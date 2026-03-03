@@ -214,6 +214,41 @@ const PIZZA_DATA = [
     { level: 10, name: "Oksu Masterpiece", color: "#ff9f43", detail: "#e67e22", textColor: "#ffffff" }
 ];
 
+const UNDEAD_ARCHETYPES = [
+    {
+        type: 'zombie',
+        skinBase: '#6f9b55',
+        skinShade: '#3d5a2b',
+        eye: '#d7ff6a',
+        apparel: '#4a5f2e',
+        silhouette: 'classic'
+    },
+    {
+        type: 'skeleton',
+        skinBase: '#dad8cf',
+        skinShade: '#8e887a',
+        eye: '#7de8ff',
+        apparel: '#4f3930',
+        silhouette: 'lean'
+    },
+    {
+        type: 'ghoul',
+        skinBase: '#8f7e65',
+        skinShade: '#4f4338',
+        eye: '#ffb56a',
+        apparel: '#5a4630',
+        silhouette: 'hunched'
+    },
+    {
+        type: 'wraith',
+        skinBase: '#7684b9',
+        skinShade: '#323f6f',
+        eye: '#f2f6ff',
+        apparel: '#2f2c4f',
+        silhouette: 'float'
+    }
+];
+
 const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
 
 const ZOMBIE_STATES = ['idle', 'angry', 'happyLeaving'];
@@ -472,7 +507,7 @@ class Customer {
         this.animState = 'idle';
         this.leaveMoodTimer = 0;
         this.nextCriticalFxAt = 0;
-        this.zombieHue = Math.random() * 60 + 70; 
+        this.undeadProfile = UNDEAD_ARCHETYPES[Math.floor(Math.random() * UNDEAD_ARCHETYPES.length)];
         this.requirements = [];
         const count = Math.random() < 0.6 ? 1 : 2;
         for (let i = 0; i < count; i++) {
@@ -524,34 +559,62 @@ class Customer {
         const bobFreq = this.isLeaving ? 12 : 3;
         const bobAmp = this.isLeaving ? 8 : 3;
         const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
+        const profile = this.undeadProfile;
+        const isAggro = this.hunger > 72 && !this.isLeaving;
+        const bodyW = profile.silhouette === 'lean' ? 22 : 28;
+        const bodyH = profile.silhouette === 'hunched' ? 48 : 44;
 
         ctx.save();
         ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.beginPath(); ctx.ellipse(zX, zY + 60, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
-
-        ctx.fillStyle = `hsl(${this.zombieHue}, 30%, 30%)`;
-        const armX = this.isLeaving ? zX - 10 : zX - 30;
-        ctx.fillRect(armX, zY + 20 + bob, 40, 15);
-
-        ctx.fillStyle = `hsl(${this.zombieHue}, 25%, 20%)`;
         ctx.beginPath();
-        ctx.ellipse(zX, zY + 35 + bob, 28, 45, 0, 0, Math.PI * 2);
+        ctx.ellipse(zX, zY + 62, profile.silhouette === 'float' ? 16 : 22, profile.silhouette === 'float' ? 7 : 10, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = `hsl(${this.zombieHue}, 40%, 45%)`;
+        ctx.fillStyle = profile.apparel;
+        const armX = this.isLeaving ? zX - 10 : zX - 30;
+        ctx.beginPath();
+        ctx.roundRect(armX, zY + 20 + bob, 40, 15, 6);
+        ctx.fill();
+
+        const clothGrad = ctx.createLinearGradient(zX - bodyW, zY - 8, zX + bodyW, zY + 46);
+        clothGrad.addColorStop(0, profile.apparel);
+        clothGrad.addColorStop(1, '#1f1a17');
+        ctx.fillStyle = clothGrad;
+        ctx.beginPath();
+        if (profile.silhouette === 'float') {
+            ctx.moveTo(zX - bodyW, zY + 12 + bob);
+            ctx.quadraticCurveTo(zX - bodyW - 8, zY + 52 + bob, zX - bodyW + 6, zY + 68 + bob);
+            ctx.quadraticCurveTo(zX, zY + 46 + bob, zX + bodyW - 6, zY + 68 + bob);
+            ctx.quadraticCurveTo(zX + bodyW + 8, zY + 52 + bob, zX + bodyW, zY + 12 + bob);
+            ctx.closePath();
+        } else {
+            ctx.ellipse(zX, zY + 35 + bob, bodyW, bodyH, 0, 0, Math.PI * 2);
+        }
+        ctx.fill();
+
+        const skinGrad = ctx.createRadialGradient(zX - 6, zY - 18 + bob, 4, zX, zY + bob, 30);
+        skinGrad.addColorStop(0, profile.skinBase);
+        skinGrad.addColorStop(1, profile.skinShade);
+        ctx.fillStyle = skinGrad;
         ctx.beginPath();
         ctx.arc(zX, zY + bob, 24, 0, Math.PI * 2);
         ctx.fill();
 
-        const eyeColor = this.isLeaving ? '#ffffff' : (this.hunger > 70 ? '#ff3e3e' : '#d1ff3e');
-        ctx.shadowBlur = (!this.isLeaving && this.hunger > 80) ? 15 : 0;
+        const eyeColor = this.isLeaving ? '#ffffff' : (isAggro ? '#ff5353' : profile.eye);
+        ctx.shadowBlur = (!this.isLeaving && isAggro) ? 15 : 6;
         ctx.shadowColor = eyeColor;
         ctx.fillStyle = eyeColor;
         ctx.beginPath();
-        ctx.arc(zX - 10, zY - 4 + bob, 5, 0, Math.PI * 2);
-        ctx.arc(zX + 10, zY - 4 + bob, 5, 0, Math.PI * 2);
+        ctx.arc(zX - 10, zY - 5 + bob, 4.5, 0, Math.PI * 2);
+        ctx.arc(zX + 10, zY - 5 + bob, 4.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.arc(zX - 10, zY - 4 + bob, 2, 0, Math.PI * 2);
+        ctx.arc(zX + 10, zY - 4 + bob, 2, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
@@ -561,6 +624,11 @@ class Customer {
             ctx.ellipse(zX, zY + 12 + bob, 10, 4 + (this.hunger/20), 0, 0, Math.PI * 2);
         }
         ctx.fill();
+
+        ctx.fillStyle = '#1e1e1e';
+        ctx.font = 'bold 10px Pretendard';
+        ctx.textAlign = 'center';
+        ctx.fillText(profile.type.toUpperCase(), zX, zY + 82 + bob);
         ctx.restore();
     }
 
@@ -874,35 +942,46 @@ function drawChefFallback(x, y) {
     const breathe = Math.sin(gameTime * 2) * 2;
     ctx.save();
     ctx.translate(x, y + breathe);
-    
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath(); ctx.roundRect(-35, 0, 70, 60, 10); ctx.fill();
-    ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.stroke();
-    
-    ctx.fillStyle = "#ff4757";
-    ctx.beginPath(); ctx.moveTo(-35, 10); ctx.lineTo(35, 10); ctx.lineTo(0, 30); ctx.closePath(); ctx.fill();
 
-    const faceGrad = ctx.createRadialGradient(0, -15, 5, 0, -10, 30);
-    faceGrad.addColorStop(0, "#ffdbac"); faceGrad.addColorStop(1, "#f1c27d");
+    const coatGrad = ctx.createLinearGradient(-36, 0, 36, 60);
+    coatGrad.addColorStop(0, '#fff8ee');
+    coatGrad.addColorStop(1, '#d9cec2');
+    ctx.fillStyle = coatGrad;
+    ctx.beginPath(); ctx.roundRect(-38, 0, 76, 64, 14); ctx.fill();
+    ctx.strokeStyle = '#bcae9d'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.fillStyle = '#b33939';
+    ctx.beginPath(); ctx.moveTo(-38, 12); ctx.lineTo(38, 12); ctx.lineTo(0, 34); ctx.closePath(); ctx.fill();
+
+    const faceGrad = ctx.createRadialGradient(-2, -18, 4, 0, -6, 34);
+    faceGrad.addColorStop(0, '#ffdcb4'); faceGrad.addColorStop(1, '#d6a574');
     ctx.fillStyle = faceGrad;
-    ctx.beginPath(); ctx.arc(0, -10, 28, 0, Math.PI * 2); ctx.fill();
-    
-    ctx.fillStyle = "rgba(255, 100, 100, 0.2)";
-    ctx.beginPath(); ctx.arc(-15, -5, 6, 0, Math.PI * 2); ctx.arc(15, -5, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -8, 30, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath(); ctx.roundRect(-28, -65, 56, 35, 12); ctx.fill();
-    ctx.strokeStyle = "#eee"; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, -65, 35, 18, 0, 0, Math.PI * 2); ctx.fill();
-    
-    ctx.fillStyle = "#2d1e12";
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.roundRect(-31, -72, 62, 38, 13); ctx.fill();
+    ctx.strokeStyle = '#ece4d8'; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -72, 37, 19, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#3b2618';
     ctx.beginPath();
-    ctx.moveTo(-18, -2); ctx.quadraticCurveTo(0, 5, 18, -2); ctx.quadraticCurveTo(0, 15, -18, -2); ctx.fill();
-    
-    ctx.fillStyle = "#000";
-    ctx.beginPath(); ctx.arc(-10, -18, 3, 0, Math.PI * 2); ctx.arc(10, -18, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff"; 
-    ctx.beginPath(); ctx.arc(-11, -19, 1, 0, Math.PI * 2); ctx.arc(9, -19, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.moveTo(-18, -4); ctx.quadraticCurveTo(0, 8, 18, -4); ctx.quadraticCurveTo(0, 20, -18, -4); ctx.fill();
+
+    ctx.fillStyle = '#241711';
+    ctx.beginPath(); ctx.arc(-11, -20, 3.5, 0, Math.PI * 2); ctx.arc(11, -20, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-12, -21, 1.1, 0, Math.PI * 2); ctx.arc(10, -21, 1.1, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#2f1f14';
+    ctx.beginPath();
+    ctx.moveTo(-15, 0); ctx.quadraticCurveTo(0, 8, 15, 0); ctx.quadraticCurveTo(0, 15, -15, 0); ctx.fill();
+
+    ctx.fillStyle = '#f7ede1';
+    for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.roundRect(i * 14 - 4, 20, 8, 24, 2);
+        ctx.fill();
+    }
     
     ctx.restore();
 }
@@ -1013,51 +1092,111 @@ function draw() {
 function drawItemFallback(level, x, y, scale) {
     const data = PIZZA_DATA[level - 1]; if (!data) return;
     const cx = x + TILE_SIZE / 2; const cy = y + TILE_SIZE / 2;
-    const r = (TILE_SIZE / 2 - 12) * scale;
+    const r = (TILE_SIZE / 2 - 10) * scale;
 
     ctx.save();
-    ctx.shadowBlur = 12 * scale; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowOffsetY = 6 * scale;
-    const grad = ctx.createRadialGradient(cx - r/3, cy - r/3, r/8, cx, cy, r);
-    grad.addColorStop(0, data.color); grad.addColorStop(1, data.detail);
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 14 * scale; ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowOffsetY = 6 * scale;
+    const boardGrad = ctx.createRadialGradient(cx - r / 4, cy - r / 3, r / 8, cx, cy, r);
+    boardGrad.addColorStop(0, data.color);
+    boardGrad.addColorStop(1, data.detail);
+    ctx.fillStyle = boardGrad;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-    switch(level) {
-        case 1:
-            ctx.fillStyle = "rgba(255,255,255,0.4)";
-            for(let i=0; i<8; i++) {
-                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.6, cy + Math.sin(i*2)*r*0.5, 2*scale, 0, Math.PI*2); ctx.fill();
-            }
-            break;
-        case 3:
-            ctx.fillStyle = "rgba(139, 69, 19, 0.2)";
-            for(let i=0; i<4; i++) {
-                ctx.beginPath(); ctx.arc(cx + (i-1.5)*10, cy + (Math.sin(i)*12), 4*scale, 0, Math.PI*2); ctx.fill();
-            }
-            break;
-        case 4:
-            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1;
-            for(let i=0; i<5; i++) {
-                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.4, cy + Math.sin(i*r)*r*0.4, 3*scale, 0, Math.PI*2); ctx.stroke();
-            }
-            break;
-        case 7:
-            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
-            ctx.moveTo(cx-r*0.5, cy); ctx.lineTo(cx+r*0.5, cy); ctx.stroke();
-            break;
-        case 10:
-            const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
-            shine.addColorStop(0, "rgba(255,255,255,0)");
-            shine.addColorStop(0.5, "rgba(255,255,255,0.3)");
-            shine.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.fillStyle = shine; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-            break;
+    if (level >= 3) {
+        ctx.strokeStyle = '#b7702f';
+        ctx.lineWidth = 4 * scale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 2 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    if (level <= 2) {
+        ctx.fillStyle = level === 1 ? '#f5e4c5' : '#c73d36';
+        ctx.beginPath();
+        ctx.roundRect(cx - 22 * scale, cy - 15 * scale, 44 * scale, 30 * scale, 10 * scale);
+        ctx.fill();
+    }
+
+    if (level >= 3) {
+        const cheeseGrad = ctx.createRadialGradient(cx, cy - 6 * scale, 2, cx, cy, r - 8 * scale);
+        cheeseGrad.addColorStop(0, '#ffe27a');
+        cheeseGrad.addColorStop(1, '#f3b72e');
+        ctx.fillStyle = cheeseGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 7 * scale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (level >= 4) {
+        ctx.fillStyle = '#a3372c';
+        for (let i = 0; i < 5; i++) {
+            const ang = (Math.PI * 2 * i) / 5;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(ang) * r * 0.45, cy + Math.sin(ang) * r * 0.4, 6 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 5) {
+        ctx.fillStyle = '#8b6a52';
+        for (let i = 0; i < 4; i++) {
+            const ang = (Math.PI * 2 * i) / 4 + 0.4;
+            ctx.beginPath();
+            ctx.ellipse(cx + Math.cos(ang) * r * 0.28, cy + Math.sin(ang) * r * 0.3, 5 * scale, 3.5 * scale, ang, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 6) {
+        ctx.fillStyle = '#1f1f24';
+        for (let i = 0; i < 3; i++) {
+            const ang = (Math.PI * 2 * i) / 3 + 0.7;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(ang) * r * 0.22, cy + Math.sin(ang) * r * 0.26, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 7) {
+        ctx.strokeStyle = '#2f8c43';
+        ctx.lineWidth = 2 * scale;
+        for (let i = 0; i < 4; i++) {
+            const ang = (Math.PI * 2 * i) / 4 + 0.2;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * r * 0.1, cy + Math.sin(ang) * r * 0.1);
+            ctx.quadraticCurveTo(cx + Math.cos(ang + 0.2) * r * 0.25, cy + Math.sin(ang + 0.2) * r * 0.25, cx + Math.cos(ang) * r * 0.45, cy + Math.sin(ang) * r * 0.45);
+            ctx.stroke();
+        }
+    }
+
+    if (level >= 8) {
+        ctx.strokeStyle = 'rgba(255, 136, 62, 0.65)';
+        ctx.lineWidth = 3 * scale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 12 * scale, Math.PI * 0.2, Math.PI * 0.8);
+        ctx.stroke();
+    }
+
+    if (level >= 9) {
+        ctx.fillStyle = 'rgba(255, 218, 127, 0.35)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 15 * scale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (level === 10) {
+        const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
+        shine.addColorStop(0, "rgba(255,255,255,0)");
+        shine.addColorStop(0.5, "rgba(255,255,255,0.32)");
+        shine.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = shine; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
     }
 
     ctx.fillStyle = data.textColor;
-    ctx.font = `900 ${Math.max(8, 9 * scale)}px Pretendard`;
+    ctx.font = `900 ${Math.max(8, 8.5 * scale)}px Pretendard`;
     ctx.textAlign = "center";
-    ctx.fillText(data.name.split(' ')[0], cx, cy + 3 * scale);
+    ctx.fillText(data.name.split(' ')[0], cx, cy + 31 * scale);
     ctx.restore();
 }
 
