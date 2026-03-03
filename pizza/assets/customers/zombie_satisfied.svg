@@ -1,6 +1,24 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
-  <ellipse cx='80' cy='58' rx='38' ry='38' fill='#7a8f5a' stroke='#2d1e12' stroke-width='4'/>
-  <rect x='50' y='90' width='60' height='54' rx='10' fill='#432e1e' stroke='#2d1e12' stroke-width='4'/>
-  <circle cx='66' cy='56' r='6' fill='#d1ff3e'/><circle cx='94' cy='56' r='6' fill='#d1ff3e'/>
-  <text x='80' y='22' text-anchor='middle' font-size='14' fill='#ff6b6b' font-family='Arial'>satisfied</text>
+  <defs>
+    <linearGradient id='skinS' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#a2ca76'/>
+      <stop offset='100%' stop-color='#628949'/>
+    </linearGradient>
+    <linearGradient id='coatS' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#75543a'/>
+      <stop offset='100%' stop-color='#3e2a1d'/>
+    </linearGradient>
+  </defs>
+  <ellipse cx='80' cy='132' rx='36' ry='10' fill='rgba(0,0,0,0.35)'/>
+  <path d='M48 86 Q80 74 112 86 L116 138 Q80 150 44 138 Z' fill='url(#coatS)' stroke='#2d1e12' stroke-width='4'/>
+  <ellipse cx='80' cy='58' rx='38' ry='34' fill='url(#skinS)' stroke='#2d1e12' stroke-width='4'/>
+  <path d='M58 52 Q80 44 102 52' stroke='#557540' stroke-width='5' fill='none' stroke-linecap='round'/>
+  <path d='M59 58 q7 10 14 0 M87 58 q7 10 14 0' stroke='#ecffe2' stroke-width='4' fill='none' stroke-linecap='round'/>
+  <path d='M66 78 Q80 92 94 78' stroke='#2d1e12' stroke-width='4' fill='none' stroke-linecap='round'/>
+  <path d='M44 96 L28 90' stroke='#7d9f5f' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='26' cy='90' r='6' fill='#a2ca76' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M116 98 L132 84' stroke='#7d9f5f' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='134' cy='84' r='6' fill='#a2ca76' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M72 102 l32 0 l-8 20 l-16 0 z' fill='#ffbf69' stroke='#a9581c' stroke-width='2'/>
+  <circle cx='80' cy='110' r='3' fill='#b33939'/><circle cx='92' cy='112' r='3' fill='#b33939'/>
 </svg>

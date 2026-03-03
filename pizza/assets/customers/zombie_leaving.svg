@@ -1,6 +1,26 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
-  <ellipse cx='80' cy='58' rx='38' ry='38' fill='#7a8f5a' stroke='#2d1e12' stroke-width='4'/>
-  <rect x='50' y='90' width='60' height='54' rx='10' fill='#432e1e' stroke='#2d1e12' stroke-width='4'/>
-  <circle cx='66' cy='56' r='6' fill='#d1ff3e'/><circle cx='94' cy='56' r='6' fill='#d1ff3e'/>
-  <text x='80' y='22' text-anchor='middle' font-size='14' fill='#ff6b6b' font-family='Arial'>leaving</text>
+  <defs>
+    <linearGradient id='skinL' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#97c06d'/>
+      <stop offset='100%' stop-color='#5a7d40'/>
+    </linearGradient>
+    <linearGradient id='coatL' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#6f5036'/>
+      <stop offset='100%' stop-color='#372418'/>
+    </linearGradient>
+  </defs>
+  <ellipse cx='80' cy='132' rx='38' ry='10' fill='rgba(0,0,0,0.35)'/>
+  <path d='M46 86 Q80 74 114 86 L118 138 Q80 151 42 138 Z' fill='url(#coatL)' stroke='#2d1e12' stroke-width='4'/>
+  <ellipse cx='80' cy='58' rx='39' ry='34' fill='url(#skinL)' stroke='#2d1e12' stroke-width='4'/>
+  <path d='M59 52 Q80 40 101 52' stroke='#4f6b38' stroke-width='5' fill='none' stroke-linecap='round'/>
+  <ellipse cx='66' cy='58' rx='8' ry='7' fill='#ecffdc'/><ellipse cx='94' cy='58' rx='8' ry='7' fill='#ecffdc'/>
+  <circle cx='66' cy='58' r='3.5' fill='#8bff6a'/><circle cx='94' cy='58' r='3.5' fill='#8bff6a'/>
+  <path d='M68 78 Q80 86 92 78' stroke='#2d1e12' stroke-width='4' fill='none' stroke-linecap='round'/>
+  <path d='M46 98 L24 104' stroke='#759657' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='22' cy='104' r='6' fill='#97c06d' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M114 94 L136 74' stroke='#759657' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='138' cy='74' r='6' fill='#97c06d' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M88 102 l18 5 l-6 14 l-20 -7 z' fill='#ffb347' stroke='#8f3e0f' stroke-width='2'/>
+  <path d='M118 40 l6 -10 l6 10 h-4 v8 h-4 v-8 z' fill='#ff9f43'/>
+  <path d='M126 40 l6 -10 l6 10 h-4 v8 h-4 v-8 z' fill='#ffd166'/>
 </svg>
