@@ -714,7 +714,9 @@ class Customer {
         const frame = this.getFrameIndex(rafClock);
         const stateRow = ZOMBIE_STATES.indexOf(state);
 
-        if (stateRow >= 0 && generatedSprites.zombieLayers.body) {
+        if (customerImg) {
+            ctx.drawImage(customerImg, this.x - 45, this.y - 20 + bob, 160, 160);
+        } else if (stateRow >= 0 && generatedSprites.zombieLayers.body) {
             const sx = frame * ZOMBIE_CELL;
             const sy = stateRow * ZOMBIE_CELL;
             const jitter = (this.animState === 'angry' && this.hunger > 88) ? (frame % 2 === 0 ? -2 : 2) : 0;
@@ -726,8 +728,6 @@ class Customer {
                 if (!sheet) return;
                 ctx.drawImage(sheet, sx, sy, ZOMBIE_CELL, ZOMBIE_CELL, drawX + jitter, drawY, 96, 96);
             });
-        } else if (customerImg) {
-            ctx.drawImage(customerImg, this.x - 45, this.y - 20 + bob, 160, 160);
         } else {
             this.drawFallback();
         }
