@@ -32,7 +32,7 @@
     const keys = Object.create(null);
     const stars = Array.from({ length: 130 }, () => ({ x: Math.random(), y: Math.random(), z: .4 + Math.random() * .9, t: Math.random() * 6.28 }));
 
-    const player = { x: 0, y: 0, r: 13, speed: 420, autoSpeed: 300, lives: 3, invulnUntil: 0, fireCd: 0 };
+    const player = { x: 0, y: 0, r: 13, speed: 630, autoSpeed: 450, lives: 3, invulnUntil: 0, fireCd: 0 };
     const enemies = [], pBullets = [], eBullets = [];
     let target = null, score = 0, wave = 1;
     let formation = { x: 0, y: 70, vx: 72, stepDown: 24 };
@@ -118,9 +118,10 @@
       const live = enemies.filter(e => e.alive);
       if (!live.length) return;
       const e = live[(Math.random() * live.length) | 0];
+      const ey = e.y + formation.y;
       const tx = player.x + (Math.random() - .5) * 24, ty = player.y;
-      const ox = tx - e.x, oy = ty - e.y, d = Math.hypot(ox, oy) || 1, sp = 240 + wave * 8;
-      eBullets.push({ x: e.x, y: e.y + 14, vx: ox / d * sp, vy: oy / d * sp });
+      const ox = tx - e.x, oy = ty - ey, d = Math.hypot(ox, oy) || 1, sp = 240 + wave * 8;
+      eBullets.push({ x: e.x, y: ey + 14, vx: ox / d * sp, vy: oy / d * sp });
     }
 
     function updateRunning(dt, now) {
