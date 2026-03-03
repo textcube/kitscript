@@ -1,0 +1,17 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'>
+  <defs>
+    <radialGradient id='g10' cx='45%' cy='35%' r='70%'>
+      <stop offset='0%' stop-color='#ffdca1'/>
+      <stop offset='100%' stop-color='#d07a1f'/>
+    </radialGradient>
+    <linearGradient id='shine' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='rgba(255,255,255,0)'/>
+      <stop offset='50%' stop-color='rgba(255,255,255,0.45)'/>
+      <stop offset='100%' stop-color='rgba(255,255,255,0)'/>
+    </linearGradient>
+  </defs>
+  <rect width='128' height='128' fill='none'/>
+  <circle cx='64' cy='64' r='53' fill='url(#g10)' stroke='#4e342e' stroke-width='5'/>
+  <circle cx='64' cy='64' r='43' fill='none' stroke='#ffefc4' stroke-width='3' opacity='0.75'/>
+  <ellipse cx='64' cy='64' rx='44' ry='44' fill='url(#shine)'/>
+</svg>

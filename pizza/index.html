@@ -133,8 +133,62 @@ const ctx = canvas.getContext('2d');
 
 const WIDTH = 960;
 const HEIGHT = 640;
-canvas.width = WIDTH;
-canvas.height = HEIGHT;
+
+const ASSET_MANIFEST = {
+    items: Array.from({ length: 10 }, (_, i) => ({
+        logicalName: `item-${i + 1}`,
+        webp: `assets/items/pizza_lv${i + 1}.webp`,
+        png: `assets/items/pizza_lv${i + 1}.png`
+    })),
+    customers: {
+        zombieWaiting: { logicalName: 'customer-zombie-waiting', webp: 'assets/customers/zombie_waiting.webp', png: 'assets/customers/zombie_waiting.png' },
+        zombieAngry: { logicalName: 'customer-zombie-angry', webp: 'assets/customers/zombie_angry.webp', png: 'assets/customers/zombie_angry.png' },
+        zombieLeaving: { logicalName: 'customer-zombie-leaving', webp: 'assets/customers/zombie_leaving.webp', png: 'assets/customers/zombie_leaving.png' },
+
+        ghostWaiting: { logicalName: 'customer-ghost-waiting', webp: 'assets/customers/ghost_waiting.webp', png: 'assets/customers/ghost_waiting.png' },
+        ghostAngry: { logicalName: 'customer-ghost-angry', webp: 'assets/customers/ghost_angry.webp', png: 'assets/customers/ghost_angry.png' },
+        ghostLeaving: { logicalName: 'customer-ghost-leaving', webp: 'assets/customers/ghost_leaving.webp', png: 'assets/customers/ghost_leaving.png' },
+
+        skeletonWaiting: { logicalName: 'customer-skeleton-waiting', webp: 'assets/customers/skeleton_waiting.webp', png: 'assets/customers/skeleton_waiting.png' },
+        skeletonAngry: { logicalName: 'customer-skeleton-angry', webp: 'assets/customers/skeleton_angry.webp', png: 'assets/customers/skeleton_angry.png' },
+        skeletonLeaving: { logicalName: 'customer-skeleton-leaving', webp: 'assets/customers/skeleton_leaving.webp', png: 'assets/customers/skeleton_leaving.png' },
+
+        draculaWaiting: { logicalName: 'customer-dracula-waiting', webp: 'assets/customers/dracula_waiting.webp', png: 'assets/customers/dracula_waiting.png' },
+        draculaAngry: { logicalName: 'customer-dracula-angry', webp: 'assets/customers/dracula_angry.webp', png: 'assets/customers/dracula_angry.png' },
+        draculaLeaving: { logicalName: 'customer-dracula-leaving', webp: 'assets/customers/dracula_leaving.webp', png: 'assets/customers/dracula_leaving.png' }
+    },
+    chef: {
+        logicalName: 'chef',
+        webp: 'assets/chef/chef_main.webp',
+        png: 'assets/chef/chef_main.png'
+    },
+    order: {
+        logicalName: 'order',
+        webp: 'assets/ui/order_ticket_2x.webp',
+        png: 'assets/ui/order_ticket_2x.png'
+    },
+    effect: {
+        logicalName: 'effect',
+        webp: 'assets/effects/spark_128.webp',
+        png: 'assets/effects/spark_128.png'
+    },
+    background: {
+        logicalName: 'background',
+        webp: 'assets/bg/shop_bg_1920x1280.webp',
+        png: 'assets/bg/shop_bg_1920x1280.png'
+    }
+};
+
+function setupCanvasResolution() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = `${WIDTH}px`;
+    canvas.style.height = `${HEIGHT}px`;
+    canvas.width = Math.floor(WIDTH * dpr);
+    canvas.height = Math.floor(HEIGHT * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+setupCanvasResolution();
 
 const GRID_SIZE = 5;
 const TILE_SIZE = 84;
@@ -154,6 +208,226 @@ const PIZZA_DATA = [
     { level: 9, name: "Golden Crust", color: "#f1c40f", detail: "#f39c12", textColor: "#3e2723" },
     { level: 10, name: "Oksu Masterpiece", color: "#ff9f43", detail: "#e67e22", textColor: "#ffffff" }
 ];
+
+const UNDEAD_ARCHETYPES = [
+    {
+        type: 'zombie',
+        skinBase: '#6f9b55',
+        skinShade: '#3d5a2b',
+        eye: '#d7ff6a',
+        apparel: '#4a5f2e',
+        silhouette: 'classic'
+    },
+    {
+        type: 'dracula',
+        skinBase: '#c9c4e0',
+        skinShade: '#6f678f',
+        eye: '#ff6e9f',
+        apparel: '#2f2044',
+        silhouette: 'classic'
+    },
+    {
+        type: 'ghost',
+        skinBase: '#dce8ff',
+        skinShade: '#90a8d9',
+        eye: '#ffffff',
+        apparel: '#7f8eb9',
+        silhouette: 'float'
+    },
+    {
+        type: 'skeleton',
+        skinBase: '#dad8cf',
+        skinShade: '#8e887a',
+        eye: '#7de8ff',
+        apparel: '#4f3930',
+        silhouette: 'lean'
+    }
+];
+
+const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie/ghost/skeleton/dracula customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
+
+
+const CUSTOMER_ASSET_KEY_MAP = {
+    zombie: { idle: 'customer-zombie-waiting', angry: 'customer-zombie-angry', happyLeaving: 'customer-zombie-leaving' },
+    ghost: { idle: 'customer-ghost-waiting', angry: 'customer-ghost-angry', happyLeaving: 'customer-ghost-leaving' },
+    skeleton: { idle: 'customer-skeleton-waiting', angry: 'customer-skeleton-angry', happyLeaving: 'customer-skeleton-leaving' },
+    dracula: { idle: 'customer-dracula-waiting', angry: 'customer-dracula-angry', happyLeaving: 'customer-dracula-leaving' }
+};
+
+const ZOMBIE_STATES = ['idle', 'angry', 'happyLeaving'];
+const ZOMBIE_FRAME_COUNT = 6;
+const ZOMBIE_CELL = 96;
+const generatedSprites = { zombieLayers: {}, particles: {} };
+let rafClock = 0;
+
+const loadedImages = {};
+let assetLoadingProgress = 0;
+
+function drawLoadingScreen(progress) {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#1a120b';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.fillStyle = '#ff9f43';
+    ctx.textAlign = 'center';
+    ctx.font = '900 36px Pretendard';
+    ctx.fillText('LOADING ASSETS', WIDTH / 2, HEIGHT / 2 - 24);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px Pretendard';
+    ctx.fillText(`${Math.round(progress)}%`, WIDTH / 2, HEIGHT / 2 + 24);
+}
+
+function loadImageWithFallback(assetDef) {
+    const svgFallback = assetDef.webp ? assetDef.webp.replace(/\.webp$/, '.svg') : null;
+    const candidates = [assetDef.webp, assetDef.png, svgFallback].filter(Boolean);
+    return new Promise((resolve) => {
+        const tryLoad = (idx) => {
+            if (idx >= candidates.length) {
+                resolve({ key: assetDef.logicalName, img: null });
+                return;
+            }
+            const img = new Image();
+            img.onload = () => resolve({ key: assetDef.logicalName, img });
+            img.onerror = () => tryLoad(idx + 1);
+            img.src = candidates[idx];
+        };
+        tryLoad(0);
+    });
+}
+
+function getAssetList() {
+    return [
+        ...ASSET_MANIFEST.items,
+        ...Object.values(ASSET_MANIFEST.customers),
+        ASSET_MANIFEST.chef,
+        ASSET_MANIFEST.order,
+        ASSET_MANIFEST.effect,
+        ASSET_MANIFEST.background
+    ];
+}
+
+async function loadAssets() {
+    const assets = getAssetList();
+    const total = assets.length;
+    let loaded = 0;
+
+    drawLoadingScreen(0);
+
+    const tasks = assets.map(async (assetDef) => {
+        const { key, img } = await loadImageWithFallback(assetDef);
+        loadedImages[key] = img;
+        loaded += 1;
+        assetLoadingProgress = (loaded / total) * 100;
+        drawLoadingScreen(assetLoadingProgress);
+    });
+
+    await Promise.all(tasks);
+    assetLoadingProgress = 100;
+    drawLoadingScreen(assetLoadingProgress);
+    resetGame();
+    requestAnimationFrame(loop);
+}
+
+function initGeneratedSprites() {
+    generatedSprites.zombieLayers = createZombieLayerSheets();
+    generatedSprites.particles = createParticleSprites();
+}
+
+function createZombieLayerSheets() {
+    const layers = ['body', 'arm', 'head', 'eyes'];
+    const out = {};
+    layers.forEach(layer => {
+        const sheet = document.createElement('canvas');
+        sheet.width = ZOMBIE_CELL * ZOMBIE_FRAME_COUNT;
+        sheet.height = ZOMBIE_CELL * ZOMBIE_STATES.length;
+        const sctx = sheet.getContext('2d');
+        ZOMBIE_STATES.forEach((state, row) => {
+            for (let frame = 0; frame < ZOMBIE_FRAME_COUNT; frame++) {
+                const x = frame * ZOMBIE_CELL;
+                const y = row * ZOMBIE_CELL;
+                drawZombieLayerFrame(sctx, layer, state, frame, x, y);
+            }
+        });
+        out[layer] = sheet;
+    });
+    return out;
+}
+
+function drawZombieLayerFrame(sctx, layer, state, frame, x, y) {
+    const centerX = x + ZOMBIE_CELL / 2;
+    const centerY = y + ZOMBIE_CELL / 2;
+    const sway = Math.sin((frame / ZOMBIE_FRAME_COUNT) * Math.PI * 2);
+    const armWave = Math.sin((frame / ZOMBIE_FRAME_COUNT) * Math.PI * 2) * 10;
+
+    if (layer === 'body') {
+        sctx.fillStyle = state === 'angry' ? '#324422' : '#2e4025';
+        sctx.beginPath();
+        sctx.ellipse(centerX, centerY + 18 + sway * 1.5, 22, 30, 0, 0, Math.PI * 2);
+        sctx.fill();
+    }
+
+    if (layer === 'arm') {
+        sctx.fillStyle = '#3c522a';
+        const waveX = state === 'happyLeaving' ? armWave : sway * 3;
+        sctx.fillRect(centerX - 26 + waveX, centerY + 12, 18, 8);
+        sctx.fillRect(centerX + 8, centerY + 14 + sway, 16, 8);
+    }
+
+    if (layer === 'head') {
+        sctx.fillStyle = state === 'angry' ? '#628a45' : '#6ea355';
+        sctx.beginPath();
+        sctx.arc(centerX + sway * 1.5, centerY - 10, 20, 0, Math.PI * 2);
+        sctx.fill();
+    }
+
+    if (layer === 'eyes') {
+        const eyeGlow = state === 'angry' ? '#ff4d4d' : '#d9ff6a';
+        sctx.shadowBlur = state === 'angry' ? 10 : 0;
+        sctx.shadowColor = eyeGlow;
+        sctx.fillStyle = eyeGlow;
+        const wobble = state === 'angry' ? (frame % 2 === 0 ? -2 : 2) : 0;
+        sctx.beginPath();
+        sctx.arc(centerX - 8 + wobble, centerY - 13, 4, 0, Math.PI * 2);
+        sctx.arc(centerX + 8 + wobble, centerY - 13, 4, 0, Math.PI * 2);
+        sctx.fill();
+        sctx.shadowBlur = 0;
+    }
+}
+
+function createParticleSprites() {
+    const make = (drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = 36;
+        c.height = 36;
+        const cctx = c.getContext('2d');
+        drawFn(cctx);
+        return c;
+    };
+    return {
+        cheese: make(cctx => {
+            cctx.fillStyle = '#ffd447';
+            cctx.beginPath(); cctx.moveTo(5, 30); cctx.lineTo(30, 20); cctx.lineTo(12, 6); cctx.closePath(); cctx.fill();
+            cctx.fillStyle = '#f4b729';
+            cctx.beginPath(); cctx.arc(17, 18, 3, 0, Math.PI * 2); cctx.arc(23, 14, 2, 0, Math.PI * 2); cctx.fill();
+        }),
+        flame: make(cctx => {
+            cctx.fillStyle = '#ff6b35';
+            cctx.beginPath(); cctx.moveTo(18, 4); cctx.quadraticCurveTo(32, 16, 18, 32); cctx.quadraticCurveTo(6, 18, 18, 4); cctx.fill();
+            cctx.fillStyle = '#ffd166';
+            cctx.beginPath(); cctx.moveTo(18, 10); cctx.quadraticCurveTo(26, 18, 18, 28); cctx.quadraticCurveTo(11, 19, 18, 10); cctx.fill();
+        }),
+        smoke: make(cctx => {
+            cctx.fillStyle = 'rgba(180,180,180,0.9)';
+            cctx.beginPath();
+            cctx.arc(12, 20, 7, 0, Math.PI * 2);
+            cctx.arc(20, 16, 8, 0, Math.PI * 2);
+            cctx.arc(26, 22, 6, 0, Math.PI * 2);
+            cctx.fill();
+        })
+    };
+}
+
 
 const GameState = { PLAYING: 1, OVER: 2 };
 let currentState = GameState.PLAYING;
@@ -227,13 +501,16 @@ document.getElementById('soundToggle').addEventListener('click', (e) => {
 class Customer {
     constructor() {
         this.id = Date.now() + Math.random();
-        this.x = WIDTH - 260;
+        this.x = WIDTH - 300;
         this.y = 120 + (this.getQueueCount() * 125);
         this.targetY = this.y;
         this.hunger = 0;
         this.active = true;
         this.isLeaving = false; // 퇴장 중인지 여부
-        this.zombieHue = Math.random() * 60 + 70; 
+        this.animState = 'idle';
+        this.leaveMoodTimer = 0;
+        this.nextCriticalFxAt = 0;
+        this.undeadProfile = UNDEAD_ARCHETYPES[Math.floor(Math.random() * UNDEAD_ARCHETYPES.length)];
         this.requirements = [];
         const count = Math.random() < 0.6 ? 1 : 2;
         for (let i = 0; i < count; i++) {
@@ -246,9 +523,11 @@ class Customer {
         return customers.filter(c => !c.isLeaving).length;
     }
 
-    update(dt) {
+    update(dt, timeMs) {
         if (this.isLeaving) {
             this.x += 300 * dt; // 오른쪽으로 퇴장
+            this.leaveMoodTimer += dt;
+            this.animState = 'happyLeaving';
             return;
         }
 
@@ -261,106 +540,196 @@ class Customer {
         }
 
         this.hunger += (0.35 + (gameTime / 600)) * dt; 
+        this.animState = this.hunger > 72 ? 'angry' : 'idle';
         if (this.hunger >= 100) {
             this.hunger = 100;
             currentState = GameState.OVER;
         }
+
+        if (this.hunger > 88) {
+            this.animState = 'angry';
+        }
     }
 
-    draw() {
+    getFrameIndex(timeMs) {
+        const speed = this.animState === 'happyLeaving' ? 10 : (this.animState === 'angry' ? 12 : 6);
+        return Math.floor((timeMs / 1000) * speed) % ZOMBIE_FRAME_COUNT;
+    }
+
+    drawFallback() {
         const zX = this.x + 35;
         const zY = this.y + 45;
-        // 퇴장할 때는 더 활기차게 바운싱
         const bobFreq = this.isLeaving ? 12 : 3;
         const bobAmp = this.isLeaving ? 8 : 3;
         const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
-        
+        const profile = this.undeadProfile;
+        const isAggro = this.hunger > 72 && !this.isLeaving;
+        const bodyW = profile.silhouette === 'lean' ? 22 : 28;
+        const bodyH = profile.silhouette === 'hunched' ? 48 : 44;
+
         ctx.save();
-        // 좀비 그림자
         ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.beginPath(); ctx.ellipse(zX, zY + 60, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
-
-        // 좀비 팔
-        ctx.fillStyle = `hsl(${this.zombieHue}, 30%, 30%)`;
-        const armX = this.isLeaving ? zX - 10 : zX - 30;
-        ctx.fillRect(armX, zY + 20 + bob, 40, 15);
-
-        // 몸통
-        ctx.fillStyle = `hsl(${this.zombieHue}, 25%, 20%)`;
         ctx.beginPath();
-        ctx.ellipse(zX, zY + 35 + bob, 28, 45, 0, 0, Math.PI * 2);
+        ctx.ellipse(zX, zY + 62, profile.silhouette === 'float' ? 16 : 22, profile.silhouette === 'float' ? 7 : 10, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // 머리
-        ctx.fillStyle = `hsl(${this.zombieHue}, 40%, 45%)`;
+
+        ctx.fillStyle = profile.apparel;
+        const armX = this.isLeaving ? zX - 10 : zX - 30;
+        ctx.beginPath();
+        ctx.roundRect(armX, zY + 20 + bob, 40, 15, 6);
+        ctx.fill();
+
+        const clothGrad = ctx.createLinearGradient(zX - bodyW, zY - 8, zX + bodyW, zY + 46);
+        clothGrad.addColorStop(0, profile.apparel);
+        clothGrad.addColorStop(1, '#1f1a17');
+        ctx.fillStyle = clothGrad;
+        ctx.beginPath();
+        if (profile.silhouette === 'float') {
+            ctx.moveTo(zX - bodyW, zY + 12 + bob);
+            ctx.quadraticCurveTo(zX - bodyW - 8, zY + 52 + bob, zX - bodyW + 6, zY + 68 + bob);
+            ctx.quadraticCurveTo(zX, zY + 46 + bob, zX + bodyW - 6, zY + 68 + bob);
+            ctx.quadraticCurveTo(zX + bodyW + 8, zY + 52 + bob, zX + bodyW, zY + 12 + bob);
+            ctx.closePath();
+        } else {
+            ctx.ellipse(zX, zY + 35 + bob, bodyW, bodyH, 0, 0, Math.PI * 2);
+        }
+        ctx.fill();
+
+        const skinGrad = ctx.createRadialGradient(zX - 6, zY - 18 + bob, 4, zX, zY + bob, 30);
+        skinGrad.addColorStop(0, profile.skinBase);
+        skinGrad.addColorStop(1, profile.skinShade);
+        ctx.fillStyle = skinGrad;
         ctx.beginPath();
         ctx.arc(zX, zY + bob, 24, 0, Math.PI * 2);
         ctx.fill();
 
-        // 눈
-        const eyeColor = this.isLeaving ? '#ffffff' : (this.hunger > 70 ? '#ff3e3e' : '#d1ff3e');
-        ctx.shadowBlur = (!this.isLeaving && this.hunger > 80) ? 15 : 0;
+        const eyeColor = this.isLeaving ? '#ffffff' : (isAggro ? '#ff5353' : profile.eye);
+        ctx.shadowBlur = (!this.isLeaving && isAggro) ? 15 : 6;
         ctx.shadowColor = eyeColor;
         ctx.fillStyle = eyeColor;
         ctx.beginPath();
-        ctx.arc(zX - 10, zY - 4 + bob, 5, 0, Math.PI * 2);
-        ctx.arc(zX + 10, zY - 4 + bob, 5, 0, Math.PI * 2);
+        ctx.arc(zX - 10, zY - 5 + bob, 4.5, 0, Math.PI * 2);
+        ctx.arc(zX + 10, zY - 5 + bob, 4.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 입
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.arc(zX - 10, zY - 4 + bob, 2, 0, Math.PI * 2);
+        ctx.arc(zX + 10, zY - 4 + bob, 2, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
         if (this.isLeaving) {
-            // 웃는 입
             ctx.arc(zX, zY + 10 + bob, 8, 0, Math.PI);
         } else {
             ctx.ellipse(zX, zY + 12 + bob, 10, 4 + (this.hunger/20), 0, 0, Math.PI * 2);
         }
         ctx.fill();
-        ctx.restore();
 
-        // 주문서 (퇴장 중이 아닐 때만 그림)
-        if (!this.isLeaving) {
-            const sX = this.x + 75;
-            const sY = this.y + 15;
+        ctx.fillStyle = '#1e1e1e';
+        ctx.font = 'bold 10px Pretendard';
+        ctx.textAlign = 'center';
+        ctx.fillText(profile.type.toUpperCase(), zX, zY + 82 + bob);
+        ctx.restore();
+    }
+
+    drawOrderSheet(sX, sY) {
+        const orderImg = loadedImages.order;
+        const parchmentImg = loadedImages.parchment;
+        if (orderImg) {
+            ctx.drawImage(orderImg, sX, sY, 160, 95);
+        } else {
             ctx.save();
-            const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
-            paperGrad.addColorStop(0, '#f8efba');
-            paperGrad.addColorStop(1, '#e1d49a');
-            ctx.fillStyle = paperGrad;
-            ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.4)";
-            
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(0,0,0,0.4)";
             ctx.beginPath();
             ctx.moveTo(sX, sY);
             ctx.lineTo(sX + 160, sY);
             ctx.lineTo(sX + 160, sY + 95);
-            for(let i=160; i>=0; i-=10) {
-                ctx.lineTo(sX + i, sY + 95 + (i%20==0?5:-5));
+            for (let i = 160; i >= 0; i -= 10) {
+                ctx.lineTo(sX + i, sY + 95 + (i % 20 === 0 ? 5 : -5));
             }
             ctx.closePath();
-            ctx.fill();
-            
-            ctx.strokeStyle = "rgba(93, 64, 55, 0.1)";
-            ctx.lineWidth = 1;
-            for(let i=sY+35; i<sY+80; i+=12) {
-                ctx.beginPath(); ctx.moveTo(sX + 15, i); ctx.lineTo(sX + 145, i); ctx.stroke();
+            ctx.clip();
+
+            if (parchmentImg) {
+                ctx.drawImage(parchmentImg, sX, sY, 160, 100);
+            } else {
+                const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
+                paperGrad.addColorStop(0, '#f8efba');
+                paperGrad.addColorStop(1, '#e1d49a');
+                ctx.fillStyle = paperGrad;
+                ctx.fillRect(sX, sY, 160, 100);
             }
+            ctx.restore();
 
-            ctx.fillStyle = "rgba(0,0,0,0.1)";
-            ctx.fillRect(sX + 15, sY + 80, 130, 6);
-            const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
-            ctx.fillStyle = barColor;
-            ctx.fillRect(sX + 15, sY + 80, 130 * (this.hunger / 100), 6);
+            ctx.strokeStyle = "rgba(93, 64, 55, 0.12)";
+            ctx.lineWidth = 1;
+            for (let i = sY + 35; i < sY + 80; i += 12) {
+                ctx.beginPath();
+                ctx.moveTo(sX + 15, i);
+                ctx.lineTo(sX + 145, i);
+                ctx.stroke();
+            }
+        }
 
-            ctx.fillStyle = "#5d4037";
-            ctx.font = "bold 11px Pretendard";
-            ctx.fillText(`ORDER #${Math.floor(this.orderSeed)}`, sX + 15, sY + 22);
-            
-            this.requirements.forEach((level, idx) => {
-                const offsetX = idx * 55;
-                drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
+        ctx.fillStyle = "rgba(0,0,0,0.14)";
+        ctx.fillRect(sX + 15, sY + 80, 130, 6);
+        const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
+        ctx.fillStyle = barColor;
+        ctx.fillRect(sX + 15, sY + 80, 130 * (this.hunger / 100), 6);
+
+        ctx.fillStyle = "#5d4037";
+        ctx.font = "bold 11px Pretendard";
+        ctx.fillText(`ORDER #${Math.floor(this.orderSeed)}`, sX + 15, sY + 22);
+
+        this.requirements.forEach((level, idx) => {
+            const offsetX = idx * 55;
+            drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
+        });
+
+        return getCustomerStatusIcon(this);
+    }
+
+    draw() {
+        const state = this.animState;
+        const assetByType = CUSTOMER_ASSET_KEY_MAP[this.undeadProfile.type] || CUSTOMER_ASSET_KEY_MAP.zombie;
+        const customerImg = loadedImages[assetByType?.[state]];
+        const bobFreq = this.isLeaving ? 12 : 3;
+        const bobAmp = this.isLeaving ? 8 : 3;
+        const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
+        const drawX = this.x - 10;
+        const drawY = this.y + 15 + bob;
+        const frame = this.getFrameIndex(rafClock);
+        const stateRow = ZOMBIE_STATES.indexOf(state);
+
+        if (customerImg) {
+            ctx.drawImage(customerImg, this.x - 45, this.y - 20 + bob, 160, 160);
+        } else if (stateRow >= 0 && generatedSprites.zombieLayers.body) {
+            const sx = frame * ZOMBIE_CELL;
+            const sy = stateRow * ZOMBIE_CELL;
+            const jitter = (this.animState === 'angry' && this.hunger > 88) ? (frame % 2 === 0 ? -2 : 2) : 0;
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath(); ctx.ellipse(this.x + 35, this.y + 105, 28, 12, 0, 0, Math.PI * 2); ctx.fill();
+
+            ['body', 'arm', 'head', 'eyes'].forEach(layer => {
+                const sheet = generatedSprites.zombieLayers[layer];
+                if (!sheet) return;
+                ctx.drawImage(sheet, sx, sy, ZOMBIE_CELL, ZOMBIE_CELL, drawX + jitter, drawY, 96, 96);
             });
+        } else {
+            this.drawFallback();
+        }
+
+        if (!this.isLeaving) {
+            const orderOffsetX = 90;
+            const sX = this.x + orderOffsetX;
+            const sY = this.y + 15;
+            ctx.save();
+            const statusIcon = this.drawOrderSheet(sX, sY);
+            if (statusIcon) drawStatusIcon(statusIcon, sX - 22, sY + 6);
             ctx.restore();
         }
     }
@@ -469,16 +838,18 @@ function spawnIngredient() {
     }
 }
 
-function spawnParticles(x, y, color) {
+function spawnParticles(x, y, color, kind = 'cheese') {
+    const particleKind = kind || 'cheese';
     for (let i = 0; i < 15; i++) {
         effectParticles.push({
             x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
-            life: 1.0, color, size: Math.random() * 5 + 2
+            life: 1.0, color, size: Math.random() * 5 + 2, kind: particleKind
         });
     }
 }
 
 function update(time) {
+    rafClock = time;
     const dt = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
     if (currentState === GameState.OVER) {
@@ -501,7 +872,7 @@ function update(time) {
                 if (grid[a.to]) {
                     grid[a.to].level++;
                     grid[a.to].scale = 1.4;
-                    spawnParticles(a.endPos.x + TILE_SIZE/2, a.endPos.y + TILE_SIZE/2, PIZZA_DATA[grid[a.to].level-1].color);
+                    spawnParticles(a.endPos.x + TILE_SIZE/2, a.endPos.y + TILE_SIZE/2, PIZZA_DATA[grid[a.to].level-1].color, 'flame');
                 }
                 grid[a.from] = null;
             } else {
@@ -526,7 +897,7 @@ function update(time) {
         customers.push(new Customer());
     }
 
-    customers.forEach(c => c.update(dt));
+    customers.forEach(c => c.update(dt, time));
 
     // 주문 수령 및 퇴장 처리
     customers.forEach(cust => {
@@ -536,7 +907,7 @@ function update(time) {
             const gIdx = grid.findIndex(it => it && !it.isAnimating && it.level === levelNeeded);
             if (gIdx !== -1) {
                 const p = grid[gIdx].getPos();
-                spawnParticles(p.x + TILE_SIZE/2, p.y + TILE_SIZE/2, PIZZA_DATA[levelNeeded-1].color);
+                spawnParticles(p.x + TILE_SIZE/2, p.y + TILE_SIZE/2, PIZZA_DATA[levelNeeded-1].color, 'cheese');
                 grid[gIdx] = null;
                 cust.requirements.splice(rIdx, 1);
                 gold += levelNeeded * 400;
@@ -546,7 +917,11 @@ function update(time) {
         }
         // 모든 주문 완료 시 퇴장 모드로 전환
         if (cust.requirements.length === 0) {
+            cust.animState = 'happyLeaving';
             cust.isLeaving = true;
+        } else if (cust.hunger > 88 && rafClock > cust.nextCriticalFxAt) {
+            spawnParticles(cust.x + 35, cust.y + 30, '#ff6b6b', 'smoke');
+            cust.nextCriticalFxAt = rafClock + 240;
         }
     });
     
@@ -556,73 +931,319 @@ function update(time) {
     effectParticles.forEach(p => {
         p.x += p.vx; p.y += p.vy; p.vy += 0.2; 
         p.life -= dt * 1.5;
+        p.vx *= 0.98;
     });
     effectParticles = effectParticles.filter(p => p.life > 0);
 }
 
 // --- Drawing Systems ---
 
-function drawChef(x, y) {
-    const breathe = Math.sin(gameTime * 2) * 2;
+function drawChefFallback(x, y) {
+    const phase = getChefMotionPhase();
+    const { breathe, leftArmRotation, rightArmRotation, toolLift, bodyRock } = phase;
     ctx.save();
-    ctx.translate(x, y + breathe);
-    
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath(); ctx.roundRect(-35, 0, 70, 60, 10); ctx.fill();
-    ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.stroke();
-    
-    ctx.fillStyle = "#ff4757";
-    ctx.beginPath(); ctx.moveTo(-35, 10); ctx.lineTo(35, 10); ctx.lineTo(0, 30); ctx.closePath(); ctx.fill();
+    ctx.translate(x + bodyRock * 1.2, y + breathe);
 
-    const faceGrad = ctx.createRadialGradient(0, -15, 5, 0, -10, 30);
-    faceGrad.addColorStop(0, "#ffdbac"); faceGrad.addColorStop(1, "#f1c27d");
+    const coatGrad = ctx.createLinearGradient(-36, 0, 36, 60);
+    coatGrad.addColorStop(0, '#fff8ee');
+    coatGrad.addColorStop(1, '#d9cec2');
+    ctx.fillStyle = coatGrad;
+    ctx.beginPath(); ctx.roundRect(-38, 0, 76, 64, 14); ctx.fill();
+    ctx.strokeStyle = '#bcae9d'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    ctx.fillStyle = '#b33939';
+    ctx.beginPath(); ctx.moveTo(-38, 12); ctx.lineTo(38, 12); ctx.lineTo(0, 34); ctx.closePath(); ctx.fill();
+
+    const faceGrad = ctx.createRadialGradient(-2, -18, 4, 0, -6, 34);
+    faceGrad.addColorStop(0, '#ffdcb4'); faceGrad.addColorStop(1, '#d6a574');
     ctx.fillStyle = faceGrad;
-    ctx.beginPath(); ctx.arc(0, -10, 28, 0, Math.PI * 2); ctx.fill();
-    
-    ctx.fillStyle = "rgba(255, 100, 100, 0.2)";
-    ctx.beginPath(); ctx.arc(-15, -5, 6, 0, Math.PI * 2); ctx.arc(15, -5, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -8, 30, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath(); ctx.roundRect(-28, -65, 56, 35, 12); ctx.fill();
-    ctx.strokeStyle = "#eee"; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(0, -65, 35, 18, 0, 0, Math.PI * 2); ctx.fill();
-    
-    ctx.fillStyle = "#2d1e12";
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.roundRect(-31, -72, 62, 38, 13); ctx.fill();
+    ctx.strokeStyle = '#ece4d8'; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -72, 37, 19, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#3b2618';
     ctx.beginPath();
-    ctx.moveTo(-18, -2); ctx.quadraticCurveTo(0, 5, 18, -2); ctx.quadraticCurveTo(0, 15, -18, -2); ctx.fill();
-    
-    ctx.fillStyle = "#000";
-    ctx.beginPath(); ctx.arc(-10, -18, 3, 0, Math.PI * 2); ctx.arc(10, -18, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#fff"; 
-    ctx.beginPath(); ctx.arc(-11, -19, 1, 0, Math.PI * 2); ctx.arc(9, -19, 1, 0, Math.PI * 2); ctx.fill();
-    
+    ctx.moveTo(-18, -4); ctx.quadraticCurveTo(0, 8, 18, -4); ctx.quadraticCurveTo(0, 20, -18, -4); ctx.fill();
+
+    ctx.fillStyle = '#241711';
+    ctx.beginPath(); ctx.arc(-11, -20, 3.5, 0, Math.PI * 2); ctx.arc(11, -20, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-12, -21, 1.1, 0, Math.PI * 2); ctx.arc(10, -21, 1.1, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = '#2f1f14';
+    ctx.beginPath();
+    ctx.moveTo(-15, 0); ctx.quadraticCurveTo(0, 8, 15, 0); ctx.quadraticCurveTo(0, 15, -15, 0); ctx.fill();
+
+    ctx.fillStyle = '#f7ede1';
+    for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.roundRect(i * 14 - 4, 20, 8, 24, 2);
+        ctx.fill();
+    }
+
+    // 조리대/팬
+    ctx.fillStyle = 'rgba(48, 32, 22, 0.72)';
+    ctx.beginPath();
+    ctx.roundRect(-84, 56, 168, 18, 8);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(78, 57, 42, 0.78)';
+    ctx.beginPath();
+    ctx.roundRect(-74, 62, 148, 14, 5);
+    ctx.fill();
+
+    ctx.fillStyle = '#2f2f36';
+    ctx.beginPath();
+    ctx.ellipse(52, 56, 25, 11, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(170, 175, 182, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const shoulderY = 16;
+    const leftShoulderX = -30;
+    const rightShoulderX = 30;
+
+    // 왼팔 블록
+    ctx.save();
+    ctx.translate(leftShoulderX, shoulderY);
+    ctx.rotate(leftArmRotation);
+    ctx.strokeStyle = '#f2c79d';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-26, 20 + toolLift * 0.35);
+    ctx.stroke();
+    ctx.fillStyle = '#e6b98d';
+    ctx.beginPath();
+    ctx.arc(-26, 20 + toolLift * 0.35, 5.4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
+
+    // 오른팔/도구 블록
+    let toolTip = { x: 66, y: 40 };
+    ctx.save();
+    ctx.translate(rightShoulderX, shoulderY);
+    ctx.rotate(rightArmRotation);
+    ctx.strokeStyle = '#f5d1ab';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(30, 16 - toolLift * 0.4);
+    ctx.stroke();
+
+    ctx.fillStyle = '#edc59f';
+    ctx.beginPath();
+    ctx.arc(30, 16 - toolLift * 0.4, 5.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 도구 손잡이(주걱/국자)
+    ctx.strokeStyle = '#6d4a35';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(33, 14 - toolLift * 0.4);
+    ctx.lineTo(58, 30 - toolLift);
+    ctx.stroke();
+
+    ctx.fillStyle = '#cfd7dd';
+    ctx.beginPath();
+    ctx.ellipse(62, 33 - toolLift, 8.5, 5.8, 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tipX = 62;
+    const tipY = 33 - toolLift;
+    toolTip = {
+        x: rightShoulderX + tipX * Math.cos(rightArmRotation) - tipY * Math.sin(rightArmRotation),
+        y: shoulderY + tipX * Math.sin(rightArmRotation) + tipY * Math.cos(rightArmRotation)
+    };
+    ctx.restore();
+
+    // 도구 끝 입자(증기/밀가루)
+    const particleCount = 2 + Math.floor((Math.sin(gameTime * 4) + 1) * 1.5);
+    for (let i = 0; i < particleCount; i++) {
+        const swirl = gameTime * 3.4 + i * 1.9;
+        const px = toolTip.x + Math.cos(swirl) * (4 + i * 1.8);
+        const py = toolTip.y - 8 - i * 4 + Math.sin(swirl * 1.2) * 2.2;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.48)' : 'rgba(244,224,198,0.55)';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.4 + (i % 2) * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+function getChefMotionPhase() {
+    const armRaw = Math.sin(gameTime * 6);
+    const easedArm = Math.tanh(armRaw * 1.12) * 0.9;
+    const bodyRock = Math.sin(gameTime * 2.4);
+    const breathe = Math.sin(gameTime * 2) * 2;
+    const toolBounce = 0.5 + 0.5 * Math.sin(gameTime * 6 + 0.4);
+    return {
+        breathe,
+        bodyRock,
+        leftArmRotation: -0.24 + easedArm * 0.12,
+        rightArmRotation: 0.2 - easedArm * 0.18,
+        toolLift: toolBounce * 5
+    };
+}
+
+function drawChefCookingOverlay(anchorX, anchorY, phase) {
+    const { bodyRock, toolLift, leftArmRotation, rightArmRotation } = phase;
+    const bodyShiftX = bodyRock * 1.6;
+
+    ctx.save();
+    ctx.translate(anchorX + bodyShiftX, anchorY);
+
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const shoulderY = 74;
+    const leftShoulderX = 58;
+    const rightShoulderX = 102;
+
+    ctx.strokeStyle = 'rgba(78, 47, 31, 0.65)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(leftShoulderX, shoulderY);
+    ctx.lineTo(rightShoulderX, shoulderY);
+    ctx.stroke();
+
+    // 왼팔
+    ctx.save();
+    ctx.translate(leftShoulderX, shoulderY);
+    ctx.rotate(leftArmRotation);
+    ctx.strokeStyle = 'rgba(255, 226, 198, 0.78)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-25, 28 + toolLift * 0.4);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(242, 199, 157, 0.8)';
+    ctx.beginPath();
+    ctx.arc(-25, 28 + toolLift * 0.4, 5.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 오른팔 + 조리 도구
+    ctx.save();
+    ctx.translate(rightShoulderX, shoulderY);
+    ctx.rotate(rightArmRotation);
+    ctx.strokeStyle = 'rgba(255, 229, 204, 0.82)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(33, 20 - toolLift * 0.5);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(242, 199, 157, 0.85)';
+    ctx.beginPath();
+    ctx.arc(33, 20 - toolLift * 0.5, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(93, 66, 48, 0.9)';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(36, 18 - toolLift * 0.5);
+    ctx.lineTo(62, 37 - toolLift);
+    ctx.stroke();
+
+    // 국자(head)
+    ctx.fillStyle = 'rgba(205, 214, 220, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(66, 40 - toolLift, 10, 7, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 팬/작업대 상호작용 이펙트(증기)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.36)';
+    ctx.lineWidth = 2;
+    const steamDrift = (0.2 - rightArmRotation) * 12;
+    for (let i = 0; i < 3; i++) {
+        const sx = 114 + i * 8 + steamDrift * 0.35;
+        const sy = 112 - i * 6 - toolLift * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(sx + 4 + steamDrift, sy - 8, sx + 1, sy - 16);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.restore();
+}
+
+function drawChef(x, y) {
+    const chefImg = loadedImages.chef;
+    const phase = getChefMotionPhase();
+    if (chefImg) {
+        const { breathe } = phase;
+        const anchorX = x - 80;
+        const anchorY = y - 90 + breathe;
+        ctx.drawImage(chefImg, anchorX, anchorY, 160, 160);
+        drawChefCookingOverlay(anchorX, anchorY, phase);
+        return;
+    }
+    drawChefFallback(x, y);
 }
 
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    ctx.fillStyle = "#1a0f0a"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 2;
-    for(let i=0; i<WIDTH; i+=60) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke();
+    const bgImg = loadedImages.background;
+    if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, WIDTH, HEIGHT);
+    } else {
+        ctx.fillStyle = "#1a0f0a"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 2;
+        for(let i=0; i<WIDTH; i+=60) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke();
+        }
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, WIDTH, 110);
+    const headerTexture = loadedImages.headerTexture;
+    if (headerTexture) {
+        ctx.drawImage(headerTexture, 0, 0, WIDTH, 110);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, WIDTH, 110);
+    } else {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, WIDTH, 110);
+    }
     drawChef(WIDTH/2 - 200, 75);
 
     ctx.fillStyle = "#ff9f43";
     ctx.font = "900 36px Pretendard";
-    ctx.fillText(gold.toLocaleString(), 60, 80);
+    ctx.fillText(gold.toLocaleString(), 60, 86);
     ctx.font = "bold 13px Pretendard";
     ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText("REVENUE COLLECTED", 60, 42);
+    ctx.fillText("REVENUE COLLECTED", 60, 48);
 
-    const tX = WIDTH/2 - 80, tY = 60;
-    ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(tX, tY, 160, 16);
-    const tGrad = ctx.createLinearGradient(tX, 0, tX + 160, 0);
-    tGrad.addColorStop(0, "#ff9f43"); tGrad.addColorStop(1, "#ff6b6b");
-    ctx.fillStyle = tGrad; ctx.fillRect(tX, tY, 160 * (turnTimer/2), 16);
+    const tX = WIDTH / 2 - 80;
+    const tY = 60;
+    const timerFillX = tX + 4;
+    const timerFillY = tY + 11;
+    const timerFillW = 152;
+    const timerFillH = 16;
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.fillRect(timerFillX, timerFillY, timerFillW, timerFillH);
+    const tGrad = ctx.createLinearGradient(timerFillX, 0, timerFillX + timerFillW, 0);
+    tGrad.addColorStop(0, "#ff9f43");
+    tGrad.addColorStop(1, "#ff6b6b");
+    ctx.fillStyle = tGrad;
+    ctx.fillRect(timerFillX, timerFillY, timerFillW * (turnTimer / 2), timerFillH);
+    const timerFrame = loadedImages.timerFrame;
+    if (timerFrame) {
+        ctx.drawImage(timerFrame, tX - 16, tY, 200, 38);
+    } else {
+        ctx.strokeStyle = "rgba(255,220,170,0.5)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(timerFillX - 2, timerFillY - 2, timerFillW + 4, timerFillH + 4);
+    }
 
     ctx.save();
     ctx.shadowBlur = 40; ctx.shadowColor = "rgba(0,0,0,0.6)";
@@ -645,8 +1266,15 @@ function draw() {
     });
 
     effectParticles.forEach(p => {
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = p.life;
+        const particleSprite = generatedSprites.particles[p.kind] || generatedSprites.particles.cheese;
+        const size = p.size * 4;
+        if (particleSprite) {
+            ctx.drawImage(particleSprite, p.x - size / 2, p.y - size / 2, size, size);
+        } else {
+            ctx.fillStyle = p.color; ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        }
     });
     ctx.globalAlpha = 1;
 
@@ -656,71 +1284,221 @@ function draw() {
     if (currentState === GameState.OVER) drawGameOver();
 }
 
-function drawItem(level, x, y, scale) {
+function drawItemFallback(level, x, y, scale) {
     const data = PIZZA_DATA[level - 1]; if (!data) return;
     const cx = x + TILE_SIZE / 2; const cy = y + TILE_SIZE / 2;
-    const r = (TILE_SIZE / 2 - 12) * scale;
-    
+    const r = (TILE_SIZE / 2 - 10) * scale;
+
     ctx.save();
-    ctx.shadowBlur = 12 * scale; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowOffsetY = 6 * scale;
-    const grad = ctx.createRadialGradient(cx - r/3, cy - r/3, r/8, cx, cy, r);
-    grad.addColorStop(0, data.color); grad.addColorStop(1, data.detail);
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 14 * scale; ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowOffsetY = 6 * scale;
+    const boardGrad = ctx.createRadialGradient(cx - r / 4, cy - r / 3, r / 8, cx, cy, r);
+    boardGrad.addColorStop(0, data.color);
+    boardGrad.addColorStop(1, data.detail);
+    ctx.fillStyle = boardGrad;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-    switch(level) {
-        case 1: 
-            ctx.fillStyle = "rgba(255,255,255,0.4)";
-            for(let i=0; i<8; i++) {
-                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.6, cy + Math.sin(i*2)*r*0.5, 2*scale, 0, Math.PI*2); ctx.fill();
-            }
-            break;
-        case 3: 
-            ctx.fillStyle = "rgba(139, 69, 19, 0.2)";
-            for(let i=0; i<4; i++) {
-                ctx.beginPath(); ctx.arc(cx + (i-1.5)*10, cy + (Math.sin(i)*12), 4*scale, 0, Math.PI*2); ctx.fill();
-            }
-            break;
-        case 4: 
-            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1;
-            for(let i=0; i<5; i++) {
-                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.4, cy + Math.sin(i*r)*r*0.4, 3*scale, 0, Math.PI*2); ctx.stroke();
-            }
-            break;
-        case 7: 
-            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
-            ctx.moveTo(cx-r*0.5, cy); ctx.lineTo(cx+r*0.5, cy); ctx.stroke();
-            break;
-        case 10: 
-            const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
-            shine.addColorStop(0, "rgba(255,255,255,0)");
-            shine.addColorStop(0.5, "rgba(255,255,255,0.3)");
-            shine.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.fillStyle = shine; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
-            break;
+    if (level >= 3) {
+        ctx.strokeStyle = '#b7702f';
+        ctx.lineWidth = 4 * scale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 2 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    if (level <= 2) {
+        ctx.fillStyle = level === 1 ? '#f5e4c5' : '#c73d36';
+        ctx.beginPath();
+        ctx.roundRect(cx - 22 * scale, cy - 15 * scale, 44 * scale, 30 * scale, 10 * scale);
+        ctx.fill();
+    }
+
+    if (level >= 3) {
+        const cheeseGrad = ctx.createRadialGradient(cx, cy - 6 * scale, 2, cx, cy, r - 8 * scale);
+        cheeseGrad.addColorStop(0, '#ffe27a');
+        cheeseGrad.addColorStop(1, '#f3b72e');
+        ctx.fillStyle = cheeseGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 7 * scale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (level >= 4) {
+        ctx.fillStyle = '#a3372c';
+        for (let i = 0; i < 5; i++) {
+            const ang = (Math.PI * 2 * i) / 5;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(ang) * r * 0.45, cy + Math.sin(ang) * r * 0.4, 6 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 5) {
+        ctx.fillStyle = '#8b6a52';
+        for (let i = 0; i < 4; i++) {
+            const ang = (Math.PI * 2 * i) / 4 + 0.4;
+            ctx.beginPath();
+            ctx.ellipse(cx + Math.cos(ang) * r * 0.28, cy + Math.sin(ang) * r * 0.3, 5 * scale, 3.5 * scale, ang, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 6) {
+        ctx.fillStyle = '#1f1f24';
+        for (let i = 0; i < 3; i++) {
+            const ang = (Math.PI * 2 * i) / 3 + 0.7;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(ang) * r * 0.22, cy + Math.sin(ang) * r * 0.26, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (level >= 7) {
+        ctx.strokeStyle = '#2f8c43';
+        ctx.lineWidth = 2 * scale;
+        for (let i = 0; i < 4; i++) {
+            const ang = (Math.PI * 2 * i) / 4 + 0.2;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * r * 0.1, cy + Math.sin(ang) * r * 0.1);
+            ctx.quadraticCurveTo(cx + Math.cos(ang + 0.2) * r * 0.25, cy + Math.sin(ang + 0.2) * r * 0.25, cx + Math.cos(ang) * r * 0.45, cy + Math.sin(ang) * r * 0.45);
+            ctx.stroke();
+        }
+    }
+
+    if (level >= 8) {
+        ctx.strokeStyle = 'rgba(255, 136, 62, 0.65)';
+        ctx.lineWidth = 3 * scale;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 12 * scale, Math.PI * 0.2, Math.PI * 0.8);
+        ctx.stroke();
+    }
+
+    if (level >= 9) {
+        ctx.fillStyle = 'rgba(255, 218, 127, 0.35)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 15 * scale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    if (level === 10) {
+        const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
+        shine.addColorStop(0, "rgba(255,255,255,0)");
+        shine.addColorStop(0.5, "rgba(255,255,255,0.32)");
+        shine.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = shine; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
     }
 
     ctx.fillStyle = data.textColor;
-    ctx.font = `900 ${Math.max(8, 9 * scale)}px Pretendard`;
-    ctx.textAlign = "center"; 
-    ctx.fillText(data.name.split(' ')[0], cx, cy + 3 * scale);
+    ctx.font = `900 ${Math.max(8, 8.5 * scale)}px Pretendard`;
+    ctx.textAlign = "center";
+    ctx.fillText(data.name.split(' ')[0], cx, cy + 31 * scale);
+    ctx.restore();
+}
+
+function drawItem(level, x, y, scale) {
+    const itemImg = loadedImages[`item-${level}`];
+    if (itemImg) {
+        const size = 128 * scale;
+        const centerX = x + TILE_SIZE / 2;
+        const centerY = y + TILE_SIZE / 2;
+        ctx.save();
+        ctx.shadowBlur = 12 * scale;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowOffsetY = 6 * scale;
+        ctx.drawImage(itemImg, centerX - size / 2, centerY - size / 2, size, size);
+        ctx.restore();
+        return;
+    }
+    drawItemFallback(level, x, y, scale);
+}
+
+function getCustomerStatusIcon(customer) {
+    if (!customer) return null;
+    if (customer.isLeaving) return 'leave';
+    if (!Array.isArray(customer.requirements) || customer.requirements.length === 0) return null;
+    if (customer.hunger >= 80) return 'warning';
+    return 'ok';
+}
+
+function drawStatusIcon(iconType, x, y) {
+    if (!iconType) return;
+
+    const iconRadius = 13;
+    const centerX = x + iconRadius;
+    const centerY = y + iconRadius;
+    const iconStyleMap = {
+        warning: { bg: '#f39c12', stroke: '#7a4a00', symbol: '#ffffff', text: '!' },
+        leave: { bg: '#e74c3c', stroke: '#6e140c', symbol: '#ffffff', text: '↗' },
+        ok: { bg: '#2ecc71', stroke: '#0b5f2d', symbol: '#ffffff', text: '✓' }
+    };
+
+    const style = iconStyleMap[iconType];
+    if (!style) return;
+
+    ctx.save();
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.fillStyle = style.bg;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, iconRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = style.symbol;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = "bold 14px Pretendard";
+    ctx.fillText(style.text, centerX, centerY + (iconType === 'warning' ? 0.5 : 0));
     ctx.restore();
 }
 
 function drawGameOver() {
-    ctx.fillStyle = "rgba(0,0,0,0.96)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.shadowBlur = 30; ctx.shadowColor = "#ff4757";
-    ctx.fillStyle = "#ff4757"; ctx.font = "900 70px Pretendard"; ctx.textAlign = "center";
-    ctx.fillText("UNDEAD RIOT!", WIDTH / 2, HEIGHT / 2 - 40);
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const frameW = 700;
+    const frameH = 320;
+    const frameX = WIDTH / 2 - frameW / 2;
+    const frameY = HEIGHT / 2 - frameH / 2;
+    const gameoverFrame = loadedImages.gameoverFrame;
+
+    if (gameoverFrame) {
+        ctx.drawImage(gameoverFrame, frameX, frameY, frameW, frameH);
+    } else {
+        ctx.fillStyle = "rgba(45,30,18,0.95)";
+        ctx.beginPath();
+        ctx.roundRect(frameX, frameY, frameW, frameH, 30);
+        ctx.fill();
+        ctx.strokeStyle = "#ff9f43";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+    }
+
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "rgba(255, 71, 87, 0.5)";
+    ctx.fillStyle = "#ff4757";
+    ctx.font = "900 70px Pretendard";
+    ctx.fillText("UNDEAD RIOT!", WIDTH / 2, frameY + 128);
+
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "white"; ctx.font = "20px Pretendard";
-    ctx.fillText(`The hungry horde breached the kitchen!`, WIDTH / 2, HEIGHT / 2 + 20);
-    ctx.fillStyle = "#ff9f43"; ctx.font = "bold 24px Pretendard";
-    ctx.fillText(`KITCHEN REOPENING IN ${Math.ceil(restartCountdown)}s`, WIDTH / 2, HEIGHT / 2 + 90);
+    ctx.fillStyle = "#f8efe2";
+    ctx.font = "20px Pretendard";
+    ctx.fillText("The hungry horde breached the kitchen!", WIDTH / 2, frameY + 196);
+
+    ctx.fillStyle = "#ffb24a";
+    ctx.font = "bold 24px Pretendard";
+    ctx.fillText(`KITCHEN REOPENING IN ${Math.ceil(restartCountdown)}s`, WIDTH / 2, frameY + 256);
 }
 
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
-resetGame(); requestAnimationFrame(loop);
+
+window.addEventListener('resize', setupCanvasResolution);
+loadAssets();
 
 </script>
 </body>
