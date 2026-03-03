@@ -57,6 +57,43 @@
 
     let mode = RUNNING, gameOverHold = 0, countdown = 7;
 
+    const THEME = {
+      bg: '#05070f',
+      dangerLine: 'rgba(255,86,86,.26)',
+      aimLine: 'rgba(130,190,255,.35)',
+      player: {
+        nose: '#d9f7ff',
+        wing: '#39bdf8',
+        outline: '#91e8ff',
+        cockpit: '#eaf9ff',
+        wingLine: '#184f76',
+        engineGlow: 'rgba(96,212,255,.38)',
+        engineCore: 'rgba(194,245,255,.9)',
+        shield: 'rgba(133,201,255,.85)',
+        shieldInner: 'rgba(85,163,255,.32)'
+      },
+      enemy: {
+        top: '#9bb8ff',
+        topFlash: '#fff4ad',
+        cockpit: '#1a2342',
+        cockpitFlash: '#334f92',
+        engine: '#25325a',
+        engineFlash: '#5268a8',
+        pod: '#708ed8',
+        podFlash: '#b9d0ff',
+        glow: '#ff6a7f',
+        glowFlash: '#ffe1e1',
+        outline: 'rgba(93,119,196,.8)',
+        outlineFlash: 'rgba(255,243,184,.95)',
+        hpBg: 'rgba(6,10,22,.88)',
+        hpFg: '#7affb0'
+      },
+      bullets: {
+        player: '#7cd8ff',
+        enemy: '#ff7373'
+      }
+    };
+
     let audioCtx = null, masterGain = null, audioReady = false;
 
     function initAudio() {
@@ -266,9 +303,119 @@
       }
     }
 
+    function drawPlayer(ctx, p, now) {
+      const inv = now < p.invulnUntil;
+      const blinkOff = inv && Math.floor(now * 16) % 2 !== 0;
+      if (blinkOff) return;
+
+      const bodyGrad = ctx.createLinearGradient(p.x, p.y - 18, p.x, p.y + 16);
+      bodyGrad.addColorStop(0, THEME.player.nose);
+      bodyGrad.addColorStop(0.55, '#79deff');
+      bodyGrad.addColorStop(1, THEME.player.wing);
+
+      ctx.fillStyle = THEME.player.engineGlow;
+      ctx.beginPath();
+      ctx.arc(p.x - 7, p.y + 14, 6, 0, Math.PI * 2);
+      ctx.arc(p.x + 7, p.y + 14, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y + 18);
+      ctx.lineTo(p.x - 7, p.y + 27);
+      ctx.lineTo(p.x + 7, p.y + 27);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - 16);
+      ctx.lineTo(p.x - 14, p.y + 14);
+      ctx.lineTo(p.x + 14, p.y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = THEME.player.outline;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      ctx.strokeStyle = THEME.player.wingLine;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - 8);
+      ctx.lineTo(p.x - 9, p.y + 11);
+      ctx.moveTo(p.x, p.y - 8);
+      ctx.lineTo(p.x + 9, p.y + 11);
+      ctx.stroke();
+
+      ctx.fillStyle = THEME.player.cockpit;
+      ctx.fillRect(p.x - 3, p.y - 5, 6, 9);
+      ctx.fillStyle = THEME.player.engineCore;
+      ctx.fillRect(p.x - 6, p.y + 13, 4, 2.6);
+      ctx.fillRect(p.x + 2, p.y + 13, 4, 2.6);
+
+      if (inv && Math.floor(now * 12) % 2 === 0) {
+        ctx.strokeStyle = THEME.player.shield;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 21, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = THEME.player.shieldInner;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 17.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function drawEnemy(ctx, e, formationY) {
+      if (!e.alive) return;
+      const ex = e.x, ey = e.y + formationY;
+      const flash = Math.min(1, e.flash);
+      const topColor = flash > 0 ? THEME.enemy.topFlash : THEME.enemy.top;
+      const cockpitColor = flash > 0 ? THEME.enemy.cockpitFlash : THEME.enemy.cockpit;
+      const engineColor = flash > 0 ? THEME.enemy.engineFlash : THEME.enemy.engine;
+      const podColor = flash > 0 ? THEME.enemy.podFlash : THEME.enemy.pod;
+      const glowColor = flash > 0 ? THEME.enemy.glowFlash : THEME.enemy.glow;
+
+      ctx.fillStyle = topColor;
+      ctx.beginPath();
+      ctx.moveTo(ex - 16, ey - 8);
+      ctx.lineTo(ex, ey - 12);
+      ctx.lineTo(ex + 16, ey - 8);
+      ctx.lineTo(ex + 13, ey + 1);
+      ctx.lineTo(ex - 13, ey + 1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = cockpitColor;
+      ctx.fillRect(ex - 8, ey - 2, 16, 7);
+      ctx.fillStyle = engineColor;
+      ctx.fillRect(ex - 11, ey + 5, 22, 6);
+
+      ctx.fillStyle = podColor;
+      ctx.fillRect(ex - 18, ey + 2, 5, 8);
+      ctx.fillRect(ex + 13, ey + 2, 5, 8);
+
+      ctx.fillStyle = glowColor;
+      ctx.fillRect(ex - 15, ey + 9, 4, 3.5);
+      ctx.fillRect(ex + 11, ey + 9, 4, 3.5);
+      ctx.beginPath();
+      ctx.arc(ex - 15.5, ey + 1.5, 1.5, 0, Math.PI * 2);
+      ctx.arc(ex + 15.5, ey + 1.5, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = flash > 0 ? THEME.enemy.outlineFlash : THEME.enemy.outline;
+      ctx.lineWidth = 1.1 + flash * 1.2;
+      ctx.strokeRect(ex - 16.5, ey - 12.5, 33, 24);
+
+      const bw = 28, hpW = bw * (e.hp / e.maxHp);
+      ctx.fillStyle = THEME.enemy.hpBg;
+      ctx.fillRect(ex - bw / 2, ey - 18, bw, 4);
+      ctx.fillStyle = THEME.enemy.hpFg;
+      ctx.fillRect(ex - bw / 2, ey - 18, hpW, 4);
+    }
+
     function draw(now) {
       x.clearRect(0, 0, w, h);
-      x.fillStyle = '#05070f'; x.fillRect(0, 0, w, h);
+      x.fillStyle = THEME.bg; x.fillRect(0, 0, w, h);
 
       for (const s of stars) {
         s.t += .01 * s.z;
@@ -278,38 +425,18 @@
         x.fillRect(px, py, r, r);
       }
 
-      x.strokeStyle = 'rgba(255,86,86,.26)'; x.beginPath(); x.moveTo(0, dangerY); x.lineTo(w, dangerY); x.stroke();
+      x.strokeStyle = THEME.dangerLine; x.beginPath(); x.moveTo(0, dangerY); x.lineTo(w, dangerY); x.stroke();
 
       if (target) {
-        x.strokeStyle = 'rgba(130,190,255,.35)'; x.setLineDash([6, 7]);
+        x.strokeStyle = THEME.aimLine; x.setLineDash([6, 7]);
         x.beginPath(); x.moveTo(player.x, player.y - 10); x.lineTo(target.x, target.y + formation.y); x.stroke(); x.setLineDash([]);
       }
 
-      for (const b of pBullets) { x.fillStyle = '#7cd8ff'; x.fillRect(b.x - 2, b.y - 6, 4, 8); }
-      for (const b of eBullets) { x.fillStyle = '#ff7373'; x.fillRect(b.x - 2, b.y - 2, 4, 8); }
+      for (const b of pBullets) { x.fillStyle = THEME.bullets.player; x.fillRect(b.x - 2, b.y - 6, 4, 8); }
+      for (const b of eBullets) { x.fillStyle = THEME.bullets.enemy; x.fillRect(b.x - 2, b.y - 2, 4, 8); }
 
-      for (const e of enemies) if (e.alive) {
-        const ex = e.x, ey = e.y + formation.y;
-        x.fillStyle = e.flash ? '#fff4ad' : '#9bb8ff';
-        x.fillRect(ex - 16, ey - 10, 32, 20);
-        x.fillStyle = '#192138';
-        x.fillRect(ex - 9, ey - 2, 18, 7);
-        x.fillStyle = '#ff6a7f'; x.fillRect(ex - 14, ey + 8, 6, 4); x.fillRect(ex + 8, ey + 8, 6, 4);
-        const bw = 28, hpW = bw * (e.hp / e.maxHp);
-        x.fillStyle = 'rgba(0,0,0,.5)'; x.fillRect(ex - bw / 2, ey - 18, bw, 4);
-        x.fillStyle = '#72f7a6'; x.fillRect(ex - bw / 2, ey - 18, hpW, 4);
-      }
-
-      const inv = now < player.invulnUntil;
-      if (!inv || Math.floor(now * 16) % 2 === 0) {
-        x.fillStyle = '#5ad2ff';
-        x.beginPath();
-        x.moveTo(player.x, player.y - 16);
-        x.lineTo(player.x - 14, player.y + 14);
-        x.lineTo(player.x + 14, player.y + 14);
-        x.closePath(); x.fill();
-        x.fillStyle = '#d9f4ff'; x.fillRect(player.x - 3, player.y - 4, 6, 8);
-      }
+      for (const e of enemies) drawEnemy(x, e, formation.y);
+      drawPlayer(x, player, now);
 
       hud.textContent = `Score ${score}   Lives ${player.lives}   Wave ${wave}   Target ${target ? `HP:${target.hp}` : '-'}`;
     }
