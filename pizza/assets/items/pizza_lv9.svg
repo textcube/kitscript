@@ -1,6 +1,12 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'>
+  <defs>
+    <radialGradient id='g9' cx='50%' cy='40%' r='68%'>
+      <stop offset='0%' stop-color='#ffe27a'/>
+      <stop offset='100%' stop-color='#d69a2e'/>
+    </radialGradient>
+  </defs>
   <rect width='128' height='128' fill='none'/>
-  <circle cx='64' cy='64' r='54' fill='#ff9f43' stroke='#3e2723' stroke-width='4'/>
-  <circle cx='64' cy='64' r='42' fill='none' stroke='#ff6b6b' stroke-width='4' opacity='0.7'/>
-  <text x='64' y='70' text-anchor='middle' font-size='30' font-family='Arial' fill='#fff' font-weight='700'>9</text>
+  <circle cx='64' cy='64' r='52' fill='url(#g9)' stroke='#6d4c41' stroke-width='5'/>
+  <circle cx='64' cy='64' r='45' fill='none' stroke='#fff2b2' stroke-width='3' opacity='0.7'/>
+  <path d='M28 66c11-7 22-7 33 0s22 7 33 0' fill='none' stroke='#fff7d6' stroke-width='3' opacity='0.7' stroke-linecap='round'/>
 </svg>

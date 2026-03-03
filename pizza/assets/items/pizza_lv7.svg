@@ -1,6 +1,9 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'>
   <rect width='128' height='128' fill='none'/>
-  <circle cx='64' cy='64' r='54' fill='#ff9f43' stroke='#3e2723' stroke-width='4'/>
-  <circle cx='64' cy='64' r='42' fill='none' stroke='#ff6b6b' stroke-width='4' opacity='0.7'/>
-  <text x='64' y='70' text-anchor='middle' font-size='30' font-family='Arial' fill='#fff' font-weight='700'>7</text>
+  <circle cx='64' cy='64' r='50' fill='#e7c08b' stroke='#6d4c41' stroke-width='4'/>
+  <circle cx='64' cy='64' r='40' fill='#d8433e'/>
+  <circle cx='64' cy='64' r='34' fill='#f5cd4e'/>
+  <path d='M45 58c6-10 15-6 18 2-8 4-14 2-18-2z' fill='#2e7d32'/>
+  <path d='M68 47c7-9 14-5 17 2-8 4-13 2-17-2z' fill='#2e7d32'/>
+  <path d='M72 78c6-10 15-6 18 2-8 4-14 2-18-2z' fill='#2e7d32'/>
 </svg>
