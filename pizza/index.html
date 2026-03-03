@@ -619,8 +619,7 @@ class Customer {
             drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
         });
 
-        const statusIcon = getCustomerStatusIcon(this);
-        if (statusIcon) drawStatusIcon(statusIcon, sX - 30, sY + 6);
+        return getCustomerStatusIcon(this);
     }
 
     draw() {
@@ -661,7 +660,8 @@ class Customer {
             const sX = this.x + 75;
             const sY = this.y + 15;
             ctx.save();
-            this.drawOrderSheet(sX, sY);
+            const statusIcon = this.drawOrderSheet(sX, sY);
+            if (statusIcon) drawStatusIcon(statusIcon, sX - 30, sY + 6);
             ctx.restore();
         }
     }
@@ -1076,6 +1076,50 @@ function drawItem(level, x, y, scale) {
         return;
     }
     drawItemFallback(level, x, y, scale);
+}
+
+function getCustomerStatusIcon(customer) {
+    if (!customer) return null;
+    if (customer.isLeaving) return 'leave';
+    if (!Array.isArray(customer.requirements) || customer.requirements.length === 0) return null;
+    if (customer.hunger >= 80) return 'warning';
+    return 'ok';
+}
+
+function drawStatusIcon(iconType, x, y) {
+    if (!iconType) return;
+
+    const iconRadius = 13;
+    const centerX = x + iconRadius;
+    const centerY = y + iconRadius;
+    const iconStyleMap = {
+        warning: { bg: '#f39c12', stroke: '#7a4a00', symbol: '#ffffff', text: '!' },
+        leave: { bg: '#e74c3c', stroke: '#6e140c', symbol: '#ffffff', text: '↗' },
+        ok: { bg: '#2ecc71', stroke: '#0b5f2d', symbol: '#ffffff', text: '✓' }
+    };
+
+    const style = iconStyleMap[iconType];
+    if (!style) return;
+
+    ctx.save();
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.fillStyle = style.bg;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, iconRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = style.stroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = style.symbol;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = "bold 14px Pretendard";
+    ctx.fillText(style.text, centerX, centerY + (iconType === 'warning' ? 0.5 : 0));
+    ctx.restore();
 }
 
 function drawGameOver() {
