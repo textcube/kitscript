@@ -529,7 +529,7 @@
                 const isLocked = state.level < m.reqLevel;
                 const btn = document.createElement('a'); btn.className = `module-btn ${isLocked ? 'locked' : ''}`;
                 btn.innerHTML = isLocked ? `🔒 LV.${m.reqLevel}` : m.label;
-                btn.href = isLocked ? '#' : `https://kitscirpt.com/game/${m.label.toLowerCase()}`;
+                btn.href = isLocked ? '#' : `https://kitscript.com/game/${m.label.toLowerCase()}`;
                 if (m.side === 'left') leftCont.appendChild(btn); else rightCont.appendChild(btn);
             });
         }
