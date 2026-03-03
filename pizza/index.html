@@ -155,6 +155,45 @@ const PIZZA_DATA = [
     { level: 10, name: "Oksu Masterpiece", color: "#ff9f43", detail: "#e67e22", textColor: "#ffffff" }
 ];
 
+const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
+const imageAssets = {
+    items: Array.from({ length: 10 }, (_, i) => `assets/items/pizza_lv${i + 1}.svg`),
+    customers: {
+        waiting: 'assets/customers/zombie_waiting.svg',
+        angry: 'assets/customers/zombie_angry.svg',
+        satisfied: 'assets/customers/zombie_satisfied.svg',
+        leaving: 'assets/customers/zombie_leaving.svg'
+    },
+    chef: 'assets/chef/chef_main.svg',
+    order: 'assets/ui/order_ticket_2x.svg',
+    effect: 'assets/effects/spark_128.svg',
+    background: 'assets/bg/shop_bg_1920x1280.svg'
+};
+
+const loadedImages = {};
+function loadImageAsset(key, src) {
+    const img = new Image();
+    img.onload = () => { loadedImages[key] = img; };
+    img.onerror = () => { loadedImages[key] = null; };
+    img.src = src;
+}
+
+function initImageAssets() {
+    imageAssets.items.forEach((src, idx) => loadImageAsset(`item-${idx + 1}`, src));
+    Object.entries(imageAssets.customers).forEach(([state, src]) => loadImageAsset(`customer-${state}`, src));
+    loadImageAsset('chef', imageAssets.chef);
+    loadImageAsset('order', imageAssets.order);
+    loadImageAsset('effect', imageAssets.effect);
+    loadImageAsset('background', imageAssets.background);
+}
+
+function getCustomerSpriteState(customer) {
+    if (customer.isLeaving) return 'leaving';
+    if (customer.requirements.length === 0) return 'satisfied';
+    if (customer.hunger > 70) return 'angry';
+    return 'waiting';
+}
+
 const GameState = { PLAYING: 1, OVER: 2 };
 let currentState = GameState.PLAYING;
 let gold = 0;
@@ -267,37 +306,31 @@ class Customer {
         }
     }
 
-    draw() {
+    drawFallback() {
         const zX = this.x + 35;
         const zY = this.y + 45;
-        // 퇴장할 때는 더 활기차게 바운싱
         const bobFreq = this.isLeaving ? 12 : 3;
         const bobAmp = this.isLeaving ? 8 : 3;
         const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
-        
+
         ctx.save();
-        // 좀비 그림자
         ctx.fillStyle = "rgba(0,0,0,0.3)";
         ctx.beginPath(); ctx.ellipse(zX, zY + 60, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
 
-        // 좀비 팔
         ctx.fillStyle = `hsl(${this.zombieHue}, 30%, 30%)`;
         const armX = this.isLeaving ? zX - 10 : zX - 30;
         ctx.fillRect(armX, zY + 20 + bob, 40, 15);
 
-        // 몸통
         ctx.fillStyle = `hsl(${this.zombieHue}, 25%, 20%)`;
         ctx.beginPath();
         ctx.ellipse(zX, zY + 35 + bob, 28, 45, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // 머리
+
         ctx.fillStyle = `hsl(${this.zombieHue}, 40%, 45%)`;
         ctx.beginPath();
         ctx.arc(zX, zY + bob, 24, 0, Math.PI * 2);
         ctx.fill();
 
-        // 눈
         const eyeColor = this.isLeaving ? '#ffffff' : (this.hunger > 70 ? '#ff3e3e' : '#d1ff3e');
         ctx.shadowBlur = (!this.isLeaving && this.hunger > 80) ? 15 : 0;
         ctx.shadowColor = eyeColor;
@@ -308,29 +341,28 @@ class Customer {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 입
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
         if (this.isLeaving) {
-            // 웃는 입
             ctx.arc(zX, zY + 10 + bob, 8, 0, Math.PI);
         } else {
             ctx.ellipse(zX, zY + 12 + bob, 10, 4 + (this.hunger/20), 0, 0, Math.PI * 2);
         }
         ctx.fill();
         ctx.restore();
+    }
 
-        // 주문서 (퇴장 중이 아닐 때만 그림)
-        if (!this.isLeaving) {
-            const sX = this.x + 75;
-            const sY = this.y + 15;
-            ctx.save();
+    drawOrderSheet(sX, sY) {
+        const orderImg = loadedImages.order;
+        if (orderImg) {
+            ctx.drawImage(orderImg, sX, sY, 160, 95);
+        } else {
             const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
             paperGrad.addColorStop(0, '#f8efba');
             paperGrad.addColorStop(1, '#e1d49a');
             ctx.fillStyle = paperGrad;
             ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.4)";
-            
+
             ctx.beginPath();
             ctx.moveTo(sX, sY);
             ctx.lineTo(sX + 160, sY);
@@ -340,27 +372,51 @@ class Customer {
             }
             ctx.closePath();
             ctx.fill();
-            
+
             ctx.strokeStyle = "rgba(93, 64, 55, 0.1)";
             ctx.lineWidth = 1;
             for(let i=sY+35; i<sY+80; i+=12) {
                 ctx.beginPath(); ctx.moveTo(sX + 15, i); ctx.lineTo(sX + 145, i); ctx.stroke();
             }
+        }
 
-            ctx.fillStyle = "rgba(0,0,0,0.1)";
-            ctx.fillRect(sX + 15, sY + 80, 130, 6);
-            const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
-            ctx.fillStyle = barColor;
-            ctx.fillRect(sX + 15, sY + 80, 130 * (this.hunger / 100), 6);
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.fillRect(sX + 15, sY + 80, 130, 6);
+        const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
+        ctx.fillStyle = barColor;
+        ctx.fillRect(sX + 15, sY + 80, 130 * (this.hunger / 100), 6);
 
-            ctx.fillStyle = "#5d4037";
-            ctx.font = "bold 11px Pretendard";
-            ctx.fillText(`ORDER #${Math.floor(this.orderSeed)}`, sX + 15, sY + 22);
-            
-            this.requirements.forEach((level, idx) => {
-                const offsetX = idx * 55;
-                drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
-            });
+        ctx.fillStyle = "#5d4037";
+        ctx.font = "bold 11px Pretendard";
+        ctx.fillText(`ORDER #${Math.floor(this.orderSeed)}`, sX + 15, sY + 22);
+
+        this.requirements.forEach((level, idx) => {
+            const offsetX = idx * 55;
+            drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
+        });
+    }
+
+    draw() {
+        const state = getCustomerSpriteState(this);
+        const customerImg = loadedImages[`customer-${state}`];
+        if (customerImg) {
+            const bobFreq = this.isLeaving ? 12 : 3;
+            const bobAmp = this.isLeaving ? 8 : 3;
+            const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
+            const drawX = this.x - 45;
+            const drawY = this.y - 20 + bob;
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath(); ctx.ellipse(this.x + 35, this.y + 105, 28, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.drawImage(customerImg, drawX, drawY, 160, 160);
+        } else {
+            this.drawFallback();
+        }
+
+        if (!this.isLeaving) {
+            const sX = this.x + 75;
+            const sY = this.y + 15;
+            ctx.save();
+            this.drawOrderSheet(sX, sY);
             ctx.restore();
         }
     }
@@ -562,7 +618,7 @@ function update(time) {
 
 // --- Drawing Systems ---
 
-function drawChef(x, y) {
+function drawChefFallback(x, y) {
     const breathe = Math.sin(gameTime * 2) * 2;
     ctx.save();
     ctx.translate(x, y + breathe);
@@ -599,13 +655,28 @@ function drawChef(x, y) {
     ctx.restore();
 }
 
+function drawChef(x, y) {
+    const chefImg = loadedImages.chef;
+    if (chefImg) {
+        const breathe = Math.sin(gameTime * 2) * 2;
+        ctx.drawImage(chefImg, x - 80, y - 90 + breathe, 160, 160);
+        return;
+    }
+    drawChefFallback(x, y);
+}
+
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    ctx.fillStyle = "#1a0f0a"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 2;
-    for(let i=0; i<WIDTH; i+=60) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke();
+    const bgImg = loadedImages.background;
+    if (bgImg) {
+        ctx.drawImage(bgImg, 0, 0, WIDTH, HEIGHT);
+    } else {
+        ctx.fillStyle = "#1a0f0a"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 2;
+        for(let i=0; i<WIDTH; i+=60) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke();
+        }
     }
 
     ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, WIDTH, 110);
@@ -645,8 +716,15 @@ function draw() {
     });
 
     effectParticles.forEach(p => {
-        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = p.life;
+        const effectImg = loadedImages.effect;
+        if (effectImg) {
+            const size = p.size * 4;
+            ctx.drawImage(effectImg, p.x - size / 2, p.y - size / 2, size, size);
+        } else {
+            ctx.fillStyle = p.color; ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        }
     });
     ctx.globalAlpha = 1;
 
@@ -656,11 +734,11 @@ function draw() {
     if (currentState === GameState.OVER) drawGameOver();
 }
 
-function drawItem(level, x, y, scale) {
+function drawItemFallback(level, x, y, scale) {
     const data = PIZZA_DATA[level - 1]; if (!data) return;
     const cx = x + TILE_SIZE / 2; const cy = y + TILE_SIZE / 2;
     const r = (TILE_SIZE / 2 - 12) * scale;
-    
+
     ctx.save();
     ctx.shadowBlur = 12 * scale; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowOffsetY = 6 * scale;
     const grad = ctx.createRadialGradient(cx - r/3, cy - r/3, r/8, cx, cy, r);
@@ -669,29 +747,29 @@ function drawItem(level, x, y, scale) {
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
     switch(level) {
-        case 1: 
+        case 1:
             ctx.fillStyle = "rgba(255,255,255,0.4)";
             for(let i=0; i<8; i++) {
                 ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.6, cy + Math.sin(i*2)*r*0.5, 2*scale, 0, Math.PI*2); ctx.fill();
             }
             break;
-        case 3: 
+        case 3:
             ctx.fillStyle = "rgba(139, 69, 19, 0.2)";
             for(let i=0; i<4; i++) {
                 ctx.beginPath(); ctx.arc(cx + (i-1.5)*10, cy + (Math.sin(i)*12), 4*scale, 0, Math.PI*2); ctx.fill();
             }
             break;
-        case 4: 
+        case 4:
             ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1;
             for(let i=0; i<5; i++) {
                 ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.4, cy + Math.sin(i*r)*r*0.4, 3*scale, 0, Math.PI*2); ctx.stroke();
             }
             break;
-        case 7: 
+        case 7:
             ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
             ctx.moveTo(cx-r*0.5, cy); ctx.lineTo(cx+r*0.5, cy); ctx.stroke();
             break;
-        case 10: 
+        case 10:
             const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
             shine.addColorStop(0, "rgba(255,255,255,0)");
             shine.addColorStop(0.5, "rgba(255,255,255,0.3)");
@@ -702,9 +780,26 @@ function drawItem(level, x, y, scale) {
 
     ctx.fillStyle = data.textColor;
     ctx.font = `900 ${Math.max(8, 9 * scale)}px Pretendard`;
-    ctx.textAlign = "center"; 
+    ctx.textAlign = "center";
     ctx.fillText(data.name.split(' ')[0], cx, cy + 3 * scale);
     ctx.restore();
+}
+
+function drawItem(level, x, y, scale) {
+    const itemImg = loadedImages[`item-${level}`];
+    if (itemImg) {
+        const size = 128 * scale;
+        const centerX = x + TILE_SIZE / 2;
+        const centerY = y + TILE_SIZE / 2;
+        ctx.save();
+        ctx.shadowBlur = 12 * scale;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowOffsetY = 6 * scale;
+        ctx.drawImage(itemImg, centerX - size / 2, centerY - size / 2, size, size);
+        ctx.restore();
+        return;
+    }
+    drawItemFallback(level, x, y, scale);
 }
 
 function drawGameOver() {
@@ -720,6 +815,7 @@ function drawGameOver() {
 }
 
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
+initImageAssets();
 resetGame(); requestAnimationFrame(loop);
 
 </script>

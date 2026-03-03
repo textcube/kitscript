@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1280' viewBox='0 0 1920 1280'>
+  <rect width='1920' height='1280' fill='#1a0f0a'/>
+  <g stroke='#2d1e12' stroke-width='2'>
+    <line x1='64' y1='0' x2='64' y2='1280'/><line x1='128' y1='0' x2='128' y2='1280'/><line x1='192' y1='0' x2='192' y2='1280'/><line x1='256' y1='0' x2='256' y2='1280'/>
+  </g>
+</svg>

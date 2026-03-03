@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+  <ellipse cx='80' cy='58' rx='38' ry='38' fill='#7a8f5a' stroke='#2d1e12' stroke-width='4'/>
+  <rect x='50' y='90' width='60' height='54' rx='10' fill='#432e1e' stroke='#2d1e12' stroke-width='4'/>
+  <circle cx='66' cy='56' r='6' fill='#d1ff3e'/><circle cx='94' cy='56' r='6' fill='#d1ff3e'/>
+  <text x='80' y='22' text-anchor='middle' font-size='14' fill='#ff6b6b' font-family='Arial'>angry</text>
+</svg>
