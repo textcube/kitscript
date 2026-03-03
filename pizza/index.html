@@ -986,11 +986,106 @@ function drawChefFallback(x, y) {
     ctx.restore();
 }
 
+function drawChefCookingOverlay(anchorX, anchorY, phase) {
+    const { bodyRock, stir, toolBounce } = phase;
+    const bodyShiftX = bodyRock * 1.6;
+    const armRotation = stir * (Math.PI / 180) * 10;
+    const toolLift = toolBounce * 5;
+
+    ctx.save();
+    ctx.translate(anchorX + bodyShiftX, anchorY);
+
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const shoulderY = 74;
+    const leftShoulderX = 58;
+    const rightShoulderX = 102;
+
+    ctx.strokeStyle = 'rgba(78, 47, 31, 0.65)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(leftShoulderX, shoulderY);
+    ctx.lineTo(rightShoulderX, shoulderY);
+    ctx.stroke();
+
+    // 왼팔
+    ctx.save();
+    ctx.translate(leftShoulderX, shoulderY);
+    ctx.rotate(-0.22 + armRotation * 0.85);
+    ctx.strokeStyle = 'rgba(255, 226, 198, 0.78)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-25, 28 + toolLift * 0.4);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(242, 199, 157, 0.8)';
+    ctx.beginPath();
+    ctx.arc(-25, 28 + toolLift * 0.4, 5.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 오른팔 + 조리 도구
+    ctx.save();
+    ctx.translate(rightShoulderX, shoulderY);
+    ctx.rotate(0.18 - armRotation);
+    ctx.strokeStyle = 'rgba(255, 229, 204, 0.82)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(33, 20 - toolLift * 0.5);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(242, 199, 157, 0.85)';
+    ctx.beginPath();
+    ctx.arc(33, 20 - toolLift * 0.5, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(93, 66, 48, 0.9)';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(36, 18 - toolLift * 0.5);
+    ctx.lineTo(62, 37 - toolLift);
+    ctx.stroke();
+
+    // 국자(head)
+    ctx.fillStyle = 'rgba(205, 214, 220, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(66, 40 - toolLift, 10, 7, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 팬/작업대 상호작용 이펙트(증기)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.36)';
+    ctx.lineWidth = 2;
+    const steamDrift = stir * 2.2;
+    for (let i = 0; i < 3; i++) {
+        const sx = 114 + i * 8 + steamDrift * 0.35;
+        const sy = 112 - i * 6 - toolLift * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(sx + 4 + steamDrift, sy - 8, sx + 1, sy - 16);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+    ctx.restore();
+}
+
 function drawChef(x, y) {
     const chefImg = loadedImages.chef;
     if (chefImg) {
         const breathe = Math.sin(gameTime * 2) * 2;
-        ctx.drawImage(chefImg, x - 80, y - 90 + breathe, 160, 160);
+        const anchorX = x - 80;
+        const anchorY = y - 90 + breathe;
+        const phase = {
+            stir: Math.sin(gameTime * 6),
+            bodyRock: Math.sin(gameTime * 2.5),
+            toolBounce: Math.max(0, Math.sin(gameTime * 6))
+        };
+        ctx.drawImage(chefImg, anchorX, anchorY, 160, 160);
+        drawChefCookingOverlay(anchorX, anchorY, phase);
         return;
     }
     drawChefFallback(x, y);
