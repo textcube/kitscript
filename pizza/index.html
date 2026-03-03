@@ -724,11 +724,12 @@ class Customer {
         }
 
         if (!this.isLeaving) {
-            const sX = this.x + 75;
+            const orderOffsetX = 108;
+            const sX = this.x + orderOffsetX;
             const sY = this.y + 15;
             ctx.save();
             const statusIcon = this.drawOrderSheet(sX, sY);
-            if (statusIcon) drawStatusIcon(statusIcon, sX - 30, sY + 6);
+            if (statusIcon) drawStatusIcon(statusIcon, sX - 22, sY + 6);
             ctx.restore();
         }
     }
