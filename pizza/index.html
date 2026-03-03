@@ -501,7 +501,7 @@ document.getElementById('soundToggle').addEventListener('click', (e) => {
 class Customer {
     constructor() {
         this.id = Date.now() + Math.random();
-        this.x = WIDTH - 260;
+        this.x = WIDTH - 300;
         this.y = 120 + (this.getQueueCount() * 125);
         this.targetY = this.y;
         this.hunger = 0;
@@ -724,7 +724,7 @@ class Customer {
         }
 
         if (!this.isLeaving) {
-            const orderOffsetX = 108;
+            const orderOffsetX = 90;
             const sX = this.x + orderOffsetX;
             const sY = this.y + 15;
             ctx.save();
@@ -1023,10 +1023,10 @@ function draw() {
 
     ctx.fillStyle = "#ff9f43";
     ctx.font = "900 36px Pretendard";
-    ctx.fillText(gold.toLocaleString(), 60, 80);
+    ctx.fillText(gold.toLocaleString(), 60, 86);
     ctx.font = "bold 13px Pretendard";
     ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText("REVENUE COLLECTED", 60, 42);
+    ctx.fillText("REVENUE COLLECTED", 60, 48);
 
     const tX = WIDTH / 2 - 80;
     const tY = 60;
