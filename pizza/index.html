@@ -939,9 +939,10 @@ function update(time) {
 // --- Drawing Systems ---
 
 function drawChefFallback(x, y) {
-    const breathe = Math.sin(gameTime * 2) * 2;
+    const phase = getChefMotionPhase();
+    const { breathe, leftArmRotation, rightArmRotation, toolLift, bodyRock } = phase;
     ctx.save();
-    ctx.translate(x, y + breathe);
+    ctx.translate(x + bodyRock * 1.2, y + breathe);
 
     const coatGrad = ctx.createLinearGradient(-36, 0, 36, 60);
     coatGrad.addColorStop(0, '#fff8ee');
@@ -982,15 +983,118 @@ function drawChefFallback(x, y) {
         ctx.roundRect(i * 14 - 4, 20, 8, 24, 2);
         ctx.fill();
     }
-    
+
+    // 조리대/팬
+    ctx.fillStyle = 'rgba(48, 32, 22, 0.72)';
+    ctx.beginPath();
+    ctx.roundRect(-84, 56, 168, 18, 8);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(78, 57, 42, 0.78)';
+    ctx.beginPath();
+    ctx.roundRect(-74, 62, 148, 14, 5);
+    ctx.fill();
+
+    ctx.fillStyle = '#2f2f36';
+    ctx.beginPath();
+    ctx.ellipse(52, 56, 25, 11, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(170, 175, 182, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const shoulderY = 16;
+    const leftShoulderX = -30;
+    const rightShoulderX = 30;
+
+    // 왼팔 블록
+    ctx.save();
+    ctx.translate(leftShoulderX, shoulderY);
+    ctx.rotate(leftArmRotation);
+    ctx.strokeStyle = '#f2c79d';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-26, 20 + toolLift * 0.35);
+    ctx.stroke();
+    ctx.fillStyle = '#e6b98d';
+    ctx.beginPath();
+    ctx.arc(-26, 20 + toolLift * 0.35, 5.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 오른팔/도구 블록
+    let toolTip = { x: 66, y: 40 };
+    ctx.save();
+    ctx.translate(rightShoulderX, shoulderY);
+    ctx.rotate(rightArmRotation);
+    ctx.strokeStyle = '#f5d1ab';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(30, 16 - toolLift * 0.4);
+    ctx.stroke();
+
+    ctx.fillStyle = '#edc59f';
+    ctx.beginPath();
+    ctx.arc(30, 16 - toolLift * 0.4, 5.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 도구 손잡이(주걱/국자)
+    ctx.strokeStyle = '#6d4a35';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(33, 14 - toolLift * 0.4);
+    ctx.lineTo(58, 30 - toolLift);
+    ctx.stroke();
+
+    ctx.fillStyle = '#cfd7dd';
+    ctx.beginPath();
+    ctx.ellipse(62, 33 - toolLift, 8.5, 5.8, 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tipX = 62;
+    const tipY = 33 - toolLift;
+    toolTip = {
+        x: rightShoulderX + tipX * Math.cos(rightArmRotation) - tipY * Math.sin(rightArmRotation),
+        y: shoulderY + tipX * Math.sin(rightArmRotation) + tipY * Math.cos(rightArmRotation)
+    };
+    ctx.restore();
+
+    // 도구 끝 입자(증기/밀가루)
+    const particleCount = 2 + Math.floor((Math.sin(gameTime * 4) + 1) * 1.5);
+    for (let i = 0; i < particleCount; i++) {
+        const swirl = gameTime * 3.4 + i * 1.9;
+        const px = toolTip.x + Math.cos(swirl) * (4 + i * 1.8);
+        const py = toolTip.y - 8 - i * 4 + Math.sin(swirl * 1.2) * 2.2;
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.48)' : 'rgba(244,224,198,0.55)';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.4 + (i % 2) * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     ctx.restore();
 }
 
+function getChefMotionPhase() {
+    const armRaw = Math.sin(gameTime * 6);
+    const easedArm = Math.tanh(armRaw * 1.12) * 0.9;
+    const bodyRock = Math.sin(gameTime * 2.4);
+    const breathe = Math.sin(gameTime * 2) * 2;
+    const toolBounce = 0.5 + 0.5 * Math.sin(gameTime * 6 + 0.4);
+    return {
+        breathe,
+        bodyRock,
+        leftArmRotation: -0.24 + easedArm * 0.12,
+        rightArmRotation: 0.2 - easedArm * 0.18,
+        toolLift: toolBounce * 5
+    };
+}
+
 function drawChefCookingOverlay(anchorX, anchorY, phase) {
-    const { bodyRock, stir, toolBounce } = phase;
+    const { bodyRock, toolLift, leftArmRotation, rightArmRotation } = phase;
     const bodyShiftX = bodyRock * 1.6;
-    const armRotation = stir * (Math.PI / 180) * 10;
-    const toolLift = toolBounce * 5;
 
     ctx.save();
     ctx.translate(anchorX + bodyShiftX, anchorY);
@@ -1014,7 +1118,7 @@ function drawChefCookingOverlay(anchorX, anchorY, phase) {
     // 왼팔
     ctx.save();
     ctx.translate(leftShoulderX, shoulderY);
-    ctx.rotate(-0.22 + armRotation * 0.85);
+    ctx.rotate(leftArmRotation);
     ctx.strokeStyle = 'rgba(255, 226, 198, 0.78)';
     ctx.lineWidth = 10;
     ctx.beginPath();
@@ -1030,7 +1134,7 @@ function drawChefCookingOverlay(anchorX, anchorY, phase) {
     // 오른팔 + 조리 도구
     ctx.save();
     ctx.translate(rightShoulderX, shoulderY);
-    ctx.rotate(0.18 - armRotation);
+    ctx.rotate(rightArmRotation);
     ctx.strokeStyle = 'rgba(255, 229, 204, 0.82)';
     ctx.lineWidth = 10;
     ctx.beginPath();
@@ -1059,7 +1163,7 @@ function drawChefCookingOverlay(anchorX, anchorY, phase) {
     // 팬/작업대 상호작용 이펙트(증기)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.36)';
     ctx.lineWidth = 2;
-    const steamDrift = stir * 2.2;
+    const steamDrift = (0.2 - rightArmRotation) * 12;
     for (let i = 0; i < 3; i++) {
         const sx = 114 + i * 8 + steamDrift * 0.35;
         const sy = 112 - i * 6 - toolLift * 0.8;
@@ -1075,15 +1179,11 @@ function drawChefCookingOverlay(anchorX, anchorY, phase) {
 
 function drawChef(x, y) {
     const chefImg = loadedImages.chef;
+    const phase = getChefMotionPhase();
     if (chefImg) {
-        const breathe = Math.sin(gameTime * 2) * 2;
+        const { breathe } = phase;
         const anchorX = x - 80;
         const anchorY = y - 90 + breathe;
-        const phase = {
-            stir: Math.sin(gameTime * 6),
-            bodyRock: Math.sin(gameTime * 2.5),
-            toolBounce: Math.max(0, Math.sin(gameTime * 6))
-        };
         ctx.drawImage(chefImg, anchorX, anchorY, 160, 160);
         drawChefCookingOverlay(anchorX, anchorY, phase);
         return;
