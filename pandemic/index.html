@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion: Infection Protocol</title>
+    <style>
+        :root {
+            --bg-day: #1a2a3a;
+            --bg-night: #020406;
+            --header-bg: #05070a;
+            --accent-red: #ff3e3e;
+            --accent-orange: #ffa502;
+            --accent-yellow: #f1c40f;
+            --human-white: #ffffff;
+            --ui-border: #1e272e;
+            --ui-font: 'JetBrains Mono', 'Pretendard', monospace;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-night);
+            color: #fff;
+            font-family: var(--ui-font);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Top Bar UI */
+        .top-bar {
+            height: 64px;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--ui-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            box-sizing: border-box;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+
+        .brand-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #a4b0be;
+        }
+
+        .brand-label {
+            font-size: 10px;
+            color: var(--accent-orange);
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin-top: -2px;
+        }
+
+        .nav-section {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: #161b22;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #21262d;
+            color: #fff;
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 10px rgba(255,165,2,0.3);
+        }
+
+        .btn-sound.on {
+            color: var(--accent-yellow);
+            border-color: var(--accent-yellow);
+            text-shadow: 0 0 5px var(--accent-yellow);
+        }
+
+        /* Game Layout */
+        .game-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, rgba(30,39,46,0.2) 0%, rgba(0,0,0,0.5) 100%);
+        }
+
+        #gameCanvas {
+            max-width: 95%;
+            max-height: 95%;
+            border: 1px solid #1e272e;
+            background: #000;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9);
+        }
+
+        /* Tactical HUD */
+        .game-stats {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: rgba(10, 14, 20, 0.85);
+            padding: 16px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            border-left: 4px solid var(--accent-orange);
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            min-width: 200px;
+        }
+
+        .stat-row {
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-label { color: #8b949e; text-transform: uppercase; }
+        .stat-value { font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+
+        .power-bar-bg { width: 100%; height: 4px; background: #0d1117; margin-top: 4px; border-radius: 2px; }
+        .power-bar-fill { height: 100%; background: var(--accent-yellow); transition: width 0.5s; border-radius: 2px; box-shadow: 0 0 10px var(--accent-yellow); }
+
+        .end-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .end-title {
+            color: var(--accent-red);
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(255,62,62,0.5);
+        }
+
+        .day-night-indicator {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(10, 14, 20, 0.85);
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            font-weight: 800;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(8px);
+            letter-spacing: 1px;
+        }
+
+        .dot { width: 8px; height: 8px; border-radius: 2px; }
+        .dot-day { background: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
+        .dot-night { background: #57606f; }
+
+        /* CRT Effect Overlay */
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="crt-overlay"></div>
+
+    <header class="top-bar">
+        <div class="brand-section">
+            <span class="title">Eternal Invasion: Infection Protocol</span>
+            <span class="brand-label">BUNTGAMES</span>
+        </div>
+        <div class="nav-section">
+            <button id="soundToggle" class="btn btn-sound">SOUND: OFF</button>
+            <a href="https://youtube.com/@textcube" target="_blank" class="btn">YouTube</a>
+            <a href="https://example.com" target="_blank" class="btn">Homepage</a>
+        </div>
+    </header>
+
+    <main class="game-wrapper" id="mainWrapper">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="game-stats">
+            <div class="stat-row">
+                <span class="stat-label">Infection Rate</span>
+                <span id="rateValue" class="stat-value">0%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Global Power</span>
+                <span id="powerValue" class="stat-value">100%</span>
+            </div>
+            <div class="power-bar-bg"><div id="powerBar" class="power-bar-fill" style="width: 100%;"></div></div>
+            <div class="stat-row" style="margin-top: 12px;">
+                <span class="stat-label">Survivor Signal</span>
+                <span id="humanValue" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <div class="day-night-indicator">
+            <div id="cycleDot" class="dot dot-day"></div>
+            <span id="cycleLabel">STATUS: DAY_WATCH</span>
+        </div>
+
+        <div id="endOverlay" class="end-overlay">
+            <div class="end-title">GLOBAL INFECTION COMPLETE</div>
+            <div id="countdownLabel" style="font-size: 14px; color: #8b949e; letter-spacing: 2px;">REINITIALIZING SYSTEM IN 7s</div>
+        </div>
+    </main>
+
+<script>
+/**
+ * Eternal Invasion: Infection Protocol - Visual Overhaul Ver.
+ */
+
+const CONFIG = {
+    gridSize: 64, 
+    tickRate: 500,
+    cycleDuration: 24000, 
+    dayDuration: 12000,   
+    powerDecay: 0.12,      
+    infectionChance: 0.22,
+    nightInfectionBoost: 0.38,
+    infectedToZombieTicks: 7,
+    duskThreshold: 9000,
+    blockCount: 4,      
+    blockSize: 8        
+};
+
+const CELL = {
+    EMPTY: 0,
+    HUMAN: 1,
+    INFECTED: 2,
+    ZOMBIE: 3,
+    POWERED_HOUSE: 4,
+    ABANDONED_HOUSE: 5
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const rateEl = document.getElementById('rateValue');
+const powerEl = document.getElementById('powerValue');
+const powerBar = document.getElementById('powerBar');
+const humanEl = document.getElementById('humanValue');
+const cycleDot = document.getElementById('cycleDot');
+const cycleLabel = document.getElementById('cycleLabel');
+const endOverlay = document.getElementById('endOverlay');
+const countdownLabel = document.getElementById('countdownLabel');
+const soundBtn = document.getElementById('soundToggle');
+const body = document.body;
+
+// State
+let grid = [];
+let power = 100;
+let timeInCycle = 0;
+let lastFrameTime = 0;
+let isNight = false;
+let isTotalDarkness = false;
+let gameActive = true;
+let isSoundEnabled = false;
+
+// --- Sound Engine ---
+let audioCtx = null;
+function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+const playSfx = {
+    infection: () => {
+        if(!isSoundEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(35, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    },
+    cycle: (night) => {
+        if(!isSoundEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(night ? 90 : 220, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(night ? 45 : 280, audioCtx.currentTime + 1);
+        gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 1);
+    },
+    beep: () => {
+        if(!isSoundEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    }
+};
+
+soundBtn.onclick = () => {
+    initAudio();
+    isSoundEnabled = !isSoundEnabled;
+    soundBtn.textContent = isSoundEnabled ? "SOUND: ON" : "SOUND: OFF";
+    soundBtn.classList.toggle('on', isSoundEnabled);
+};
+
+// --- Core Simulation Logic ---
+
+function initGrid() {
+    grid = [];
+    const size = CONFIG.gridSize;
+    for (let y = 0; y < size; y++) {
+        grid[y] = [];
+        for (let x = 0; x < size; x++) {
+            let r = Math.random();
+            if (r < 0.20) grid[y][x] = { type: CELL.HUMAN, data: 0, subType: CELL.EMPTY };
+            else grid[y][x] = { type: CELL.EMPTY, data: 0 };
+        }
+    }
+
+    for (let i = 0; i < CONFIG.blockCount; i++) {
+        placeBlock(CELL.POWERED_HOUSE);
+        placeBlock(CELL.ABANDONED_HOUSE);
+    }
+
+    let mx, my;
+    let validStart = false;
+    while (!validStart) {
+        mx = Math.floor(Math.random() * size);
+        my = Math.floor(Math.random() * size);
+        if (grid[my][mx].type !== CELL.POWERED_HOUSE) {
+            validStart = true;
+        }
+    }
+    
+    const targetCell = grid[my][mx];
+    grid[my][mx] = { 
+        type: CELL.INFECTED, 
+        data: 0, 
+        subType: targetCell.type === CELL.HUMAN ? targetCell.subType : targetCell.type 
+    };
+}
+
+function placeBlock(type) {
+    const size = CONFIG.gridSize;
+    const bSize = CONFIG.blockSize;
+    let bx = Math.floor(Math.random() * (size - bSize));
+    let by = Math.floor(Math.random() * (size - bSize));
+
+    for (let y = by; y < by + bSize; y++) {
+        for (let x = bx; x < bx + bSize; x++) {
+            if (grid[y][x].type !== CELL.POWERED_HOUSE && grid[y][x].type !== CELL.ABANDONED_HOUSE) {
+                grid[y][x] = { type: type, data: 0 };
+            }
+        }
+    }
+}
+
+function findNearestShelter(sx, sy) {
+    let bestDist = Infinity;
+    let target = null;
+    const size = CONFIG.gridSize;
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            if (grid[y][x].type === CELL.POWERED_HOUSE || grid[y][x].type === CELL.ABANDONED_HOUSE) {
+                const d = Math.abs(x - sx) + Math.abs(y - sy);
+                if (d < bestDist) {
+                    bestDist = d;
+                    target = { x, y };
+                }
+            }
+        }
+    }
+    return target;
+}
+
+function findNearestSurvivor(zx, zy) {
+    let bestDist = Infinity;
+    let target = null;
+    const size = CONFIG.gridSize;
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            if (grid[y][x].type === CELL.HUMAN) {
+                if (grid[y][x].subType === CELL.POWERED_HOUSE && !isTotalDarkness && !isNight) continue;
+                const d = Math.abs(x - zx) + Math.abs(y - zy);
+                if (d < bestDist) {
+                    bestDist = d;
+                    target = { x, y };
+                }
+            }
+        }
+    }
+    return target;
+}
+
+function tick() {
+    if (!gameActive) return;
+
+    const nextGrid = JSON.parse(JSON.stringify(grid));
+    const size = CONFIG.gridSize;
+    let anyInfection = false;
+
+    power = Math.max(0, power - CONFIG.powerDecay);
+    isTotalDarkness = power <= 0;
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const cell = grid[y][x];
+
+            // 1. Human AI
+            if (cell.type === CELL.HUMAN) {
+                if (timeInCycle >= CONFIG.duskThreshold && timeInCycle < CONFIG.dayDuration) {
+                    const shelter = findNearestShelter(x, y);
+                    if (shelter) {
+                        const dx = shelter.x > x ? 1 : (shelter.x < x ? -1 : 0);
+                        const dy = shelter.y > y ? 1 : (shelter.y < y ? -1 : 0);
+                        const nx = x + dx, ny = y + dy;
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                            const targetCell = nextGrid[ny][nx];
+                            if (targetCell.type === CELL.EMPTY || targetCell.type === CELL.POWERED_HOUSE || targetCell.type === CELL.ABANDONED_HOUSE) {
+                                const prevSubType = cell.subType || CELL.EMPTY;
+                                nextGrid[ny][nx] = { type: CELL.HUMAN, data: 0, subType: (targetCell.type === CELL.EMPTY ? CELL.EMPTY : targetCell.type) };
+                                nextGrid[y][x] = { type: prevSubType, data: 0 };
+                            }
+                        }
+                    }
+                } 
+                else if (timeInCycle < CONFIG.duskThreshold && Math.random() < 0.35) {
+                    const directions = [[0,1],[0,-1],[1,0],[-1,0]];
+                    const dir = directions[Math.floor(Math.random() * 4)];
+                    const nx = x + dir[0], ny = y + dir[1];
+                    if (nx >= 0 && nx < size && ny >= 0 && ny < size && nextGrid[ny][nx].type === CELL.EMPTY) {
+                        nextGrid[ny][nx] = { type: CELL.HUMAN, data: 0, subType: CELL.EMPTY };
+                        nextGrid[y][x] = { type: cell.subType || CELL.EMPTY, data: 0 };
+                    }
+                }
+            }
+
+            // 2. Zombie Logic
+            if (cell.type === CELL.INFECTED || cell.type === CELL.ZOMBIE) {
+                if (cell.type === CELL.INFECTED) {
+                    nextGrid[y][x].data++;
+                    if (nextGrid[y][x].data >= CONFIG.infectedToZombieTicks) {
+                        nextGrid[y][x].type = CELL.ZOMBIE;
+                        nextGrid[y][x].data = 0;
+                    }
+                }
+
+                const inSafePowered = (cell.subType === CELL.POWERED_HOUSE && !isTotalDarkness);
+                const isActivated = (isNight || isTotalDarkness || cell.subType === CELL.ABANDONED_HOUSE) && !inSafePowered;
+                
+                if (isActivated) {
+                    if (cell.type === CELL.ZOMBIE && Math.random() < 0.5) {
+                        const target = findNearestSurvivor(x, y);
+                        let dir;
+                        if (target && Math.random() > 0.25) {
+                            const dx = target.x > x ? 1 : (target.x < x ? -1 : 0);
+                            const dy = target.y > y ? 1 : (target.y < y ? -1 : 0);
+                            if (dx !== 0 && dy !== 0) { dir = Math.random() < 0.5 ? [dx, 0] : [0, dy]; } else { dir = [dx, dy]; }
+                        } else {
+                            dir = [[0,1],[0,-1],[1,0],[-1,0]][Math.floor(Math.random() * 4)];
+                        }
+
+                        const nx = x + dir[0], ny = y + dir[1];
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                            const nextCellTarget = grid[ny][nx];
+                            if (!(nextCellTarget.type === CELL.POWERED_HOUSE && !isTotalDarkness)) {
+                                if (nextCellTarget.type === CELL.EMPTY || nextCellTarget.type === CELL.HUMAN || nextCellTarget.type === CELL.ABANDONED_HOUSE || (nextCellTarget.type === CELL.POWERED_HOUSE && isTotalDarkness)) {
+                                    const prevSubType = cell.subType || CELL.EMPTY;
+                                    nextGrid[ny][nx] = { 
+                                        type: CELL.ZOMBIE, 
+                                        data: 0, 
+                                        subType: (nextCellTarget.type === CELL.HUMAN ? nextCellTarget.subType : nextCellTarget.type) 
+                                    };
+                                    nextGrid[y][x] = { type: prevSubType, data: 0 };
+                                }
+                            }
+                        }
+                    }
+
+                    const neighbors = [[0,1],[0,-1],[1,0],[-1,0]];
+                    let chance = CONFIG.infectionChance + (isNight ? CONFIG.nightInfectionBoost : 0);
+                    if (isTotalDarkness) chance += 0.15;
+
+                    neighbors.forEach(dir => {
+                        const nx = x + dir[0], ny = y + dir[1];
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                            const target = grid[ny][nx];
+                            if (target.type === CELL.HUMAN) {
+                                if (Math.random() < chance) {
+                                    nextGrid[ny][nx] = { type: CELL.INFECTED, data: 0, subType: target.subType };
+                                    anyInfection = true;
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    if (anyInfection) playSfx.infection();
+    grid = nextGrid;
+    updateStats();
+}
+
+function updateStats() {
+    let humans = 0, infected = 0, zombies = 0;
+    grid.flat().forEach(c => {
+        if (c.type === CELL.HUMAN) humans++;
+        else if (c.type === CELL.INFECTED) infected++;
+        else if (c.type === CELL.ZOMBIE) zombies++;
+    });
+
+    const total = humans + infected + zombies;
+    const rate = total === 0 ? 0 : ((infected + zombies) / total) * 100;
+
+    rateEl.textContent = `${Math.floor(rate)}%`;
+    powerEl.textContent = `${Math.floor(power)}%`;
+    powerBar.style.width = `${power}%`;
+    humanEl.textContent = humans;
+
+    if (rate >= 100 && gameActive) triggerEnd();
+}
+
+function triggerEnd() {
+    gameActive = false;
+    endOverlay.style.display = 'flex';
+    let count = 7;
+    const itv = setInterval(() => {
+        count--;
+        countdownLabel.textContent = `REINITIALIZING SYSTEM IN ${count}s`;
+        playSfx.beep();
+        if (count <= 0) {
+            clearInterval(itv);
+            endOverlay.style.display = 'none';
+            resetSimulation();
+        }
+    }, 1000);
+}
+
+function resetSimulation() {
+    power = 100;
+    timeInCycle = 0;
+    lastFrameTime = performance.now();
+    gameActive = true;
+    initGrid();
+}
+
+// --- High Fidelity Rendering ---
+
+function resize() {
+    const parent = document.getElementById('mainWrapper');
+    const size = Math.min(parent.clientWidth * 0.95, parent.clientHeight * 0.95);
+    canvas.width = size;
+    canvas.height = size;
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+function render(now) {
+    const delta = now - lastFrameTime;
+    lastFrameTime = now;
+
+    if (gameActive) {
+        timeInCycle = (timeInCycle + delta) % CONFIG.cycleDuration;
+        const newNight = timeInCycle > CONFIG.dayDuration;
+        if (newNight !== isNight) {
+            isNight = newNight;
+            cycleDot.className = isNight ? 'dot dot-night' : 'dot dot-day';
+            cycleLabel.textContent = isNight ? 'STATUS: NIGHT_WATCH' : 'STATUS: DAY_WATCH';
+            body.style.backgroundColor = isNight ? 'var(--bg-night)' : 'var(--bg-day)';
+            playSfx.cycle(isNight);
+        }
+    }
+
+    const cellSize = canvas.width / CONFIG.gridSize;
+
+    // Background base
+    ctx.fillStyle = isNight ? '#020406' : '#1a2a3a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid Scanlines Effect
+    ctx.strokeStyle = isNight ? 'rgba(30, 39, 46, 0.3)' : 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for(let i=0; i<=CONFIG.gridSize; i+=8) {
+        ctx.moveTo(i * cellSize, 0); ctx.lineTo(i * cellSize, canvas.height);
+        ctx.moveTo(0, i * cellSize); ctx.lineTo(canvas.width, i * cellSize);
+    }
+    ctx.stroke();
+
+    for (let y = 0; y < CONFIG.gridSize; y++) {
+        for (let x = 0; x < CONFIG.gridSize; x++) {
+            const cell = grid[y][x];
+            const effectiveType = (cell.type === CELL.HUMAN || cell.type === CELL.INFECTED || cell.type === CELL.ZOMBIE) ? cell.subType : cell.type;
+
+            // Structure Rendering
+            if (effectiveType === CELL.POWERED_HOUSE) {
+                ctx.fillStyle = isTotalDarkness ? '#161b22' : 'rgba(243, 156, 18, 0.25)';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                
+                // Procedural Windows
+                if (!isTotalDarkness && (x+y) % 3 === 0) {
+                    ctx.fillStyle = Math.random() > 0.1 ? '#f1c40f' : '#34495e';
+                    ctx.fillRect(x * cellSize + cellSize*0.3, y * cellSize + cellSize*0.3, cellSize*0.4, cellSize*0.4);
+                }
+            } else if (effectiveType === CELL.ABANDONED_HOUSE) {
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+
+            // Entity Rendering (Non-Dot improvements)
+            if (cell.type === CELL.EMPTY || cell.type === CELL.POWERED_HOUSE || cell.type === CELL.ABANDONED_HOUSE) continue;
+
+            const cx = x * cellSize + cellSize/2;
+            const cy = y * cellSize + cellSize/2;
+            const size = cellSize * 0.45;
+
+            ctx.save();
+            switch(cell.type) {
+                case CELL.HUMAN:
+                    // Pulse Effect
+                    const pulse = Math.sin(now / 200) * 0.1 + 0.9;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size * pulse, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.stroke();
+                    break;
+                case CELL.INFECTED:
+                    // Jittery Square
+                    const jx = (Math.random()-0.5) * 2;
+                    const jy = (Math.random()-0.5) * 2;
+                    ctx.fillStyle = '#ffa502';
+                    ctx.fillRect(cx - size + jx, cy - size + jy, size*1.5, size*1.5);
+                    break;
+                case CELL.ZOMBIE:
+                    // Diamond Shape with Glow
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#ff3e3e';
+                    ctx.fillStyle = '#ff3e3e';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - size);
+                    ctx.lineTo(cx + size, cy);
+                    ctx.lineTo(cx, cy + size);
+                    ctx.lineTo(cx - size, cy);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+            }
+            ctx.restore();
+        }
+    }
+
+    // Vignette / Post Processing
+    const grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width*0.2, canvas.width/2, canvas.height/2, canvas.width*0.7);
+    grd.addColorStop(0, 'rgba(0,0,0,0)');
+    grd.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+
+    if (isTotalDarkness) {
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    requestAnimationFrame(render);
+}
+
+initGrid();
+lastFrameTime = performance.now();
+setInterval(tick, CONFIG.tickRate);
+requestAnimationFrame(render);
+
+</script>
+</body>
+</html>
