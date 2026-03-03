@@ -1,23 +1,574 @@
-<!doctype html>
-<html lang="ko">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Redirecting to Space Auto-Battle…</title>
-  <meta http-equiv="refresh" content="0; url=./space/index.html" />
-  <style>
-    html, body { height: 100%; margin: 0; }
-    body { display: grid; place-items: center; background: #05070f; color: #dbe6ff; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    a { color: #9fc0ff; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BUNT GAMES | 8-BIT Eternal Invasion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gold: #ffcc00;
+            --magic-blue: #00ffff;
+            --danger: #ff0055;
+            --font-pixel: 'Press Start 2P', cursive;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: var(--font-pixel); color: #fff; }
+
+        /* Background & Dim */
+        #video-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; overflow: hidden; }
+        #video-background iframe {
+            width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border: none; filter: brightness(0.3) contrast(1.2);
+        }
+
+        #dim-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.8) 100%); z-index: -1; pointer-events: none; }
+
+        /* Game Canvas */
+        #gameCanvas { position: fixed; top: 0; left: 0; z-index: 1; image-rendering: pixelated; }
+
+        /* UI Layer */
+        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+        #ui-layer * { pointer-events: auto; }
+
+        #brand-header { 
+            padding: 10px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(0,0,0,0.9); 
+            border-bottom: 4px solid var(--primary-gold);
+            gap: 10px;
+        }
+
+        .brand-logo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
+        .brand-main { font-size: 11px; color: var(--primary-gold); letter-spacing: 1px; }
+        .brand-sub { font-size: 6px; color: #fff; letter-spacing: 1px; opacity: 0.8; }
+
+        #center-hud { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+        #score-area { font-size: 14px; color: #fff; text-shadow: 2px 2px #f00; letter-spacing: 2px; }
+
+        #gauge-container { display: flex; flex-direction: column; gap: 3px; width: 100%; max-width: 240px; }
+        .bar-wrapper { display: flex; align-items: center; gap: 6px; }
+        .bar-label { font-size: 6px; color: #fff; width: 25px; text-align: left; }
+        .bar-bg { flex: 1; height: 8px; background: #333; border: 1px solid #fff; position: relative; overflow: hidden; }
+        .bar-fill { height: 100%; transition: width 0.2s; }
+        .bar-fill.hp { background: #f00; }
+        .bar-fill.exp { background: #0ff; }
+
+        .brand-links { display: flex; gap: 8px; min-width: 100px; justify-content: flex-end; }
+        .link-btn { padding: 4px 6px; font-size: 6px; text-decoration: none; color: #fff; border: 1.5px solid #fff; white-space: nowrap; }
+        .link-btn:hover { background: #fff; color: #000; }
+
+        #info-bar { padding: 5px 20px; text-align: center; font-size: 8px; color: var(--primary-gold); background: rgba(0,0,0,0.4); }
+
+        .module-group { position: absolute; top: 55%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+        #left-modules { left: 0; }
+        #right-modules { right: 0; }
+
+        .module-btn { width: 160px; height: 40px; background: #000; border: 3px solid var(--primary-gold); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 7px; border-radius: 4px; }
+        .module-btn:hover:not(.locked) { background: var(--primary-gold); color: #000; transform: scale(1.05); }
+        .module-btn.locked { opacity: 0.3; cursor: not-allowed; border-color: #555; }
+
+        #bottom-controls { padding: 30px; display: flex; flex-direction: column; align-items: center; }
+        #stat-tickets { font-size: 9px; margin-bottom: 15px; color: var(--magic-blue); text-shadow: 2px 2px #000; letter-spacing: 1px; }
+
+        #aoe-button { 
+            padding: 15px 40px; font-size: 12px; background: #000; border: 4px solid var(--magic-blue); color: var(--magic-blue); 
+            cursor: pointer; font-family: var(--font-pixel); box-shadow: 4px 4px #000; transition: all 0.1s; border-radius: 30px;
+        }
+        #aoe-button.active { 
+            border-color: var(--primary-gold); 
+            color: var(--primary-gold); 
+            animation: blink 0.5s infinite; 
+            cursor: pointer;
+        }
+        #aoe-button.disabled { 
+            opacity: 0.2; 
+            cursor: not-allowed; 
+            border-color: #555; 
+            color: #555; 
+            box-shadow: none; 
+            animation: none;
+        }
+
+        #sound-toggle { background:transparent; border:none; color:#555; font-size:8px; cursor:pointer; margin-top:15px; text-decoration: underline; }
+
+        @keyframes blink { 0%, 100% { filter: brightness(1.3); transform: scale(1); } 50% { filter: brightness(0.7); transform: scale(1.05); } }
+        #toast-container { position: fixed; top: 140px; left: 50%; transform: translateX(-50%); pointer-events: none; }
+        .toast { padding: 10px 20px; border: 2px solid #fff; font-size: 10px; background: #000; margin-bottom: 5px; box-shadow: 4px 4px #000; animation: fadeInUp 0.3s ease-out; }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 850px) {
+            #brand-header { flex-direction: column; padding: 10px; gap: 10px; }
+            .brand-logo { align-items: center; min-width: auto; }
+            .module-group { position: relative; top: 0; transform: none; flex-direction: row; flex-wrap: wrap; justify-content: center; width: 100%; padding: 5px; gap: 8px; }
+            .module-btn { width: calc(50% - 10px); height: 35px; }
+        }
+    </style>
 </head>
 <body>
-  <div>
-    <p>메인 게임으로 이동 중입니다…</p>
-    <p>자동 이동이 안 되면 <a href="./space/index.html">여기를 클릭</a>.</p>
-  </div>
-  <script>
-    location.replace('./space/index.html');
-  </script>
+
+    <div id="video-background">
+        <div id="player"></div>
+    </div>
+    <div id="dim-overlay"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div id="brand-header">
+            <div class="brand-logo">
+                <div class="brand-main">BUNTGAMES</div>
+                <div class="brand-sub">ETERNAL INVASION</div>
+            </div>
+            
+            <div id="center-hud">
+                <div id="score-area"><span id="score">000000000</span></div>
+                <div id="gauge-container">
+                    <div class="bar-wrapper">
+                        <span class="bar-label">HP</span>
+                        <div class="bar-bg"><div id="hp-bar" class="bar-fill hp" style="width: 100%;"></div></div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <span class="bar-label">MP</span>
+                        <div class="bar-bg"><div id="exp-bar" class="bar-fill exp" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="brand-links">
+                <a href="https://www.youtube.com/@textcube" target="_blank" class="link-btn">YT</a>
+                <a href="https://kitscript.com/game/main" target="_blank" class="link-btn">SRC</a>
+            </div>
+        </div>
+
+        <div id="info-bar">
+            <span id="stat-level">LV.1 HERO</span>
+        </div>
+
+        <nav id="left-modules" class="module-group"></nav>
+        <nav id="right-modules" class="module-group"></nav>
+
+        <footer id="bottom-controls">
+            <div id="stat-tickets">SALVO CHARGE: 0 / 3</div>
+            <button id="aoe-button" class="disabled">GENESIS BURST</button>
+            <button id="sound-toggle">SOUND: OFF</button>
+        </footer>
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        const CONFIG = {
+            YT_VIDEO_ID: 'kFnxuOnbHU0', 
+            MAX_HP: 100,
+            PIXEL_SIZE: 5, 
+            PLAYER_RANGE: 135, 
+            FAIRY_RANGE: 120, 
+            ENEMY_SPAWN_BUFFER: 30, 
+            TICKETS_FOR_AOE: 3, 
+            MAX_TICKETS: 3,
+            ENEMY_SEPARATION_RADIUS: 30, 
+            ENEMY_SEPARATION_FORCE: 0.6, 
+            SPAWN_INTERVAL_BASE: 1500, 
+            SPAWN_INTERVAL_MIN: 200,   
+            TIME_DIFFICULTY_FACTOR: 2, 
+            ENEMY_TYPES: [
+                { name: 'zombie', color: '#00ff00', score: 150, speed: 0.9 },
+                { name: 'mummy', color: '#ffff00', score: 200, speed: 0.7 },
+                { name: 'dracula', color: '#ff0000', score: 300, speed: 1.4 },
+                { name: 'pumpkin', color: '#ff8800', score: 500, speed: 0.6 },
+                { name: 'skeleton', color: '#cccccc', score: 100, speed: 1.2 }
+            ],
+            MODULES: [
+                { label: 'WIZARD', side: 'left', reqLevel: 1 },
+                { label: 'PUZZLE', side: 'right', reqLevel: 2 },
+                { label: 'OCEAN', side: 'left', reqLevel: 3 },
+                { label: 'BIRD', side: 'right', reqLevel: 4 },
+                { label: 'PIZZA', side: 'left', reqLevel: 5 },
+                { label: 'SPACE', side: 'right', reqLevel: 6 },
+                { label: 'WAVE', side: 'left', reqLevel: 7 },
+                { label: 'PLAYLIST', side: 'right', reqLevel: 8 }
+            ]
+        };
+
+        let state = {
+            hp: CONFIG.MAX_HP, level: 1, exp: 0, maxExp: 1000,
+            score: 0, kills: 0, tickets: 0, lastSpawnTime: 0, startTime: 0, active: true, isMuted: true
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let playerPos = { x: 0, y: 0, anim: 0, shootCd: 0 };
+        let fairies = []; 
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        let ytPlayer;
+
+        function drawPixel(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+        }
+
+        window.onYouTubeIframeAPIReady = function() {
+            ytPlayer = new YT.Player('player', {
+                height: '100%', width: '100%', videoId: CONFIG.YT_VIDEO_ID,
+                playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: CONFIG.YT_VIDEO_ID, mute: 1, rel: 0, enablejsapi: 1, origin: window.location.origin },
+                events: { 
+                    'onReady': (event) => { event.target.playVideo(); event.target.mute(); },
+                    'onStateChange': (event) => { if (event.data === YT.PlayerState.ENDED) { ytPlayer.playVideo(); } }
+                }
+            });
+        };
+
+        function init() {
+            resize();
+            state.startTime = performance.now();
+            window.addEventListener('resize', resize);
+            document.getElementById('aoe-button').addEventListener('click', triggerAOE);
+            document.getElementById('sound-toggle').addEventListener('click', toggleSound);
+            renderModules();
+            updateHUD();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            playerPos.x = canvas.width / 2;
+            playerPos.y = canvas.height / 2;
+            const turretOffset = 135; 
+            fairies = [
+                { x: playerPos.x - turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: 0 },
+                { x: playerPos.x + turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: Math.PI/2 },
+                { x: playerPos.x - turretOffset, y: playerPos.y + turretOffset, cd: 0, offset: Math.PI },
+                { x: playerPos.x + turretOffset, y: playerPos.y + turretOffset, cd: 0, offset: Math.PI*1.5 }
+            ];
+        }
+
+        function gameLoop(time) {
+            if (state.active) { update(time); draw(); }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(time) {
+            playerPos.anim += 0.04; 
+            playerPos.shootCd--;
+
+            const elapsedTimeInSeconds = (time - state.startTime) / 1000;
+            const timeReduction = elapsedTimeInSeconds * CONFIG.TIME_DIFFICULTY_FACTOR;
+            const currentSpawnInterval = Math.max(CONFIG.SPAWN_INTERVAL_MIN, CONFIG.SPAWN_INTERVAL_BASE - (state.level * 80) - timeReduction);
+
+            if (time - state.lastSpawnTime > currentSpawnInterval) { spawnEnemy(); state.lastSpawnTime = time; }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                const dx = playerPos.x - e.x;
+                const dy = playerPos.y - e.y;
+                const distToPlayer = Math.hypot(dx, dy);
+                let vx = (dx / distToPlayer) * e.speed;
+                let vy = (dy / distToPlayer) * e.speed;
+
+                for (let j = 0; j < enemies.length; j++) {
+                    if (i === j) continue;
+                    const other = enemies[j];
+                    const distToOther = Math.hypot(e.x - other.x, e.y - other.y);
+                    if (distToOther < CONFIG.ENEMY_SEPARATION_RADIUS) {
+                        const diffX = e.x - other.x;
+                        const diffY = e.y - other.y;
+                        const force = (CONFIG.ENEMY_SEPARATION_RADIUS - distToOther) / CONFIG.ENEMY_SEPARATION_RADIUS;
+                        vx += (diffX / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
+                        vy += (diffY / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
+                    }
+                }
+                e.x += vx; e.y += vy; e.tick++;
+                if (distToPlayer < 45) {
+                    state.hp -= 0.5;
+                    if (state.hp <= 0) gameOver();
+                    updateHUD();
+                }
+            }
+
+            if (playerPos.shootCd <= 0 && enemies.length > 0) {
+                let closestEnemy = null;
+                let minTargetDist = CONFIG.PLAYER_RANGE;
+                for (const e of enemies) {
+                    const d = Math.hypot(e.x - playerPos.x, e.y - playerPos.y);
+                    if (d < minTargetDist) { minTargetDist = d; closestEnemy = e; }
+                }
+                if (closestEnemy) {
+                    projectiles.push({ x: playerPos.x + 10, y: playerPos.y - 20, tx: closestEnemy.x, ty: closestEnemy.y, targetRef: closestEnemy, life: 1.0, speed: 15, color: '#0ff' });
+                    playerPos.shootCd = 18;
+                }
+            }
+
+            fairies.forEach(f => {
+                f.cd--;
+                if (f.cd <= 0 && enemies.length > 0) {
+                    let closestEnemy = null;
+                    let minTargetDist = CONFIG.FAIRY_RANGE;
+                    for (const e of enemies) {
+                        const d = Math.hypot(e.x - f.x, e.y - f.y);
+                        if (d < minTargetDist) { minTargetDist = d; closestEnemy = e; }
+                    }
+                    if (closestEnemy) {
+                        projectiles.push({ x: f.x, y: f.y, tx: closestEnemy.x, ty: closestEnemy.y, targetRef: closestEnemy, life: 1.0, speed: 12, color: '#00ffff' });
+                        f.cd = 40 + Math.random() * 20;
+                    }
+                }
+            });
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                const dx = p.tx - p.x;
+                const dy = p.ty - p.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 15) { killEnemy(p.targetRef); projectiles.splice(i, 1); continue; }
+                p.x += (dx / dist) * p.speed; p.y += (dy / dist) * p.speed;
+            }
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; return (p.life -= 0.05) > 0; });
+        }
+
+        function spawnEnemy() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            const buffer = CONFIG.ENEMY_SPAWN_BUFFER;
+            if (side === 0) { x = Math.random() * canvas.width; y = -buffer; }
+            else if (side === 1) { x = canvas.width + buffer; y = Math.random() * canvas.height; }
+            else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + buffer; }
+            else { x = -buffer; y = Math.random() * canvas.height; }
+            const type = CONFIG.ENEMY_TYPES[Math.floor(Math.random() * CONFIG.ENEMY_TYPES.length)];
+            enemies.push({ ...type, x, y, tick: 0 });
+        }
+
+        function killEnemy(target) {
+            const idx = enemies.indexOf(target);
+            if (idx > -1) {
+                spawnParticles(target.x, target.y, target.color, 12);
+                state.score += target.score;
+                state.kills++;
+                gainExp(50);
+                // 10 Kills = 1 Charge
+                if (state.kills % 10 === 0 && state.tickets < CONFIG.MAX_TICKETS) { 
+                    state.tickets++; 
+                    showToast("CHARGE ACQUIRED!");
+                }
+                enemies.splice(idx, 1);
+                updateHUD();
+            }
+        }
+
+        function gainExp(amt) {
+            state.exp += amt;
+            if (state.exp >= state.maxExp) {
+                state.exp = 0; state.level++;
+                state.maxExp = Math.floor(state.maxExp * 1.3);
+                showToast(`LEVEL UP: ${state.level}`);
+                renderModules(); updateHUD();
+            }
+        }
+
+        /**
+         * 제네시스 버스트 발사 로직 복구
+         */
+        function triggerAOE() {
+            if (state.tickets < CONFIG.TICKETS_FOR_AOE) { 
+                showToast("NOT ENOUGH CHARGE"); 
+                return; 
+            }
+            state.tickets = 0; 
+            spawnParticles(playerPos.x, playerPos.y, '#0ff', 100);
+            
+            enemies.forEach(e => {
+                state.score += e.score;
+                spawnParticles(e.x, e.y, e.color, 15);
+            });
+            enemies = []; 
+            showToast('GENESIS BURST!!'); 
+            updateHUD();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(playerPos.x, playerPos.y, CONFIG.PLAYER_RANGE, 0, Math.PI * 2);
+            ctx.stroke();
+
+            projectiles.forEach(p => { drawPixel(p.x - 3, p.y - 3, 6, 6, p.color); drawPixel(p.x - 1, p.y - 1, 2, 2, '#fff'); });
+            fairies.forEach(f => drawSubtleFairy(f.x, f.y, playerPos.anim, f.offset));
+            enemies.forEach(e => drawEnhancedPixelEnemy(e));
+            drawGrandPixelHero(playerPos.x, playerPos.y, playerPos.anim);
+            particles.forEach(p => { ctx.globalAlpha = p.life; drawPixel(p.x, p.y, 4, 4, p.color); });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawSubtleFairy(x, y, anim, offset) {
+            const p = CONFIG.PIXEL_SIZE;
+            const floatBob = Math.cos(anim * 1.2 + offset) * (p * 1.5); 
+            const pulse = Math.sin(anim * 1.5 + offset) * 0.5 + 0.5;
+
+            ctx.save();
+            ctx.translate(x - p*4, y - p*6 + floatBob);
+            ctx.globalAlpha = 0.15 + pulse * 0.1;
+            ctx.shadowBlur = 8 * pulse; ctx.shadowColor = '#0ff';
+            drawPixel(p*1, p*1, p*6, p*6, '#00ffff');
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+
+            ctx.strokeStyle = `rgba(0, 255, 255, ${0.2 + pulse * 0.2})`;
+            ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p*4, p*2.5, p*3.5 + pulse * 0.5, 0, Math.PI * 2); ctx.stroke();
+
+            drawPixel(p*2, -p, p*4, p*2, '#e0f7fa'); drawPixel(p*1, 0, p*6, p, '#e0f7fa');
+            drawPixel(p*3, p, p*2, p*2.5, '#ffe0bd');
+            drawPixel(p*3.2, p*1.8, 2, 2, '#000'); drawPixel(p*4.2, p*1.8, 2, 2, '#000');
+            drawPixel(p*2, p*3.5, p*4, p*4.5, '#00bcd4');
+            drawPixel(p*1.5, p*4, p*5, p, '#006064'); drawPixel(p*1.5, p*7.5, p*5, p, '#006064');
+
+            const staffOsc = Math.sin(anim * 2 + offset) * (p * 0.5);
+            drawPixel(p*7, p*2 + staffOsc, p*0.6, p*6, '#5d4037');
+            ctx.shadowBlur = 6 * pulse; ctx.shadowColor = '#0ff';
+            drawPixel(p*6.5, p*1 + staffOsc, p*1.5, p*1.5, '#00ffff');
+            drawPixel(p*7, p*1.2 + staffOsc, p*0.6, p*0.6, '#ffffff'); 
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        function drawGrandPixelHero(x, y, anim) {
+            const p = CONFIG.PIXEL_SIZE;
+            const floatBob = Math.sin(anim * 2.5) * (p * 2);
+            const pulse = Math.sin(anim * 2) * 0.5 + 0.5;
+
+            ctx.save();
+            ctx.translate(x - p*6, y - p*11 + floatBob);
+            ctx.globalAlpha = 0.2 + pulse * 0.2;
+            ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
+            drawPixel(0, p*11, p*12, p*0.5, '#0ff');
+            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            drawPixel(p*1, p*4, p*10, p*7, '#101030'); 
+            drawPixel(p*2, p*3, p*8, p*8, '#1a1a4d'); 
+            drawPixel(p*1, p*4, p*2, p*6, '#282878');
+            drawPixel(p*9, p*4, p*2, p*6, '#282878');
+            drawPixel(p*2, p*10, p*8, p*0.6, '#ffcc00');
+            drawPixel(p*5.5, p*3, p*1, p*7, '#ffcc00');
+            drawPixel(p*3, p*0.5, p*6, p*4, '#1a1a4d'); drawPixel(p*4, p*1.5, p*4, p*2.5, '#050510'); 
+            const eyeGlow = pulse > 0.5 ? '#fff' : '#0ff';
+            ctx.shadowBlur = 8 * pulse; ctx.shadowColor = '#0ff';
+            drawPixel(p*4.5, p*2.2, p*0.8, p*0.8, eyeGlow); drawPixel(p*6.7, p*2.2, p*0.8, p*0.8, eyeGlow);
+            ctx.shadowBlur = 0;
+            drawPixel(p*2, p*0.5, p*8, p*0.8, '#1a1a4d'); drawPixel(p*4, -p*1, p*4, p*1.5, '#1a1a4d'); 
+            drawPixel(p*5, -p*2.5, p*2, p*1.5, '#1a1a4d'); drawPixel(p*6.5, -p*2.5, p*0.8, p*0.8, '#ffcc00'); 
+            const staffOsc = Math.cos(anim * 2.5) * p;
+            drawPixel(p*11, p*2 + staffOsc, p*1, p*9, '#5d4037'); drawPixel(p*10.5, p*2 + staffOsc, p*2, p*0.8, '#8b4513'); 
+            ctx.shadowBlur = 20 * pulse; ctx.shadowColor = '#0ff';
+            drawPixel(p*10.2, p*0.5 + staffOsc, p*2.5, p*2.5, '#00ffff'); drawPixel(p*10.8, p*1 + staffOsc, p*1.2, p*1.2, '#ffffff'); 
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        function drawEnhancedPixelEnemy(e) {
+            const p = CONFIG.PIXEL_SIZE;
+            const walkFrame = Math.floor(e.tick / 8) % 4;
+            const bob = (walkFrame % 2 === 1) ? -2 : 0;
+            const breathe = Math.sin(e.tick * 0.1) * 0.5 + 0.5;
+            ctx.save(); ctx.translate(e.x - p*4, e.y - p*4 + bob);
+            ctx.globalAlpha = 0.2; drawPixel(p, p*8.5, p*6, p*0.5, '#000'); ctx.globalAlpha = 1;
+            let legL_Y = p*8; let legR_Y = p*8;
+            if (walkFrame === 0) legR_Y -= p; if (walkFrame === 2) legL_Y -= p; 
+            switch(e.name) {
+                case 'skeleton':
+                    drawPixel(p*2, 0, p*4, p*4, '#eee'); drawPixel(p*2.5, p*0.5, p, p, '#ccc'); drawPixel(p*3, p*4, p*2, p*4, '#ddd'); 
+                    ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#0ff';
+                    drawPixel(p*2.8, p*1.5, p*0.8, p*0.8, '#0ff'); drawPixel(p*4.4, p*1.5, p*0.8, p*0.8, '#0ff');
+                    ctx.shadowBlur = 0; drawPixel(p*2, legL_Y, p, p, '#eee'); drawPixel(p*5, legR_Y, p, p, '#eee');
+                    break;
+                case 'zombie':
+                    drawPixel(p*1, 0, p*6, p*4, '#2e7d32'); drawPixel(p*1.5, p*4, p*5, p*4, '#1b5e20'); drawPixel(p*1.5, p*5, p*5, p*2, '#455a64'); 
+                    drawPixel(p*2.5, p*2, p*0.8, p*0.8, '#000'); drawPixel(p*4.7, p*2, p*0.8, p*0.8, '#000');
+                    drawPixel(p*2, legL_Y, p*1.5, p, '#263238'); drawPixel(p*4.5, legR_Y, p*1.5, p, '#263238');
+                    break;
+                case 'mummy':
+                    drawPixel(p*1, 0, p*6, p*8, '#fbc02d'); ctx.fillStyle = '#f9a825'; ctx.fillRect(Math.floor(p*1), Math.floor(p*2.5), Math.floor(p*6), 1.5);
+                    ctx.fillRect(Math.floor(p*1), Math.floor(p*5.5), Math.floor(p*6), 1.5);
+                    ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#f00';
+                    drawPixel(p*2.5, p*2, p*0.8, p*0.8, '#f00'); drawPixel(p*4.7, p*2, p*0.8, p*0.8, '#f00');
+                    ctx.shadowBlur = 0; drawPixel(p*7, p*4 + (breathe * p), p, p*2, '#fbc02d');
+                    drawPixel(p*2, legL_Y, p, p, '#fbc02d'); drawPixel(p*5, legR_Y, p, p, '#fbc02d');
+                    break;
+                case 'dracula':
+                    drawPixel(p*2, 0, p*4, p*4, '#ffe0bd'); drawPixel(p*1, p*1, p*6, p*8, '#1a1a1a'); drawPixel(p*2.5, p*3, p*3, p*5, '#b71c1c'); 
+                    drawPixel(p*3, p*1.8, p*0.6, p*0.6, '#f00'); drawPixel(p*4.4, p*1.8, p*0.6, p*0.6, '#f00');
+                    drawPixel(p*3, p*3, p*2, p*0.5, '#fff'); drawPixel(p*2, legL_Y, p, p, '#000'); drawPixel(p*5, legR_Y, p, p, '#000');
+                    break;
+                case 'pumpkin':
+                    drawPixel(p*1, p*1, p*6, p*6, '#e65100'); drawPixel(p*3.5, 0, p, p*1.5, '#2e7d32'); 
+                    const flameColor = breathe > 0.5 ? '#ffff00' : '#ff9100';
+                    drawPixel(p*2.5, p*3, p*1.2, p*1.2, flameColor); drawPixel(p*4.3, p*3, p*1.2, p*1.2, flameColor);
+                    drawPixel(p*3, p*5, p*2, p*0.8, flameColor); drawPixel(p*2, legL_Y-p, p, p, '#3e2723'); drawPixel(p*5, legR_Y-p, p, p, '#3e2723');
+                    break;
+                default:
+                    drawPixel(p*1, 0, p*6, p*8, e.color); drawPixel(p*2, legL_Y, p, p, '#000'); drawPixel(p*5, legR_Y, p, p, '#000');
+            }
+            ctx.restore();
+        }
+
+        function spawnParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) { particles.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0, color: color }); }
+        }
+
+        function renderModules() {
+            const leftCont = document.getElementById('left-modules');
+            const rightCont = document.getElementById('right-modules');
+            if(!leftCont || !rightCont) return;
+            leftCont.innerHTML = ''; rightCont.innerHTML = '';
+            CONFIG.MODULES.forEach(m => {
+                const isLocked = state.level < m.reqLevel;
+                const btn = document.createElement('a'); btn.className = `module-btn ${isLocked ? 'locked' : ''}`;
+                btn.innerHTML = isLocked ? `🔒 LV.${m.reqLevel}` : m.label;
+                btn.href = isLocked ? '#' : 'https://kitscript.com';
+                if (m.side === 'left') leftCont.appendChild(btn); else rightCont.appendChild(btn);
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('hp-bar').style.width = `${state.hp}%`;
+            document.getElementById('exp-bar').style.width = `${(state.exp / state.maxExp) * 100}%`;
+            document.getElementById('score').innerText = state.score.toString().padStart(9, '0');
+            document.getElementById('stat-level').innerText = `LV.${state.level} HERO`;
+            document.getElementById('stat-tickets').innerText = `SALVO CHARGE: ${state.tickets} / 3`;
+            
+            const aoeBtn = document.getElementById('aoe-button');
+            // 버튼 상태 업데이트 로직 복구
+            if (state.tickets >= CONFIG.TICKETS_FOR_AOE) {
+                aoeBtn.classList.add('active');
+                aoeBtn.classList.remove('disabled');
+            } else {
+                aoeBtn.classList.remove('active');
+                aoeBtn.classList.add('disabled');
+            }
+        }
+
+        function showToast(msg) {
+            const cont = document.getElementById('toast-container');
+            const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
+            cont.appendChild(t); setTimeout(() => t.remove(), 2500);
+        }
+
+        function gameOver() { state.active = false; showToast('GAME OVER - REBOOTING'); setTimeout(() => location.reload(), 3000); }
+
+        function toggleSound() {
+            if (!ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("PLAYER READYING"); return; }
+            state.isMuted = !state.isMuted;
+            const btn = document.getElementById('sound-toggle');
+            if (state.isMuted) { ytPlayer.mute(); btn.innerText = "SOUND: OFF"; }
+            else { ytPlayer.unMute(); ytPlayer.setVolume(100); ytPlayer.playVideo(); btn.innerText = "SOUND: ON"; showToast("SOUND ACTIVATED"); }
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
