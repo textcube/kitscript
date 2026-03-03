@@ -133,8 +133,67 @@ const ctx = canvas.getContext('2d');
 
 const WIDTH = 960;
 const HEIGHT = 640;
-canvas.width = WIDTH;
-canvas.height = HEIGHT;
+
+const ASSET_MANIFEST = {
+    items: Array.from({ length: 10 }, (_, i) => ({
+        logicalName: `item-${i + 1}`,
+        webp: `assets/items/pizza_lv${i + 1}.webp`,
+        png: `assets/items/pizza_lv${i + 1}.png`
+    })),
+    customers: {
+        waiting: {
+            logicalName: 'customer-waiting',
+            webp: 'assets/customers/zombie_waiting.webp',
+            png: 'assets/customers/zombie_waiting.png'
+        },
+        angry: {
+            logicalName: 'customer-angry',
+            webp: 'assets/customers/zombie_angry.webp',
+            png: 'assets/customers/zombie_angry.png'
+        },
+        satisfied: {
+            logicalName: 'customer-satisfied',
+            webp: 'assets/customers/zombie_satisfied.webp',
+            png: 'assets/customers/zombie_satisfied.png'
+        },
+        leaving: {
+            logicalName: 'customer-leaving',
+            webp: 'assets/customers/zombie_leaving.webp',
+            png: 'assets/customers/zombie_leaving.png'
+        }
+    },
+    chef: {
+        logicalName: 'chef',
+        webp: 'assets/chef/chef_main.webp',
+        png: 'assets/chef/chef_main.png'
+    },
+    order: {
+        logicalName: 'order',
+        webp: 'assets/ui/order_ticket_2x.webp',
+        png: 'assets/ui/order_ticket_2x.png'
+    },
+    effect: {
+        logicalName: 'effect',
+        webp: 'assets/effects/spark_128.webp',
+        png: 'assets/effects/spark_128.png'
+    },
+    background: {
+        logicalName: 'background',
+        webp: 'assets/bg/shop_bg_1920x1280.webp',
+        png: 'assets/bg/shop_bg_1920x1280.png'
+    }
+};
+
+function setupCanvasResolution() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = `${WIDTH}px`;
+    canvas.style.height = `${HEIGHT}px`;
+    canvas.width = Math.floor(WIDTH * dpr);
+    canvas.height = Math.floor(HEIGHT * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+setupCanvasResolution();
 
 const GRID_SIZE = 5;
 const TILE_SIZE = 84;
@@ -156,18 +215,6 @@ const PIZZA_DATA = [
 ];
 
 const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
-const imageAssets = {
-    items: Array.from({ length: 10 }, (_, i) => `assets/items/pizza_lv${i + 1}.svg`),
-    customers: {
-        waiting: 'assets/customers/zombie_waiting.svg',
-        angry: 'assets/customers/zombie_angry.svg',
-        satisfied: 'assets/customers/zombie_satisfied.svg',
-        leaving: 'assets/customers/zombie_leaving.svg'
-    },
-    chef: 'assets/chef/chef_main.svg',
-    order: 'assets/ui/order_ticket_2x.svg',
-    background: 'assets/bg/shop_bg_1920x1280.svg'
-};
 
 const ZOMBIE_STATES = ['idle', 'angry', 'happyLeaving'];
 const ZOMBIE_FRAME_COUNT = 6;
@@ -176,20 +223,72 @@ const generatedSprites = { zombieLayers: {}, particles: {} };
 let rafClock = 0;
 
 const loadedImages = {};
-function loadImageAsset(key, src) {
-    const img = new Image();
-    img.onload = () => { loadedImages[key] = img; };
-    img.onerror = () => { loadedImages[key] = null; };
-    img.src = src;
+let assetLoadingProgress = 0;
+
+function drawLoadingScreen(progress) {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#1a120b';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.fillStyle = '#ff9f43';
+    ctx.textAlign = 'center';
+    ctx.font = '900 36px Pretendard';
+    ctx.fillText('LOADING ASSETS', WIDTH / 2, HEIGHT / 2 - 24);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px Pretendard';
+    ctx.fillText(`${Math.round(progress)}%`, WIDTH / 2, HEIGHT / 2 + 24);
 }
 
-function initImageAssets() {
-    imageAssets.items.forEach((src, idx) => loadImageAsset(`item-${idx + 1}`, src));
-    Object.entries(imageAssets.customers).forEach(([state, src]) => loadImageAsset(`customer-${state}`, src));
-    loadImageAsset('chef', imageAssets.chef);
-    loadImageAsset('order', imageAssets.order);
-    loadImageAsset('background', imageAssets.background);
-    initGeneratedSprites();
+function loadImageWithFallback(assetDef) {
+    const svgFallback = assetDef.webp ? assetDef.webp.replace(/\.webp$/, '.svg') : null;
+    const candidates = [assetDef.webp, assetDef.png, svgFallback].filter(Boolean);
+    return new Promise((resolve) => {
+        const tryLoad = (idx) => {
+            if (idx >= candidates.length) {
+                resolve({ key: assetDef.logicalName, img: null });
+                return;
+            }
+            const img = new Image();
+            img.onload = () => resolve({ key: assetDef.logicalName, img });
+            img.onerror = () => tryLoad(idx + 1);
+            img.src = candidates[idx];
+        };
+        tryLoad(0);
+    });
+}
+
+function getAssetList() {
+    return [
+        ...ASSET_MANIFEST.items,
+        ...Object.values(ASSET_MANIFEST.customers),
+        ASSET_MANIFEST.chef,
+        ASSET_MANIFEST.order,
+        ASSET_MANIFEST.effect,
+        ASSET_MANIFEST.background
+    ];
+}
+
+async function loadAssets() {
+    const assets = getAssetList();
+    const total = assets.length;
+    let loaded = 0;
+
+    drawLoadingScreen(0);
+
+    const tasks = assets.map(async (assetDef) => {
+        const { key, img } = await loadImageWithFallback(assetDef);
+        loadedImages[key] = img;
+        loaded += 1;
+        assetLoadingProgress = (loaded / total) * 100;
+        drawLoadingScreen(assetLoadingProgress);
+    });
+
+    await Promise.all(tasks);
+    assetLoadingProgress = 100;
+    drawLoadingScreen(assetLoadingProgress);
+    resetGame();
+    requestAnimationFrame(loop);
 }
 
 function initGeneratedSprites() {
@@ -1014,8 +1113,9 @@ function drawGameOver() {
 }
 
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
-initImageAssets();
-resetGame(); requestAnimationFrame(loop);
+
+window.addEventListener('resize', setupCanvasResolution);
+loadAssets();
 
 </script>
 </body>
