@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 38">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7c97e"/>
+      <stop offset="1" stop-color="#9f6732"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="196" height="34" rx="12" fill="#2d1e12"/>
+  <rect x="4" y="4" width="192" height="30" rx="10" fill="none" stroke="url(#metal)" stroke-width="4"/>
+  <rect x="16" y="11" width="168" height="16" rx="8" fill="#1a120b" opacity="0.8"/>
+</svg>

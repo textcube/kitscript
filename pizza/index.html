@@ -166,6 +166,15 @@ const imageAssets = {
     },
     chef: 'assets/chef/chef_main.svg',
     order: 'assets/ui/order_ticket_2x.svg',
+    parchment: 'assets/ui/parchment_texture.svg',
+    headerTexture: 'assets/ui/header_wood_texture.svg',
+    timerFrame: 'assets/ui/timer_frame.svg',
+    gameoverFrame: 'assets/ui/gameover_frame.svg',
+    statusIcons: {
+        hungry: 'assets/ui/icon_hungry.svg',
+        satisfied: 'assets/ui/icon_satisfied.svg',
+        leaving: 'assets/ui/icon_leaving.svg'
+    },
     effect: 'assets/effects/spark_128.svg',
     background: 'assets/bg/shop_bg_1920x1280.svg'
 };
@@ -183,6 +192,11 @@ function initImageAssets() {
     Object.entries(imageAssets.customers).forEach(([state, src]) => loadImageAsset(`customer-${state}`, src));
     loadImageAsset('chef', imageAssets.chef);
     loadImageAsset('order', imageAssets.order);
+    loadImageAsset('parchment', imageAssets.parchment);
+    loadImageAsset('headerTexture', imageAssets.headerTexture);
+    loadImageAsset('timerFrame', imageAssets.timerFrame);
+    loadImageAsset('gameoverFrame', imageAssets.gameoverFrame);
+    Object.entries(imageAssets.statusIcons).forEach(([state, src]) => loadImageAsset(`status-${state}`, src));
     loadImageAsset('effect', imageAssets.effect);
     loadImageAsset('background', imageAssets.background);
 }
@@ -194,6 +208,33 @@ function getCustomerSpriteState(customer) {
     return 'waiting';
 }
 
+
+function getCustomerStatusIcon(customer) {
+    if (customer.isLeaving) return 'leaving';
+    if (customer.requirements.length === 0) return 'satisfied';
+    if (customer.hunger > 70) return 'hungry';
+    return null;
+}
+
+function drawStatusIcon(iconKey, x, y) {
+    const icon = loadedImages[`status-${iconKey}`];
+    if (icon) {
+        ctx.drawImage(icon, x, y, 28, 28);
+        return;
+    }
+
+    ctx.save();
+    ctx.translate(x + 14, y + 14);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = iconKey === 'hungry' ? '#ff6b6b' : (iconKey === 'satisfied' ? '#7ed957' : '#8fc3ff');
+    ctx.font = '900 14px Pretendard';
+    ctx.textAlign = 'center';
+    ctx.fillText(iconKey === 'hungry' ? '!' : (iconKey === 'satisfied' ? '✓' : '→'), 0, 5);
+    ctx.restore();
+}
 const GameState = { PLAYING: 1, OVER: 2 };
 let currentState = GameState.PLAYING;
 let gold = 0;
@@ -354,33 +395,45 @@ class Customer {
 
     drawOrderSheet(sX, sY) {
         const orderImg = loadedImages.order;
+        const parchmentImg = loadedImages.parchment;
         if (orderImg) {
             ctx.drawImage(orderImg, sX, sY, 160, 95);
         } else {
-            const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
-            paperGrad.addColorStop(0, '#f8efba');
-            paperGrad.addColorStop(1, '#e1d49a');
-            ctx.fillStyle = paperGrad;
-            ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.4)";
-
+            ctx.save();
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(0,0,0,0.4)";
             ctx.beginPath();
             ctx.moveTo(sX, sY);
             ctx.lineTo(sX + 160, sY);
             ctx.lineTo(sX + 160, sY + 95);
-            for(let i=160; i>=0; i-=10) {
-                ctx.lineTo(sX + i, sY + 95 + (i%20==0?5:-5));
+            for (let i = 160; i >= 0; i -= 10) {
+                ctx.lineTo(sX + i, sY + 95 + (i % 20 === 0 ? 5 : -5));
             }
             ctx.closePath();
-            ctx.fill();
+            ctx.clip();
 
-            ctx.strokeStyle = "rgba(93, 64, 55, 0.1)";
+            if (parchmentImg) {
+                ctx.drawImage(parchmentImg, sX, sY, 160, 100);
+            } else {
+                const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
+                paperGrad.addColorStop(0, '#f8efba');
+                paperGrad.addColorStop(1, '#e1d49a');
+                ctx.fillStyle = paperGrad;
+                ctx.fillRect(sX, sY, 160, 100);
+            }
+            ctx.restore();
+
+            ctx.strokeStyle = "rgba(93, 64, 55, 0.12)";
             ctx.lineWidth = 1;
-            for(let i=sY+35; i<sY+80; i+=12) {
-                ctx.beginPath(); ctx.moveTo(sX + 15, i); ctx.lineTo(sX + 145, i); ctx.stroke();
+            for (let i = sY + 35; i < sY + 80; i += 12) {
+                ctx.beginPath();
+                ctx.moveTo(sX + 15, i);
+                ctx.lineTo(sX + 145, i);
+                ctx.stroke();
             }
         }
 
-        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.fillStyle = "rgba(0,0,0,0.14)";
         ctx.fillRect(sX + 15, sY + 80, 130, 6);
         const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
         ctx.fillStyle = barColor;
@@ -394,6 +447,9 @@ class Customer {
             const offsetX = idx * 55;
             drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
         });
+
+        const statusIcon = getCustomerStatusIcon(this);
+        if (statusIcon) drawStatusIcon(statusIcon, sX - 30, sY + 6);
     }
 
     draw() {
@@ -679,7 +735,15 @@ function draw() {
         }
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, WIDTH, 110);
+    const headerTexture = loadedImages.headerTexture;
+    if (headerTexture) {
+        ctx.drawImage(headerTexture, 0, 0, WIDTH, 110);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(0, 0, WIDTH, 110);
+    } else {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, WIDTH, 110);
+    }
     drawChef(WIDTH/2 - 200, 75);
 
     ctx.fillStyle = "#ff9f43";
@@ -689,11 +753,27 @@ function draw() {
     ctx.fillStyle = "rgba(255,255,255,0.5)";
     ctx.fillText("REVENUE COLLECTED", 60, 42);
 
-    const tX = WIDTH/2 - 80, tY = 60;
-    ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(tX, tY, 160, 16);
-    const tGrad = ctx.createLinearGradient(tX, 0, tX + 160, 0);
-    tGrad.addColorStop(0, "#ff9f43"); tGrad.addColorStop(1, "#ff6b6b");
-    ctx.fillStyle = tGrad; ctx.fillRect(tX, tY, 160 * (turnTimer/2), 16);
+    const tX = WIDTH / 2 - 80;
+    const tY = 60;
+    const timerFillX = tX + 4;
+    const timerFillY = tY + 11;
+    const timerFillW = 152;
+    const timerFillH = 16;
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.fillRect(timerFillX, timerFillY, timerFillW, timerFillH);
+    const tGrad = ctx.createLinearGradient(timerFillX, 0, timerFillX + timerFillW, 0);
+    tGrad.addColorStop(0, "#ff9f43");
+    tGrad.addColorStop(1, "#ff6b6b");
+    ctx.fillStyle = tGrad;
+    ctx.fillRect(timerFillX, timerFillY, timerFillW * (turnTimer / 2), timerFillH);
+    const timerFrame = loadedImages.timerFrame;
+    if (timerFrame) {
+        ctx.drawImage(timerFrame, tX - 16, tY, 200, 38);
+    } else {
+        ctx.strokeStyle = "rgba(255,220,170,0.5)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(timerFillX - 2, timerFillY - 2, timerFillW + 4, timerFillH + 4);
+    }
 
     ctx.save();
     ctx.shadowBlur = 40; ctx.shadowColor = "rgba(0,0,0,0.6)";
@@ -803,15 +883,42 @@ function drawItem(level, x, y, scale) {
 }
 
 function drawGameOver() {
-    ctx.fillStyle = "rgba(0,0,0,0.96)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    ctx.shadowBlur = 30; ctx.shadowColor = "#ff4757";
-    ctx.fillStyle = "#ff4757"; ctx.font = "900 70px Pretendard"; ctx.textAlign = "center";
-    ctx.fillText("UNDEAD RIOT!", WIDTH / 2, HEIGHT / 2 - 40);
+    ctx.fillStyle = "rgba(0,0,0,0.9)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    const frameW = 700;
+    const frameH = 320;
+    const frameX = WIDTH / 2 - frameW / 2;
+    const frameY = HEIGHT / 2 - frameH / 2;
+    const gameoverFrame = loadedImages.gameoverFrame;
+
+    if (gameoverFrame) {
+        ctx.drawImage(gameoverFrame, frameX, frameY, frameW, frameH);
+    } else {
+        ctx.fillStyle = "rgba(45,30,18,0.95)";
+        ctx.beginPath();
+        ctx.roundRect(frameX, frameY, frameW, frameH, 30);
+        ctx.fill();
+        ctx.strokeStyle = "#ff9f43";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+    }
+
+    ctx.textAlign = "center";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "rgba(255, 71, 87, 0.5)";
+    ctx.fillStyle = "#ff4757";
+    ctx.font = "900 70px Pretendard";
+    ctx.fillText("UNDEAD RIOT!", WIDTH / 2, frameY + 128);
+
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "white"; ctx.font = "20px Pretendard";
-    ctx.fillText(`The hungry horde breached the kitchen!`, WIDTH / 2, HEIGHT / 2 + 20);
-    ctx.fillStyle = "#ff9f43"; ctx.font = "bold 24px Pretendard";
-    ctx.fillText(`KITCHEN REOPENING IN ${Math.ceil(restartCountdown)}s`, WIDTH / 2, HEIGHT / 2 + 90);
+    ctx.fillStyle = "#f8efe2";
+    ctx.font = "20px Pretendard";
+    ctx.fillText("The hungry horde breached the kitchen!", WIDTH / 2, frameY + 196);
+
+    ctx.fillStyle = "#ffb24a";
+    ctx.font = "bold 24px Pretendard";
+    ctx.fillText(`KITCHEN REOPENING IN ${Math.ceil(restartCountdown)}s`, WIDTH / 2, frameY + 256);
 }
 
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
