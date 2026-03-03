@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 120">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a3c27"/>
+      <stop offset="1" stop-color="#2f1d11"/>
+    </linearGradient>
+    <pattern id="grain" width="120" height="24" patternUnits="userSpaceOnUse">
+      <path d="M0,10 C20,2 40,22 60,10 C80,-2 100,18 120,10" stroke="#8b5d3c" stroke-width="2" fill="none" opacity="0.35"/>
+      <path d="M0,20 C25,12 40,28 70,18 C90,12 110,26 120,22" stroke="#c18a53" stroke-width="1.5" fill="none" opacity="0.2"/>
+    </pattern>
+  </defs>
+  <rect width="960" height="120" fill="url(#wood)"/>
+  <rect width="960" height="120" fill="url(#grain)"/>
+  <rect width="960" height="120" fill="#000" opacity="0.18"/>
+</svg>
