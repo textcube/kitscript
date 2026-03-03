@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion: Pizza Edition</title>
+    <style>
+        :root {
+            --primary-color: #ff9f43;
+            --accent-color: #ff6b6b;
+            --bg-dark: #1a120b;
+            --header-bg: #2d1e12;
+            --btn-bg: #432e1e;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Pretendard', 'Segoe UI', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        .game-header {
+            width: 100%;
+            max-width: 1000px;
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--header-bg);
+            padding: 0 30px;
+            box-sizing: border-box;
+            border-bottom: 4px solid #4a3523;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .brand-zone {
+            display: flex;
+            flex-direction: column;
+        }
+        .brand-name {
+            font-weight: 900;
+            font-size: 24px;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255,159,67,0.5);
+        }
+        .game-subtitle {
+            font-size: 13px;
+            color: #a08a78;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .link-zone {
+            display: flex;
+            gap: 12px;
+        }
+        .nav-btn {
+            background: var(--btn-bg);
+            color: #e0c9b7;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            border: 2px solid #5d432f;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-btn:hover {
+            background: #5d432f;
+            border-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .sound-btn.active {
+            border-color: #00d2d3;
+            color: #00d2d3;
+            box-shadow: 0 0 15px rgba(0,210,211,0.2);
+        }
+        .canvas-container {
+            position: relative;
+            margin-top: 25px;
+            background: #3e2723;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 20px 60px rgba(0,0,0,0.7);
+        }
+        canvas {
+            border-radius: 10px;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="game-header">
+        <div class="brand-zone">
+            <span class="brand-name">BUNTGAMES</span>
+            <span class="game-subtitle">Eternal Invasion: Pizza Edition - Oksu Wood-Fired Pizza</span>
+        </div>
+        <div class="link-zone">
+            <button id="soundToggle" class="nav-btn sound-btn">Sound: OFF</button>
+            <a href="https://kitscript.com/game" target="_blank" class="nav-btn">Homepage</a>
+            <a href="https://www.youtube.com/@textcube" target="_blank" class="nav-btn" style="border-color: #ff4757;">YouTube</a>
+        </div>
+    </header>
+
+    <div class="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+<script>
+/**
+ * Eternal Invasion: Pizza Edition - Satisfied Customer Ver.
+ * [Senior Game Dev Visual Update]
+ * - 퇴장 애니메이션(Leaving Animation) 구현
+ * - 다중 품목 주문 & 캐릭터 시스템 연계
+ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const WIDTH = 960;
+const HEIGHT = 640;
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
+
+const GRID_SIZE = 5;
+const TILE_SIZE = 84;
+const SPACING = 12;
+const GRID_START_X = 60;
+const GRID_START_Y = 130;
+
+const PIZZA_DATA = [
+    { level: 1, name: "Flour Dough", color: "#f3e5ab", detail: "#e8d5b5", textColor: "#5d4037" },
+    { level: 2, name: "Rich Tomato", color: "#eb4d4b", detail: "#b33939", textColor: "#ffffff" },
+    { level: 3, name: "Creamy Cheese", color: "#f9ca24", detail: "#f0932b", textColor: "#5d4037" },
+    { level: 4, name: "Smoked Peperoni", color: "#c0392b", detail: "#922b21", textColor: "#ffffff" },
+    { level: 5, name: "Wild Mushroom", color: "#d7ccc8", detail: "#8d6e63", textColor: "#3e2723" },
+    { level: 6, name: "Ripe Olive", color: "#2f3640", detail: "#121212", textColor: "#ffffff" },
+    { level: 7, name: "Organic Basil", color: "#27ae60", detail: "#1e8449", textColor: "#ffffff" },
+    { level: 8, name: "Wood Oven Special", color: "#e67e22", detail: "#d35400", textColor: "#ffffff" },
+    { level: 9, name: "Golden Crust", color: "#f1c40f", detail: "#f39c12", textColor: "#3e2723" },
+    { level: 10, name: "Oksu Masterpiece", color: "#ff9f43", detail: "#e67e22", textColor: "#ffffff" }
+];
+
+const GameState = { PLAYING: 1, OVER: 2 };
+let currentState = GameState.PLAYING;
+let gold = 0;
+let lastTime = 0;
+let gameTime = 0;
+let turnTimer = 0; 
+let spawnTimer = 0;
+let restartCountdown = 7;
+
+let grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
+let customers = [];
+let animations = []; 
+let effectParticles = [];
+
+// --- Sound Engine ---
+let audioCtx = null;
+let isSoundOn = false;
+
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+const sfx = {
+    move: () => {
+        if (!isSoundOn || !audioCtx) return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.frequency.setValueAtTime(150, audioCtx.currentTime);
+        o.frequency.linearRampToValueAtTime(250, audioCtx.currentTime + 0.1);
+        g.gain.setValueAtTime(0.02, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.1);
+    },
+    merge: () => {
+        if (!isSoundOn || !audioCtx) return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(440, audioCtx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+        g.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.15);
+    },
+    success: () => {
+        if (!isSoundOn || !audioCtx) return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        o.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+        o.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2);
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.4);
+    }
+};
+
+document.getElementById('soundToggle').addEventListener('click', (e) => {
+    initAudio();
+    isSoundOn = !isSoundOn;
+    e.target.textContent = isSoundOn ? "Sound: ON" : "Sound: OFF";
+    e.target.classList.toggle('active', isSoundOn);
+    if (isSoundOn) audioCtx.resume();
+});
+
+// --- Logic Classes ---
+
+class Customer {
+    constructor() {
+        this.id = Date.now() + Math.random();
+        this.x = WIDTH - 260;
+        this.y = 120 + (this.getQueueCount() * 125);
+        this.targetY = this.y;
+        this.hunger = 0;
+        this.active = true;
+        this.isLeaving = false; // 퇴장 중인지 여부
+        this.zombieHue = Math.random() * 60 + 70; 
+        this.requirements = [];
+        const count = Math.random() < 0.6 ? 1 : 2;
+        for (let i = 0; i < count; i++) {
+            this.requirements.push(Math.floor(Math.random() * 5) + 1);
+        }
+        this.orderSeed = Math.random() * 1000;
+    }
+
+    getQueueCount() {
+        return customers.filter(c => !c.isLeaving).length;
+    }
+
+    update(dt) {
+        if (this.isLeaving) {
+            this.x += 300 * dt; // 오른쪽으로 퇴장
+            return;
+        }
+
+        // 대기열 위치 조정 (앞 사람이 나가면 앞으로 당김)
+        const currentWaiters = customers.filter(c => !c.isLeaving);
+        const myIndex = currentWaiters.indexOf(this);
+        if (myIndex !== -1) {
+            this.targetY = 120 + (myIndex * 125);
+            this.y += (this.targetY - this.y) * 5 * dt;
+        }
+
+        this.hunger += (0.35 + (gameTime / 600)) * dt; 
+        if (this.hunger >= 100) {
+            this.hunger = 100;
+            currentState = GameState.OVER;
+        }
+    }
+
+    draw() {
+        const zX = this.x + 35;
+        const zY = this.y + 45;
+        // 퇴장할 때는 더 활기차게 바운싱
+        const bobFreq = this.isLeaving ? 12 : 3;
+        const bobAmp = this.isLeaving ? 8 : 3;
+        const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
+        
+        ctx.save();
+        // 좀비 그림자
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.beginPath(); ctx.ellipse(zX, zY + 60, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+        // 좀비 팔
+        ctx.fillStyle = `hsl(${this.zombieHue}, 30%, 30%)`;
+        const armX = this.isLeaving ? zX - 10 : zX - 30;
+        ctx.fillRect(armX, zY + 20 + bob, 40, 15);
+
+        // 몸통
+        ctx.fillStyle = `hsl(${this.zombieHue}, 25%, 20%)`;
+        ctx.beginPath();
+        ctx.ellipse(zX, zY + 35 + bob, 28, 45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 머리
+        ctx.fillStyle = `hsl(${this.zombieHue}, 40%, 45%)`;
+        ctx.beginPath();
+        ctx.arc(zX, zY + bob, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 눈
+        const eyeColor = this.isLeaving ? '#ffffff' : (this.hunger > 70 ? '#ff3e3e' : '#d1ff3e');
+        ctx.shadowBlur = (!this.isLeaving && this.hunger > 80) ? 15 : 0;
+        ctx.shadowColor = eyeColor;
+        ctx.fillStyle = eyeColor;
+        ctx.beginPath();
+        ctx.arc(zX - 10, zY - 4 + bob, 5, 0, Math.PI * 2);
+        ctx.arc(zX + 10, zY - 4 + bob, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 입
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.beginPath();
+        if (this.isLeaving) {
+            // 웃는 입
+            ctx.arc(zX, zY + 10 + bob, 8, 0, Math.PI);
+        } else {
+            ctx.ellipse(zX, zY + 12 + bob, 10, 4 + (this.hunger/20), 0, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        ctx.restore();
+
+        // 주문서 (퇴장 중이 아닐 때만 그림)
+        if (!this.isLeaving) {
+            const sX = this.x + 75;
+            const sY = this.y + 15;
+            ctx.save();
+            const paperGrad = ctx.createLinearGradient(sX, sY, sX + 150, sY + 90);
+            paperGrad.addColorStop(0, '#f8efba');
+            paperGrad.addColorStop(1, '#e1d49a');
+            ctx.fillStyle = paperGrad;
+            ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.4)";
+            
+            ctx.beginPath();
+            ctx.moveTo(sX, sY);
+            ctx.lineTo(sX + 160, sY);
+            ctx.lineTo(sX + 160, sY + 95);
+            for(let i=160; i>=0; i-=10) {
+                ctx.lineTo(sX + i, sY + 95 + (i%20==0?5:-5));
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = "rgba(93, 64, 55, 0.1)";
+            ctx.lineWidth = 1;
+            for(let i=sY+35; i<sY+80; i+=12) {
+                ctx.beginPath(); ctx.moveTo(sX + 15, i); ctx.lineTo(sX + 145, i); ctx.stroke();
+            }
+
+            ctx.fillStyle = "rgba(0,0,0,0.1)";
+            ctx.fillRect(sX + 15, sY + 80, 130, 6);
+            const barColor = this.hunger > 85 ? '#eb4d4b' : (this.hunger > 60 ? '#f0932b' : '#6ab04c');
+            ctx.fillStyle = barColor;
+            ctx.fillRect(sX + 15, sY + 80, 130 * (this.hunger / 100), 6);
+
+            ctx.fillStyle = "#5d4037";
+            ctx.font = "bold 11px Pretendard";
+            ctx.fillText(`ORDER #${Math.floor(this.orderSeed)}`, sX + 15, sY + 22);
+            
+            this.requirements.forEach((level, idx) => {
+                const offsetX = idx * 55;
+                drawItem(level, sX + 35 + offsetX, sY + 35, 0.48);
+            });
+            ctx.restore();
+        }
+    }
+}
+
+class TileItem {
+    constructor(level, index) {
+        this.level = level;
+        this.index = index;
+        this.isAnimating = false;
+        this.scale = 1.0;
+    }
+    getPos() {
+        const col = this.index % GRID_SIZE;
+        const row = Math.floor(this.index / GRID_SIZE);
+        return {
+            x: GRID_START_X + col * (TILE_SIZE + SPACING),
+            y: GRID_START_Y + row * (TILE_SIZE + SPACING)
+        };
+    }
+}
+
+// --- Systems ---
+
+function resetGame() {
+    grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
+    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+        grid[i] = new TileItem(1, i);
+    }
+    customers = [];
+    animations = [];
+    effectParticles = [];
+    gold = 0;
+    gameTime = 0;
+    turnTimer = 0;
+    spawnTimer = 0;
+    restartCountdown = 7;
+    currentState = GameState.PLAYING;
+}
+
+function processTurn() {
+    if (animations.length > 0) return;
+    let sorted = grid.map((_, i) => i).filter(i => grid[i] && !grid[i].isAnimating);
+    sorted.sort((a, b) => grid[b].level - grid[a].level);
+
+    for (let i of sorted) {
+        const itemA = grid[i];
+        let sameLevel = [];
+        grid.forEach((itemB, idx) => {
+            if (itemB && itemB !== itemA && !itemB.isAnimating && itemB.level === itemA.level) {
+                sameLevel.push(idx);
+            }
+        });
+        if (sameLevel.length === 0) continue;
+        let closestIdx = -1;
+        let minDist = Infinity;
+        const ax = i % GRID_SIZE, ay = Math.floor(i / GRID_SIZE);
+        sameLevel.forEach(idxB => {
+            const bx = idxB % GRID_SIZE, by = Math.floor(idxB / GRID_SIZE);
+            const d = Math.abs(ax - bx) + Math.abs(ay - by);
+            if (d < minDist) { minDist = d; closestIdx = idxB; }
+        });
+        if (closestIdx === -1) continue;
+        const itemB = grid[closestIdx];
+        const bx = closestIdx % GRID_SIZE, by = Math.floor(closestIdx / GRID_SIZE);
+
+        if (minDist === 1) {
+            itemB.isAnimating = true;
+            animations.push({
+                type: 'merge', from: closestIdx, to: i, level: itemB.level,
+                progress: 0, startPos: itemB.getPos(), endPos: itemA.getPos()
+            });
+            sfx.merge();
+            return;
+        } else {
+            const dx = ax > bx ? 1 : (ax < bx ? -1 : 0);
+            const dy = ay > by ? 1 : (ay < by ? -1 : 0);
+            let targets = (Math.abs(ax - bx) >= Math.abs(ay - by)) 
+                ? [{ x: bx + dx, y: by }, { x: bx, y: by + dy }]
+                : [{ x: bx, y: by + dy }, { x: bx + dx, y: by }];
+            for (let t of targets) {
+                const nIdx = t.y * GRID_SIZE + t.x;
+                if (t.x >= 0 && t.x < GRID_SIZE && t.y >= 0 && t.y < GRID_SIZE && !grid[nIdx]) {
+                    itemB.isAnimating = true;
+                    animations.push({
+                        type: 'move', from: closestIdx, to: nIdx, level: itemB.level,
+                        progress: 0, startPos: itemB.getPos(), endPos: {
+                            x: GRID_START_X + t.x * (TILE_SIZE + SPACING),
+                            y: GRID_START_Y + t.y * (TILE_SIZE + SPACING)
+                        }
+                    });
+                    sfx.move();
+                    return;
+                }
+            }
+        }
+    }
+}
+
+function spawnIngredient() {
+    let empties = [];
+    grid.forEach((item, idx) => { if (!item) empties.push(idx); });
+    if (empties.length > 0) {
+        const idx = empties[Math.floor(Math.random() * empties.length)];
+        grid[idx] = new TileItem(1, idx);
+    }
+}
+
+function spawnParticles(x, y, color) {
+    for (let i = 0; i < 15; i++) {
+        effectParticles.push({
+            x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+            life: 1.0, color, size: Math.random() * 5 + 2
+        });
+    }
+}
+
+function update(time) {
+    const dt = Math.min((time - lastTime) / 1000, 0.1);
+    lastTime = time;
+    if (currentState === GameState.OVER) {
+        restartCountdown -= dt;
+        if (restartCountdown <= 0) resetGame();
+        return;
+    }
+    gameTime += dt;
+    spawnTimer += dt;
+    turnTimer += dt;
+
+    if (turnTimer >= 2.0) { processTurn(); turnTimer = 0; }
+    if (spawnTimer >= 4.0) { spawnIngredient(); spawnTimer = 0; }
+
+    for (let i = animations.length - 1; i >= 0; i--) {
+        const a = animations[i];
+        a.progress += dt * 5;
+        if (a.progress >= 1) {
+            if (a.type === 'merge') {
+                if (grid[a.to]) {
+                    grid[a.to].level++;
+                    grid[a.to].scale = 1.4;
+                    spawnParticles(a.endPos.x + TILE_SIZE/2, a.endPos.y + TILE_SIZE/2, PIZZA_DATA[grid[a.to].level-1].color);
+                }
+                grid[a.from] = null;
+            } else {
+                const mItem = grid[a.from];
+                if (mItem) {
+                    mItem.index = a.to; mItem.isAnimating = false;
+                    grid[a.to] = mItem; grid[a.from] = null;
+                }
+            }
+            animations.splice(i, 1);
+        }
+    }
+
+    grid.forEach(item => {
+        if (item && item.scale > 1.0) item.scale -= dt * 3;
+        if (item && item.scale < 1.0) item.scale = 1.0;
+    });
+
+    // 대기 중인 손님 수만 체크하여 스폰
+    const waitingCount = customers.filter(c => !c.isLeaving).length;
+    if (waitingCount < 4 && Math.random() < 0.007) {
+        customers.push(new Customer());
+    }
+
+    customers.forEach(c => c.update(dt));
+
+    // 주문 수령 및 퇴장 처리
+    customers.forEach(cust => {
+        if (!cust.active || cust.isLeaving) return;
+        for (let rIdx = 0; rIdx < cust.requirements.length; rIdx++) {
+            const levelNeeded = cust.requirements[rIdx];
+            const gIdx = grid.findIndex(it => it && !it.isAnimating && it.level === levelNeeded);
+            if (gIdx !== -1) {
+                const p = grid[gIdx].getPos();
+                spawnParticles(p.x + TILE_SIZE/2, p.y + TILE_SIZE/2, PIZZA_DATA[levelNeeded-1].color);
+                grid[gIdx] = null;
+                cust.requirements.splice(rIdx, 1);
+                gold += levelNeeded * 400;
+                sfx.success();
+                break; 
+            }
+        }
+        // 모든 주문 완료 시 퇴장 모드로 전환
+        if (cust.requirements.length === 0) {
+            cust.isLeaving = true;
+        }
+    });
+    
+    // 화면 밖으로 완전히 나간 손님 필터링
+    customers = customers.filter(c => c.x < WIDTH + 200);
+
+    effectParticles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.2; 
+        p.life -= dt * 1.5;
+    });
+    effectParticles = effectParticles.filter(p => p.life > 0);
+}
+
+// --- Drawing Systems ---
+
+function drawChef(x, y) {
+    const breathe = Math.sin(gameTime * 2) * 2;
+    ctx.save();
+    ctx.translate(x, y + breathe);
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.roundRect(-35, 0, 70, 60, 10); ctx.fill();
+    ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.stroke();
+    
+    ctx.fillStyle = "#ff4757";
+    ctx.beginPath(); ctx.moveTo(-35, 10); ctx.lineTo(35, 10); ctx.lineTo(0, 30); ctx.closePath(); ctx.fill();
+
+    const faceGrad = ctx.createRadialGradient(0, -15, 5, 0, -10, 30);
+    faceGrad.addColorStop(0, "#ffdbac"); faceGrad.addColorStop(1, "#f1c27d");
+    ctx.fillStyle = faceGrad;
+    ctx.beginPath(); ctx.arc(0, -10, 28, 0, Math.PI * 2); ctx.fill();
+    
+    ctx.fillStyle = "rgba(255, 100, 100, 0.2)";
+    ctx.beginPath(); ctx.arc(-15, -5, 6, 0, Math.PI * 2); ctx.arc(15, -5, 6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.roundRect(-28, -65, 56, 35, 12); ctx.fill();
+    ctx.strokeStyle = "#eee"; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -65, 35, 18, 0, 0, Math.PI * 2); ctx.fill();
+    
+    ctx.fillStyle = "#2d1e12";
+    ctx.beginPath();
+    ctx.moveTo(-18, -2); ctx.quadraticCurveTo(0, 5, 18, -2); ctx.quadraticCurveTo(0, 15, -18, -2); ctx.fill();
+    
+    ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.arc(-10, -18, 3, 0, Math.PI * 2); ctx.arc(10, -18, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff"; 
+    ctx.beginPath(); ctx.arc(-11, -19, 1, 0, Math.PI * 2); ctx.arc(9, -19, 1, 0, Math.PI * 2); ctx.fill();
+    
+    ctx.restore();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    
+    ctx.fillStyle = "#1a0f0a"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 2;
+    for(let i=0; i<WIDTH; i+=60) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0, 0, WIDTH, 110);
+    drawChef(WIDTH/2 - 200, 75);
+
+    ctx.fillStyle = "#ff9f43";
+    ctx.font = "900 36px Pretendard";
+    ctx.fillText(gold.toLocaleString(), 60, 80);
+    ctx.font = "bold 13px Pretendard";
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.fillText("REVENUE COLLECTED", 60, 42);
+
+    const tX = WIDTH/2 - 80, tY = 60;
+    ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(tX, tY, 160, 16);
+    const tGrad = ctx.createLinearGradient(tX, 0, tX + 160, 0);
+    tGrad.addColorStop(0, "#ff9f43"); tGrad.addColorStop(1, "#ff6b6b");
+    ctx.fillStyle = tGrad; ctx.fillRect(tX, tY, 160 * (turnTimer/2), 16);
+
+    ctx.save();
+    ctx.shadowBlur = 40; ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.fillStyle = "#2d1e12";
+    ctx.beginPath(); ctx.roundRect(GRID_START_X - 18, GRID_START_Y - 18, (TILE_SIZE + SPACING) * GRID_SIZE + 24, (TILE_SIZE + SPACING) * GRID_SIZE + 24, 25); ctx.fill();
+    ctx.restore();
+
+    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+        const col = i % GRID_SIZE; const row = Math.floor(i / GRID_SIZE);
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.beginPath(); ctx.roundRect(GRID_START_X + col * (TILE_SIZE + SPACING), GRID_START_Y + row * (TILE_SIZE + SPACING), TILE_SIZE, TILE_SIZE, 15); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.03)"; ctx.stroke();
+    }
+
+    grid.forEach(it => { if (it && !it.isAnimating) drawItem(it.level, it.getPos().x, it.getPos().y, it.scale); });
+    animations.forEach(a => {
+        const x = a.startPos.x + (a.endPos.x - a.startPos.x) * a.progress;
+        const y = a.startPos.y + (a.endPos.y - a.startPos.y) * a.progress;
+        drawItem(a.level, x, y, a.type === 'merge' ? 1.15 : 1.0);
+    });
+
+    effectParticles.forEach(p => {
+        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // 퇴장 중인 손님을 나중에 그려서 우선순위 확보
+    customers.forEach(c => c.draw());
+    
+    if (currentState === GameState.OVER) drawGameOver();
+}
+
+function drawItem(level, x, y, scale) {
+    const data = PIZZA_DATA[level - 1]; if (!data) return;
+    const cx = x + TILE_SIZE / 2; const cy = y + TILE_SIZE / 2;
+    const r = (TILE_SIZE / 2 - 12) * scale;
+    
+    ctx.save();
+    ctx.shadowBlur = 12 * scale; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowOffsetY = 6 * scale;
+    const grad = ctx.createRadialGradient(cx - r/3, cy - r/3, r/8, cx, cy, r);
+    grad.addColorStop(0, data.color); grad.addColorStop(1, data.detail);
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+    switch(level) {
+        case 1: 
+            ctx.fillStyle = "rgba(255,255,255,0.4)";
+            for(let i=0; i<8; i++) {
+                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.6, cy + Math.sin(i*2)*r*0.5, 2*scale, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+        case 3: 
+            ctx.fillStyle = "rgba(139, 69, 19, 0.2)";
+            for(let i=0; i<4; i++) {
+                ctx.beginPath(); ctx.arc(cx + (i-1.5)*10, cy + (Math.sin(i)*12), 4*scale, 0, Math.PI*2); ctx.fill();
+            }
+            break;
+        case 4: 
+            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1;
+            for(let i=0; i<5; i++) {
+                ctx.beginPath(); ctx.arc(cx + Math.cos(i)*r*0.4, cy + Math.sin(i*r)*r*0.4, 3*scale, 0, Math.PI*2); ctx.stroke();
+            }
+            break;
+        case 7: 
+            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.beginPath();
+            ctx.moveTo(cx-r*0.5, cy); ctx.lineTo(cx+r*0.5, cy); ctx.stroke();
+            break;
+        case 10: 
+            const shine = ctx.createLinearGradient(cx-r, cy-r, cx+r, cy+r);
+            shine.addColorStop(0, "rgba(255,255,255,0)");
+            shine.addColorStop(0.5, "rgba(255,255,255,0.3)");
+            shine.addColorStop(1, "rgba(255,255,255,0)");
+            ctx.fillStyle = shine; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+            break;
+    }
+
+    ctx.fillStyle = data.textColor;
+    ctx.font = `900 ${Math.max(8, 9 * scale)}px Pretendard`;
+    ctx.textAlign = "center"; 
+    ctx.fillText(data.name.split(' ')[0], cx, cy + 3 * scale);
+    ctx.restore();
+}
+
+function drawGameOver() {
+    ctx.fillStyle = "rgba(0,0,0,0.96)"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.shadowBlur = 30; ctx.shadowColor = "#ff4757";
+    ctx.fillStyle = "#ff4757"; ctx.font = "900 70px Pretendard"; ctx.textAlign = "center";
+    ctx.fillText("UNDEAD RIOT!", WIDTH / 2, HEIGHT / 2 - 40);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "white"; ctx.font = "20px Pretendard";
+    ctx.fillText(`The hungry horde breached the kitchen!`, WIDTH / 2, HEIGHT / 2 + 20);
+    ctx.fillStyle = "#ff9f43"; ctx.font = "bold 24px Pretendard";
+    ctx.fillText(`KITCHEN REOPENING IN ${Math.ceil(restartCountdown)}s`, WIDTH / 2, HEIGHT / 2 + 90);
+}
+
+function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
+resetGame(); requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
