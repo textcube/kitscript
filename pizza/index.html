@@ -141,26 +141,21 @@ const ASSET_MANIFEST = {
         png: `assets/items/pizza_lv${i + 1}.png`
     })),
     customers: {
-        waiting: {
-            logicalName: 'customer-waiting',
-            webp: 'assets/customers/zombie_waiting.webp',
-            png: 'assets/customers/zombie_waiting.png'
-        },
-        angry: {
-            logicalName: 'customer-angry',
-            webp: 'assets/customers/zombie_angry.webp',
-            png: 'assets/customers/zombie_angry.png'
-        },
-        satisfied: {
-            logicalName: 'customer-satisfied',
-            webp: 'assets/customers/zombie_satisfied.webp',
-            png: 'assets/customers/zombie_satisfied.png'
-        },
-        leaving: {
-            logicalName: 'customer-leaving',
-            webp: 'assets/customers/zombie_leaving.webp',
-            png: 'assets/customers/zombie_leaving.png'
-        }
+        zombieWaiting: { logicalName: 'customer-zombie-waiting', webp: 'assets/customers/zombie_waiting.webp', png: 'assets/customers/zombie_waiting.png' },
+        zombieAngry: { logicalName: 'customer-zombie-angry', webp: 'assets/customers/zombie_angry.webp', png: 'assets/customers/zombie_angry.png' },
+        zombieLeaving: { logicalName: 'customer-zombie-leaving', webp: 'assets/customers/zombie_leaving.webp', png: 'assets/customers/zombie_leaving.png' },
+
+        ghostWaiting: { logicalName: 'customer-ghost-waiting', webp: 'assets/customers/ghost_waiting.webp', png: 'assets/customers/ghost_waiting.png' },
+        ghostAngry: { logicalName: 'customer-ghost-angry', webp: 'assets/customers/ghost_angry.webp', png: 'assets/customers/ghost_angry.png' },
+        ghostLeaving: { logicalName: 'customer-ghost-leaving', webp: 'assets/customers/ghost_leaving.webp', png: 'assets/customers/ghost_leaving.png' },
+
+        skeletonWaiting: { logicalName: 'customer-skeleton-waiting', webp: 'assets/customers/skeleton_waiting.webp', png: 'assets/customers/skeleton_waiting.png' },
+        skeletonAngry: { logicalName: 'customer-skeleton-angry', webp: 'assets/customers/skeleton_angry.webp', png: 'assets/customers/skeleton_angry.png' },
+        skeletonLeaving: { logicalName: 'customer-skeleton-leaving', webp: 'assets/customers/skeleton_leaving.webp', png: 'assets/customers/skeleton_leaving.png' },
+
+        draculaWaiting: { logicalName: 'customer-dracula-waiting', webp: 'assets/customers/dracula_waiting.webp', png: 'assets/customers/dracula_waiting.png' },
+        draculaAngry: { logicalName: 'customer-dracula-angry', webp: 'assets/customers/dracula_angry.webp', png: 'assets/customers/dracula_angry.png' },
+        draculaLeaving: { logicalName: 'customer-dracula-leaving', webp: 'assets/customers/dracula_leaving.webp', png: 'assets/customers/dracula_leaving.png' }
     },
     chef: {
         logicalName: 'chef',
@@ -224,14 +219,6 @@ const UNDEAD_ARCHETYPES = [
         silhouette: 'classic'
     },
     {
-        type: 'mummy',
-        skinBase: '#d5c6a3',
-        skinShade: '#8b7a55',
-        eye: '#f7e27c',
-        apparel: '#a98f62',
-        silhouette: 'hunched'
-    },
-    {
         type: 'dracula',
         skinBase: '#c9c4e0',
         skinShade: '#6f678f',
@@ -257,7 +244,15 @@ const UNDEAD_ARCHETYPES = [
     }
 ];
 
-const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
+const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie/ghost/skeleton/dracula customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
+
+
+const CUSTOMER_ASSET_KEY_MAP = {
+    zombie: { idle: 'customer-zombie-waiting', angry: 'customer-zombie-angry', happyLeaving: 'customer-zombie-leaving' },
+    ghost: { idle: 'customer-ghost-waiting', angry: 'customer-ghost-angry', happyLeaving: 'customer-ghost-leaving' },
+    skeleton: { idle: 'customer-skeleton-waiting', angry: 'customer-skeleton-angry', happyLeaving: 'customer-skeleton-leaving' },
+    dracula: { idle: 'customer-dracula-waiting', angry: 'customer-dracula-angry', happyLeaving: 'customer-dracula-leaving' }
+};
 
 const ZOMBIE_STATES = ['idle', 'angry', 'happyLeaving'];
 const ZOMBIE_FRAME_COUNT = 6;
@@ -700,12 +695,8 @@ class Customer {
 
     draw() {
         const state = this.animState;
-        const customerAssetByState = {
-            idle: 'customer-waiting',
-            angry: 'customer-angry',
-            happyLeaving: 'customer-leaving'
-        };
-        const customerImg = loadedImages[customerAssetByState[state]];
+        const assetByType = CUSTOMER_ASSET_KEY_MAP[this.undeadProfile.type] || CUSTOMER_ASSET_KEY_MAP.zombie;
+        const customerImg = loadedImages[assetByType?.[state]];
         const bobFreq = this.isLeaving ? 12 : 3;
         const bobAmp = this.isLeaving ? 8 : 3;
         const bob = Math.sin(gameTime * bobFreq + this.id) * bobAmp;
