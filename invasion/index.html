@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #eee;
+            font-family: 'Pretendard', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            background-color: #000;
+            box-shadow: 0 0 50px rgba(255,0,0,0.1);
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+        }
+
+        /* UI Panel */
+        .ui-panel {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 15px;
+            border-radius: 4px;
+            pointer-events: none;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 2px solid #500;
+            color: #f55;
+            font-family: monospace;
+            z-index: 100;
+            transform: translateX(-120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            opacity: 0;
+        }
+        .ui-panel.active {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Result Overlay */
+        #resultOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        #resultOverlay.active { display: flex; }
+        .result-title { font-size: 4rem; margin-bottom: 10px; font-weight: 900; }
+        .result-sub { font-size: 1.5rem; margin-bottom: 30px; font-family: monospace; }
+        
+        .again-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #050;
+            color: white;
+            border: 2px solid #5f5;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px #5f5;
+            transition: 0.3s;
+        }
+        .again-btn:hover { background: #5f5; transform: scale(1.1); color: #000; }
+
+        .controls {
+            padding: 12px;
+            display: flex;
+            gap: 12px;
+            background: #111;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            font-weight: 800;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 1px;
+            position: relative;
+        }
+        
+        .nav-btn {
+            background: transparent;
+            border: 1px solid #555;
+            color: #888;
+            padding: 5px 10px;
+            font-family: monospace;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s;
+            outline: none;
+            text-decoration: none;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        
+        .info-btn { position: absolute; left: 20px; }
+        .info-btn:hover, .info-btn.active { border-color: #f55; color: #f55; }
+        
+        /* Sound Button Neon Style */
+        .sound-btn { position: absolute; left: 130px; border-color: #444; color: #444; }
+        .sound-btn.active { border-color: #0f0; color: #0f0; box-shadow: 0 0 10px rgba(0, 255, 0, 0.3); }
+        .sound-btn:hover { border-color: #0f0; color: #0f0; }
+
+        .end-btn { position: absolute; left: 235px; border-color: #f55; color: #f55; }
+        .end-btn:hover { background: #500; color: #fff; }
+
+        .yt-btn { position: absolute; right: 20px; border-color: #ff0000; color: #ff0000; font-weight: bold; }
+        .yt-btn:hover { background: #ff0000; color: #fff; }
+
+        .title-text {
+            color: #fff;
+            text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
+            font-size: 1.1rem;
+        }
+        .red { color: #ff4d4d; }
+        .blue { color: #4d7cff; }
+        .stats { color: #fff; font-size: 11px; font-family: monospace; }
+        
+        @media (max-width: 1150px) {
+            .nav-btn { position: static; font-size: 8px; padding: 4px 6px; }
+            .controls { gap: 8px; padding: 8px; flex-wrap: wrap; }
+            .title-text { font-size: 0.9rem; width: 100%; text-align: center; order: -1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="resultOverlay">
+    <div id="winnerText" class="result-title">VICTORY</div>
+    <div id="resultStats" class="result-sub">RED: 0 | BLUE: 0</div>
+    <button id="againBtn" class="again-btn">AGAIN (RETRY)</button>
+</div>
+
+<div class="controls">
+    <button id="toggleInfo" class="nav-btn info-btn">SYSTEM INFO</button>
+    <button id="soundBtn" class="nav-btn sound-btn">SOUND: OFF</button>
+    <button id="endWarBtn" class="nav-btn end-btn">END WAR</button>
+    <div class="title-text">ETERNAL INVASION</div>
+    <div class="stats">ENTITIES: <span id="entityCount">0</span></div>
+    <div class="stats">FPS: <span id="fps">0</span></div>
+    <div><span class="red">RED</span> vs <span class="blue">BLUE</span></div>
+    <a href="https://www.youtube.com/@textcube" target="_blank" class="nav-btn yt-btn">BUNT GAMES YT</a>
+</div>
+
+<div id="uiPanel" class="ui-panel">
+    > SYSTEM_BOOT: OK<br>
+    > PROJECT_NAME: ETERNAL_INVASION<br>
+    > AUDIO_ENGINE: PROCEDURAL_SYNTH<br>
+    > BGM: STANDBY (USE SOUND BUTTON)<br>
+    > TARGETING: LOWEST_HP_FOCUS<br>
+    > STATUS: INFINITE_WAR_ACTIVE<br>
+    -------------------------<br>
+    > CLICK 'SOUND' BUTTON TO ENABLE AUDIO
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+/**
+ * Eternal Invasion: 브랜딩이 확정된 FSM 백병전 시뮬레이션
+ */
+
+// --- 절차적 오디오 엔진 ---
+class AudioEngine {
+    constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.isStarted = false;
+        this.isMuted = false;
+        this.bpm = 135;
+        this.nextTickTime = 0;
+        this.currentStep = 0;
+    }
+
+    async init() {
+        if (this.ctx) {
+            if (this.ctx.state === 'suspended') {
+                await this.ctx.resume();
+            }
+            return;
+        }
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.3;
+            this.masterGain.connect(this.ctx.destination);
+            this.isStarted = true;
+            this.scheduler();
+        } catch (e) { console.error("Audio Context Error:", e); }
+    }
+
+    toggleMute() {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'running') {
+            this.ctx.suspend();
+            return false;
+        } else {
+            this.ctx.resume();
+            return true;
+        }
+    }
+
+    playKick(time) {
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.frequency.setValueAtTime(150, time);
+        osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+        gain.gain.setValueAtTime(1, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.5);
+    }
+
+    playBass(time, freq) {
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.2);
+    }
+
+    playChomp() {
+        if (!this.isStarted || this.ctx.state !== 'running') return;
+        const time = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(200, time);
+        osc.frequency.exponentialRampToValueAtTime(50, time + 0.1);
+        gain.gain.setValueAtTime(0.15, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.1);
+    }
+
+    playLaser() {
+        if (!this.isStarted || this.ctx.state !== 'running') return;
+        const time = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, time);
+        osc.frequency.exponentialRampToValueAtTime(100, time + 0.15);
+        gain.gain.setValueAtTime(0.08, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+        osc.connect(gain); gain.connect(this.masterGain);
+        osc.start(time); osc.stop(time + 0.15);
+    }
+
+    playHit() {
+        if (!this.isStarted || this.ctx.state !== 'running') return;
+        const time = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.05;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.08, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+        noise.connect(gain); gain.connect(this.masterGain);
+        noise.start(time);
+    }
+
+    scheduler() {
+        if (!this.isStarted) return;
+        if (this.ctx.state === 'running') {
+            while (this.nextTickTime < this.ctx.currentTime + 0.1) {
+                const time = this.nextTickTime;
+                if (this.currentStep % 4 === 0) this.playKick(time);
+                const bassFreqs = [55, 55, 65, 49];
+                if (this.currentStep % 2 === 0) this.playBass(time, bassFreqs[(this.currentStep / 2) % 4]);
+                this.nextTickTime += 60.0 / this.bpm / 4.0;
+                this.currentStep++;
+            }
+        } else {
+            this.nextTickTime = this.ctx.currentTime;
+        }
+        setTimeout(() => this.scheduler(), 25);
+    }
+}
+
+const audio = new AudioEngine();
+
+// --- 시뮬레이션 엔진 ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const entityCountEl = document.getElementById('entityCount');
+const fpsEl = document.getElementById('fps');
+const uiPanel = document.getElementById('uiPanel');
+const toggleBtn = document.getElementById('toggleInfo');
+const soundBtn = document.getElementById('soundBtn');
+const endWarBtn = document.getElementById('endWarBtn');
+const resultOverlay = document.getElementById('resultOverlay');
+const winnerText = document.getElementById('winnerText');
+const resultStats = document.getElementById('resultStats');
+const againBtn = document.getElementById('againBtn');
+
+let gameRunning = true;
+let spawnTimer = 0;
+let lastTime = 0;
+let entities = [];
+let projectiles = [];
+let particles = [];
+let lanes = [];
+const spriteCache = {};
+
+const UNIT_TYPES = { MELEE: 'MELEE', RANGED: 'RANGED' };
+const TEAMS = { RED: 'RED', BLUE: 'BLUE' };
+const TEAM_COLORS = { [TEAMS.RED]: '#ff4d4d', [TEAMS.BLUE]: '#4d7cff' };
+
+const CONFIG = {
+    SPAWN_INTERVAL: 400,
+    MAX_MINIONS_PER_TEAM: 160,
+    LANE_COUNT: 9,
+    LANE_ADHERENCE_THRESHOLD: 12,
+    LANE_MAX_DRIFT: 25,
+    SEPARATION_FORCE: 0.35,
+    PROJECTILE_SPEED: 8,
+    [UNIT_TYPES.MELEE]: { hp: 200, range: 24, speed: 1.8, radius: 8, damage: 25, cooldown: 500, attackDuration: 250 },
+    [UNIT_TYPES.RANGED]: { hp: 80, range: 160, speed: 1.2, radius: 9, damage: 12, cooldown: 1000, attackDuration: 400 }
+};
+
+function initGame() {
+    entities = [];
+    projectiles = [];
+    particles = [];
+    spawnTimer = 0;
+    gameRunning = true;
+    resultOverlay.classList.remove('active');
+}
+
+function endWar() {
+    gameRunning = false;
+    const redCount = entities.filter(e => e.team === TEAMS.RED && e.state !== 'DEAD').length;
+    const blueCount = entities.filter(e => e.team === TEAMS.BLUE && e.state !== 'DEAD').length;
+    
+    let winner = "DRAW";
+    if (redCount > blueCount) {
+        winner = "RED VICTORY";
+        winnerText.style.color = TEAM_COLORS[TEAMS.RED];
+    } else if (blueCount > redCount) {
+        winner = "BLUE VICTORY";
+        winnerText.style.color = TEAM_COLORS[TEAMS.BLUE];
+    } else {
+        winnerText.style.color = "#fff";
+    }
+
+    winnerText.innerText = winner;
+    resultStats.innerText = `RED UNITS: ${redCount} | BLUE UNITS: ${blueCount}`;
+    resultOverlay.classList.add('active');
+}
+
+// UI 이벤트 리스너
+soundBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!audio.isStarted) await audio.init();
+    const isNowPlaying = audio.toggleMute();
+    if (isNowPlaying) {
+        soundBtn.innerText = "SOUND: ON";
+        soundBtn.classList.add('active');
+        uiPanel.innerHTML = uiPanel.innerHTML.replace('STANDBY (USE SOUND BUTTON)', 'TENSION_LOOP_ACTIVE');
+    } else {
+        soundBtn.innerText = "SOUND: OFF";
+        soundBtn.classList.remove('active');
+    }
+});
+
+toggleBtn.addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    uiPanel.classList.toggle('active'); 
+    toggleBtn.classList.toggle('active'); 
+});
+
+endWarBtn.addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    endWar(); 
+});
+
+againBtn.addEventListener('click', (e) => { 
+    e.stopPropagation(); 
+    initGame(); 
+});
+
+// 파티클 시스템
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 6;
+        this.vy = (Math.random() - 0.5) * 6;
+        this.life = 1.0; this.color = color;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    draw() {
+        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 2, 2); ctx.globalAlpha = 1.0;
+    }
+}
+
+function createHitEffect(x, y, color) {
+    for(let i=0; i<6; i++) particles.push(new Particle(x, y, color));
+    audio.playHit();
+}
+
+// 스프라이트 캐싱
+function preRenderSprites() {
+    const teams = Object.values(TEAMS);
+    teams.forEach(team => {
+        const teamColor = TEAM_COLORS[team];
+        const pSize = 40;
+        const pCanvas = document.createElement('canvas');
+        pCanvas.width = pSize; pCanvas.height = pSize;
+        const pCtx = pCanvas.getContext('2d');
+        pCtx.translate(pSize/2, pSize/2); pCtx.fillStyle = teamColor;
+        pCtx.beginPath(); pCtx.arc(0, 0, 10, 0.2 * Math.PI, 1.8 * Math.PI); 
+        pCtx.lineTo(0,0); pCtx.fill();
+        spriteCache[`${team}_${UNIT_TYPES.MELEE}`] = pCanvas;
+
+        const iSize = 40;
+        const iCanvas = document.createElement('canvas');
+        iCanvas.width = iSize; iCanvas.height = iSize;
+        const iCtx = iCanvas.getContext('2d');
+        iCtx.translate(iSize/2, iSize/2); iCtx.fillStyle = teamColor;
+        const pixelSize = 2;
+        const map = [
+            "  X     X  ", "   X   X   ", "  XXXXXXX  ", " XX XXXXX XX",
+            "XXXXXXXXXXX", "X XXXXXXX X", "X X     X X", "   XX XX   "
+        ];
+        map.forEach((row, y) => {
+            for(let x=0; x<row.length; x++) if(row[x] === 'X') iCtx.fillRect((x - 5.5) * pixelSize, (y - 4) * pixelSize, pixelSize, pixelSize);
+        });
+        spriteCache[`${team}_${UNIT_TYPES.RANGED}`] = iCanvas;
+    });
+}
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 50;
+    lanes = [];
+    const padding = 70;
+    const spacing = (canvas.height - padding * 2) / (CONFIG.LANE_COUNT - 1);
+    for (let i = 0; i < CONFIG.LANE_COUNT; i++) lanes.push(padding + i * spacing);
+}
+
+// 엔티티 클래스
+class Projectile {
+    constructor(x, y, target, color, damage) {
+        this.x = x; this.y = y; this.target = target;
+        this.color = color; this.damage = damage;
+        this.speed = CONFIG.PROJECTILE_SPEED; this.active = true;
+    }
+    update() {
+        if (!this.target || this.target.state === 'DEAD') { this.active = false; return; }
+        const dx = this.target.x - this.x; const dy = this.target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8) { 
+            this.target.takeDamage(this.damage); 
+            createHitEffect(this.x, this.y, this.color); 
+            this.active = false; 
+        }
+        else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
+    }
+    draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x - 2, this.y - 2, 4, 4); }
+}
+
+class Minion {
+    constructor(team, laneIndex, type) {
+        this.team = team; this.laneIndex = laneIndex; this.type = type;
+        this.stats = CONFIG[type]; this.laneY = lanes[laneIndex];
+        this.radius = this.stats.radius; this.hp = this.stats.hp; this.maxHp = this.stats.hp;
+        this.x = team === TEAMS.RED ? 40 : canvas.width - 40;
+        this.y = this.laneY + (Math.random() * 20 - 10);
+        this.state = 'MOVE'; this.lastAttackTime = 0; this.animOffset = Math.random() * 1000;
+        this.hitFlash = 0; this.facingDir = team === TEAMS.RED ? 1 : -1;
+        this.lungeOffset = 0; this.teamColor = TEAM_COLORS[team];
+    }
+
+    takeDamage(amount) {
+        this.hp -= amount; this.hitFlash = 5;
+        if (this.hp <= 0) { this.state = 'DEAD'; createHitEffect(this.x, this.y, '#fff'); }
+    }
+
+    applySeparation(laneEntities, isRooted) {
+        const forceMult = isRooted ? 0.05 : 1.0;
+        const minDist = this.radius * 2.8;
+        for (let other of laneEntities) {
+            if (other === this || other.state === 'DEAD') continue;
+            const dx = this.x - other.x; const dy = this.y - other.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < minDist * minDist && distSq > 0) {
+                const dist = Math.sqrt(distSq);
+                const push = (minDist - dist) / dist * CONFIG.SEPARATION_FORCE * forceMult;
+                this.x += dx * push; this.y += dy * push * 0.5;
+            }
+        }
+    }
+
+    update(dt, currentTime, laneEntities) {
+        if (this.state === 'DEAD' || !gameRunning) return;
+        if (this.hitFlash > 0) this.hitFlash--;
+        const timeSinceAttack = currentTime - this.lastAttackTime;
+        const isRooted = timeSinceAttack < this.stats.attackDuration;
+        this.applySeparation(laneEntities, isRooted);
+
+        let bestTarget = null; let lowestHP = Infinity; let minDistToTarget = Infinity;
+        const detectionRange = this.stats.range + 140;
+        for (let other of laneEntities) {
+            if (other.team !== this.team && other.state !== 'DEAD') {
+                const dx = other.x - this.x; const dy = other.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < detectionRange) {
+                    if (other.hp < lowestHP) { lowestHP = other.hp; bestTarget = other; minDistToTarget = dist; }
+                    else if (other.hp === lowestHP && dist < minDistToTarget) { bestTarget = other; minDistToTarget = dist; }
+                }
+            }
+        }
+
+        switch (this.state) {
+            case 'MOVE':
+                this.facingDir = this.team === TEAMS.RED ? 1 : -1;
+                if (bestTarget) this.state = 'ATTACK';
+                else {
+                    if (Math.abs(this.y - this.laneY) < CONFIG.LANE_ADHERENCE_THRESHOLD) this.x += this.facingDir * this.stats.speed;
+                    this.y += (this.laneY - this.y) * 0.1;
+                }
+                break;
+            case 'ATTACK':
+                if (!bestTarget || bestTarget.state === 'DEAD' || minDistToTarget > this.stats.range + 160) this.state = 'MOVE';
+                else {
+                    this.facingDir = bestTarget.x > this.x ? 1 : -1;
+                    if (minDistToTarget <= this.stats.range) {
+                        if (!isRooted && currentTime - this.lastAttackTime > this.stats.cooldown) {
+                            if (this.type === UNIT_TYPES.RANGED) { 
+                                projectiles.push(new Projectile(this.x, this.y, bestTarget, this.teamColor, this.stats.damage)); 
+                                audio.playLaser(); 
+                            }
+                            else { 
+                                bestTarget.takeDamage(this.stats.damage); 
+                                createHitEffect(bestTarget.x, bestTarget.y, this.teamColor); 
+                                this.lungeOffset = 5; audio.playChomp(); 
+                            }
+                            this.lastAttackTime = currentTime;
+                        }
+                    } 
+                    else if (!isRooted) {
+                        this.x += ((bestTarget.x - this.x) / minDistToTarget) * this.stats.speed;
+                        this.y += ((bestTarget.y - this.y) / minDistToTarget) * this.stats.speed * 0.5 + (this.laneY - this.y) * 0.05;
+                    }
+                }
+                break;
+        }
+        this.y = Math.max(this.laneY - CONFIG.LANE_MAX_DRIFT, Math.min(this.laneY + CONFIG.LANE_MAX_DRIFT, this.y));
+        this.x = Math.max(15, Math.min(canvas.width - 15, this.x));
+        this.lungeOffset *= 0.85;
+    }
+
+    draw(currentTime) {
+        if (this.state === 'DEAD') return;
+        const timeSinceAttack = currentTime - this.lastAttackTime;
+        const isRooted = timeSinceAttack < this.stats.attackDuration;
+        ctx.save();
+        ctx.translate(this.x + this.lungeOffset * this.facingDir, this.y);
+        ctx.scale(this.facingDir, 1);
+        if (this.hitFlash > 0) ctx.filter = 'brightness(5) contrast(2)';
+        if (this.type === UNIT_TYPES.MELEE) {
+            let angle = isRooted ? (1 - timeSinceAttack/this.stats.attackDuration) * 0.45 * Math.PI : (Math.sin(currentTime * 0.015 + this.animOffset) + 1)/2 * 0.25 * Math.PI;
+            ctx.fillStyle = this.teamColor; ctx.beginPath(); ctx.arc(0, 0, 10, angle, 2 * Math.PI - angle); ctx.lineTo(0,0); ctx.fill();
+        } else {
+            const bob = Math.sin(currentTime * 0.01 + this.animOffset) * 2;
+            ctx.rotate(Math.sin(currentTime * 0.008 + this.animOffset) * (isRooted ? 0.4 : 0.15));
+            ctx.drawImage(spriteCache[`${this.team}_${this.type}`], -20, -20 + bob);
+        }
+        ctx.restore();
+        const hpPct = this.hp / this.maxHp;
+        ctx.fillStyle = '#333'; ctx.fillRect(this.x - 10, this.y - 18, 20, 2);
+        ctx.fillStyle = hpPct > 0.3 ? this.teamColor : '#fff'; ctx.fillRect(this.x - 10, this.y - 18, 20 * hpPct, 2);
+    }
+}
+
+function spawn() {
+    if (!gameRunning) return;
+    for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
+        const redL = entities.filter(e => e.team === TEAMS.RED && e.laneIndex === i && e.state !== 'DEAD').length;
+        const blueL = entities.filter(e => e.team === TEAMS.BLUE && e.laneIndex === i && e.state !== 'DEAD').length;
+        if (redL < Math.ceil(CONFIG.MAX_MINIONS_PER_TEAM / CONFIG.LANE_COUNT)) entities.push(new Minion(TEAMS.RED, i, Math.random() < 0.7 ? UNIT_TYPES.MELEE : UNIT_TYPES.RANGED));
+        if (blueL < Math.ceil(CONFIG.MAX_MINIONS_PER_TEAM / CONFIG.LANE_COUNT)) entities.push(new Minion(TEAMS.BLUE, i, Math.random() < 0.7 ? UNIT_TYPES.MELEE : UNIT_TYPES.RANGED));
+    }
+}
+
+function update(currentTime) {
+    const dt = currentTime - lastTime; lastTime = currentTime;
+    if (gameRunning) {
+        spawnTimer += dt; if (spawnTimer > CONFIG.SPAWN_INTERVAL) { spawn(); spawnTimer = 0; }
+        const laneMap = Array.from({ length: CONFIG.LANE_COUNT }, () => []);
+        entities.forEach(e => { if (e.state !== 'DEAD') laneMap[e.laneIndex].push(e); });
+        entities.forEach(m => m.update(dt, currentTime, laneMap[m.laneIndex]));
+        entities = entities.filter(m => m.state !== 'DEAD');
+        projectiles.forEach(p => p.update()); projectiles = projectiles.filter(p => p.active);
+        particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0);
+    }
+    entityCountEl.innerText = entities.length;
+    fpsEl.innerText = Math.round(1000 / dt) || 0;
+    draw(currentTime);
+    requestAnimationFrame(update);
+}
+
+function draw(currentTime) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#111';
+    lanes.forEach(y => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); });
+    entities.forEach(m => m.draw(currentTime));
+    projectiles.forEach(p => p.draw());
+    particles.forEach(p => p.draw());
+}
+
+window.addEventListener('resize', resize);
+resize(); preRenderSprites();
+requestAnimationFrame(update);
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이터널 인베이전: 퍼즐 에디션</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Orbitron', 'Black Han Sans', sans-serif; background-color: #0a0a0a; color: white; user-select: none; touch-action: manipulation; }
+        .bg-grid-mesh {
+            background-image: linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        @keyframes flicker { 0%, 100% { opacity: 1; filter: brightness(2.5) contrast(1.2); } 50% { opacity: 0; } }
+        .animate-flicker { animation: flicker 0.1s infinite; }
+        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(500%); } }
+        .scanline { position: absolute; width: 100%; height: 20%; background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.1), transparent); animation: scanline 4s linear infinite; pointer-events: none; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-6px, 6px); }
+            50% { transform: translate(6px, -6px); }
+            75% { transform: translate(-6px, -6px); }
+        }
+        .shake-active { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes flashRed {
+            0% { background-color: rgba(153, 27, 27, 0); }
+            50% { background-color: rgba(220, 38, 38, 0.5); }
+            100% { background-color: rgba(153, 27, 27, 0); }
+        }
+        .flash-active { animation: flashRed 0.4s ease-out; }
+
+        @keyframes wizardAttack {
+            0% { transform: translateY(0) scale(1.25); filter: brightness(1); }
+            20% { transform: translateY(-30px) scale(1.4); filter: brightness(2) drop-shadow(0 0 30px #3b82f6); }
+            100% { transform: translateY(0) scale(1.25); filter: brightness(1); }
+        }
+        .wizard-attack-active { animation: wizardAttack 0.3s ease-out; }
+
+        @keyframes enemyPush {
+            0% { transform: translateY(0) scale(1); filter: brightness(1); border-color: transparent; }
+            30% { transform: translateY(20px) scale(1.15); filter: brightness(2.5); border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+            60% { transform: translateY(-10px) scale(1.1); filter: brightness(2); }
+            100% { transform: translateY(0) scale(1); filter: brightness(1); border-color: transparent; }
+        }
+        .enemy-push-active { animation: enemyPush 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; z-index: 50 !important; border-width: 4px !important; }
+
+        @keyframes skillUp { 0% { transform: translate(-50%, 0) scale(1); opacity: 0; } 20% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); } 80% { opacity: 1; transform: translate(-50%, -30px) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -50px) scale(1); } }
+        .skill-alert { position: absolute; left: 50%; top: -20px; z-index: 50; animation: skillUp 2.5s forwards; }
+        .combo-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+        .projectile { width: 14px; height: 35px; background: linear-gradient(to top, #1d4ed8, #22d3ee, white); border-radius: 999px; box-shadow: 0 0 25px #3b82f6; position: absolute; z-index: 30; transform: translateX(-50%); }
+        
+        /* 버튼 스타일 커스텀 */
+        .btn-social { @apply p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen p-4 overflow-x-hidden transition-colors duration-200" id="mainBody">
+
+    <!-- HUD -->
+    <div class="w-full max-w-[360px] mb-4 shrink-0">
+        <div class="flex justify-between items-center bg-zinc-900/90 p-5 rounded-[2rem] border border-white/5 shadow-2xl backdrop-blur-2xl">
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2 text-[10px] text-blue-400 font-black tracking-widest uppercase mb-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    Puzzle Edition
+                </div>
+                <!-- 타이틀: Eternal Invasion 각인 -->
+                <div class="text-xl font-black italic text-white uppercase leading-none tracking-tighter">Eternal Invasion</div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex items-center gap-2">
+                    <!-- 유튜브 버튼 추가 -->
+                    <a href="https://www.youtube.com/@textcube" target="_blank" class="btn-social text-red-500 hover:scale-110" title="YouTube">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </a>
+                    <!-- KitScript 버튼 추가 -->
+                    <a href="https://kitscript.com/game/puzzle" target="_blank" class="btn-social text-blue-400 hover:scale-110 font-black text-[10px] px-3 uppercase" title="Install">
+                        KIT
+                    </a>
+                    <button id="muteBtn" class="btn-social text-zinc-400">
+                        <svg id="volOnIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                        <svg id="volOffIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    </button>
+                </div>
+                <div id="scoreLabel" class="text-3xl font-mono text-yellow-400 font-black leading-none">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME CORE -->
+    <div class="w-full max-w-[360px] flex flex-col items-center">
+        <div id="battlefieldContainer" class="relative w-full p-4 bg-zinc-950 rounded-t-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] border-[8px] border-zinc-900 bg-grid-mesh shrink-0 overflow-hidden">
+            <div class="scanline"></div>
+            <div class="absolute bottom-[4.5%] left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/40 to-transparent blur-sm"></div>
+            <div id="gridArea" class="grid gap-1 relative z-10 w-full aspect-[7/10]" style="grid-template-columns: repeat(7, 1fr);"></div>
+            <div id="projectileLayer" class="absolute inset-4 pointer-events-none z-30"></div>
+            <div class="absolute -left-6 top-12 h-[calc(100%-8rem)] w-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                <div id="shieldBar" class="w-full bg-blue-500 transition-all duration-1000 h-full"></div>
+            </div>
+        </div>
+
+        <div id="wizardTrack" class="relative h-20 w-full px-4 -mt-10 z-40 overflow-visible">
+            <div id="wizard" class="absolute top-0 h-full flex items-center justify-center transition-all duration-200 ease-out text-8xl scale-125 select-none" style="width: 14.28%; left: 42.85%;">
+                🧙‍♂️
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full max-w-[360px] mt-6 flex flex-col items-center pb-10">
+        <div id="skillAlert" class="skill-alert hidden">
+            <div class="bg-blue-600 text-white px-4 py-1 rounded-full font-black text-sm shadow-[0_0_20px_#2563eb] whitespace-nowrap uppercase">
+                ULTIMATE READY! SALVO +1
+            </div>
+        </div>
+        <div class="flex items-center gap-6 w-full justify-center px-4">
+            <div class="flex-1 flex flex-col gap-2">
+                <div class="w-full h-4 bg-zinc-900 rounded-full overflow-hidden border border-white/10 flex items-center px-0.5 combo-glow">
+                    <div id="comboBar" class="h-2 bg-gradient-to-r from-blue-700 to-cyan-400 transition-all duration-300 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-[8px] font-black tracking-widest text-blue-400 uppercase leading-none">
+                    <span>Combo Energy</span>
+                    <span id="comboLabel">0 / 100</span>
+                </div>
+            </div>
+            <!-- SALVO 버튼: 스크립트에서 스택 유무에 따라 스타일을 제어합니다. -->
+            <button id="salvoBtn" class="relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all active:scale-90 border-zinc-800 bg-zinc-900">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <span class="text-[10px] font-black mt-1 uppercase text-blue-400">Salvo</span>
+                <div id="salvoBadge" class="absolute -top-2 -right-2 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center border-2 border-zinc-950 text-[10px] font-black text-white shadow-lg">3</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" class="fixed inset-0 bg-black/98 flex flex-col items-center justify-center z-[100] p-6 backdrop-blur-3xl hidden">
+        <!-- 타이틀: Eternal Invasion 각인 -->
+        <div class="text-blue-500 text-[40px] font-black italic tracking-tighter leading-none text-center uppercase mb-10 drop-shadow-[0_0_40px_#3b82f6]">Eternal Invasion</div>
+        <div class="bg-zinc-900/90 p-10 rounded-[3rem] border border-white/10 w-full max-w-sm text-center shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+            <div class="text-[10px] text-zinc-500 uppercase tracking-widest mb-4">Battle Result</div>
+            <div id="finalScoreLabel" class="text-8xl font-mono text-yellow-500 mb-8 font-black leading-none tracking-tighter">0</div>
+            
+            <div class="flex flex-col gap-4 mb-10">
+                <button id="retryBtn" class="w-full py-6 bg-white text-black rounded-[2rem] font-black text-2xl hover:bg-blue-500 hover:text-white transition-all active:scale-95 uppercase">Retry Now</button>
+                
+                <div class="flex items-center gap-2 w-full">
+                    <a href="https://www.youtube.com/@textcube" target="_blank" class="flex-1 py-4 bg-red-600 text-white rounded-[1.5rem] font-black text-sm uppercase flex items-center justify-center gap-2">
+                        YouTube
+                    </a>
+                    <a href="https://kitscript.com/game/puzzle" target="_blank" class="flex-1 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black text-sm uppercase flex items-center justify-center gap-2">
+                        Install
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-2">
+                <div class="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">Auto-restarting in <span id="restartTimer">7</span>s</div>
+                <div class="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div id="restartProgressBar" class="h-full bg-blue-500 transition-all duration-1000 linear" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GRID_WIDTH = 7, GRID_HEIGHT = 10;
+        const COLORS = ['#4A6741', '#D1D5DB', '#7C3AED', '#991B1B', '#D97706'];
+        const ICONS = ['🧟', '💀', '👻', '🧛', '🎃'];
+        const PROJECTILE_SPEED = 0.02, SHOOT_INTERVAL = 2140, COMBO_THRESHOLD = 100, SPEED_INCREMENT = 175;
+
+        let grid = [], projectiles = [], score = 0, comboCount = 0, shield = 100, skillUses = 3;
+        let shooterX = 3, gameOver = false, isMuted = true, selectedCell = null, moveSpeed = 10000;
+        let lastMoveTime = 0, lastShootTime = 0, lastAIMoveTime = 0, needsRender = true, audioCtx = null, isImpactActive = false;
+
+        const gridArea = document.getElementById('gridArea'), shooter = document.getElementById('wizard');
+        const battlefield = document.getElementById('battlefieldContainer'), projectileLayer = document.getElementById('projectileLayer');
+        const salvoBtn = document.getElementById('salvoBtn'), scoreLabel = document.getElementById('scoreLabel');
+        const comboBar = document.getElementById('comboBar'), comboLabel = document.getElementById('comboLabel');
+        const shieldBar = document.getElementById('shieldBar'), muteBtn = document.getElementById('muteBtn'), gameOverOverlay = document.getElementById('gameOverOverlay');
+
+        function createUnit() { return { id: Math.random().toString(36).substr(2, 9), type: Math.floor(Math.random() * COLORS.length), status: 'alive' }; }
+
+        function initGrid() {
+            grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(null));
+            for (let y = 0; y < 4; y++) for (let x = 0; x < GRID_WIDTH; x++) grid[y][x] = createUnit();
+            needsRender = true;
+        }
+
+        function playSynth(type) {
+            if (!audioCtx || isMuted) return;
+            const ctx = audioCtx, osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            const now = ctx.currentTime;
+            if (type === 'shoot') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
+                gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'hit') {
+                const noise = ctx.createBufferSource(), bSize = ctx.sampleRate * 0.12, buf = ctx.createBuffer(1, bSize, ctx.sampleRate), data = buf.getChannelData(0);
+                for (let i = 0; i < bSize; i++) data[i] = Math.random() * 2 - 1;
+                noise.buffer = buf; gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                noise.connect(gain); noise.start(now);
+            } else if (type === 'skill') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110, now); osc.frequency.linearRampToValueAtTime(880, now + 0.3);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'alarm') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(150, now); gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4); osc.start(now); osc.stop(now + 0.4);
+            }
+        }
+
+        function renderGrid() {
+            gridArea.innerHTML = '';
+            for (let y = 0; y < GRID_HEIGHT; y++) {
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const unit = grid[y][x], cell = document.createElement('div');
+                    cell.className = `relative flex items-center justify-center rounded-xl transition-all duration-200 aspect-square border-2 border-transparent`;
+                    if (unit) {
+                        cell.style.backgroundColor = COLORS[unit.type];
+                        cell.innerHTML = `<span class="drop-shadow-lg text-2xl">${ICONS[unit.type]}</span>`;
+                        cell.classList.add('shadow-lg', 'border-b-4', 'border-black/20');
+                        if (unit.status === 'dying') cell.classList.add('animate-flicker');
+                        if (isImpactActive && y === GRID_HEIGHT - 1) cell.classList.add('enemy-push-active');
+                    }
+                    if (selectedCell && selectedCell.x === x && selectedCell.y === y) cell.classList.add('ring-4', 'ring-white', 'scale-110', 'z-20');
+                    cell.onclick = () => {
+                        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        if (audioCtx.state === 'suspended') audioCtx.resume();
+                        const u = grid[y][x]; if (!u || u.status === 'dying' || gameOver) return;
+                        if (!selectedCell) { selectedCell = { x, y }; playSynth('select'); }
+                        else {
+                            if (Math.abs(selectedCell.x - x) + Math.abs(selectedCell.y - y) === 1) {
+                                let t = grid[y][x]; grid[y][x] = grid[selectedCell.y][selectedCell.x]; grid[selectedCell.y][selectedCell.x] = t;
+                                selectedCell = null; applyGravity();
+                            } else selectedCell = { x, y };
+                        }
+                        needsRender = true;
+                    };
+                    gridArea.appendChild(cell);
+                }
+            }
+            needsRender = false;
+        }
+
+        function applyGravity() {
+            for (let x = 0; x < GRID_WIDTH; x++) {
+                let lowY = -1; for (let y = GRID_HEIGHT-1; y>=0; y--) if (grid[y][x]) { lowY = y; break; }
+                if (lowY === -1) continue;
+                let sur = []; for (let y=0; y<=lowY; y++) if (grid[y][x] && grid[y][x].status === 'alive') sur.push(grid[y][x]);
+                for (let y=lowY; y>=0; y--) grid[y][x] = sur.length > 0 ? sur.pop() : createUnit();
+            }
+            needsRender = true;
+        }
+
+        function updateProjectiles() {
+            projectileLayer.innerHTML = '';
+            projectiles = projectiles.filter(p => {
+                p.y -= PROJECTILE_SPEED;
+                const gx = Math.min(GRID_WIDTH-1, Math.max(0, Math.floor(p.x + 0.1))), gy = Math.floor(p.y + 0.2);
+                if (gy >= 0 && gy < GRID_HEIGHT && grid[gy][gx] && grid[gy][gx].status === 'alive') {
+                    const type = grid[gy][gx].type;
+                    const matches = (function chain(cx, cy, ct, list = [], vis = new Set()) {
+                        if (cx<0||cx>=GRID_WIDTH||cy<0||cy>=GRID_HEIGHT||!grid[cy][cx]||grid[cy][cx].type!==ct||grid[cy][cx].status==='dying'||vis.has(`${cx},${cy}`)) return list;
+                        vis.add(`${cx},${cy}`); list.push({x:cx,y:cy});
+                        [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}].forEach(d => chain(cx+d.x, cy+d.y, ct, list, vis));
+                        return list;
+                    })(gx, gy, type);
+                    if (matches.length >= 3) {
+                        matches.forEach(m => { grid[m.y][m.x].status = 'dying'; grid[m.y][m.x].dieTime = performance.now() + 500; });
+                        score += matches.length * 200; comboCount += matches.length;
+                        if (comboCount >= COMBO_THRESHOLD) { skillUses = Math.min(skillUses + 1, 10); comboCount -= COMBO_THRESHOLD; const a = document.getElementById('skillAlert'); a.classList.remove('hidden'); setTimeout(()=>a.classList.add('hidden'), 2500); playSynth('skill'); }
+                    } else { grid[gy][gx].status = 'dying'; grid[gy][gx].dieTime = performance.now() + 500; score += 100; }
+                    playSynth('hit'); needsRender = true; return false;
+                }
+                if (p.y < -1.5) return false;
+                const d = document.createElement('div'); d.className = 'projectile'; d.style.left = `${(p.x + 0.5) / GRID_WIDTH * 100}%`; d.style.top = `${(p.y / GRID_HEIGHT) * 100}%`;
+                projectileLayer.appendChild(d); return true;
+            });
+        }
+
+        function triggerInvasion() {
+            playSynth('alarm'); isImpactActive = true; renderGrid();
+            battlefield.classList.remove('shake-active'); document.getElementById('mainBody').classList.remove('flash-active'); shooter.classList.remove('wizard-attack-active');
+            void battlefield.offsetWidth; battlefield.classList.add('shake-active'); document.getElementById('mainBody').classList.add('flash-active'); shooter.classList.add('wizard-attack-active');
+            setTimeout(() => { isImpactActive = false; renderGrid(); battlefield.classList.remove('shake-active'); document.getElementById('mainBody').classList.remove('flash-active'); shooter.classList.remove('wizard-attack-active'); }, 400);
+        }
+
+        function gameLoop(time) {
+            if (gameOver) return;
+            if (time - lastAIMoveTime > 500) {
+                let tx = shooterX, mY = -1;
+                for (let x=0; x<GRID_WIDTH; x++) for (let y=GRID_HEIGHT-1; y>=0; y--) if (grid[y][x] && grid[y][x].status === 'alive') { if (y > mY) { mY = y; tx = x; } break; }
+                if (tx !== shooterX) { shooterX += (tx > shooterX ? 1 : -1); shooter.style.left = `${(shooterX / GRID_WIDTH) * 100}%`; }
+                lastAIMoveTime = time;
+            }
+            if (time - lastShootTime > SHOOT_INTERVAL) { projectiles.push({ x: shooterX, y: GRID_HEIGHT }); playSynth('shoot'); lastShootTime = time; }
+            if (time - lastMoveTime > moveSpeed) {
+                if (grid[GRID_HEIGHT - 1].some(u => u && u.status === 'alive')) { shield -= 25; triggerInvasion(); if (shield <= 0) { gameOver = true; gameOverOverlay.classList.remove('hidden'); document.getElementById('finalScoreLabel').innerText = score.toLocaleString(); let c=7; const i=setInterval(()=> { c--; document.getElementById('restartTimer').innerText=c; document.getElementById('restartProgressBar').style.width=`${(c/7)*100}%`; if (c<=0) { clearInterval(i); startNewGame(); } }, 1000); } }
+                else { grid.pop(); grid.unshift(Array.from({ length: GRID_WIDTH }, createUnit)); moveSpeed = Math.max(2200, moveSpeed - SPEED_INCREMENT); }
+                needsRender = true; lastMoveTime = time;
+            }
+            let dr = false, sd = false;
+            for (let y=0; y<GRID_HEIGHT; y++) for (let x=0; x<GRID_WIDTH; x++) if (grid[y][x] && grid[y][x].status === 'dying') { if (performance.now() > grid[y][x].dieTime) { grid[y][x] = null; dr = true; needsRender = true; } else sd = true; }
+            if (dr && !sd) applyGravity();
+            if (needsRender) renderGrid();
+            updateProjectiles();
+
+            // UI 업데이트
+            scoreLabel.innerText = score.toLocaleString();
+            comboBar.style.width = `${Math.min(100, (comboCount / COMBO_THRESHOLD) * 100)}%`;
+            comboLabel.innerText = `${Math.floor(comboCount)} / ${COMBO_THRESHOLD}`;
+            shieldBar.style.height = `${shield}%`;
+            shieldBar.style.marginTop = `${100 - shield}%`;
+            document.getElementById('salvoBadge').innerText = skillUses;
+
+            // SALVO 버튼 시각적 활성화/비활성화 로직
+            if (skillUses > 0) {
+                salvoBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'border-zinc-800');
+                salvoBtn.classList.add('border-blue-500', 'shadow-[0_0_15px_rgba(59,130,246,0.2)]');
+            } else {
+                salvoBtn.classList.add('opacity-50', 'cursor-not-allowed', 'border-zinc-800');
+                salvoBtn.classList.remove('border-blue-500', 'shadow-[0_0_15px_rgba(59,130,246,0.2)]');
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startNewGame() {
+            gameOver = false; gameOverOverlay.classList.add('hidden'); score = 0; comboCount = 0; shield = 100; skillUses = 3; moveSpeed = 10000; initGrid(); lastMoveTime = performance.now(); requestAnimationFrame(gameLoop);
+        }
+
+        muteBtn.onclick = () => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); isMuted = !isMuted; document.getElementById('volOnIcon').classList.toggle('hidden', isMuted); document.getElementById('volOffIcon').classList.toggle('hidden', !isMuted); };
+        salvoBtn.onclick = () => { if (skillUses > 0 && !gameOver) { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); for (let x=0; x<GRID_WIDTH; x++) projectiles.push({ x, y: GRID_HEIGHT }); skillUses--; playSynth('skill'); shooter.classList.add('wizard-attack-active'); setTimeout(()=>shooter.classList.remove('wizard-attack-active'), 400); } };
+        document.getElementById('retryBtn').onclick = startNewGame;
+        startNewGame();
+    </script>
+</body>
+</html>

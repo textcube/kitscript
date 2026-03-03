@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion Bird - Ultimate Audio & UI Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; }
+        canvas { display: block; image-rendering: pixelated; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #fff; pointer-events: none; }
+        .energy-bar-container { width: 300px; height: 20px; border: 3px solid #fff; background: #222; margin-top: 5px; }
+        #energy-fill { width: 100%; height: 100%; background: #00ff00; transition: width 0.1s; }
+        #mode-indicator { position: absolute; top: 20px; right: 20px; color: #00ff00; font-weight: bold; border: 1px solid #00ff00; padding: 5px 15px; border-radius: 20px; }
+        
+        .ui-btn {
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            z-index: 60;
+            pointer-events: auto;
+        }
+        .ui-btn:hover { transform: scale(1.05); }
+
+        .yt-btn {
+            background-color: #ff0000;
+            color: white;
+            box-shadow: 0 0 15px rgba(255,0,0,0.3);
+        }
+
+        .game-btn {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        #sound-toggle {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(5px);
+        }
+        #sound-toggle.muted {
+            color: #ff3d00;
+            border-color: #ff3d00;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="text-2xl font-bold text-red-500">SCORE: <span id="score-val" class="text-white">0</span></div>
+        <div class="mt-2 text-sm font-bold">SHIELD ENERGY</div>
+        <div class="energy-bar-container">
+            <div id="energy-fill"></div>
+        </div>
+    </div>
+
+    <div id="mode-indicator" class="animate-pulse">AUTO MODE ON</div>
+
+    <!-- Sound Toggle Button -->
+    <button id="sound-toggle" class="ui-btn px-4 py-2 rounded-full text-xs muted">
+        <span id="sound-icon">🔇</span> <span id="sound-text">SOUND OFF</span>
+    </button>
+
+    <!-- Bottom Right Action Buttons -->
+    <div class="fixed bottom-6 right-6 flex flex-col gap-3 items-end z-50">
+        <!-- New Game Link Button -->
+        <a href="https://kitscript.com/game/bird" target="_blank" class="game-btn ui-btn px-4 py-2 rounded-full text-xs">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M21 16.5C21 16.88 20.79 17.21 20.47 17.38L12.57 21.82C12.41 21.94 12.21 22 12 22C11.79 22 11.59 21.94 11.43 21.82L3.53 17.38C3.21 17.21 3 16.88 3 16.5V7.5C3 7.12 3.21 6.79 3.53 6.62L11.43 2.18C11.59 2.06 11.79 2 12 2C12.21 2 12.41 2.06 12.57 2.18L20.47 6.62C20.79 6.79 21 7.12 21 7.5V16.5Z" stroke="white" stroke-width="2" fill="none"/></svg>
+            Play on KitScript
+        </a>
+        <!-- YouTube Channel Link -->
+        <a href="https://www.youtube.com/@textcube" target="_blank" class="yt-btn ui-btn px-4 py-2 rounded-full text-xs">
+            <svg viewBox="0 0 24 24" class="w-5 h-5 fill-current"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+            YouTube @textcube
+        </a>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Game Over Notification -->
+    <div id="msg-box" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white flex-col z-10 hidden">
+        <h1 class="text-6xl font-black mb-4 italic tracking-tighter text-red-600" id="main-title">SYSTEM FAILURE</h1>
+        <p class="text-2xl mb-8 opacity-90" id="sub-title">Restarting in 7s...</p>
+        
+        <div class="flex gap-4 mb-6">
+            <a href="https://kitscript.com/game/bird" target="_blank" class="game-btn ui-btn px-8 py-4 rounded-lg text-lg">
+                게임 더 보기
+            </a>
+            <a href="https://www.youtube.com/@textcube" target="_blank" class="yt-btn ui-btn px-8 py-4 rounded-lg text-lg">
+                유튜브 구독
+            </a>
+        </div>
+        
+        <div class="text-sm opacity-50">Press Space or Click to Skip Wait</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-val');
+        const energyFill = document.getElementById('energy-fill');
+        const msgBox = document.getElementById('msg-box');
+        const modeIndicator = document.getElementById('mode-indicator');
+        const soundToggle = document.getElementById('sound-toggle');
+        const soundIcon = document.getElementById('sound-icon');
+        const soundText = document.getElementById('sound-text');
+        
+        const mainTitle = document.getElementById('main-title');
+        const subTitle = document.getElementById('sub-title');
+        
+        // --- Sound System ---
+        let audioCtx = null;
+        let isMuted = true; 
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playJumpSound() {
+            if (!audioCtx || isMuted) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(4.8, audioCtx.currentTime); 
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playHitSound() {
+            if (!audioCtx || isMuted) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
+            
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime); 
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.25);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        }
+
+        soundToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            initAudio();
+            isMuted = !isMuted;
+            updateSoundUI();
+        });
+
+        function updateSoundUI() {
+            if (isMuted) {
+                soundIcon.innerText = "🔇";
+                soundText.innerText = "SOUND OFF";
+                soundToggle.classList.add('muted');
+            } else {
+                soundIcon.innerText = "🔊";
+                soundText.innerText = "SOUND ON";
+                soundToggle.classList.remove('muted');
+            }
+        }
+
+        // --- Game Physics & Balance ---
+        const GRAVITY = 0.56; 
+        const JUMP = -15.2;   
+        const INVADER_SIZE = 48; 
+        const COLUMN_SPACING = 480; 
+        const INVINCIBILITY_TIME = 25;
+        const AUTO_RESTART_TIME = 7000; 
+
+        const BASE_SPEED = 3.5;
+        const SPEED_INCREMENT = 0.15;
+
+        let gameState = 'START';
+        let frameCount = 0;
+        let score = 0;
+        let energy = 100;
+        let lastHitFrame = -100;
+        let gameOverTime = 0; 
+        let isAutoMode = true;
+
+        class ParallaxLayer {
+            constructor(count, size, speedMult, color) {
+                this.stars = [];
+                this.speedMult = speedMult;
+                this.size = size;
+                this.color = color;
+                for (let i = 0; i < count; i++) {
+                    this.stars.push({
+                        x: Math.random() * window.innerWidth,
+                        y: Math.random() * window.innerHeight
+                    });
+                }
+            }
+            update(gameSpeed) {
+                const moveDist = gameSpeed * this.speedMult;
+                this.stars.forEach(s => {
+                    s.x -= moveDist;
+                    if (s.x < -this.size) s.x = canvas.width;
+                });
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                this.stars.forEach(s => { ctx.fillRect(s.x, s.y, this.size, this.size); });
+            }
+        }
+
+        let bgLayers = [];
+
+        const player = {
+            x: 120, y: 0, vy: 0,
+            width: 100, height: 90, collisionRadius: 32, angle: 0,
+            draw() {
+                const isInvincible = frameCount - lastHitFrame < INVINCIBILITY_TIME;
+                if (isInvincible && frameCount % 4 < 2) return;
+                const color = energy > 30 ? '#00e5ff' : '#ff3d00';
+                const centerX = this.x + this.width / 2;
+                const centerY = this.y + this.height / 2;
+                ctx.save();
+                ctx.translate(centerX, centerY); ctx.rotate(this.angle);
+                ctx.fillStyle = '#ffeb3b';
+                ctx.beginPath(); ctx.moveTo(35, -10); ctx.lineTo(65, 0); ctx.lineTo(35, 15);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(20, -10, 12, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.arc(24, -10, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                let wingOffset = Math.sin(frameCount * 0.35) * 35; 
+                ctx.beginPath(); ctx.roundRect(-45, -10 + wingOffset, 55, 25, 12); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.restore();
+            },
+            update() {
+                if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+                    this.vy += GRAVITY; this.y += this.vy;
+                    if (this.vy < 0) { this.angle = Math.max(-0.2, this.vy * 0.02); } 
+                    else if (gameState === 'PLAYING') {
+                        this.angle += 0.025;
+                        if (this.angle > Math.PI / 4) this.angle = Math.PI / 4;
+                    }
+                }
+                if (gameState === 'PLAYING' && isAutoMode) this.applyAutoAI();
+                const centerY = this.y + this.height / 2;
+                if (centerY > canvas.height) {
+                    this.y = canvas.height - this.height / 2; this.vy = 0;
+                    if (gameState === 'PLAYING') endGame();
+                }
+                if (this.y < 0) { this.y = 0; this.vy = 0; }
+            },
+            applyAutoAI() {
+                const upcomingPipes = columns.filter(col => col.x + col.width > this.x);
+                const p1 = upcomingPipes[0]; const p2 = upcomingPipes[1];
+                const centerY = this.y + this.height / 2;
+                let targetY = canvas.height / 2;
+                if (p1) {
+                    const distToP1 = (p1.x + p1.width) - this.x;
+                    const p1Center = p1.gapY + p1.gapSize / 2;
+                    if (p2 && distToP1 < 200) {
+                        const p2Center = p2.gapY + p2.gapSize / 2;
+                        const weight = Math.max(0, Math.min(1, distToP1 / 200));
+                        targetY = p1Center * weight + p2Center * (1 - weight);
+                    } else targetY = p1Center;
+                }
+                const tToPeak = Math.abs(JUMP / GRAVITY);
+                const peakDisplacement = (JUMP * tToPeak) + (0.5 * GRAVITY * tToPeak * tToPeak);
+                const potentialPeakY = centerY + peakDisplacement;
+                let safeToJump = true; let threshold = 12;
+                if (p1) {
+                    const distToEntry = p1.x - (this.x + this.width);
+                    const isInside = (this.x + this.width > p1.x && this.x < p1.x + p1.width);
+                    if (isInside || distToEntry < 60) {
+                        threshold = 4; if (potentialPeakY < p1.gapY + 45) safeToJump = false;
+                        if (centerY > p1.gapY + p1.gapSize - 70 && this.vy > 0) { this.jump(); return; }
+                    }
+                }
+                if (this.vy > 0 && centerY > targetY + threshold && safeToJump) this.jump();
+            },
+            jump() {
+                if (gameState === 'PLAYING' && energy > 0) {
+                    this.vy = JUMP; playJumpSound();
+                }
+            }
+        };
+
+        const INVADER_MAP = [
+            ["  X     X  ", "   X   X   ", "  XXXXXXX  ", " XX XXX XX ", "XXXXXXXXXXX", "X XXXXXXX X", "X X     X X", "   XX XX   "],
+            ["  X     X  ", "   X   X   ", "  XXXXXXX  ", " XX XXX XX ", "XXXXXXXXXXX", "XXX XXXXXXX", "X         X", "  XX   XX  "]
+        ];
+
+        class Invader {
+            constructor(x, y) { this.x = x; this.y = y; this.active = true; }
+            draw() {
+                if (!this.active) return;
+                const frame = Math.floor(frameCount / 12) % 2; 
+                const design = INVADER_MAP[frame];
+                const pixelSize = INVADER_SIZE / 11;
+                ctx.fillStyle = '#ff0055';
+                for (let r = 0; r < design.length; r++) {
+                    for (let c = 0; c < design[r].length; c++) {
+                        if (design[r][c] === 'X') ctx.fillRect(this.x + c * pixelSize, this.y + r * pixelSize, pixelSize + 1, pixelSize + 1);
+                    }
+                }
+            }
+        }
+
+        class Column {
+            constructor(x) {
+                this.x = x; this.invaders = []; this.width = 100; this.passed = false;
+                this.gapSize = 310; this.gapY = Math.random() * (canvas.height - this.gapSize - 200) + 100;
+                for (let yy = 0; yy < canvas.height; yy += INVADER_SIZE + 10) {
+                    if (yy < this.gapY || yy > this.gapY + this.gapSize) {
+                        for(let xx = 0; xx < this.width; xx += INVADER_SIZE + 10) {
+                            this.invaders.push(new Invader(this.x + xx, yy));
+                        }
+                    }
+                }
+            }
+            update(speed) { this.x -= speed; this.invaders.forEach(inv => inv.x -= speed); }
+            draw() { this.invaders.forEach(inv => inv.draw()); }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.vx = (Math.random() - 0.5) * 15; this.vy = (Math.random() - 0.5) * 15;
+                this.size = Math.random() * 8 + 4; this.life = 1.0;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.025; }
+            draw() {
+                ctx.globalAlpha = this.life; ctx.fillStyle = '#ff0055';
+                ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1;
+            }
+        }
+
+        let columns = [];
+        let particles = [];
+
+        function checkCircleRectCollision(circle, rect) {
+            const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.w));
+            const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.h));
+            const d2 = (circle.x - closestX)**2 + (circle.y - closestY)**2;
+            return d2 < (circle.r * circle.r);
+        }
+
+        function init() {
+            resize();
+            player.y = canvas.height / 2; player.vy = 0; player.angle = 0;
+            columns = []; particles = [];
+            score = 0; energy = 100; frameCount = 0; lastHitFrame = -100;
+            isAutoMode = true; 
+            scoreEl.innerText = score;
+            updateEnergyUI();
+            updateModeUI();
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            bgLayers = [
+                new ParallaxLayer(80, 2, 0.1, 'rgba(255,255,255,0.2)'),
+                new ParallaxLayer(40, 3, 0.3, 'rgba(255,255,255,0.4)'),
+                new ParallaxLayer(20, 5, 0.6, 'rgba(255,255,255,0.7)')
+            ];
+        }
+
+        function updateEnergyUI() {
+            energyFill.style.width = energy + '%';
+            if (energy > 60) energyFill.style.background = '#00ff00';
+            else if (energy > 30) energyFill.style.background = '#ffff00';
+            else energyFill.style.background = '#ff0000';
+        }
+
+        function updateModeUI() {
+            if (isAutoMode) {
+                modeIndicator.innerText = "AUTO MODE ON";
+                modeIndicator.style.color = "#00ff00"; modeIndicator.style.borderColor = "#00ff00";
+                modeIndicator.classList.add('animate-pulse');
+            } else {
+                modeIndicator.innerText = "MANUAL MODE";
+                modeIndicator.style.color = "#ffeb3b"; modeIndicator.style.borderColor = "#ffeb3b";
+                modeIndicator.classList.remove('animate-pulse');
+            }
+        }
+
+        function createExplosion(x, y) {
+            for (let i = 0; i < 8; i++) particles.push(new Particle(x + INVADER_SIZE/2, y + INVADER_SIZE/2));
+        }
+
+        function spawnColumn() {
+            const lastX = columns.length > 0 ? columns[columns.length - 1].x : canvas.width;
+            columns.push(new Column(lastX + COLUMN_SPACING));
+        }
+
+        function endGame() {
+            if (gameState === 'GAMEOVER') return; 
+            gameState = 'GAMEOVER'; gameOverTime = Date.now(); 
+            msgBox.classList.remove('hidden');
+        }
+
+        function update() {
+            const currentSpeed = (gameState === 'PLAYING') ? BASE_SPEED + (score * SPEED_INCREMENT) : 0;
+            if (gameState === 'PLAYING') {
+                frameCount++;
+                if (columns.length === 0 || columns[columns.length - 1].x < canvas.width + COLUMN_SPACING) spawnColumn();
+                const circleCollider = { x: player.x + player.width / 2, y: player.y + player.height / 2, r: player.collisionRadius };
+                columns.forEach(col => {
+                    col.update(currentSpeed);
+                    col.invaders.forEach(inv => {
+                        if (inv.active) {
+                            const invRect = { x: inv.x, y: inv.y, w: INVADER_SIZE, h: INVADER_SIZE };
+                            if (checkCircleRectCollision(circleCollider, invRect)) {
+                                inv.active = false; createExplosion(inv.x, inv.y); playHitSound();
+                                if (frameCount - lastHitFrame > 8) {
+                                    energy -= 10; lastHitFrame = frameCount;
+                                    if (energy <= 0) energy = 0;
+                                    updateEnergyUI();
+                                }
+                            }
+                        }
+                    });
+                    if (!col.passed && col.x + col.width < player.x) { col.passed = true; score++; scoreEl.innerText = score; }
+                });
+                columns = columns.filter(col => col.x > -400);
+            } else if (gameState === 'GAMEOVER') {
+                const elapsed = Date.now() - gameOverTime;
+                const remaining = Math.ceil((AUTO_RESTART_TIME - elapsed) / 1000);
+                if (remaining <= 0) startMission(); else subTitle.innerText = `Restarting in ${remaining}s...`;
+            }
+            bgLayers.forEach(layer => layer.update(currentSpeed || BASE_SPEED * 0.5));
+            player.update();
+            particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            bgLayers.forEach(layer => layer.draw());
+            ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
+            for(let i=0; i<canvas.height; i+=6) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+            columns.forEach(col => col.draw());
+            particles.forEach(p => p.draw()); player.draw();
+            const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+            grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+        function startMission() {
+            initAudio();
+            init();
+            gameState = 'PLAYING';
+            msgBox.classList.add('hidden');
+        }
+
+        function handleInput(e) {
+            initAudio();
+            if (e && e.target && e.target.closest('.ui-btn')) return;
+
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                startMission();
+            } else {
+                if (isAutoMode) { isAutoMode = false; updateModeUI(); }
+                player.jump();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
+        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('resize', resize);
+
+        init();
+        gameState = 'PLAYING'; 
+        msgBox.classList.add('hidden');
+        loop();
+    </script>
+</body>
+</html>
