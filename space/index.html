@@ -35,6 +35,9 @@
     <div class="top-actions">
       <a class="top-link" href="http://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer">YouTube</a>
       <a class="top-link" href="https://github.com" target="_blank" rel="noopener noreferrer">게임 원본</a>
+      <button id="soundToggle" type="button" aria-pressed="false">Sound: OFF</button>
+      <a class="top-link" href="https://www.youtube.com" target="_blank" rel="noopener noreferrer">YouTube</a>
+      <a class="top-link" href="http://kitscript.com/game" target="_blank" rel="noopener noreferrer">Kitscript</a>
     </div>
   </header>
   <canvas id="game"></canvas>
@@ -44,6 +47,7 @@
     const RUNNING = 'RUNNING', GAME_OVER = 'GAME_OVER', RESTART_COUNTDOWN = 'RESTART_COUNTDOWN';
     const c = document.getElementById('game'), x = c.getContext('2d');
     const hud = document.getElementById('hud'), ov = document.getElementById('overlay'), cd = document.getElementById('cd');
+    const soundToggle = document.getElementById('soundToggle');
 
     let w = 0, h = 0, dangerY = 0;
     const keys = Object.create(null);
@@ -57,7 +61,19 @@
 
     let mode = RUNNING, gameOverHold = 0, countdown = 7;
 
+    const MASTER_VOLUME = 0.08;
     let audioCtx = null, masterGain = null, audioReady = false;
+    let soundEnabled = false;
+
+    function updateSoundToggleUi() {
+      soundToggle.textContent = `Sound: ${soundEnabled ? 'ON' : 'OFF'}`;
+      soundToggle.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+    }
+
+    function applySoundState() {
+      if (!masterGain) return;
+      masterGain.gain.value = soundEnabled ? MASTER_VOLUME : 0;
+    }
 
     function initAudio() {
       if (audioCtx) return;
@@ -65,19 +81,19 @@
       if (!AudioCtor) return;
       audioCtx = new AudioCtor();
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.08;
       masterGain.connect(audioCtx.destination);
+      applySoundState();
     }
 
-    function unlockAudio() {
+    async function unlockAudio() {
       initAudio();
       if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
       audioReady = audioCtx.state === 'running';
     }
 
     function tone(type, freq, duration, volume = 1, slide = 1) {
-      if (!audioReady || !audioCtx || !masterGain) return;
+      if (!soundEnabled || !audioReady || !audioCtx || !masterGain) return;
       const t = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -94,6 +110,7 @@
     }
 
     function playSfx(kind) {
+      if (!soundEnabled || !audioReady) return;
       if (kind === 'playerFire') tone('square', 720, 0.06, 0.75, 0.75);
       else if (kind === 'enemyFire') tone('sawtooth', 280, 0.09, 0.6, 0.86);
       else if (kind === 'enemyHit') tone('triangle', 420, 0.05, 0.55, 1.2);
@@ -114,6 +131,15 @@
     addEventListener('pointerdown', unlockAudio, { once: true });
     addEventListener('keydown', unlockAudio, { once: true });
     document.getElementById('restartNow').onclick = () => { if (mode !== RUNNING) beginNewRun(); };
+    soundToggle.onclick = async () => {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+      audioReady = !!audioCtx && audioCtx.state === 'running';
+      soundEnabled = !soundEnabled;
+      applySoundState();
+      updateSoundToggleUi();
+    };
+    updateSoundToggleUi();
 
     function buildWave() {
       enemies.length = 0;
