@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Space Auto-Battle</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #05070f; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #hud { position: fixed; left: 12px; top: 10px; color: #d8e7ff; font-weight: 600; font-size: 14px; letter-spacing: .2px; text-shadow: 0 1px 0 #000; pointer-events: none; }
+    #overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.48); color: #fff; text-align: center; }
+    #overlay.show { display: grid; }
+    .panel { background: rgba(12, 18, 35, .92); border: 1px solid #5f87ff; border-radius: 10px; padding: 22px 28px; min-width: 260px; }
+    .title { font-size: 34px; font-weight: 800; margin-bottom: 8px; }
+    .countdown { color: #9cb9ff; font-size: 18px; margin: 6px 0 14px; }
+    button { border: 1px solid #7ea2ff; border-radius: 8px; background: #19284d; color: #e8f0ff; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    button:hover { filter: brightness(1.12); }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud"></div>
+  <div id="overlay"><div class="panel"><div class="title">GAME OVER</div><div class="countdown" id="cd">Restarting in 7…</div><button id="restartNow">Restart now</button></div></div>
+  <script>
+    const RUNNING = 'RUNNING', GAME_OVER = 'GAME_OVER', RESTART_COUNTDOWN = 'RESTART_COUNTDOWN';
+    const c = document.getElementById('game'), x = c.getContext('2d');
+    const hud = document.getElementById('hud'), ov = document.getElementById('overlay'), cd = document.getElementById('cd');
+
+    let w = 0, h = 0, dangerY = 0;
+    const keys = Object.create(null);
+    const stars = Array.from({ length: 130 }, () => ({ x: Math.random(), y: Math.random(), z: .4 + Math.random() * .9, t: Math.random() * 6.28 }));
+
+    const player = { x: 0, y: 0, r: 13, speed: 560, autoSpeed: 420, lives: 3, invulnUntil: 0, fireCd: 0 };
+    const enemies = [], pBullets = [], eBullets = [];
+    let target = null, score = 0, wave = 1;
+    let formation = { x: 0, y: 70, vx: 72, stepDown: 24 };
+    let enemySpeedBase = 72, nextEnemyShot = 0;
+
+    let mode = RUNNING, gameOverHold = 0, countdown = 7;
+
+    function resize() {
+      w = c.width = innerWidth; h = c.height = innerHeight;
+      dangerY = h - 120;
+      player.y = h - 64;
+      player.x = Math.min(Math.max(player.x || w * .5, 28), w - 28);
+    }
+    addEventListener('resize', resize); resize();
+
+    addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) e.preventDefault(); });
+    addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    document.getElementById('restartNow').onclick = () => { if (mode !== RUNNING) beginNewRun(); };
+
+    function buildWave() {
+      enemies.length = 0;
+      const cols = 6, rows = 3, sx = 84, sy = 66;
+      const startX = (w - (cols - 1) * sx) * .5;
+      const hpBoost = Math.floor((wave - 1) / 3);
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const base = r === 0 ? 1 : (r === 1 ? 2 : 3);
+          enemies.push({ x: startX + col * sx, y: 86 + r * sy, w: 34, h: 22, maxHp: base + hpBoost, hp: base + hpBoost, flash: 0, alive: true });
+        }
+      }
+      formation = { x: 0, y: 70, vx: enemySpeedBase + (wave - 1) * 8, stepDown: 20 + Math.min(18, wave * 1.5) };
+      nextEnemyShot = 0.6 + Math.random() * 0.6;
+    }
+
+    function beginNewRun() {
+      score = 0; wave = 1; enemySpeedBase = 72;
+      player.lives = 3; player.invulnUntil = 0; player.fireCd = 0;
+      pBullets.length = 0; eBullets.length = 0;
+      mode = RUNNING; gameOverHold = 0; countdown = 7;
+      ov.classList.remove('show');
+      buildWave();
+    }
+
+    function beginGameOver() {
+      if (mode !== RUNNING) return;
+      mode = GAME_OVER;
+      gameOverHold = 0.45;
+      countdown = 7;
+      ov.classList.add('show');
+      cd.textContent = `Restarting in ${Math.ceil(countdown)}…`;
+    }
+
+    function pickTarget() {
+      let best = null;
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        if (!best) { best = e; continue; }
+        if (e.y > best.y) best = e;
+        else if (e.y === best.y && e.hp > best.hp) best = e;
+        else if (e.y === best.y && e.hp === best.hp && Math.abs(e.x - player.x) < Math.abs(best.x - player.x)) best = e;
+      }
+      target = best;
+    }
+
+    function enemyBounds() {
+      let l = 1e9, r = -1e9;
+      for (const e of enemies) if (e.alive) { l = Math.min(l, e.x - e.w * .5); r = Math.max(r, e.x + e.w * .5); }
+      return { l, r };
+    }
+
+    function firePlayerBullet() {
+      if (!target) return;
+      const ox = target.x - player.x, oy = target.y - player.y;
+      const d = Math.hypot(ox, oy) || 1;
+      const sp = 580;
+      pBullets.push({ x: player.x, y: player.y - player.r, vx: ox / d * sp, vy: oy / d * sp });
+    }
+
+    function fireEnemyBullet(dt) {
+      nextEnemyShot -= dt;
+      if (nextEnemyShot > 0) return;
+      nextEnemyShot = 0.7 + Math.random() * 0.5;
+      const live = enemies.filter(e => e.alive);
+      if (!live.length) return;
+      const e = live[(Math.random() * live.length) | 0];
+      const tx = player.x + (Math.random() - .5) * 24, ty = player.y;
+      const ox = tx - e.x, oy = ty - e.y, d = Math.hypot(ox, oy) || 1, sp = 240 + wave * 8;
+      eBullets.push({ x: e.x, y: e.y + formation.y + 14, vx: ox / d * sp, vy: oy / d * sp });
+    }
+
+    function updateRunning(dt, now) {
+      pickTarget();
+
+      const l = keys['arrowleft'] || keys['a'], r = keys['arrowright'] || keys['d'];
+      const manual = (r ? 1 : 0) - (l ? 1 : 0);
+      if (manual) player.x += manual * player.speed * dt;
+      else if (target) {
+        const dx = target.x - player.x, step = Math.sign(dx) * Math.min(Math.abs(dx), player.autoSpeed * dt);
+        player.x += step;
+      }
+      player.x = Math.max(22, Math.min(w - 22, player.x));
+
+      player.fireCd -= dt;
+      while (player.fireCd <= 0) { firePlayerBullet(); player.fireCd += 0.15; }
+
+      formation.x += formation.vx * dt;
+      const b = enemyBounds();
+      if (b.l + formation.x < 14 || b.r + formation.x > w - 14) {
+        formation.vx *= -1.06;
+        formation.y += formation.stepDown;
+      }
+
+      for (const e of enemies) if (e.alive) {
+        e.x += formation.vx * dt;
+        e.flash = Math.max(0, e.flash - dt * 6);
+        if (e.y + formation.y > dangerY) { beginGameOver(); return; }
+      }
+
+      fireEnemyBullet(dt);
+
+      for (let i = pBullets.length - 1; i >= 0; i--) {
+        const b = pBullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.x < -20 || b.x > w + 20 || b.y < -30 || b.y > h + 20) { pBullets.splice(i, 1); continue; }
+        for (const e of enemies) {
+          if (!e.alive) continue;
+          const ex = e.x, ey = e.y + formation.y;
+          if (Math.abs(b.x - ex) < e.w * .5 && Math.abs(b.y - ey) < e.h * .5) {
+            e.hp--; e.flash = 1; pBullets.splice(i, 1);
+            if (e.hp <= 0) { e.alive = false; score += 10; }
+            break;
+          }
+        }
+      }
+
+      for (let i = eBullets.length - 1; i >= 0; i--) {
+        const b = eBullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.x < -20 || b.x > w + 20 || b.y < -20 || b.y > h + 20) { eBullets.splice(i, 1); continue; }
+        if (Math.hypot(b.x - player.x, b.y - player.y) < player.r + 4) {
+          eBullets.splice(i, 1);
+          if (now > player.invulnUntil) {
+            player.lives--; player.invulnUntil = now + 0.8;
+            if (player.lives <= 0) { beginGameOver(); return; }
+          }
+        }
+      }
+
+      if (!enemies.some(e => e.alive)) {
+        wave++; enemySpeedBase += 5;
+        pBullets.length = 0; eBullets.length = 0;
+        buildWave();
+      }
+    }
+
+    function updateState(dt) {
+      if (mode === RUNNING) return;
+      if (mode === GAME_OVER) {
+        gameOverHold -= dt;
+        if (gameOverHold <= 0) mode = RESTART_COUNTDOWN;
+      }
+      if (mode === RESTART_COUNTDOWN) {
+        countdown -= dt;
+        if (countdown <= 0) beginNewRun();
+        else cd.textContent = `Restarting in ${Math.ceil(countdown)}…`;
+      }
+    }
+
+    function draw(now) {
+      x.clearRect(0, 0, w, h);
+      x.fillStyle = '#05070f'; x.fillRect(0, 0, w, h);
+
+      for (const s of stars) {
+        s.t += .01 * s.z;
+        const px = s.x * w, py = (s.y * h + (now * 18 * s.z)) % h, a = .25 + .6 * (Math.sin(s.t) * .5 + .5);
+        x.fillStyle = `rgba(170,200,255,${a.toFixed(3)})`;
+        const r = s.z * 1.4;
+        x.fillRect(px, py, r, r);
+      }
+
+      x.strokeStyle = 'rgba(255,86,86,.26)'; x.beginPath(); x.moveTo(0, dangerY); x.lineTo(w, dangerY); x.stroke();
+
+      if (target) {
+        x.strokeStyle = 'rgba(130,190,255,.35)'; x.setLineDash([6, 7]);
+        x.beginPath(); x.moveTo(player.x, player.y - 10); x.lineTo(target.x, target.y + formation.y); x.stroke(); x.setLineDash([]);
+      }
+
+      for (const b of pBullets) { x.fillStyle = '#7cd8ff'; x.fillRect(b.x - 2, b.y - 6, 4, 8); }
+      for (const b of eBullets) { x.fillStyle = '#ff7373'; x.fillRect(b.x - 2, b.y - 2, 4, 8); }
+
+      for (const e of enemies) if (e.alive) {
+        const ex = e.x, ey = e.y + formation.y;
+        x.fillStyle = e.flash ? '#fff4ad' : '#9bb8ff';
+        x.fillRect(ex - 16, ey - 10, 32, 20);
+        x.fillStyle = '#192138';
+        x.fillRect(ex - 9, ey - 2, 18, 7);
+        x.fillStyle = '#ff6a7f'; x.fillRect(ex - 14, ey + 8, 6, 4); x.fillRect(ex + 8, ey + 8, 6, 4);
+        const bw = 28, hpW = bw * (e.hp / e.maxHp);
+        x.fillStyle = 'rgba(0,0,0,.5)'; x.fillRect(ex - bw / 2, ey - 18, bw, 4);
+        x.fillStyle = '#72f7a6'; x.fillRect(ex - bw / 2, ey - 18, hpW, 4);
+      }
+
+      const inv = now < player.invulnUntil;
+      if (!inv || Math.floor(now * 16) % 2 === 0) {
+        x.fillStyle = '#5ad2ff';
+        x.beginPath();
+        x.moveTo(player.x, player.y - 16);
+        x.lineTo(player.x - 14, player.y + 14);
+        x.lineTo(player.x + 14, player.y + 14);
+        x.closePath(); x.fill();
+        x.fillStyle = '#d9f4ff'; x.fillRect(player.x - 3, player.y - 4, 6, 8);
+      }
+
+      hud.textContent = `Score ${score}   Lives ${player.lives}   Wave ${wave}   Target ${target ? `HP:${target.hp}` : '-'}`;
+    }
+
+    let last = performance.now() / 1000;
+    function loop(tms) {
+      const now = tms / 1000, dt = Math.min(0.033, now - last); last = now;
+      if (mode === RUNNING) updateRunning(dt, now);
+      updateState(dt);
+      draw(now);
+      requestAnimationFrame(loop);
+    }
+
+    beginNewRun();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
