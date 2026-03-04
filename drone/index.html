@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion: Drone Edition</title>
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-red: #ff0055;
+            --neon-purple: #bc13fe;
+            --neon-orange: #ffaa00;
+            --bg-deep: #020205;
+            --panel-bg: rgba(5, 10, 20, 0.85);
+            --border-glow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-deep);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', 'Share Tech Mono', monospace;
+            overflow: hidden;
+            display: flex; flex-direction: column; height: 100vh;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--neon-blue);
+            box-shadow: var(--border-glow);
+            z-index: 100;
+        }
+
+        .brand-container { display: flex; flex-direction: column; }
+        .brand-sub { font-size: 10px; letter-spacing: 5px; color: var(--neon-blue); font-weight: bold; text-transform: uppercase; }
+        .brand-title { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px var(--neon-blue); }
+
+        .nav-buttons { display: flex; gap: 15px; }
+        button {
+            background: rgba(0, 242, 255, 0.05); border: 1px solid var(--neon-blue);
+            color: var(--neon-blue); padding: 10px 20px; cursor: pointer;
+            font-size: 12px; text-transform: uppercase; transition: all 0.2s ease;
+            border-radius: 2px; font-weight: bold; letter-spacing: 1px;
+        }
+        button:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
+        button.active { background: rgba(0, 242, 255, 0.2); border-color: #fff; }
+
+        main { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; }
+        #gameCanvas { max-width: 100%; max-height: 100%; border: 1px solid #1a1a1a; cursor: crosshair; }
+
+        .side-panel {
+            position: absolute; right: 25px; top: 25px; bottom: 25px;
+            width: 180px; background: var(--panel-bg); border: 1px solid rgba(0, 242, 255, 0.3);
+            padding: 20px; display: flex; flex-direction: column; gap: 20px;
+            backdrop-filter: blur(10px); pointer-events: none;
+        }
+
+        .ui-panel {
+            position: absolute; bottom: 25px; left: 25px;
+            background: var(--panel-bg); border: 1px solid rgba(0, 242, 255, 0.3);
+            padding: 20px; width: 320px; backdrop-filter: blur(10px);
+            font-size: 12px; color: #aaa; pointer-events: none;
+            line-height: 1.8;
+        }
+
+        .stat-box { margin-bottom: 15px; }
+        .stat-label { font-size: 10px; color: var(--neon-blue); font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+        .stat-bar-bg { width: 100%; height: 6px; background: #111; border-radius: 3px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; width: 100%; background: var(--neon-blue); transition: width 0.3s ease; }
+        .stat-bar-fill.danger { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+
+        #gameOverOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); display: none;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 200;
+        }
+        
+        .sortie-indicator { color: var(--neon-orange); font-weight: bold; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        .prep-timer { color: var(--neon-purple); font-weight: bold; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand-container">
+        <div class="brand-sub">Advanced Tactical Systems</div>
+        <div class="brand-title">Eternal Invasion: Drone Edition</div>
+    </div>
+    <div class="nav-buttons">
+        <button id="soundToggle">Audio: Off</button>
+        <button id="autoDeployToggle">Auto-Sortie: On</button>
+    </div>
+</header>
+
+<main id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-panel">
+        <b style="color:#fff; font-size: 14px; letter-spacing: 1px;">STRATEGIC COMMAND LOG</b><br>
+        <span style="color:var(--neon-blue)">> AUDIO ENGINE:</span> Procedural Synth active.<br>
+        <span style="color:var(--neon-blue)">> IMPACT FX:</span> Kinetic haptics & camera shake.<br>
+        <span style="color:var(--neon-blue)">> SQUADRON OPS:</span> Sequential 1-turn sortie.<br>
+        <span style="color:var(--neon-blue)">> THREAT LEVEL:</span> Escalating spawn intensity.
+    </div>
+
+    <div class="side-panel">
+        <div class="stat-box" id="prepBox">
+            <div class="stat-label">Preparation Time</div>
+            <div id="prepCountdown" class="prep-timer">05.00s</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Core Integrity</div>
+            <div class="stat-bar-bg"><div id="hpFill" class="stat-bar-fill"></div></div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Threat Analysis</div>
+            <div id="threatLevel" style="font-size: 18px; font-weight: bold; color: #fff;">1.00x</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Sortie Queue</div>
+            <div id="queueCount" class="sortie-indicator">Standby</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-size: 9px; color: #555; text-align: center;">BUNTGAMES OS v6.0 [AUDIO-CORE]</div>
+    </div>
+
+    <div id="gameOverOverlay">
+        <div style="font-size: 12px; color: var(--neon-red); letter-spacing: 8px; margin-bottom: 10px;">SYSTEM FAILURE</div>
+        <h1 style="color:#fff; font-size: 48px; letter-spacing: 4px; margin: 0;">CORE COMPROMISED</h1>
+        <div id="restartTimer" style="margin-top: 30px; font-size: 14px; color: var(--neon-blue);">REBOOTING COMMAND CENTER...</div>
+    </div>
+</main>
+
+<script>
+/**
+ * ETERNAL INVASION: DRONE EDITION v6.0
+ * --------------------------------------------------
+ * 1. Procedural Audio Synthesis: Advanced Launch, Hit, and Merge sounds.
+ * 2. Haptic Visuals: Screen shake on core damage and heavy impacts.
+ * 3. Geometry Engine: Circle, Pentagon, Hexagon, Heptagon, Octagon drones.
+ */
+
+const GRID_SIZE = 4;
+const CELL_SIZE = 80;
+const GRID_X = 60;
+const GRID_Y = 160;
+
+const TECH_TREE = {
+    1: { name: "Scout", hp: 140, dmg: 14, range: 120, color: "#999", speed: 1.5, sides: 0 },
+    2: { name: "Sentinel", hp: 260, dmg: 35, range: 140, color: "#ccc", speed: 1.2, sides: 5 },
+    3: {
+        Assault: { name: "Striker", hp: 380, dmg: 65, range: 190, color: "#ff3355", speed: 1.6, sides: 6 },
+        Defense: { name: "Guardian", hp: 1000, dmg: 40, range: 120, color: "#3388ff", speed: 1.1, sides: 6 }
+    },
+    4: {
+        Assault: { name: "Wraith", hp: 650, dmg: 110, range: 250, color: "#ff00bb", speed: 1.8, sides: 7 },
+        Defense: { name: "Bulwark", hp: 2400, dmg: 70, range: 160, color: "#0055ff", speed: 1.0, sides: 7 }
+    },
+    5: {
+        Assault: { name: "Warlord", hp: 1600, dmg: 220, range: 360, color: "#bc13fe", speed: 1.5, sides: 8 },
+        Defense: { name: "Colossus", hp: 6500, dmg: 180, range: 220, color: "#00f2ff", speed: 0.8, sides: 8 }
+    }
+};
+
+// --- [신규 사운드 시스템: 절차적 오디오 합성] ---
+let soundEnabled = false;
+let autoDeploy = true;
+let audioCtx = null;
+
+const SoundEngine = {
+    init() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+
+    // 발사음: 주파수 스윕 (Whoosh/Laser)
+    playLaunch() {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(1000, now);
+
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.15);
+    },
+
+    // 타격음: 화이트 노이즈 기반 금속 충돌음
+    playHit(volume = 0.05) {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const bufferSize = audioCtx.sampleRate * 0.1;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(3000, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        noise.start(now);
+    },
+
+    // 합성음: 기계적인 차임/플럭 사운드
+    playMerge() {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const notes = [440, 880];
+        notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.05);
+            gain.gain.setValueAtTime(0.1, now + i * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + i * 0.05);
+            osc.stop(now + i * 0.05 + 0.2);
+        });
+    },
+
+    // 기지 데미지: 낮은 톤의 쿵 소리
+    playCoreImpact() {
+        if (!soundEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.2);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+};
+
+// --- [그래픽 유틸리티] ---
+function drawPolygon(ctx, x, y, sides, radius, angle = 0) {
+    if (sides < 3) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+    } else {
+        ctx.beginPath();
+        for (let i = 0; i < sides; i++) {
+            const px = x + radius * Math.cos(angle + (i * 2 * Math.PI) / sides);
+            const py = y + radius * Math.sin(angle + (i * 2 * Math.PI) / sides);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+    }
+}
+
+class Particle {
+    constructor(x, y, color, size = 2) {
+        this.x = x; this.y = y; this.color = color; this.size = size;
+        this.vx = (Math.random()-0.5)*12; this.vy = (Math.random()-0.5)*12;
+        this.life = 1.0; this.decay = 0.04 + Math.random() * 0.04;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; }
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.shadowBlur = 5; ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    }
+}
+
+class Projectile {
+    constructor(x, y, target, dmg, color, isEnemy = false) {
+        this.x = x; this.y = y; this.target = target; this.dmg = dmg; this.color = color;
+        this.speed = isEnemy ? 9.5 : 22.0;
+        this.isEnemy = isEnemy;
+        this.dead = false;
+    }
+    update(game) {
+        if (!this.target || this.target.hp <= 0) { this.dead = true; return; }
+        const dx = this.target.x - this.x, dy = this.target.y - this.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 15) {
+            this.target.hp -= this.dmg; this.dead = true; 
+            SoundEngine.playHit(this.isEnemy ? 0.03 : 0.06); 
+            // 아군 탄환이 적을 맞출 때 미세한 진동
+            if (!this.isEnemy) game.shake(3, 5);
+            return;
+        }
+        this.x += (dx/dist)*this.speed; this.y += (dy/dist)*this.speed;
+    }
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        if (this.isEnemy) {
+            ctx.shadowBlur = 8; ctx.shadowColor = this.color;
+            ctx.fillRect(this.x-3, this.y-3, 6, 6);
+        } else {
+            ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    }
+}
+
+class Drone {
+    constructor(x, y, level, pathOrType, isEnemy = false, difficulty = 1.0) {
+        let data = level <= 2 ? TECH_TREE[level] : TECH_TREE[level][pathOrType];
+        this.x = x; this.y = y; this.level = level; this.pathOrType = pathOrType; this.isEnemy = isEnemy;
+        const scalar = isEnemy ? (1 + (difficulty - 1) * 0.55) : 1.0;
+        this.hp = data.hp * scalar; this.maxHp = this.hp;
+        this.dmg = data.dmg * scalar; this.range = data.range;
+        this.speed = data.speed * (isEnemy ? 1.2 : 1.0);
+        this.origColor = data.color;
+        this.color = isEnemy ? "#ff1144" : data.color;
+        this.sides = data.sides;
+        this.cooldown = 0; this.maxCooldown = 60;
+        this.target = null; this.angle = Math.random()*Math.PI*2;
+        this.patrolRadius = 150 + (this.level * 10);
+        this.patrolSpeed = 0.01 + (Math.random() * 0.005);
+        this.rotation = 0;
+    }
+
+    update(targets, base, game) {
+        if (this.cooldown > 0) this.cooldown--;
+        this.rotation += 0.02;
+        const visualRange = this.range * 1.5;
+        let closest = null, minDist = 999999;
+        targets.forEach(t => {
+            const d = Math.sqrt((t.x-this.x)**2 + (t.y-this.y)**2);
+            if (d < minDist) { minDist = d; closest = t; }
+        });
+
+        if (this.isEnemy) {
+            const distToBase = Math.sqrt((base.x-this.x)**2 + (base.y-this.y)**2);
+            this.target = (minDist < visualRange) ? closest : null;
+            if (this.target) {
+                const dx = this.target.x - this.x, dy = this.target.y - this.y;
+                if (minDist > this.range * 0.8) { this.x += (dx/minDist)*this.speed; this.y += (dy/minDist)*this.speed; }
+                if (this.cooldown <= 0 && minDist <= this.range) {
+                    this.cooldown = this.maxCooldown;
+                    return new Projectile(this.x, this.y, this.target, this.dmg, "#ff3333", true);
+                }
+            } else {
+                const dx = base.x - this.x, dy = base.y - this.y;
+                if (distToBase < 55) { 
+                    base.hp -= 0.5; 
+                    game.shake(6, 10); // 기지 데미지 시 강한 진동
+                    SoundEngine.playCoreImpact();
+                } 
+                else { this.x += (dx/distToBase)*this.speed; this.y += (dy/distToBase)*this.speed; }
+            }
+        } else {
+            if (closest && minDist < visualRange) {
+                this.target = closest;
+                const dx = this.target.x - this.x, dy = this.target.y - this.y;
+                if (minDist > this.range * 0.8) { this.x += (dx/minDist)*this.speed; this.y += (dy/minDist)*this.speed; }
+                if (this.cooldown <= 0 && minDist <= this.range) { this.cooldown = this.maxCooldown; return new Projectile(this.x, this.y, this.target, this.dmg, this.origColor, false); }
+            } else {
+                this.target = null; this.angle += this.patrolSpeed;
+                const tx = base.x + Math.cos(this.angle) * this.patrolRadius, ty = base.y + Math.sin(this.angle) * this.patrolRadius;
+                const dx = tx - this.x, dy = ty - this.y, d = Math.sqrt(dx*dx + dy*dy);
+                if (d > 2) { this.x += (dx/d) * this.speed; this.y += (dy/d) * this.speed; }
+            }
+        }
+        return null;
+    }
+
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y);
+        ctx.strokeStyle = this.isEnemy ? "#ff1144" : this.origColor;
+        ctx.lineWidth = 2.5;
+        if (this.isEnemy) { ctx.shadowBlur = 12; ctx.shadowColor = "#f00"; }
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+
+        drawPolygon(ctx, 0, 0, this.sides, 12, this.isEnemy ? -this.rotation : this.rotation);
+        
+        if (this.pathOrType === 'Defense') {
+            ctx.lineWidth = 1; ctx.strokeStyle = "#fff";
+            drawPolygon(ctx, 0, 0, this.sides, 6, -this.rotation);
+        } else if (this.pathOrType === 'Assault') {
+            ctx.lineWidth = 1; ctx.strokeStyle = "#fff";
+            ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 15); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fillRect(-15, -30, 30, 3);
+        ctx.fillStyle = this.isEnemy ? "#f00" : varColor(this.origColor); 
+        ctx.fillRect(-15, -30, 30 * (this.hp/this.maxHp), 3);
+        ctx.restore();
+    }
+}
+
+function varColor(c) { return c === "#999" ? "#00f2ff" : c; }
+
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = 1000; this.canvas.height = 600;
+        this.mousePos = { x: 0, y: 0 };
+        this.shakeX = 0; this.shakeY = 0; this.shakeTimer = 0; this.shakeIntensity = 0;
+        this.init(); this.setupListeners(); this.loop();
+    }
+
+    init() {
+        this.startTime = Date.now();
+        this.base = { x: 500, y: 300, hp: 100 };
+        this.grid = Array(16).fill(null).map(() => ({ level: 1, path: 'Basic' }));
+        this.drones = []; this.enemies = []; this.projectiles = []; this.particles = [];
+        this.difficulty = 1.0; this.gameTime = 0;
+        this.lastTurnTime = 0; this.globalTurnCount = 0; this.enemySpawnTimer = 0;
+        this.isGameOver = false;
+        this.sortieQueue = []; 
+    }
+
+    shake(intensity, frames) {
+        this.shakeIntensity = intensity;
+        this.shakeTimer = frames;
+    }
+
+    setupListeners() {
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+            this.mousePos.y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+        });
+        this.canvas.addEventListener('mousedown', () => {
+            if (this.isGameOver) return;
+            SoundEngine.init(); // 오디오 컨텍스트 활성화
+            const gx = this.mousePos.x - GRID_X, gy = this.mousePos.y - GRID_Y;
+            if (gx >= 0 && gy >= 0 && gx < 4*CELL_SIZE && gy < 4*CELL_SIZE) {
+                const idx = Math.floor(gx/CELL_SIZE) + Math.floor(gy/CELL_SIZE)*4;
+                if (this.grid[idx].level > 0 && !this.sortieQueue.includes(idx)) {
+                    this.sortieQueue.push(idx);
+                }
+            }
+        });
+        document.getElementById('soundToggle').onclick = (e) => { 
+            SoundEngine.init();
+            soundEnabled = !soundEnabled; 
+            e.target.innerText = `Audio: ${soundEnabled?'On':'Off'}`; 
+            e.target.classList.toggle('active', soundEnabled); 
+        };
+        document.getElementById('autoDeployToggle').onclick = (e) => { 
+            autoDeploy = !autoDeploy; 
+            e.target.innerText = `Auto-Sortie: ${autoDeploy?'On':'Off'}`; 
+            e.target.classList.toggle('active', autoDeploy); 
+        };
+    }
+
+    processTurn() {
+        this.globalTurnCount++;
+        if (this.sortieQueue.length > 0) {
+            const idx = this.sortieQueue.shift();
+            if (this.grid[idx].level > 0) { this.launchDrone(idx); return; }
+        }
+        const isFull = this.grid.every(c => c.level > 0);
+        if (isFull) {
+            if (Math.random() < 0.5) { if (this.tryMerge()) return; this.launchRandom(); } 
+            else { this.launchRandom(); }
+            return;
+        }
+        if (autoDeploy) {
+            const best = this.getBestAutoIdx();
+            if (best !== -1) { this.launchDrone(best); return; }
+        }
+        if (this.tryMerge()) return;
+        if (this.tryMove()) return;
+        if (this.globalTurnCount % 2 === 0) { this.spawn(); }
+    }
+
+    launchRandom() {
+        const occ = this.grid.map((v, i) => v.level > 0 ? i : null).filter(v => v !== null);
+        if (occ.length > 0) this.launchDrone(occ[Math.floor(Math.random()*occ.length)]);
+    }
+
+    getBestAutoIdx() {
+        const threats = this.enemies.filter(e => Math.sqrt((e.x - this.base.x)**2 + (e.y - this.base.y)**2) < 450);
+        if (this.enemies.length >= 4 || threats.length > 0) {
+            let bestIdx = -1, maxLvl = 0;
+            for(let i=0; i<16; i++) {
+                if (this.grid[i].level > maxLvl && !this.sortieQueue.includes(i)) {
+                    maxLvl = this.grid[i].level; bestIdx = i;
+                }
+            }
+            return bestIdx;
+        }
+        return -1;
+    }
+
+    tryMerge() {
+        for (let i = 0; i < 16; i++) {
+            if (this.grid[i].level === 0 || this.grid[i].level >= 5) continue;
+            const neighbors = [i-1, i+1, i-4, i+4].filter(n => n>=0 && n<16 && Math.abs((n%4)-(i%4)) + Math.abs(Math.floor(n/4)-Math.floor(i/4)) === 1);
+            for (let n of neighbors) {
+                if (this.grid[n].level === this.grid[i].level && this.grid[n].path === this.grid[i].path) {
+                    this.grid[n].level++;
+                    if (this.grid[n].level === 3 && this.grid[n].path === 'Basic') this.grid[n].path = Math.random() > 0.5 ? 'Assault' : 'Defense';
+                    this.grid[i].level = 0;
+                    SoundEngine.playMerge();
+                    if (this.grid[n].level === 5) this.launchDrone(n);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    tryMove() {
+        for (let i = 0; i < 16; i++) {
+            if (this.grid[i].level === 0) continue;
+            const target = this.findIdentical(i);
+            if (target !== -1) {
+                const x1 = i%4, y1 = Math.floor(i/4), x2 = target%4, y2 = Math.floor(target/4);
+                let nx = x1, ny = y1;
+                if (x1 < x2) nx++; else if (x1 > x2) nx--; else if (y1 < y2) ny++; else if (y1 > y2) ny--;
+                const nIdx = nx + ny*4;
+                if (this.grid[nIdx].level === 0) {
+                    this.grid[nIdx].level = this.grid[i].level; this.grid[nIdx].path = this.grid[i].path; this.grid[i].level = 0;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    findIdentical(idx) {
+        const { level, path } = this.grid[idx];
+        let minDist = 99, target = -1;
+        for (let i=0; i<16; i++) {
+            if (i === idx || this.grid[i].level !== level || this.grid[i].path !== path) continue;
+            const d = Math.abs((i%4)-(idx%4)) + Math.abs(Math.floor(i/4)-Math.floor(idx/4));
+            if (d < minDist) { minDist = d; target = i; }
+        }
+        return target;
+    }
+
+    spawn() {
+        const empty = this.grid.map((v, i) => v.level === 0 ? i : null).filter(v => v !== null);
+        if (empty.length > 0) {
+            const idx = empty[Math.floor(Math.random()*empty.length)];
+            this.grid[idx].level = 1; this.grid[idx].path = 'Basic';
+            const px = GRID_X + (idx%4)*CELL_SIZE + CELL_SIZE/2, py = GRID_Y + Math.floor(idx/4)*CELL_SIZE + CELL_SIZE/2;
+            for(let i=0; i<10; i++) this.particles.push(new Particle(px, py, varColor("#999")));
+        }
+    }
+
+    spawnEnemy() {
+        let level = 1;
+        const roll = Math.random() * this.difficulty;
+        if (roll > 5) level = 5; else if (roll > 3.8) level = 4; else if (roll > 2.8) level = 3; else if (roll > 1.8) level = 2;
+        const side = Math.floor(Math.random()*4), offset = 10;
+        let x, y;
+        switch(side) {
+            case 0: x = Math.random()*1000; y = offset; break;
+            case 1: x = 1000-offset; y = Math.random()*600; break;
+            case 2: x = Math.random()*1000; y = 600-offset; break;
+            case 3: x = offset; y = Math.random()*600; break;
+        }
+        this.enemies.push(new Drone(x, y, level, Math.random()>0.5?'Assault':'Defense', true, this.difficulty));
+    }
+
+    launchDrone(idx) {
+        const { level, path } = this.grid[idx];
+        this.grid[idx].level = 0;
+        this.drones.push(new Drone(this.base.x, this.base.y, level, path, false, this.difficulty));
+        SoundEngine.playLaunch();
+        const color = level <= 2 ? TECH_TREE[level].color : TECH_TREE[level][path].color;
+        for(let i=0; i<20; i++) this.particles.push(new Particle(this.base.x, this.base.y, color));
+        this.sortieQueue = this.sortieQueue.filter(q => q !== idx);
+    }
+
+    update() {
+        if (this.isGameOver) return;
+        const now = Date.now();
+        const prepRemaining = Math.max(0, 5000 - (now - this.startTime));
+        
+        this.gameTime++; 
+        this.difficulty = 1.0 + (this.gameTime / 9000);
+        
+        if (now - this.lastTurnTime > 1000) { this.processTurn(); this.lastTurnTime = now; }
+
+        if (prepRemaining === 0) {
+            if (++this.enemySpawnTimer > Math.max(8, 80 / this.difficulty)) { 
+                this.spawnEnemy(); 
+                this.enemySpawnTimer = 0; 
+            }
+        }
+
+        // --- Screen Shake Logic ---
+        if (this.shakeTimer > 0) {
+            this.shakeX = (Math.random() - 0.5) * this.shakeIntensity;
+            this.shakeY = (Math.random() - 0.5) * this.shakeIntensity;
+            this.shakeTimer--;
+        } else {
+            this.shakeX = 0; this.shakeY = 0;
+        }
+
+        this.enemies.forEach(e => { let r = e.update(this.drones, this.base, this); if (r) this.projectiles.push(r); });
+        this.drones.forEach(d => { let r = d.update(this.enemies, this.base, this); if (r) this.projectiles.push(r); });
+        this.projectiles.forEach(p => p.update(this));
+        this.particles.forEach(p => p.update());
+        
+        this.projectiles = this.projectiles.filter(p => !p.dead);
+        this.particles = this.particles.filter(p => p.life > 0);
+        this.enemies.forEach(e => { if (e.hp <= 0) { for(let i=0; i<25; i++) this.particles.push(new Particle(e.x, e.y, "#ff3355", 3)); }});
+        this.enemies = this.enemies.filter(e => e.hp > 0);
+        this.drones.forEach(d => { if (d.hp <= 0) { for(let i=0; i<20; i++) this.particles.push(new Particle(d.x, d.y, "#ffffff", 2)); }});
+        this.drones = this.drones.filter(d => d.hp > 0);
+
+        // UI Stats Update
+        document.getElementById('hpFill').style.width = this.base.hp + '%';
+        document.getElementById('hpFill').classList.toggle('danger', this.base.hp < 30);
+        document.getElementById('threatLevel').innerText = this.difficulty.toFixed(2) + 'x';
+        document.getElementById('queueCount').innerText = this.sortieQueue.length > 0 ? `DEPLOYING ${this.sortieQueue.length}` : 'STANDBY';
+        
+        const prepDisp = document.getElementById('prepCountdown');
+        if (prepRemaining > 0) {
+            prepDisp.innerText = (prepRemaining / 1000).toFixed(2) + "s";
+            document.getElementById('prepBox').style.display = 'block';
+        } else {
+            document.getElementById('prepBox').style.display = 'none';
+        }
+
+        if (this.base.hp <= 0) { this.base.hp = 0; this.isGameOver = true; document.getElementById('gameOverOverlay').style.display='flex'; setTimeout(() => location.reload(), 7000); }
+    }
+
+    draw() {
+        const ctx = this.ctx; ctx.clearRect(0, 0, 1000, 600);
+        
+        ctx.save();
+        ctx.translate(this.shakeX, this.shakeY); // Apply camera shake
+
+        // Background Grid
+        ctx.strokeStyle = "rgba(0, 242, 255, 0.05)"; ctx.lineWidth = 1;
+        for(let i=0; i<1000; i+=50) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,600); ctx.stroke(); }
+        for(let j=0; j<600; j+=50) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(1000,j); ctx.stroke(); }
+
+        // Grid Area
+        ctx.fillStyle = "rgba(0, 242, 255, 0.02)"; ctx.fillRect(GRID_X, GRID_Y, 4*CELL_SIZE, 4*CELL_SIZE);
+        ctx.strokeStyle = "rgba(0, 242, 255, 0.2)"; ctx.strokeRect(GRID_X, GRID_Y, 4*CELL_SIZE, 4*CELL_SIZE);
+        for (let i=0; i<16; i++) {
+            const x = GRID_X + (i%4)*CELL_SIZE, y = GRID_Y + Math.floor(i/4)*CELL_SIZE;
+            ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+            if (this.grid[i].level > 0) {
+                this.drawBoardItem(x + CELL_SIZE/2, y + CELL_SIZE/2, i);
+                if (this.sortieQueue.includes(i)) {
+                    ctx.strokeStyle = "rgba(255, 255, 0, 0.6)"; ctx.lineWidth = 2; ctx.strokeRect(x+3, y+3, CELL_SIZE-6, CELL_SIZE-6);
+                }
+            }
+        }
+
+        // Core
+        ctx.lineWidth = 4; ctx.strokeStyle = this.base.hp < 30 ? varColor("#f00") : varColor("#0ff");
+        ctx.beginPath(); ctx.arc(this.base.x, this.base.y, 45, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = "rgba(0, 242, 255, 0.05)"; ctx.fill();
+
+        this.enemies.forEach(e => e.draw(ctx));
+        this.drones.forEach(d => d.draw(ctx));
+        this.projectiles.forEach(p => p.draw(ctx));
+        this.particles.forEach(p => p.draw(ctx));
+
+        ctx.restore();
+    }
+
+    drawBoardItem(x, y, idx) {
+        const item = this.grid[idx];
+        const info = item.level <= 2 ? TECH_TREE[item.level] : TECH_TREE[item.level][item.path];
+        this.ctx.save();
+        this.ctx.strokeStyle = info.color;
+        this.ctx.fillStyle = info.color;
+        this.ctx.shadowBlur = 10; this.ctx.shadowColor = info.color;
+        drawPolygon(this.ctx, x, y, info.sides, 15, 0);
+        this.ctx.shadowBlur = 0;
+        this.ctx.fillStyle = "#000"; this.ctx.font = "bold 12px Arial"; this.ctx.textAlign="center"; this.ctx.textBaseline="middle";
+        this.ctx.fillText(item.level, x, y);
+        this.ctx.restore();
+    }
+    loop() { this.update(); this.draw(); requestAnimationFrame(() => this.loop()); }
+}
+window.onload = () => new Game();
+</script>
+</body>
+</html>
