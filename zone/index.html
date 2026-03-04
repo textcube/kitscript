@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ETERNAL INVASION: ZONE EDITION</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        :root { --neon-blue: #00f3ff; --neon-pink: #ff00ff; }
+        body { background-color: #050505; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; overflow: hidden; touch-action: none; user-select: none; }
+        
+        .crt-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 255, 0, 0.05)); background-size: 100% 4px, 3px 100%; pointer-events: none; z-index: 50; }
+        
+        canvas { display: block; image-rendering: pixelated; background: #000; }
+        
+        .game-ui { text-shadow: 0 0 5px var(--neon-blue); pointer-events: none; }
+        
+        .retro-btn { background: linear-gradient(to bottom, #444, #111); border: 2px solid #888; box-shadow: 0 4px 0 #000; transition: transform 0.1s; cursor: pointer; }
+        .retro-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+        
+        .header-bar { border-bottom: 4px solid #333; background: #111; z-index: 60; }
+        .brand-logo { color: var(--neon-pink); text-shadow: 0 0 8px var(--neon-pink); }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .blink { animation: blink 0.5s infinite; }
+        
+        .nav-link { font-size: 8px; color: #aaa; transition: color 0.2s; pointer-events: auto; }
+        .nav-link:hover { color: var(--neon-blue); }
+
+        .auto-badge { 
+            position: absolute; bottom: 20px; right: 20px; 
+            padding: 8px 12px; border: 2px solid var(--neon-pink); 
+            color: var(--neon-pink); font-size: 10px; z-index: 60;
+            background: rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-start min-h-screen">
+
+    <header class="header-bar w-full p-3 flex justify-between items-center px-6">
+        <div class="flex flex-col gap-1">
+            <h1 class="brand-logo text-[10px] md:text-sm">ETERNAL INVASION: ZONE EDITION</h1>
+            <div class="flex gap-4">
+                <a href="https://kitscript.com/game" target="_blank" class="nav-link">HOME</a>
+                <a href="http://www.youtube.com/@textcube" target="_blank" class="nav-link">YOUTUBE</a>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4 pointer-events-auto">
+            <button id="soundToggle" onclick="game.toggleSound()" class="retro-btn p-2 text-[8px] flex items-center gap-2">
+                SOUND: <span id="soundStatus" class="text-red-500">OFF</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="relative border-8 border-gray-800 rounded-sm shadow-[0_0_50px_rgba(0,0,0,0.5)] mt-4">
+        <div class="crt-overlay"></div>
+        
+        <div class="game-ui absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 text-[8px] md:text-[10px]">
+            <div class="flex flex-col gap-1">
+                <span class="text-cyan-400">PROGRESS</span>
+                <div class="w-24 md:w-32 h-2 md:h-3 bg-gray-900 border border-cyan-900">
+                    <div id="progressBar" class="h-full bg-cyan-400 transition-all" style="width: 0%"></div>
+                </div>
+                <span id="percentageText">0%</span>
+            </div>
+            <div class="text-center">
+                <div class="text-yellow-400 mb-1 text-[7px] md:text-[8px]">SCORE</div>
+                <div id="scoreText">000000</div>
+            </div>
+            <div class="text-right">
+                <div class="text-pink-500 mb-1">LIVES</div>
+                <div id="livesText" class="text-pink-500">❤❤❤</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="messageOverlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-40 hidden text-center">
+            <h2 id="messageTitle" class="text-xl text-white mb-2 uppercase"></h2>
+            <p id="countdownMsg" class="text-yellow-400 text-[8px] mb-6 uppercase">Restarting in 7s...</p>
+            <button id="retryBtn" class="retro-btn px-6 py-3 text-white text-sm uppercase">Manual Restart</button>
+        </div>
+
+        <div id="autoBadge" class="auto-badge blink hidden">AUTO HUNTING...</div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div class="mt-6 flex gap-10 items-center lg:hidden">
+        <div class="grid grid-cols-3 gap-2">
+            <div></div>
+            <button class="retro-btn w-12 h-12" onmousedown="game.setDirection(0, -1, true)" ontouchstart="game.setDirection(0, -1, true)">▲</button>
+            <div></div>
+            <button class="retro-btn w-12 h-12" onmousedown="game.setDirection(-1, 0, true)" ontouchstart="game.setDirection(-1, 0, true)">◀</button>
+            <button class="retro-btn w-12 h-12" onmousedown="game.setDirection(0, 1, true)" ontouchstart="game.setDirection(0, 1, true)">▼</button>
+            <button class="retro-btn w-12 h-12" onmousedown="game.setDirection(1, 0, true)" ontouchstart="game.setDirection(1, 0, true)">▶</button>
+        </div>
+        <button class="retro-btn w-20 h-20 rounded-full text-[8px] bg-red-900" onmousedown="game.toggleTurbo(true)" onmouseup="game.toggleTurbo(false)" ontouchstart="game.toggleTurbo(true)" ontouchend="game.toggleTurbo(false)">TURBO</button>
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration, vol=0.1) {
+            if (!game || !game.soundEnabled || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const SFX = {
+            move: () => playTone(120, 'square', 0.05, 0.01),
+            capture: () => { playTone(523, 'triangle', 0.1); setTimeout(()=>playTone(1046, 'triangle', 0.2), 50); },
+            enemyDie: () => { playTone(300, 'sawtooth', 0.1, 0.2); playTone(150, 'sawtooth', 0.3, 0.2); },
+            hit: () => playTone(80, 'sawtooth', 0.6, 0.3),
+            win: () => { [523, 659, 783, 1046, 1318].forEach((f, i) => setTimeout(()=>playTone(f, 'square', 0.4), i*100)); }
+        };
+
+        const GRID_W = 100;
+        const GRID_H = 75;
+        const CELL = 6;
+
+        class Particle {
+            constructor(x, y, color) { 
+                this.x = x; this.y = y; 
+                this.vx = (Math.random() - 0.5) * 8; 
+                this.vy = (Math.random() - 0.5) * 8; 
+                this.life = 1.0; this.color = color; 
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; }
+        }
+
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = GRID_W * CELL;
+                this.canvas.height = GRID_H * CELL;
+                this.offScreenCanvas = document.createElement('canvas');
+                this.offScreenCanvas.width = this.canvas.width;
+                this.offScreenCanvas.height = this.canvas.height;
+                this.offCtx = this.offScreenCanvas.getContext('2d');
+                this.patternCanvas = document.createElement('canvas');
+                this.patternCanvas.width = this.canvas.width;
+                this.patternCanvas.height = this.canvas.height;
+                this.createProceduralBackground();
+                
+                this.particles = [];
+                this.score = 0;
+                this.isRunning = false;
+                this.isGameOver = false;
+                this.turbo = false;
+                this.animationFrame = null;
+                this.soundEnabled = false;
+                this.moveFrameCounter = 0;
+
+                this.isAutoMode = true;
+                this.aiState = 'IDLE'; 
+                this.aiStepCount = 0;
+                this.stuckTimer = 0; 
+                this.lastManualInputTime = Date.now();
+                this.AUTO_RESUME_TIME = 5000; 
+
+                document.getElementById('retryBtn').onclick = () => { this.clearTimers(); this.restart(); };
+                window.addEventListener('keydown', (e) => { 
+                    if(e.key === 'Shift') this.turbo = true;
+                    if(e.key.startsWith('Arrow')) {
+                        this.setDirectionFromKey(e.key);
+                    }
+                });
+                window.addEventListener('keyup', (e) => { if(e.key === 'Shift') this.turbo = false; });
+                window.onload = () => setTimeout(() => this.restart(), 100);
+            }
+
+            clearTimers() {
+                if(this.restartTimer) clearTimeout(this.restartTimer);
+                if(this.restartInterval) clearInterval(this.restartInterval);
+            }
+
+            setDirectionFromKey(key) {
+                this.disableAutoMode();
+                if(key === 'ArrowUp') this.setDirection(0, -1, true);
+                else if(key === 'ArrowDown') this.setDirection(0, 1, true);
+                else if(key === 'ArrowLeft') this.setDirection(-1, 0, true);
+                else if(key === 'ArrowRight') this.setDirection(1, 0, true);
+            }
+
+            disableAutoMode() {
+                this.lastManualInputTime = Date.now();
+                if (!this.isAutoMode) return;
+                this.isAutoMode = false;
+                this.player.dx = 0; this.player.dy = 0;
+                document.getElementById('autoBadge').classList.add('hidden');
+            }
+
+            toggleSound() {
+                this.soundEnabled = !this.soundEnabled;
+                const status = document.getElementById('soundStatus');
+                status.innerText = this.soundEnabled ? 'ON' : 'OFF';
+                status.className = this.soundEnabled ? 'text-green-400' : 'text-red-500';
+                if(this.soundEnabled && audioCtx.state === 'suspended') audioCtx.resume();
+            }
+
+            createProceduralBackground() {
+                const bctx = this.patternCanvas.getContext('2d');
+                bctx.fillStyle = '#101025';
+                bctx.fillRect(0, 0, this.patternCanvas.width, this.patternCanvas.height);
+                for(let i=0; i<150; i++) {
+                    bctx.fillStyle = `hsl(${Math.random()*360}, 70%, 50%, 0.15)`;
+                    bctx.beginPath(); bctx.arc(Math.random()*this.patternCanvas.width, Math.random()*this.patternCanvas.height, Math.random()*30, 0, Math.PI*2); bctx.fill();
+                }
+            }
+
+            restart() {
+                this.clearTimers();
+                this.isRunning = false; this.isGameOver = false;
+                this.isAutoMode = true;
+                this.lastManualInputTime = Date.now();
+                document.getElementById('autoBadge').classList.remove('hidden');
+                this.grid = Array(GRID_H).fill().map(() => Array(GRID_W).fill(0));
+                for(let y=0; y<GRID_H; y++) {
+                    for(let x=0; x<GRID_W; x++) { if(x===0 || x===GRID_W-1 || y===0 || y===GRID_H-1) this.grid[y][x] = 1; }
+                }
+                const startX = Math.floor(GRID_W / 2);
+                const startY = GRID_H - 1;
+                this.player = { 
+                    x: startX, y: startY, dx: 0, dy: 0, 
+                    isDrawing: false, lastSafeX: startX, lastSafeY: startY,
+                    spawnTime: Date.now(), lastMoveTime: Date.now()
+                };
+                // mass(질량) 속성 추가하여 충돌 물리 보강
+                this.enemies = [
+                    { x: 30, y: 30, vx: 0.38, vy: 0.35, type: 'boss', r: 1.2, mass: 1 },
+                    { x: 70, y: 45, vx: -0.35, vy: -0.42, type: 'boss', r: 1.2, mass: 1 },
+                    { x: 15, y: 15, vx: 0.48, vy: 0.45, type: 'spark', r: 0.8, mass: 0.5 }
+                ];
+                this.lives = 3; this.captured = 0; this.score = 0; this.particles = [];
+                this.moveFrameCounter = 0; this.aiStepCount = 0; this.aiState = 'IDLE';
+                document.getElementById('messageOverlay').classList.add('hidden');
+                this.updateOffScreen(); this.updateUI();
+                this.isRunning = true;
+                if (!this.animationFrame) this.gameLoop();
+            }
+
+            updateOffScreen() {
+                this.offCtx.clearRect(0, 0, this.offScreenCanvas.width, this.offScreenCanvas.height);
+                for (let y = 0; y < GRID_H; y++) {
+                    for (let x = 0; x < GRID_W; x++) {
+                        if (this.grid[y][x] === 1) {
+                            if (this.isBoundary(x, y)) {
+                                this.offCtx.fillStyle = '#00f3ff';
+                                this.offCtx.fillRect(x * CELL, y * CELL, CELL, CELL);
+                            } else {
+                                this.offCtx.drawImage(this.patternCanvas, x * CELL, y * CELL, CELL, CELL, x * CELL, y * CELL, CELL, CELL);
+                            }
+                        }
+                    }
+                }
+            }
+
+            setDirection(dx, dy, isManual = false) {
+                if (isManual) this.lastManualInputTime = Date.now();
+                if (!this.player.isDrawing) {
+                    if (this.player.dx === -dx && dx !== 0) return;
+                    if (this.player.dy === -dy && dy !== 0) return;
+                }
+                this.player.dx = dx; this.player.dy = dy;
+                if (dx !== 0 || dy !== 0) this.player.lastMoveTime = Date.now();
+            }
+
+            getMinDistToEnemy() {
+                let minDist = 999;
+                this.enemies.forEach(e => {
+                    const d = Math.hypot(e.x - this.player.x, e.y - this.player.y);
+                    if (d < minDist) minDist = d;
+                });
+                return minDist;
+            }
+
+            isEnemyInSquare(size) {
+                return this.enemies.some(e => 
+                    Math.abs(e.x - this.player.x) <= size && 
+                    Math.abs(e.y - this.player.y) <= size
+                );
+            }
+
+            runAutoHunter() {
+                if (!this.isAutoMode || !this.isRunning) return;
+
+                const minDist = this.getMinDistToEnemy();
+                const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+                if (!this.player.isDrawing && this.grid[this.player.y][this.player.x] === 1 && !this.isBoundary(this.player.x, this.player.y)) {
+                    this.snapToNearestBoundary();
+                    return;
+                }
+
+                if (this.player.isDrawing && (this.isEnemyInSquare(15) || this.aiState === 'PANIC_RETURN')) {
+                    this.aiState = 'PANIC_RETURN';
+                    this.snapToNearestBoundary();
+                    return;
+                }
+
+                if (this.aiState === 'IDLE') {
+                    if (!this.isEnemyInSquare(15) && minDist > 22) {
+                        const possible = directions.filter(([dx, dy]) => {
+                            const nx = this.player.x + dx, ny = this.player.y + dy;
+                            return nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && this.grid[ny][nx] === 0;
+                        });
+                        if (possible.length > 0) {
+                            const [adx, ady] = possible[Math.floor(Math.random() * possible.length)];
+                            this.setDirection(adx, ady);
+                            this.aiStepCount = 4 + Math.floor(Math.random() * 4);
+                            this.aiState = 'HUNT_OUT';
+                            return;
+                        }
+                    }
+
+                    const patrolDirs = directions.filter(([dx, dy]) => {
+                        const nx = this.player.x + dx, ny = this.player.y + dy;
+                        return nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && this.isBoundary(nx, ny);
+                    });
+                    if (patrolDirs.length > 0) {
+                        let bestDir = patrolDirs[0], maxM = -1;
+                        patrolDirs.forEach(dir => {
+                            const tx = this.player.x + dir[0], ty = this.player.y + dir[1];
+                            let m = 999;
+                            this.enemies.forEach(e => { const d = Math.hypot(e.x - tx, e.y - ty); if(d < m) m = d; });
+                            if (m > maxM) { maxM = m; bestDir = dir; }
+                        });
+                        if ((this.player.dx === 0 && this.player.dy === 0) || Math.random() > 0.94) {
+                            this.setDirection(bestDir[0], bestDir[1]);
+                        }
+                    }
+                } else {
+                    this.aiStepCount--;
+                    if (this.aiStepCount <= 0) {
+                        if (this.aiState === 'HUNT_OUT') {
+                            const turns = this.player.dx !== 0 ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]];
+                            const [tdx, tdy] = turns[Math.floor(Math.random() * turns.length)];
+                            this.setDirection(tdx, tdy);
+                            this.aiStepCount = 4 + Math.floor(Math.random() * 4);
+                            this.aiState = 'HUNT_SIDE';
+                        } else {
+                            this.aiState = 'PANIC_RETURN';
+                            this.snapToNearestBoundary();
+                        }
+                    }
+                }
+            }
+
+            isBoundary(x, y) {
+                if (this.grid[y][x] !== 1) return false;
+                return [[0, 1], [0, -1], [1, 0], [-1, 0]].some(([dx, dy]) => {
+                    const nx = x + dx, ny = y + dy;
+                    return nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && this.grid[ny][nx] === 0;
+                });
+            }
+
+            snapToNearestBoundary() {
+                const queue = [[this.player.x, this.player.y]];
+                const visited = new Set([`${this.player.x},${this.player.y}`]);
+                const parent = {};
+                let target = null;
+
+                while (queue.length > 0) {
+                    const [cx, cy] = queue.shift();
+                    if (this.isBoundary(cx, cy)) { target = [cx, cy]; break; }
+                    for(let [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                        const nx = cx + dx, ny = cy + dy;
+                        if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(`${nx},${ny}`)) {
+                            if (this.player.isDrawing && this.grid[ny][nx] === 2) continue;
+                            visited.add(`${nx},${ny}`);
+                            parent[`${nx},${ny}`] = [cx, cy];
+                            queue.push([nx, ny]);
+                        }
+                    }
+                }
+
+                if (target) {
+                    let curr = target;
+                    while (parent[`${curr[0]},${curr[1]}`] && 
+                           (parent[`${curr[0]},${curr[1]}`][0] !== this.player.x || parent[`${curr[0]},${curr[1]}`][1] !== this.player.y)) {
+                        curr = parent[`${curr[0]},${curr[1]}`];
+                    }
+                    this.player.dx = curr[0] - this.player.x;
+                    this.player.dy = curr[1] - this.player.y;
+                } else {
+                    this.aiState = 'IDLE'; 
+                }
+            }
+
+            update() {
+                if (!this.isRunning) return;
+
+                if (!this.isAutoMode && Date.now() - this.lastManualInputTime > this.AUTO_RESUME_TIME) {
+                    this.isAutoMode = true;
+                    document.getElementById('autoBadge').classList.remove('hidden');
+                }
+
+                if (this.isAutoMode) this.runAutoHunter();
+                const moveDelay = this.turbo ? 2 : 4;
+                this.moveFrameCounter++;
+                if (this.moveFrameCounter >= moveDelay) { this.movePlayer(); this.moveFrameCounter = 0; }
+                this.moveEnemies();
+                this.particles = this.particles.filter(p => { p.update(); return p.life > 0; });
+            }
+
+            movePlayer() {
+                const oldX = this.player.x, oldY = this.player.y;
+                if (this.player.dx === 0 && this.player.dy === 0) return;
+                
+                let nx = this.player.x + this.player.dx, ny = this.player.y + this.player.dy;
+                if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H) { 
+                    this.player.dx = this.player.dy = 0; return; 
+                }
+
+                const cell = this.grid[ny][nx];
+                if (cell === 1) {
+                    if (this.player.isDrawing) {
+                        this.completeCapture();
+                        this.player.x = nx; this.player.y = ny;
+                        this.player.isDrawing = false;
+                        this.player.lastSafeX = nx; this.player.lastSafeY = ny;
+                        if(this.isAutoMode) { this.aiState = 'IDLE'; this.aiStepCount = 0; }
+                    } else {
+                        if (!this.isAutoMode && !this.isBoundary(nx, ny)) {
+                            this.player.dx = 0; this.player.dy = 0;
+                            return; 
+                        }
+                        this.player.x = nx; this.player.y = ny;
+                    }
+                } else if (cell === 0) {
+                    this.player.isDrawing = true; this.grid[ny][nx] = 2; this.player.x = nx; this.player.y = ny;
+                    if (Math.random() > 0.8) SFX.move();
+                } else if (cell === 2) { 
+                    this.playerHit(); 
+                }
+
+                if (oldX === this.player.x && oldY === this.player.y && this.isAutoMode) {
+                    this.stuckTimer++;
+                    if (this.stuckTimer > 20) { this.snapToNearestBoundary(); this.stuckTimer = 0; }
+                } else { this.stuckTimer = 0; }
+            }
+
+            moveEnemies() {
+                // 1단계: 벽 및 경계선 충돌 처리
+                this.enemies.forEach(e => {
+                    e.x += e.vx; e.y += e.vy;
+                    let gx = Math.floor(e.x), gy = Math.floor(e.y);
+                    if (gx <= 0 || gx >= GRID_W-1 || (this.grid[gy] && this.grid[gy][gx] === 1)) { e.vx *= -1; e.x += e.vx * 2; }
+                    if (gy <= 0 || gy >= GRID_H-1 || (this.grid[gy] && this.grid[gy][gx] === 1)) { e.vy *= -1; e.y += e.vy * 2; }
+                    
+                    const curX = Math.max(0, Math.min(GRID_W-1, Math.floor(e.x))), curY = Math.max(0, Math.min(GRID_H-1, Math.floor(e.y)));
+                    if (this.grid[curY][curX] === 2 || Math.hypot(e.x - this.player.x, e.y - this.player.y) < 1.5) this.playerHit();
+                });
+
+                // 2단계: 적들 간의 탄성 충돌 (Billiard Physics)
+                for (let i = 0; i < this.enemies.length; i++) {
+                    for (let j = i + 1; j < this.enemies.length; j++) {
+                        const e1 = this.enemies[i];
+                        const e2 = this.enemies[j];
+                        const dx = e2.x - e1.x;
+                        const dy = e2.y - e1.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const minDistance = e1.r + e2.r;
+
+                        if (distance < minDistance) {
+                            // 충돌 평면의 법선 벡터
+                            const nx = dx / distance;
+                            const ny = dy / distance;
+
+                            // 상대 속도
+                            const rvx = e2.vx - e1.vx;
+                            const rvy = e2.vy - e1.vy;
+
+                            // 법선 방향의 상대 속도 성분
+                            const velAlongNormal = rvx * nx + rvy * ny;
+
+                            // 서로 멀어지고 있다면 충돌 처리 건너뜀
+                            if (velAlongNormal > 0) continue;
+
+                            // 탄성 계수 (1.0 = 완전 탄성)
+                            const restitution = 1.0;
+
+                            // 충격량 크기 계산
+                            let jImpulse = -(1 + restitution) * velAlongNormal;
+                            jImpulse /= (1 / e1.mass + 1 / e2.mass);
+
+                            // 충격량 적용
+                            const impulseX = jImpulse * nx;
+                            const impulseY = jImpulse * ny;
+
+                            e1.vx -= (1 / e1.mass) * impulseX;
+                            e1.vy -= (1 / e1.mass) * impulseY;
+                            e2.vx += (1 / e2.mass) * impulseX;
+                            e2.vy += (1 / e2.mass) * impulseY;
+
+                            // 중첩 보정 (Overlap Correction) - 끼임 방지
+                            const percent = 0.5; // 보정 강도
+                            const slop = 0.01;   // 허용 오차
+                            const correctionAmount = Math.max(minDistance - distance, 0) / (1 / e1.mass + 1 / e2.mass) * percent;
+                            const offsetX = correctionAmount * nx;
+                            const offsetY = correctionAmount * ny;
+
+                            e1.x -= (1 / e1.mass) * offsetX;
+                            e1.y -= (1 / e1.mass) * offsetY;
+                            e2.x += (1 / e2.mass) * offsetX;
+                            e2.y += (1 / e2.mass) * offsetY;
+                        }
+                    }
+                }
+            }
+
+            completeCapture() {
+                const visited = Array(GRID_H).fill().map(() => Array(GRID_W).fill(false));
+                const islands = [];
+                for (let y = 0; y < GRID_H; y++) {
+                    for (let x = 0; x < GRID_W; x++) {
+                        if (this.grid[y][x] === 0 && !visited[y][x]) {
+                            const cells = []; const queue = [[x, y]]; visited[y][x] = true;
+                            while (queue.length) {
+                                const [cx, cy] = queue.shift(); cells.push({x: cx, y: cy});
+                                [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+                                    const nx = cx + dx, ny = cy + dy;
+                                    if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && this.grid[ny][nx] === 0 && !visited[ny][nx]) {
+                                        visited[ny][nx] = true; queue.push([nx, ny]);
+                                    }
+                                });
+                            }
+                            islands.push(cells);
+                        }
+                    }
+                }
+                islands.sort((a, b) => b.length - a.length);
+                for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) if (this.grid[y][x] === 2) this.grid[y][x] = 1;
+                for (let i = 1; i < islands.length; i++) islands[i].forEach(cell => this.grid[cell.y][cell.x] = 1);
+                this.enemies = this.enemies.filter(e => {
+                    const gx = Math.floor(e.x), gy = Math.floor(e.y);
+                    if (this.grid[gy] && this.grid[gy][gx] === 1) {
+                        this.createExplosion(e.x * CELL, e.y * CELL, '#ff0055');
+                        this.score += 20000; SFX.enemyDie(); return false;
+                    }
+                    return true;
+                });
+                this.updateOffScreen(); this.updateProgress(); SFX.capture();
+                if(this.isAutoMode) this.snapToNearestBoundary();
+            }
+
+            createExplosion(x, y, color) { for(let i=0; i<25; i++) this.particles.push(new Particle(x, y, color)); }
+
+            playerHit() {
+                SFX.hit(); this.createExplosion(this.player.x*CELL, this.player.y*CELL, '#ffffff');
+                this.lives--;
+                for (let y=0; y<GRID_H; y++) for(let x=0; x<GRID_W; x++) if(this.grid[y][x] === 2) this.grid[y][x] = 0;
+                this.player.x = this.player.lastSafeX; this.player.y = this.player.lastSafeY;
+                this.player.dx = 0; this.player.dy = 0; this.player.isDrawing = false;
+                this.player.spawnTime = Date.now(); this.player.lastMoveTime = Date.now();
+                this.aiStepCount = 0; this.aiState = 'IDLE';
+                this.updateUI();
+                if(this.lives <= 0) this.endGame("GAME OVER");
+            }
+
+            updateProgress() {
+                let total = 0; this.grid.forEach(r => r.forEach(c => { if(c===1) total++; }));
+                this.captured = (total / (GRID_W * GRID_H)) * 100;
+                this.updateUI();
+                if(this.captured >= 80) this.endGame("TARGET REACHED!");
+            }
+
+            updateUI() {
+                document.getElementById('percentageText').innerText = `${Math.floor(this.captured)}%`;
+                document.getElementById('progressBar').style.width = `${this.captured}%`;
+                document.getElementById('livesText').innerText = '❤'.repeat(Math.max(0, this.lives));
+                document.getElementById('scoreText').innerText = String(this.score).padStart(6, '0');
+            }
+
+            endGame(msg) { 
+                this.isRunning = false; this.isGameOver = true; 
+                if(this.captured >= 80 || this.enemies.length === 0) SFX.win();
+                document.getElementById('messageTitle').innerText = msg;
+                document.getElementById('messageOverlay').classList.remove('hidden'); 
+                let timeLeft = 7;
+                const countdownElem = document.getElementById('countdownMsg');
+                this.restartInterval = setInterval(() => {
+                    timeLeft--; countdownElem.innerText = `Restarting in ${timeLeft}s...`;
+                    if (timeLeft <= 0) clearInterval(this.restartInterval);
+                }, 1000);
+                this.restartTimer = setTimeout(() => this.restart(), 7000);
+            }
+
+            gameLoop() {
+                this.animationFrame = requestAnimationFrame(() => this.gameLoop());
+                this.update(); this.draw();
+            }
+
+            draw() {
+                this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(this.offScreenCanvas, 0, 0);
+                this.ctx.fillStyle = this.turbo ? '#ff0' : '#0ff';
+                for(let y=0; y<GRID_H; y++) {
+                    for(let x=0; x<GRID_W; x++) if(this.grid[y][x] === 2) this.ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
+                }
+                this.particles.forEach(p => { this.ctx.globalAlpha = p.life; this.ctx.fillStyle = p.color; this.ctx.fillRect(p.x, p.y, 4, 4); });
+                this.ctx.globalAlpha = 1;
+                this.enemies.forEach(e => {
+                    this.ctx.shadowBlur = 15; this.ctx.shadowColor = e.type === 'boss' ? '#ff0055' : '#ffff00';
+                    this.ctx.fillStyle = this.ctx.shadowColor; this.ctx.beginPath(); this.ctx.arc(e.x*CELL, e.y*CELL, e.r * CELL, 0, Math.PI*2); this.ctx.fill();
+                });
+                this.ctx.shadowBlur = 0;
+
+                let showPlayer = true, now = Date.now();
+                if ((now - this.player.spawnTime < 2000) || (now - this.player.lastMoveTime > 2000)) {
+                    showPlayer = Math.floor(now / 150) % 2 === 0;
+                }
+                
+                if (this.isAutoMode) {
+                    this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.4)';
+                    this.ctx.lineWidth = 1;
+                    const s = 15 * CELL;
+                    this.ctx.strokeRect(this.player.x * CELL - s, this.player.y * CELL - s, s * 2, s * 2);
+                }
+
+                if (showPlayer) {
+                    this.ctx.fillStyle = this.isAutoMode ? '#ff00ff' : '#fff';
+                    this.ctx.shadowColor = this.ctx.fillStyle; this.ctx.shadowBlur = 10;
+                    this.ctx.fillRect(this.player.x*CELL - 2, this.player.y*CELL - 2, CELL+4, CELL+4);
+                    this.ctx.shadowBlur = 0;
+                }
+            }
+        }
+        const game = new Game();
+    </script>
+</body>
+</html>
