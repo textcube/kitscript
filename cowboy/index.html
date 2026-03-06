@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion: Cowboy Edition - Final Integration</title>
+    <style>
+        :root {
+            --wood-dark: #3d2b1f;
+            --wood-light: #5d4b3f;
+            --accent: #d4af37;
+            --accent-glow: rgba(212, 175, 55, 0.4);
+            --danger: #ff4444;
+            --bg: #0a0a12;
+            --panel: rgba(20, 15, 10, 0.95);
+            --slot-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+            background-color: var(--bg);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 상단 네비게이션 바 */
+        #top-bar {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(to bottom, #000, #1a1a1a);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 25px;
+            box-sizing: border-box;
+            border-bottom: 2px solid var(--accent);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+
+        .branding { display: flex; align-items: center; gap: 15px; }
+        .bunt-logo { font-size: 1.6rem; font-weight: 900; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); letter-spacing: -1px; }
+        .game-title { font-size: 0.9rem; color: #888; text-transform: uppercase; border-left: 1px solid #444; padding-left: 15px; font-weight: 600; }
+
+        .nav-controls { display: flex; gap: 12px; }
+        .btn-ui { padding: 8px 18px; background: #222; border: 1px solid #444; color: #eee; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .btn-ui:hover { background: #333; border-color: var(--accent); color: var(--accent); }
+        .btn-ui.active { background: var(--accent); color: #000; border-color: #fff; }
+
+        /* 게임 뷰포트 */
+        #viewport { position: relative; margin: 15px 0; border: 4px solid var(--wood-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); background: #000; overflow: hidden; }
+        canvas { display: block; }
+
+        /* 무기 선택 독 */
+        #weapon-dock { width: 100%; max-width: 900px; background: var(--panel); padding: 20px; display: flex; justify-content: center; gap: 15px; border-radius: 15px 15px 0 0; border: 1px solid rgba(212, 175, 55, 0.2); backdrop-filter: blur(10px); }
+        .weapon-slot { position: relative; width: 100px; height: 100px; background: var(--slot-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .weapon-slot.selected { background: rgba(212, 175, 55, 0.15); border: 2px solid var(--accent); box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-12px); }
+
+        .reload-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+        .reload-circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.05); stroke-width: 6; }
+        .reload-circle-progress { fill: none; stroke: var(--accent); stroke-width: 6; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 0.1s linear; }
+
+        .slot-key { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; background: #111; border: 1px solid var(--accent); color: var(--accent); font-size: 0.75rem; font-weight: 900; display: flex; justify-content: center; align-items: center; border-radius: 50%; z-index: 5; }
+        .slot-name { font-weight: 800; font-size: 0.7rem; color: #888; margin-top: 5px; }
+
+        #hud-overlay { position: absolute; top: 20px; left: 20px; right: 20px; pointer-events: none; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10; }
+        .stat-box { background: rgba(0,0,0,0.8); padding: 12px 25px; border-left: 4px solid var(--accent); border-radius: 6px; backdrop-filter: blur(8px); }
+        .stat-value { font-size: 1.5rem; font-weight: 900; font-family: 'Courier New', Courier, monospace; }
+        #health-fill { height: 100%; background: linear-gradient(to right, #f44, #ff8888); width: 100%; transition: width 0.3s; }
+        #game-over { position: absolute; inset: 0; background: rgba(0,0,0,0.92); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 200; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">
+        <div class="branding">
+            <span class="bunt-logo">BuntGames</span>
+            <span class="game-title">Eternal Invasion: Cowboy Edition</span>
+        </div>
+        <div class="nav-controls">
+            <!-- 사용자 요청에 따른 링크 업데이트 -->
+            <a href="https://www.youtube.com/@textcube" class="btn-ui" target="_blank">YouTube</a>
+            <a href="https://kitscript.com/game" class="btn-ui" target="_blank">Homepage</a>
+            <button id="sound-btn" class="btn-ui">Sound OFF</button>
+        </div>
+    </div>
+
+    <div id="viewport">
+        <canvas id="canvas"></canvas>
+        <div id="hud-overlay">
+            <div class="stat-box">
+                <div class="stat-label" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase;">Wave Status</div>
+                <div class="stat-value">WAVE <span id="wave-val">1</span></div>
+                <div style="width: 220px; height: 10px; background: #222; border-radius: 5px; margin-top: 8px; overflow: hidden;">
+                    <div id="health-fill"></div>
+                </div>
+            </div>
+            <div class="stat-box" style="border-left-color: #4a8;">
+                <div class="stat-label" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase;">Active Loadout</div>
+                <div class="stat-value" id="weapon-val" style="color: var(--accent);">REVOLVER</div>
+            </div>
+        </div>
+        <div id="game-over">
+            <h2 style="font-size: 4rem; color: var(--danger);">MISSION FAILED</h2>
+            <p id="retry-msg" style="font-size: 1.2rem; color: #ccc;">Restarting in 7...</p>
+        </div>
+    </div>
+
+    <div id="weapon-dock">
+        <div class="weapon-slot selected" data-id="0" id="slot-0">
+            <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-0" cx="50" cy="50" r="45"></circle></svg>
+            <span class="slot-key">1</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M19,10.5V13H14.5L13.5,14H11V11H13.5L14.5,10.5H19M21,9H14.5L12,10.5H10V10H9V15H10V14.5H12L14.5,16H21V9Z"/></svg>
+            <span class="slot-name">REVOLVER</span>
+        </div>
+        <div class="weapon-slot" data-id="1" id="slot-1">
+            <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-1" cx="50" cy="50" r="45"></circle></svg>
+            <span class="slot-key">2</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M21,11H13V13H21V11M21,7H10V9H21V7M21,15H16V17H21V15M3,9H5V11H3V9M3,13H5V15H3V13Z"/></svg>
+            <span class="slot-name">SHOTGUN</span>
+        </div>
+        <div class="weapon-slot" data-id="2" id="slot-2">
+            <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-2" cx="50" cy="50" r="45"></circle></svg>
+            <span class="slot-key">3</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M22,11H10V13H22V11M22,7H6V9H22V7M22,15H14V17H22V15Z"/></svg>
+            <span class="slot-name">RIFLE</span>
+        </div>
+        <div class="weapon-slot" data-id="3" id="slot-3">
+            <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-3" cx="50" cy="50" r="45"></circle></svg>
+            <span class="slot-key">4</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M11,10H13V14H11V10M11,15H13V17H11V15Z"/></svg>
+            <span class="slot-name">DYNAMITE</span>
+        </div>
+        <div class="weapon-slot" data-id="4" id="slot-4">
+            <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-4" cx="50" cy="50" r="45"></circle></svg>
+            <span class="slot-key">5</span>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M7,5V19H9V17H11V19H13V17H15V19H17V5H15V7H13V5H11V7H9V5H7Z"/></svg>
+            <span class="slot-name">GATLING</span>
+        </div>
+    </div>
+
+    <script>
+        const AudioEngine = {
+            enabled: false,
+            ctx: null,
+            init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            toggle() { this.enabled = !this.enabled; if(this.enabled) this.init(); return this.enabled; },
+            play(type) {
+                if(!this.enabled) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                let dur = 0.1;
+                switch(type) {
+                    case 'rev': osc.frequency.setValueAtTime(250, this.ctx.currentTime); break;
+                    case 'sht': osc.frequency.setValueAtTime(120, this.ctx.currentTime); dur = 0.25; break;
+                    case 'rif': osc.frequency.setValueAtTime(400, this.ctx.currentTime); break;
+                    case 'gat': osc.frequency.setValueAtTime(350, this.ctx.currentTime); dur = 0.05; break;
+                    case 'exp': this.playExplosion(); return;
+                    case 'hit': osc.type = 'square'; osc.frequency.setValueAtTime(80, this.ctx.currentTime); dur = 0.08; break;
+                }
+                osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + dur);
+                osc.start(); osc.stop(this.ctx.currentTime + dur);
+            },
+            playExplosion() {
+                const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for(let i=0; i<data.length; i++) data[i] = Math.random() * 2 - 1;
+                const src = this.ctx.createBufferSource();
+                src.buffer = buffer;
+                const lowpass = this.ctx.createBiquadFilter();
+                lowpass.type = 'lowpass'; lowpass.frequency.setValueAtTime(500, this.ctx.currentTime);
+                lowpass.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+                src.connect(lowpass); lowpass.connect(gain); gain.connect(this.ctx.destination);
+                src.start();
+            }
+        };
+
+        const W = 800, H = 500;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = W; canvas.height = H;
+
+        const GROUND_Y = H - 160;
+        const COWBOY_X = 80;
+
+        const WEAPONS = [
+            { name: 'REVOLVER', dmg: 45, reload: 400, spd: 15, pen: 1, type: 'bullet', audio: 'rev', gunLen: 45, color: '#aaa', flashSize: 30 },
+            { name: 'SHOTGUN', dmg: 25, reload: 850, spd: 12, pen: 1, type: 'spread', count: 6, audio: 'sht', gunLen: 40, color: '#888', flashSize: 45 },
+            { name: 'RIFLE', dmg: 95, reload: 1100, spd: 22, pen: 6, type: 'bullet', audio: 'rif', gunLen: 68, color: '#d4af37', flashSize: 35 },
+            { name: 'DYNAMITE', dmg: 180, reload: 2200, spd: 8, pen: 1, type: 'bomb', radius: 120, audio: 'exp', gunLen: 30, color: '#f44', flashSize: 20 },
+            { name: 'GATLING', dmg: 18, reload: 80, spd: 18, pen: 1, type: 'bullet', audio: 'gat', gunLen: 55, color: '#555', flashSize: 35 }
+        ];
+
+        const ENEMIES = {
+            walker: { 
+                hp: 120, spd: 0.38, size: 44, typeKey: 'walker',
+                palette: ['#5b6d42', '#4a5a3a', '#6b5d4a', '#4e5b51', '#5d6b63']
+            },
+            runner: { 
+                hp: 60, spd: 1.1, size: 34, typeKey: 'runner',
+                palette: ['#b27d3a', '#c24d2f', '#a33b26', '#8e3422', '#d16a41']
+            },
+            brute: { 
+                hp: 850, spd: 0.2, size: 74, typeKey: 'brute',
+                palette: ['#3a4a3a', '#2a2f4a', '#3e2a4a', '#2a3a3a', '#1e2430']
+            },
+            swarm: { 
+                hp: 28, spd: 0.75, size: 28, typeKey: 'swarm',
+                palette: ['#788967', '#9aad7a', '#b5c499', '#8a9c5b', '#c1d18c']
+            }
+        };
+
+        class EternalInvasion {
+            constructor() {
+                this.reset();
+                this.bindEvents();
+                this.animTime = 0;
+                this.initBackground();
+            }
+
+            initBackground() {
+                this.stars = [];
+                for(let i=0; i<150; i++) this.stars.push({ x: Math.random()*W, y: Math.random()*(GROUND_Y-20), size: Math.random()*2, twinkle: Math.random()*Math.PI });
+                this.meteors = [];
+                this.scenery = [];
+                for(let i=0; i<6; i++) this.scenery.push({ x: 100+i*150+(Math.random()-0.5)*80, type: Math.random()>0.4?'cactus':'palm', scale: 0.7+Math.random()*0.5 });
+                this.sandGrains = [];
+                for(let i=0; i<250; i++) this.sandGrains.push({ x: Math.random()*W, y: GROUND_Y+Math.random()*(H-GROUND_Y), size: 1+Math.random()*2, opacity: 0.1+Math.random()*0.3 });
+            }
+
+            reset() {
+                this.state = 'playing'; this.hp = 100; this.wave = 1; this.enemies = []; this.bullets = []; this.particles = [];
+                this.currentWeapon = 0; this.lastShotTimes = [0,0,0,0,0]; this.waveKillCount = 0; this.waveTotalCount = 12;
+                this.nextSpawn = 0; this.shake = 0; this.gameOverTick = 0; this.aimAngle = 0; this.targetAimAngle = 0;
+                this.lastInteractionTime = Date.now(); this.lastAutoSwapTime = Date.now(); this.isAutoMode = false;
+                this.muzzleFlash = null;
+                document.getElementById('game-over').style.display = 'none';
+                this.updateUI();
+            }
+
+            bindEvents() {
+                window.onkeydown = (e) => { const k = parseInt(e.key); if(k>=1 && k<=5) { this.lastInteractionTime = Date.now(); this.isAutoMode = false; this.selectWeapon(k-1); }};
+                document.querySelectorAll('.weapon-slot').forEach(s => s.onclick = () => { this.lastInteractionTime = Date.now(); this.isAutoMode = false; this.selectWeapon(parseInt(s.dataset.id)); });
+                document.getElementById('sound-btn').onclick = (e) => { const on = AudioEngine.toggle(); e.target.textContent = on ? 'Sound ON' : 'Sound OFF'; };
+            }
+
+            selectWeapon(idx) { this.currentWeapon = idx; document.querySelectorAll('.weapon-slot').forEach((s, i) => s.classList.toggle('selected', i===idx)); this.updateUI(); }
+
+            updateUI() {
+                document.getElementById('wave-val').textContent = this.wave;
+                let wn = WEAPONS[this.currentWeapon].name; if(this.isAutoMode) wn += " [AI]";
+                document.getElementById('weapon-val').textContent = wn;
+                document.getElementById('health-fill').style.width = this.hp + '%';
+            }
+
+            autoEvaluateWeapon() {
+                const ec = this.enemies.length; const bc = this.enemies.filter(e => e.typeKey === 'brute').length;
+                let mx = ec > 0 ? Math.min(...this.enemies.map(e => e.x)) : Infinity;
+                let bi = 0; if(bc > 0) bi = 2; else if(mx < COWBOY_X + 160) bi = 1; else if(ec >= 15) bi = 3; else if(ec >= 8) bi = 4;
+                if(this.currentWeapon !== bi) this.selectWeapon(bi);
+            }
+
+            spawn() {
+                if(this.state !== 'playing') return;
+                let t = 'walker'; const r = Math.random();
+                if(this.wave >= 2 && r < 0.3) t = 'runner'; if(this.wave >= 3 && r < 0.2) t = 'brute'; if(this.wave >= 4 && r < 0.4) t = 'swarm';
+                const cfg = ENEMIES[t];
+                const baseColor = cfg.palette[Math.floor(Math.random() * cfg.palette.length)];
+                this.enemies.push({ x: W+100, y: GROUND_Y+30+(Math.random()-0.5)*90, ...cfg, color: baseColor, maxHp: cfg.hp, walkTick: Math.random()*100, walkSpd: 0.7+Math.random()*0.5, hitFlash: 0 });
+                this.nextSpawn = Date.now() + (2200 / (1+this.wave*0.25));
+            }
+
+            shoot(target) {
+                const w = WEAPONS[this.currentWeapon]; const now = Date.now();
+                if(now - this.lastShotTimes[this.currentWeapon] < w.reload) return;
+                this.lastShotTimes[this.currentWeapon] = now;
+                const br = Math.sin(this.animTime * 2.2) * 2.5;
+                const bx = COWBOY_X + 18 - (this.cowboyRecoil || 0);
+                const by = GROUND_Y - 35 + br;
+                const pivotX = bx + 18; const pivotY = by + 15;
+                const ang = this.aimAngle;
+                const muzzleDist = w.gunLen + 5; const mx = pivotX + Math.cos(ang) * muzzleDist; const my = pivotY + Math.sin(ang) * muzzleDist;
+
+                AudioEngine.play(w.audio);
+                this.muzzleFlash = { x: mx, y: my, angle: ang, life: 9, size: w.flashSize, spikes: 4+Math.floor(Math.random()*3) };
+                this.cowboyRecoil = 18;
+                for(let i=0; i<6; i++) this.particles.push({ x: mx, y: my, vx: Math.cos(ang+(Math.random()-0.5)*1.2)*(8+Math.random()*10), vy: Math.sin(ang+(Math.random()-0.5)*1.2)*(8+Math.random()*10), life: 0.6, size: 2, color: '#fff', gravity: 0.1 });
+                this.particles.push({ x: pivotX, y: pivotY, vx: -2-Math.random()*2, vy: -5-Math.random()*3, life: 1.2, size: 3, color: '#d4af37', gravity: 0.3 });
+
+                if(w.type === 'spread') { for(let i=0; i<w.count; i++) { const s = (i-(w.count-1)/2)*0.18; this.bullets.push({ x: mx, y: my, vx: Math.cos(ang+s)*w.spd, vy: Math.sin(ang+s)*w.spd, ...w, hitList: [] }); } }
+                else { this.bullets.push({ x: mx, y: my, vx: Math.cos(ang)*w.spd, vy: Math.sin(ang)*w.spd, ...w, hitList: [] }); }
+            }
+
+            update() {
+                this.animTime += 0.05; const now = Date.now();
+                if(this.state === 'gameover') {
+                    const elapsed = (now - this.gameOverTick) / 1000;
+                    document.getElementById('retry-msg').textContent = `Restarting in ${Math.ceil(7 - elapsed)}...`;
+                    if(elapsed >= 7) this.reset(); return;
+                }
+                if(now - this.lastInteractionTime > 30000) { if(!this.isAutoMode) { this.isAutoMode = true; this.lastAutoSwapTime = now-60000; this.updateUI(); } if(now - this.lastAutoSwapTime >= 60000) { this.autoEvaluateWeapon(); this.lastAutoSwapTime = now; }}
+                if(now > this.nextSpawn) this.spawn();
+                if(Math.random() < 0.006) this.meteors.push({ x: Math.random()*W, y: -20, vx: 5+Math.random()*5, vy: 5+Math.random()*5, life: 1 });
+                this.meteors.forEach((m, i) => { m.x+=m.vx; m.y+=m.vy; m.life-=0.01; if(m.life<=0) this.meteors.splice(i, 1); });
+
+                WEAPONS.forEach((w, i) => {
+                    const el = now - this.lastShotTimes[i]; const pr = Math.min(1, el / w.reload);
+                    const circle = document.getElementById(`progress-${i}`);
+                    if(circle) circle.style.strokeDashoffset = 283 * (1 - pr);
+                });
+
+                this.enemies.forEach((e, idx) => {
+                    e.x -= e.spd; e.walkTick += e.walkSpd * 5.5 * e.spd; if(e.hitFlash > 0) e.hitFlash--;
+                    if(Math.random()<0.1) this.particles.push({ x: e.x, y: e.y+e.size/2, vx: 0.5, vy: -0.2, life: 0.4, size: 2+Math.random()*3, color: 'rgba(100,80,60,0.3)' });
+                    if(e.x < COWBOY_X + 25) {
+                        this.hp -= e.typeKey === 'brute' ? 30 : 10; this.shake = 25; this.enemies.splice(idx, 1); this.updateUI();
+                        if(this.hp <= 0) { this.state = 'gameover'; this.gameOverTick = now; document.getElementById('game-over').style.display = 'flex'; }
+                    }
+                });
+
+                this.bullets.forEach((b, bi) => {
+                    b.x += b.vx; b.y += b.vy; if(b.x < 0 || b.x > W || b.y < 0 || b.y > H) { this.bullets.splice(bi, 1); return; }
+                    this.enemies.forEach((e, ei) => {
+                        if(b.hitList.includes(ei)) return;
+                        if(Math.hypot(e.x - b.x, e.y - b.y) < e.size/2 + 10) {
+                            e.hp -= b.dmg; e.hitFlash = 5; b.hitList.push(ei); AudioEngine.play('hit');
+                            if(b.type === 'bomb') { this.explode(b.x, b.y, b.radius, b.dmg); this.bullets.splice(bi, 1); }
+                            else if(b.hitList.length >= b.pen) this.bullets.splice(bi, 1);
+                            if(e.hp <= 0) { this.createParticles(e.x, e.y, e.color, 25); this.enemies.splice(ei, 1); this.waveKillCount++; if(this.waveKillCount >= this.waveTotalCount) { this.wave++; this.waveKillCount = 0; this.waveTotalCount += 6; this.updateUI(); }}
+                        }
+                    });
+                });
+
+                const target = this.enemies.filter(e => e.x < COWBOY_X + 550).reduce((prev, curr) => (prev.x < curr.x) ? prev : curr, {x: Infinity});
+                if(target.x !== Infinity) { 
+                    const br = Math.sin(this.animTime * 2.2) * 2.5;
+                    const by = GROUND_Y - 35 + br;
+                    const pivotX = COWBOY_X + 18 + 18; const pivotY = by + 15;
+                    this.targetAimAngle = Math.atan2(target.y - pivotY, target.x - pivotX); this.shoot(target); 
+                }
+                else this.targetAimAngle = 0;
+                
+                let diff = this.targetAimAngle - this.aimAngle;
+                while(diff < -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
+                this.aimAngle += diff * 0.15;
+
+                this.particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; if(p.gravity) p.vy += p.gravity; p.life -= 0.025; if(p.life <= 0) this.particles.splice(i, 1); });
+                if(this.muzzleFlash && this.muzzleFlash.life-- <= 0) this.muzzleFlash = null;
+                if(this.cowboyRecoil > 0) this.cowboyRecoil *= 0.85; if(this.shake > 0) this.shake *= 0.9;
+            }
+
+            explode(x, y, r, dmg) {
+                this.shake = 30; AudioEngine.play('exp');
+                this.enemies.forEach((e, i) => { if(Math.hypot(e.x - x, e.y - y) < r) { e.hp -= dmg; if(e.hp <= 0) { this.createParticles(e.x, e.y, e.color, 25); this.enemies.splice(i, 1); this.waveKillCount++; } } });
+            }
+
+            createParticles(x, y, color, count) {
+                for(let i=0; i<count; i++) this.particles.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1, size: 2+Math.random()*5, color });
+            }
+
+            draw() {
+                ctx.save(); if(this.shake > 1) ctx.translate((Math.random()-0.5)*this.shake, (Math.random()-0.5)*this.shake);
+                const sky = ctx.createLinearGradient(0,0,0,H);
+                sky.addColorStop(0, '#020205'); sky.addColorStop(0.5, '#0a0a20'); sky.addColorStop(0.8, '#2a1a30'); sky.addColorStop(1, '#4a2a1a');
+                ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+                this.stars.forEach(s => { const tw = Math.sin(this.animTime + s.twinkle)*0.5+0.5; ctx.fillStyle = `rgba(255,255,255,${tw})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill(); });
+                this.meteors.forEach(m => { ctx.strokeStyle = `rgba(255,255,200,${m.life})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - m.vx*3, m.y - m.vy*3); ctx.stroke(); });
+
+                ctx.save(); ctx.shadowBlur = 40; ctx.shadowColor = 'rgba(255,255,200,0.3)'; ctx.fillStyle = '#fffde0'; ctx.beginPath(); ctx.arc(650, 80, 45, 0, Math.PI*2); ctx.fill(); ctx.restore();
+
+                ctx.fillStyle = '#0a0505'; ctx.beginPath(); ctx.moveTo(0, GROUND_Y); ctx.lineTo(150, GROUND_Y-120); ctx.lineTo(300, GROUND_Y); ctx.lineTo(450, GROUND_Y-80); ctx.lineTo(600, GROUND_Y); ctx.lineTo(W, GROUND_Y-50); ctx.lineTo(W, GROUND_Y); ctx.fill();
+                ctx.fillStyle = '#1a0d08'; ctx.fillRect(0, GROUND_Y, W, H-GROUND_Y);
+                this.sandGrains.forEach(g => { ctx.fillStyle = `rgba(180, 130, 80, ${g.opacity})`; ctx.fillRect(g.x, g.y, g.size, g.size); });
+
+                this.scenery.forEach(s => this.drawScenery(s));
+
+                const renderables = [...this.enemies, {isPlayer: true, y: GROUND_Y-10}];
+                renderables.sort((a, b) => a.y - b.y);
+                renderables.forEach(obj => obj.isPlayer ? this.drawCowboy(COWBOY_X, GROUND_Y-35) : this.drawEnemy(obj));
+
+                this.bullets.forEach(b => {
+                    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(b.vy, b.vx)); ctx.fillStyle = b.color;
+                    if(b.type === 'bomb') { ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#ff0'; ctx.fillRect(5, -2, 5, 5); }
+                    else { ctx.fillRect(-10, -3, 20, 6); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(-25, -2, 15, 4); }
+                    ctx.restore();
+                });
+
+                this.particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); });
+                ctx.globalAlpha = 1;
+
+                if(this.muzzleFlash) {
+                    const mf = this.muzzleFlash; const al = mf.life / 9;
+                    ctx.save(); ctx.translate(mf.x, mf.y); ctx.rotate(mf.angle); ctx.globalCompositeOperation = 'lighter';
+                    const grad = ctx.createRadialGradient(0,0,0,0,0,mf.size*1.5); grad.addColorStop(0, `rgba(255,200,80,${al*0.6})`); grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0,0,mf.size*1.5,0,Math.PI*2); ctx.fill();
+                    ctx.fillStyle = `rgba(255,240,180,${al})`; ctx.beginPath();
+                    for(let i=0; i<mf.spikes*2; i++) { const r = (i%2===0)?mf.size:mf.size*0.3; const a = (i/(mf.spikes*2))*Math.PI*2; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); }
+                    ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = `rgba(255,255,255,${al})`; ctx.beginPath(); ctx.arc(0,0,mf.size*0.3,0,Math.PI*2); ctx.fill();
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+
+            drawScenery(s) {
+                ctx.save(); ctx.translate(s.x, GROUND_Y); ctx.scale(s.scale, s.scale); ctx.fillStyle = '#050302';
+                if(s.type === 'cactus') { ctx.beginPath(); ctx.roundRect(-8, -60, 16, 60, 8); ctx.roundRect(-25, -45, 17, 8, 4); ctx.roundRect(-25, -55, 8, 10, 4); ctx.roundRect(8, -35, 17, 8, 4); ctx.roundRect(17, -45, 8, 10, 4); ctx.fill(); }
+                else { ctx.beginPath(); ctx.moveTo(-5, 0); ctx.quadraticCurveTo(-10, -40, -5, -80); ctx.lineTo(5, -80); ctx.quadraticCurveTo(10, -40, 5, 0); ctx.fill(); for(let i=0; i<6; i++) { ctx.save(); ctx.translate(0,-80); ctx.rotate(i*Math.PI/3+this.animTime*0.1); ctx.beginPath(); ctx.ellipse(25,0,30,8,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }}
+                ctx.restore();
+            }
+
+            drawCowboy(x, y) {
+                const br = Math.sin(this.animTime * 2.2) * 2.5; const bl = Math.sin(this.animTime * 0.12) > 0.97;
+                ctx.save(); ctx.translate(x - (this.cowboyRecoil || 0), y + br);
+                ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(0, 78-br, 35+br, 10, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#210'; 
+                ctx.save(); ctx.translate(-10, 45); ctx.beginPath(); ctx.roundRect(-7, 0, 14, 20, 5); ctx.fill(); ctx.fillStyle = '#1a1005'; ctx.beginPath(); ctx.roundRect(-8, 20, 16, 12, [0,0,5,5]); ctx.fill(); ctx.restore();
+                ctx.fillStyle = '#210'; 
+                ctx.save(); ctx.translate(10, 45); ctx.beginPath(); ctx.roundRect(-7, 0, 14, 20, 5); ctx.fill(); ctx.fillStyle = '#1a1005'; ctx.beginPath(); ctx.roundRect(-8, 20, 16, 12, [0,0,5,5]); ctx.fill(); ctx.restore();
+                ctx.fillStyle = '#5d4b3f'; ctx.beginPath(); ctx.moveTo(-30, -15); ctx.quadraticCurveTo(0, -22, 30, -15); ctx.quadraticCurveTo(45, 30, 32, 48); ctx.quadraticCurveTo(0, 58, -32, 48); ctx.quadraticCurveTo(-45, 30, -30, -15); ctx.fill();
+                ctx.strokeStyle = '#3d2b1f'; ctx.lineWidth = 1.5; ctx.stroke();
+                ctx.fillStyle = '#a00'; ctx.beginPath(); ctx.moveTo(-15, -15); ctx.quadraticCurveTo(0, -8, 15, -15); ctx.lineTo(Math.sin(this.animTime * 3)*12, 5); ctx.fill();
+                ctx.fillStyle = '#dca'; ctx.beginPath(); ctx.moveTo(-14, -15); ctx.lineTo(-14, -32); ctx.quadraticCurveTo(0, -45, 14, -32); ctx.lineTo(14, -15); ctx.quadraticCurveTo(0, -6, -14, -15); ctx.fill();
+                ctx.fillStyle = '#321'; ctx.beginPath(); ctx.ellipse(0, -45, 40, 9, 0, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(-20, -68, 40, 22, [12, 12, 0, 0]); ctx.fill();
+                if(!bl) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-7, -28, 2, 0, Math.PI*2); ctx.arc(7, -28, 2, 0, Math.PI*2); ctx.fill(); }
+                ctx.save(); ctx.translate(18, 15); ctx.rotate(this.aimAngle);
+                ctx.fillStyle = '#210'; ctx.beginPath(); ctx.roundRect(0, -4, 20, 8, 4); ctx.fill(); 
+                ctx.translate(15, 0); ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.roundRect(0, -6, WEAPONS[this.currentWeapon].gunLen, 12, 3); ctx.fill();
+                ctx.fillStyle = '#111'; ctx.beginPath(); ctx.roundRect(0, 0, 10, 12, 2); ctx.fill();
+                ctx.restore(); ctx.restore();
+            }
+
+            drawEnemy(e) {
+                const hs = Math.cos(e.walkTick * 0.2) * 6; const jp = Math.abs(Math.sin(e.walkTick * 0.2)) * 6;
+                ctx.save(); ctx.translate(e.x, e.y); if(e.hitFlash > 0) ctx.filter = 'brightness(6)';
+                ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(0, e.size/2+8, e.size/2-jp, 10, 0, 0, Math.PI*2); ctx.fill();
+                ctx.translate(0, -jp);
+                ctx.fillStyle = e.color;
+                if(e.typeKey === 'brute') { for(let i=0; i<6; i++) { ctx.beginPath(); const ox = Math.cos(i*1.1)*12; const oy = Math.sin(i*1.1)*12; ctx.ellipse(ox, oy, e.size/2.2, e.size/2.2, i, 0, Math.PI*2); ctx.fill(); } ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 15); ctx.stroke(); }
+                else if(e.typeKey === 'runner') { ctx.beginPath(); ctx.moveTo(-e.size/2, e.size/2); ctx.bezierCurveTo(-e.size, -e.size/2, e.size, -e.size, e.size/2, e.size/2); ctx.fill(); }
+                else { ctx.beginPath(); ctx.moveTo(-e.size/2.2, e.size/2); ctx.lineTo(-e.size/2, -e.size/4); ctx.quadraticCurveTo(0, -e.size/1.5, e.size/2, -e.size/4); ctx.lineTo(e.size/2.2, e.size/2); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; for(let i=0; i<3; i++) { ctx.beginPath(); ctx.moveTo(-10, -5+i*6); ctx.lineTo(10, -5+i*6); ctx.stroke(); }}
+                ctx.save(); ctx.translate(0, -e.size/2); ctx.rotate(hs * 0.03); ctx.fillStyle = e.color; ctx.beginPath(); ctx.moveTo(-e.size/3.5, -e.size/3); ctx.bezierCurveTo(-e.size/2, -e.size, e.size/2, -e.size, e.size/3.5, -e.size/3); ctx.lineTo(e.size/5, 0); ctx.lineTo(-e.size/5, 0); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-e.size/6, -e.size/1.8, 3.5, 0, Math.PI*2); ctx.arc(e.size/6, -e.size/1.8, 3.5, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(-e.size/6, -e.size/1.8, 1.2, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                ctx.fillStyle = e.color; const al = e.typeKey === 'brute' ? 45 : 30; ctx.save(); ctx.translate(-e.size/3, -5); ctx.rotate(Math.sin(e.walkTick*0.4)*0.8 - 0.5); ctx.beginPath(); ctx.roundRect(0, -4, -al/2, 8, 4); ctx.fill(); ctx.translate(-al/2, 0); ctx.rotate(0.7 + Math.sin(e.walkTick*0.5)*0.3); ctx.beginPath(); ctx.roundRect(0, -3, -al/2, 6, 3); ctx.fill(); ctx.restore();
+                const ll = e.size/2.5; const drawLeg = (offset, phase) => { ctx.save(); ctx.translate(offset, e.size/2 - 10); const lAng = Math.sin(e.walkTick * 0.2 + phase) * 0.6; ctx.rotate(lAng); ctx.beginPath(); ctx.roundRect(-4, 0, 8, ll, 4); ctx.fill(); ctx.translate(0, ll); ctx.rotate(-lAng * 1.6 + 0.3); ctx.beginPath(); ctx.roundRect(-3, 0, 6, ll, 3); ctx.fill(); ctx.restore(); };
+                drawLeg(-8, 0); drawLeg(8, Math.PI); ctx.restore();
+            }
+        }
+
+        const game = new EternalInvasion();
+        function frame() { game.update(); game.draw(); requestAnimationFrame(frame); }
+        window.onload = frame;
+    </script>
+</body>
+</html>
