@@ -42,7 +42,7 @@ When a homepage becomes a battlefield.
 
 1. ONE
 2. CLOCK
-3. WIZARD
+3. PILOT
 4. PUZZLE
 5. OCEAN
 6. BIRD
@@ -111,4 +111,6 @@ python -m http.server 8080
 
 별도 라이선스 파일이 없다면 기본적으로 All Rights Reserved로 간주됩니다.  
 필요 시 `LICENSE` 파일을 추가해 정책을 명시하세요.
+
+
 
