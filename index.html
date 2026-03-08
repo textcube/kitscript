@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -17,14 +17,14 @@
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: var(--font-pixel); color: #fff; }
 
         /* Background & Dim */
-        #video-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; overflow: hidden; }
+        #video-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
         #video-background iframe {
             width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh;
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border: none; filter: brightness(0.3) contrast(1.2);
+            border: none; filter: brightness(0.62) contrast(1.08) saturate(1.08);
         }
 
-        #dim-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.8) 100%); z-index: -1; pointer-events: none; }
+        #dim-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.45) 100%); z-index: 0; pointer-events: none; }
 
         /* Game Canvas */
         #gameCanvas { position: fixed; top: 0; left: 0; z-index: 1; image-rendering: pixelated; }
@@ -105,8 +105,11 @@
         @media (max-width: 850px) {
             #brand-header { flex-direction: column; padding: 10px; gap: 10px; }
             .brand-logo { align-items: center; min-width: auto; }
-            .module-group { position: relative; top: 0; transform: none; flex-direction: row; flex-wrap: wrap; justify-content: center; width: 100%; padding: 5px; gap: 8px; }
-            .module-btn { width: calc(50% - 10px); height: 35px; }
+            .module-group { top: 56%; padding: 10px; gap: 8px; }
+            #left-modules, #right-modules { width: 50%; }
+            #left-modules { left: 0; right: auto; }
+            #right-modules { right: 0; left: auto; }
+            .module-btn { width: 100%; height: 32px; font-size: 6px; }
         }
     </style>
 </head>
@@ -191,13 +194,15 @@
                 { label: 'PIZZA', side: 'left', reqLevel: 5 },
                 { label: 'BOMB', side: 'right', reqLevel: 6 },
                 { label: 'DRONE', side: 'left', reqLevel: 7 },
-                { label: 'COWBOY', side: 'right', reqLevel: 8 },
-                { label: 'ZONE', side: 'right', reqLevel: 9 },
-                { label: 'PANDEMIC', side: 'left', reqLevel: 10 },
-                { label: 'SPACE', side: 'right', reqLevel: 11 },
-                { label: 'WAVE', side: 'left', reqLevel: 12 },
-                { label: 'PLAYLIST', side: 'right', reqLevel: 13 },
-                { label: 'BOOK', side: 'left', reqLevel: 14 }
+                { label: 'HACK', side: 'right', reqLevel: 8 },
+                { label: 'COWBOY', side: 'left', reqLevel: 9 },
+                { label: 'ZONE', side: 'right', reqLevel: 10 },
+                { label: 'PANDEMIC', side: 'left', reqLevel: 11 },
+                { label: 'SPACE', side: 'right', reqLevel: 12 },
+                { label: 'WAVE', side: 'left', reqLevel: 13 },
+                { label: 'PLAYLIST', side: 'right', reqLevel: 14 },
+                { label: 'HOUSE', side: 'left', reqLevel: 15 },
+                { label: 'BOOK', side: 'right', reqLevel: 16 }
             ]
         };
 
@@ -214,19 +219,61 @@
         let projectiles = [];
         let particles = [];
         let ytPlayer;
+        let videoBackgroundEnabled = true;
+        let usingIframeFallback = false;
 
         function drawPixel(x, y, w, h, color) {
             ctx.fillStyle = color;
             ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
         }
 
+        function hideVideoBackground() {
+            videoBackgroundEnabled = false;
+            const bg = document.getElementById('video-background');
+            const dim = document.getElementById('dim-overlay');
+            if (bg) bg.style.display = 'none';
+            if (dim) dim.style.background = 'radial-gradient(circle, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.6) 100%)';
+        }
+
+        function mountFallbackVideoIframe() {
+            const playerEl = document.getElementById('player');
+            if (!playerEl) return;
+            usingIframeFallback = true;
+            videoBackgroundEnabled = true;
+            playerEl.innerHTML = '';
+            const fallback = document.createElement('iframe');
+            fallback.src = `https://www.youtube-nocookie.com/embed/${CONFIG.YT_VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${CONFIG.YT_VIDEO_ID}&rel=0&playsinline=1`;
+            fallback.allow = 'autoplay; encrypted-media; picture-in-picture';
+            fallback.referrerPolicy = 'strict-origin-when-cross-origin';
+            fallback.frameBorder = '0';
+            playerEl.appendChild(fallback);
+            showToast('VIDEO FALLBACK MODE');
+        }
+
         window.onYouTubeIframeAPIReady = function() {
+            const playerVars = {
+                autoplay: 1, controls: 0, loop: 1, playlist: CONFIG.YT_VIDEO_ID,
+                mute: 1, rel: 0, enablejsapi: 1, playsinline: 1, modestbranding: 1
+            };
+            // file:// 실행 환경에서는 origin을 보내지 않음 (YouTube error 153 회피)
+            if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                playerVars.origin = window.location.origin;
+                playerVars.widget_referrer = window.location.href;
+            }
+
             ytPlayer = new YT.Player('player', {
+                host: 'https://www.youtube-nocookie.com',
                 height: '100%', width: '100%', videoId: CONFIG.YT_VIDEO_ID,
-                playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: CONFIG.YT_VIDEO_ID, mute: 1, rel: 0, enablejsapi: 1, origin: window.location.origin },
-                events: { 
+                playerVars,
+                events: {
                     'onReady': (event) => { event.target.playVideo(); event.target.mute(); },
-                    'onStateChange': (event) => { if (event.data === YT.PlayerState.ENDED) { ytPlayer.playVideo(); } }
+                    'onStateChange': (event) => { if (event.data === YT.PlayerState.ENDED) { ytPlayer.playVideo(); } },
+                    'onError': (event) => {
+                        // 153/101/150 등 임베드 제약 에러 시 no-cookie iframe fallback
+                        if ([153, 101, 150].includes(event.data)) {
+                            mountFallbackVideoIframe();
+                        }
+                    }
                 }
             });
         };
@@ -379,7 +426,7 @@
         }
 
         /**
-         * 제네시스 버스트 발사 로직 복구
+         * ?쒕꽕?쒖뒪 踰꾩뒪??諛쒖궗 濡쒖쭅 蹂듦뎄
          */
         function triggerAOE() {
             if (state.tickets < CONFIG.TICKETS_FOR_AOE) { 
@@ -534,7 +581,7 @@
             CONFIG.MODULES.forEach(m => {
                 const isLocked = state.level < m.reqLevel;
                 const btn = document.createElement('a'); btn.className = `module-btn ${isLocked ? 'locked' : ''}`;
-                btn.innerHTML = isLocked ? `🔒 LV.${m.reqLevel}` : m.label;
+                btn.innerHTML = isLocked ? `LOCK LV.${m.reqLevel}` : m.label;
                 btn.href = isLocked ? '#' : `https://kitscript.com/game/${m.label.toLowerCase()}`;
                 if (m.side === 'left') leftCont.appendChild(btn); else rightCont.appendChild(btn);
             });
@@ -548,7 +595,7 @@
             document.getElementById('stat-tickets').innerText = `SALVO CHARGE: ${state.tickets} / 3`;
             
             const aoeBtn = document.getElementById('aoe-button');
-            // 버튼 상태 업데이트 로직 복구
+            // 踰꾪듉 ?곹깭 ?낅뜲?댄듃 濡쒖쭅 蹂듦뎄
             if (state.tickets >= CONFIG.TICKETS_FOR_AOE) {
                 aoeBtn.classList.add('active');
                 aoeBtn.classList.remove('disabled');
@@ -567,7 +614,7 @@
         function gameOver() { state.active = false; showToast('GAME OVER - REBOOTING'); setTimeout(() => location.reload(), 3000); }
 
         function toggleSound() {
-            if (!ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("PLAYER READYING"); return; }
+            if (!videoBackgroundEnabled || usingIframeFallback || !ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("VIDEO UNAVAILABLE"); return; }
             state.isMuted = !state.isMuted;
             const btn = document.getElementById('sound-toggle');
             if (state.isMuted) { ytPlayer.mute(); btn.innerText = "SOUND: OFF"; }
@@ -578,3 +625,16 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
