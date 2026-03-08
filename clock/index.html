@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUNTGAMES / Eternal Invasion: Clock Edition</title>
+    <style>
+        :root {
+            --neon-cyan: #00ffff;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --ui-bg: rgba(0, 5, 10, 0.85);
+            --font-main: 'Orbitron', 'Segoe UI', sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+            font-family: var(--font-main);
+        }
+
+        #video-background {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        #video-background iframe {
+            width: 100vw;
+            height: 56.25vw;
+            min-height: 100vh;
+            min-width: 177.77vh;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.35;
+            filter: contrast(1.1) brightness(0.7);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            z-index: 2;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+        }
+
+        .top-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: auto;
+        }
+
+        .brand-zone {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .main-title {
+            background: var(--ui-bg);
+            border-left: 4px solid var(--neon-cyan);
+            padding: 8px 20px;
+            backdrop-filter: blur(10px);
+            font-size: 14px;
+            letter-spacing: 3px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .game-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            font-size: 11px;
+            border-left: 4px solid var(--neon-pink);
+            backdrop-filter: blur(5px);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .bottom-ui {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: var(--ui-bg);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            padding: 12px 24px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+
+        #fire-btn {
+            width: 150px; height: 150px;
+            border-radius: 50%;
+            font-size: 20px; font-weight: 700;
+            border: 4px double var(--neon-pink);
+            color: var(--neon-pink);
+            background: rgba(255, 0, 255, 0.05);
+            box-shadow: inset 0 0 30px rgba(255, 0, 255, 0.15);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; pointer-events: auto;
+        }
+
+        #fire-btn .mode-label { font-size: 10px; margin-top: 5px; color: #fff; letter-spacing: 1px; }
+
+        #fire-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            background: var(--neon-pink);
+            color: #fff;
+            box-shadow: 0 0 60px var(--neon-pink);
+        }
+
+        #fire-btn:disabled {
+            border-color: #333;
+            color: #555;
+            background: rgba(20, 0, 10, 0.8);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .mana-system {
+            display: flex; align-items: center; gap: 15px;
+        }
+
+        .mana-container {
+            width: 450px; height: 14px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            position: relative;
+            transform: skewX(-30deg);
+            overflow: hidden;
+        }
+
+        #mana-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #0055ff, var(--neon-cyan));
+            box-shadow: 0 0 25px var(--neon-cyan);
+            transition: width 0.2s ease-out;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 2, 5, 0.75); 
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center; align-items: center;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        #game-over h1 {
+            font-size: 5rem;
+            color: var(--neon-pink);
+            text-shadow: 0 0 50px var(--neon-pink);
+            margin-bottom: 10px;
+        }
+
+        #restart-countdown {
+            font-size: 1.5rem;
+            color: var(--neon-cyan);
+            margin-top: 20px;
+            letter-spacing: 2px;
+        }
+
+        .glitch-text { animation: glitch 0.7s infinite; }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            25% { transform: translate(-4px, 2px); }
+            50% { transform: translate(4px, -2px); }
+            75% { transform: translate(-2px, -4px); }
+            100% { transform: translate(0); }
+        }
+
+        @media (max-width: 768px) {
+            .mana-container { width: 200px; }
+            #fire-btn { width: 120px; height: 120px; font-size: 18px; }
+            #game-over h1 { font-size: 2.5rem; }
+            .main-title { font-size: 11px; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="video-background">
+        <iframe 
+            src="https://www.youtube.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&loop=1&playlist=kFnxuOnbHU0&controls=0&showinfo=0&rel=0&iv_load_policy=3" 
+            frameborder="0" 
+            allow="autoplay; encrypted-media">
+        </iframe>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="overlay">
+        <div class="top-ui">
+            <div class="brand-zone">
+                <div class="main-title">BUNTGAMES / Eternal Invasion: Clock Edition</div>
+                <div class="game-info">
+                    <span style="opacity: 0.6; letter-spacing: 2px;">THREAT LEVEL: </span>
+                    <span id="threat-level" style="color: var(--neon-pink); font-weight: bold; text-shadow: 0 0 10px var(--neon-pink);">SYNCING...</span>
+                </div>
+            </div>
+            <div class="nav-buttons">
+                <a href="https://kitscript.com/game" target="_blank" class="btn">WEBSITE</a>
+                <a href="https://www.youtube.com/@textcube" target="_blank" class="btn">YOUTUBE</a>
+                <button id="sound-toggle" class="btn">AUDIO: OFF</button>
+            </div>
+        </div>
+
+        <div class="bottom-ui">
+            <div class="mana-system">
+                <span style="font-size: 12px; color: var(--neon-cyan); letter-spacing: 2px;">CORE ENERGY</span>
+                <div class="mana-container">
+                    <div id="mana-fill"></div>
+                </div>
+            </div>
+            <button id="fire-btn">
+                <span>ENGAGE</span>
+                <span id="cost-label" class="mode-label">COST: 50 MP</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1 class="glitch-text">CRITICAL FAILURE</h1>
+        <p style="letter-spacing: 10px; font-size: 1rem; color: #aaa;">TIMELINE CORRUPTED</p>
+        <p id="final-score" style="margin-top: 20px; color: var(--neon-cyan); font-size: 1.8rem;"></p>
+        <div id="restart-countdown">REBOOTING IN 7...</div>
+    </div>
+
+    <script>
+        const ABILITY_TYPES = [
+            { id: 'LASER', name: 'PLASMA LASER', color: '#00ffff', icon: '⚡' },
+            { id: 'SHIELD', name: 'VOID SHIELD', color: '#00ffaa', icon: '🛡️' },
+            { id: 'BURST', name: 'STAR BURST', color: '#ffaa00', icon: '💥' },
+            { id: 'SLOW', name: 'CHRONO FIELD', color: '#4444ff', icon: '🌀' }
+        ];
+
+        const CONFIG = {
+            colors: {
+                clock: '#00ffff',
+                ufo: '#ff00ff',
+                ufoCore: '#ffffff',
+                laser: '#00ffff',
+                shield: '#00ffaa',
+                explosion: '#ff5500',
+                spark: '#ffffaa',
+                slow: '#4444ff',
+                turret: '#ffff00'
+            },
+            mana: { max: 100, regen: 4.6, cost: 50 },
+            ufo: {
+                spawnRateStart: 0.025, 
+                spawnRateMax: 0.15,
+                difficultyRampSec: 100, 
+                curvePower: 1.0,
+                speedMin: 1.0,
+                speedMax: 2.0,
+                damageToCenter: 15
+            },
+            combat: {
+                autoFireInterval: 200,      
+                autoSpecialChance: 0.015,   
+                autoSpecialCooldown: 2500,
+                rangeFactor: 1.25 
+            },
+            health: { max: 100 },
+            particles: { max: 150 } 
+        };
+
+        let timeSlots = [];
+        function randomizeSlots() {
+            timeSlots = [];
+            for (let i = 0; i < 12; i++) {
+                const randomAbility = ABILITY_TYPES[Math.floor(Math.random() * ABILITY_TYPES.length)];
+                timeSlots.push({...randomAbility});
+            }
+        }
+
+        const Sound = {
+            ctx: null, enabled: false,
+            init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            toggle() { if (!this.ctx) this.init(); this.enabled = !this.enabled; return this.enabled; },
+            play(type) {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                const now = this.ctx.currentTime;
+                if (type === 'laser') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                    gain.gain.setValueAtTime(0.04, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(); osc.stop(now + 0.15);
+                } else if (type === 'explosion') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(40, now);
+                    gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0, now + 0.6);
+                    osc.start(); osc.stop(now + 0.6);
+                } else if (type === 'hit') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                    osc.start(); osc.stop(now + 0.05);
+                }
+            }
+        };
+
+        class Particle {
+            constructor(x, y, color, size, speed, life) {
+                this.x = x; this.y = y;
+                this.color = color;
+                this.size = size;
+                this.vx = (Math.random() - 0.5) * speed;
+                this.vy = (Math.random() - 0.5) * speed;
+                this.life = life;
+                this.maxLife = life;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life--; }
+            draw(ctx) {
+                const alpha = this.life / this.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class UFO {
+            constructor(w, h) {
+                const side = Math.floor(Math.random() * 4);
+                if (side === 0) { this.x = Math.random() * w; this.y = -80; }
+                else if (side === 1) { this.x = w + 80; this.y = Math.random() * h; }
+                else if (side === 2) { this.x = Math.random() * w; this.y = h + 80; }
+                else { this.x = -80; this.y = Math.random() * h; }
+                this.targetX = w / 2; this.targetY = h / 2;
+                const dx = this.targetX - this.x; const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                this.speed = CONFIG.ufo.speedMin + Math.random() * (CONFIG.ufo.speedMax - CONFIG.ufo.speedMin);
+                this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed;
+                this.hp = 2; this.maxHP = 2;
+                this.radius = 24; this.radiusSq = 576; 
+                this.rotation = Math.random() * Math.PI * 2;
+                this.isSlowed = false;
+                this.pulse = 0;
+            }
+            update() {
+                const speedMult = this.isSlowed ? 0.2 : 1;
+                this.x += this.vx * speedMult; this.y += this.vy * speedMult;
+                this.rotation += 0.04; this.pulse += 0.1;
+                this.isSlowed = false;
+            }
+            draw(ctx) {
+                const pulseVal = Math.sin(this.pulse) * 5;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.shadowBlur = 8; ctx.shadowColor = CONFIG.colors.ufo;
+                ctx.strokeStyle = CONFIG.colors.ufo; ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 26 + pulseVal, 10, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0; 
+                ctx.fillStyle = "#333";
+                ctx.beginPath(); ctx.rect(-15, 2, 30, 4); ctx.fill();
+                const coreGrad = ctx.createRadialGradient(0, -5, 0, 0, -5, 12);
+                coreGrad.addColorStop(0, CONFIG.colors.ufoCore);
+                coreGrad.addColorStop(1, CONFIG.colors.ufo);
+                ctx.fillStyle = coreGrad;
+                ctx.beginPath(); ctx.arc(0, -5, 10, Math.PI, 0); ctx.fill();
+                for (let i = 0; i < 4; i++) {
+                    const ang = (i / 4) * 6.283 + Date.now() / 200;
+                    ctx.fillStyle = (i % 2 === 0) ? CONFIG.colors.ufo : "#fff";
+                    ctx.beginPath(); ctx.arc(Math.cos(ang) * 18, Math.sin(ang) * 4, 2.5, 0, 6.283); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, target, isAuto = true) {
+                this.x = x; this.y = y;
+                this.speed = isAuto ? 10 : 26; 
+                this.isAuto = isAuto; this.dead = false;
+                const dx = target.x - x; const dy = target.y - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                const dx = this.x - centerX;
+                const dy = this.y - centerY;
+                const distSq = dx*dx + dy*dy;
+                const rangeSq = (clockRadius * CONFIG.combat.rangeFactor)**2;
+                if (distSq > rangeSq) this.dead = true;
+                if (this.x < -200 || this.x > width + 200 || this.y < -200 || this.y > height + 200) this.dead = true;
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.isAuto ? CONFIG.colors.clock : CONFIG.colors.laser;
+                ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, 6.283); ctx.fill();
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const manaFill = document.getElementById('mana-fill');
+        const fireBtn = document.getElementById('fire-btn');
+        const soundBtn = document.getElementById('sound-toggle');
+        const threatUI = document.getElementById('threat-level');
+        const gameOverScreen = document.getElementById('game-over');
+        const countdownUI = document.getElementById('restart-countdown');
+
+        let width, height, centerX, centerY, clockRadius;
+        let ufos = []; let bullets = []; let particles = [];
+        let mana = 0; let health = CONFIG.health.max;
+        let isGameOver = false; let secondHandVisible = 0; let lastAutoFire = 0;
+        let lastAutoSpecialTrigger = 0;
+        let activeAbilities = []; let gameStartTime = Date.now();
+        let score = 0;
+        let currentTargetAngle = -1.57; 
+
+        function init() {
+            randomizeSlots(); resize();
+            window.addEventListener('resize', resize);
+            fireBtn.addEventListener('click', activateManualMode);
+            soundBtn.addEventListener('click', () => {
+                const on = Sound.toggle();
+                soundBtn.textContent = `AUDIO: ${on ? 'ON' : 'OFF'}`;
+            });
+            loop();
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2; centerY = height / 2;
+            clockRadius = Math.min(width, height) * 0.36;
+        }
+
+        function activateManualMode() {
+            if (mana < CONFIG.mana.cost || isGameOver) return;
+            mana -= CONFIG.mana.cost;
+            secondHandVisible = 85; 
+            const now = new Date();
+            const s = now.getSeconds() + now.getMilliseconds() / 1000;
+            const hourIndex = Math.floor(s / 5) % 12; 
+            triggerAbility(timeSlots[hourIndex]);
+        }
+
+        function triggerAbility(slotData) {
+            const type = slotData.id;
+            const duration = type === 'LASER' ? 80 : type === 'SHIELD' ? 450 : type === 'BURST' ? 70 : 700;
+            const abilityObj = { type: type, name: slotData.name, timer: duration, maxTimer: duration, color: slotData.color };
+            activeAbilities.push(abilityObj);
+            if (type === 'LASER') { Sound.play('laser'); }
+            else if (type === 'SHIELD') { Sound.play('shield'); abilityObj.radius = clockRadius + 30; }
+            else if (type === 'BURST') { Sound.play('explosion'); abilityObj.radius = 0; }
+            else if (type === 'SLOW') { Sound.play('shield'); abilityObj.radius = clockRadius * 3; }
+        }
+
+        function createExplosion(x, y, color) {
+            if (particles.length > CONFIG.particles.max) return; 
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, color || CONFIG.colors.explosion, 2 + Math.random() * 2, 3 + Math.random() * 5, 25 + Math.random() * 15));
+            }
+            Sound.play('explosion');
+        }
+
+        function createHitSpark(x, y) {
+            if (particles.length > CONFIG.particles.max) return;
+            for (let i = 0; i < 4; i++) {
+                particles.push(new Particle(x, y, CONFIG.colors.spark, 1 + Math.random() * 1.5, 2 + Math.random() * 3, 10 + Math.random() * 5));
+            }
+            Sound.play('hit');
+        }
+
+        function spawnUFO() {
+            if (isGameOver) return;
+            const elapsed = (Date.now() - gameStartTime) / 1000;
+            const ramp = Math.min(elapsed / CONFIG.ufo.difficultyRampSec, 1);
+            const rate = CONFIG.ufo.spawnRateStart + (CONFIG.ufo.spawnRateMax - CONFIG.ufo.spawnRateStart) * Math.pow(ramp, CONFIG.ufo.curvePower);
+            if (Math.random() < rate) ufos.push(new UFO(width, height));
+            const levels = ["STABLE", "ELEVATED", "HIGH", "SEVERE", "CRITICAL"];
+            threatUI.textContent = levels[Math.floor(ramp * 4.99)];
+            threatUI.style.color = ramp > 0.8 ? "var(--neon-pink)" : "var(--neon-cyan)";
+        }
+
+        function update() {
+            const timestamp = Date.now();
+            mana = Math.min(CONFIG.mana.max, mana + CONFIG.mana.regen / 60);
+            manaFill.style.width = mana + "%";
+            fireBtn.disabled = mana < CONFIG.mana.cost || isGameOver;
+
+            if (isGameOver) {
+                if (secondHandVisible > 0) secondHandVisible--;
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update(); if (particles[i].life <= 0) particles.splice(i, 1);
+                }
+                return;
+            }
+
+            spawnUFO();
+            const rangeSq = (clockRadius * CONFIG.combat.rangeFactor)**2;
+            let closest = null; 
+            let minDistSq = Infinity; 
+            for(let i=0; i<ufos.length; i++) {
+                const u = ufos[i];
+                const dx = u.x - centerX; const dy = u.y - centerY;
+                const dSq = dx*dx + dy*dy;
+                if (dSq < rangeSq && dSq < minDistSq) { 
+                    minDistSq = dSq; 
+                    closest = u; 
+                }
+            }
+            if (closest) { currentTargetAngle = Math.atan2(closest.y - centerY, closest.x - centerX); }
+            if (closest && timestamp - lastAutoFire > CONFIG.combat.autoFireInterval) {
+                bullets.push(new Bullet(centerX, centerY, closest, true));
+                lastAutoFire = timestamp;
+            }
+            if (mana > 70 && timestamp - lastAutoSpecialTrigger > CONFIG.combat.autoSpecialCooldown) {
+                if (Math.random() < CONFIG.combat.autoSpecialChance) {
+                    activateManualMode(); 
+                    lastAutoSpecialTrigger = timestamp;
+                }
+            }
+            for (let i = ufos.length - 1; i >= 0; i--) {
+                const u = ufos[i]; u.update();
+                const dx = u.x - centerX; const dy = u.y - centerY;
+                const dSq = dx*dx + dy*dy;
+                if (dSq < 2500) { 
+                    health -= CONFIG.ufo.damageToCenter;
+                    createExplosion(u.x, u.y, CONFIG.colors.ufo);
+                    ufos.splice(i, 1);
+                    if (health <= 0) endGame();
+                    continue;
+                }
+                for(let j=0; j<activeAbilities.length; j++) {
+                    const ab = activeAbilities[j];
+                    if (ab.type === 'SHIELD' && dSq < (ab.radius + 20)**2 && dSq > (ab.radius - 20)**2) u.hp = 0;
+                    else if (ab.type === 'BURST' && dSq < ab.radius**2) u.hp = 0;
+                    else if (ab.type === 'SLOW' && dSq < (clockRadius * 3)**2) u.isSlowed = true;
+                    else if (ab.type === 'LASER') {
+                        const ufoAngle = Math.atan2(u.y - centerY, u.x - centerX);
+                        let diff = Math.abs(ufoAngle - currentTargetAngle);
+                        if (diff > 3.14159) diff = 6.28318 - diff;
+                        if (diff < 0.15) u.hp = 0;
+                    }
+                }
+                if (u.hp <= 0) { 
+                    createExplosion(u.x, u.y, CONFIG.colors.ufo);
+                    ufos.splice(i, 1); score += 100; 
+                }
+            }
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i]; b.update();
+                if (b.dead) { bullets.splice(i, 1); continue; }
+                for (let j = ufos.length - 1; j >= 0; j--) {
+                    const u = ufos[j];
+                    const dx = b.x - u.x; const dy = b.y - u.y;
+                    if (dx*dx + dy*dy < 1764) { 
+                        u.hp--; createHitSpark(b.x, b.y); bullets.splice(i, 1); break;
+                    }
+                }
+            }
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            for (let i = activeAbilities.length - 1; i >= 0; i--) {
+                const ab = activeAbilities[i];
+                ab.timer--;
+                if (ab.type === 'BURST') ab.radius += 24;
+                if (ab.timer <= 0) activeAbilities.splice(i, 1);
+            }
+            if (secondHandVisible > 0) secondHandVisible--;
+        }
+
+        function drawSkillHUD() {
+            if (activeAbilities.length === 0) return;
+            const hudW = 280; const hudH = 50; let startY = 100;
+            activeAbilities.forEach((ab, idx) => {
+                ctx.save();
+                const currentY = startY + (idx * (hudH + 15));
+                const alpha = Math.min(1, ab.timer / 20);
+                ctx.globalAlpha = 0.8 * alpha;
+                ctx.fillStyle = "rgba(0, 10, 20, 0.9)";
+                ctx.strokeStyle = ab.color; ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(30, currentY); ctx.lineTo(30 + hudW, currentY);
+                ctx.lineTo(30 + hudW + 10, currentY + 10); ctx.lineTo(30 + hudW + 10, currentY + hudH);
+                ctx.lineTo(30 + 10, currentY + hudH); ctx.lineTo(30, currentY + hudH - 10);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.globalAlpha = 1 * alpha;
+                ctx.fillStyle = "#fff"; ctx.font = "bold 14px Orbitron"; ctx.textAlign = "left";
+                ctx.fillText(ab.name, 45, currentY + 20);
+                ctx.fillStyle = ab.color; ctx.font = "bold 10px Orbitron"; ctx.textAlign = "right";
+                ctx.fillText("ACTIVE SYSTEM", 30 + hudW - 5, currentY + 20);
+                const barWidth = hudW - 30;
+                ctx.fillStyle = "rgba(255, 255, 255, 0.1)"; ctx.fillRect(45, currentY + 30, barWidth, 4);
+                ctx.fillStyle = ab.color; ctx.fillRect(45, currentY + 30, barWidth * (ab.timer / ab.maxTimer), 4);
+                ctx.restore();
+            });
+        }
+
+        function drawHUD() {
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.strokeStyle = "rgba(0, 255, 255, 0.05)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, clockRadius * CONFIG.combat.rangeFactor, 0, 6.283);
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(0, 255, 255, 0.1)"; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(0, 0, clockRadius + 55, 0, 6.283); ctx.stroke();
+            ctx.setLineDash([15, 30]);
+            ctx.beginPath(); ctx.arc(0, 0, clockRadius + 80, Date.now() / 2000, Date.now() / 2000 + 6.283); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.strokeStyle = CONFIG.colors.clock; ctx.shadowBlur = 20; ctx.shadowColor = CONFIG.colors.clock;
+            ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, clockRadius, 0, 6.283); ctx.stroke();
+            ctx.shadowBlur = 0;
+            timeSlots.forEach((slot, i) => {
+                const ang = (i / 12) * 6.283 - 1.57;
+                ctx.lineWidth = 5; ctx.beginPath();
+                ctx.moveTo(Math.cos(ang) * clockRadius, Math.sin(ang) * clockRadius);
+                ctx.lineTo(Math.cos(ang) * (clockRadius - 25), Math.sin(ang) * (clockRadius - 25)); ctx.stroke();
+                ctx.save();
+                ctx.rotate(ang + 0.2618); ctx.translate(clockRadius - 70, 0); ctx.rotate(-(ang + 0.2618));
+                ctx.fillStyle = slot.color; ctx.font = "bold 15px Orbitron"; ctx.textAlign = "center";
+                ctx.fillText(slot.icon, 0, 0);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.4)"; ctx.font = "8px Orbitron";
+                ctx.fillText(slot.name.split(' ')[0], 0, 15);
+                ctx.restore();
+            });
+            const now = new Date();
+            const h = now.getHours(); const m = now.getMinutes();
+            const s = now.getSeconds() + now.getMilliseconds() / 1000;
+            const hAng = ((h % 12) / 12) * 6.283 + (m / 60) * 0.5236 - 1.57;
+            ctx.strokeStyle = CONFIG.colors.clock; ctx.lineWidth = 14; ctx.lineCap = 'butt';
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(hAng) * (clockRadius * 0.48), Math.sin(hAng) * (clockRadius * 0.48)); ctx.stroke();
+            const mAng = (m / 60) * 6.283 - 1.57;
+            ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(mAng) * (clockRadius * 0.85), Math.sin(mAng) * (clockRadius * 0.85)); ctx.stroke();
+            if (ufos.length > 0 && !isGameOver) {
+                ctx.save();
+                ctx.rotate(currentTargetAngle);
+                ctx.strokeStyle = CONFIG.colors.turret; ctx.lineWidth = 18; ctx.lineCap = 'square';
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(30, 0); ctx.stroke();
+                ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(25, 0); ctx.stroke();
+                ctx.restore();
+            }
+            if (secondHandVisible > 0) {
+                const sAng = (s / 60) * 6.283 - 1.57;
+                ctx.strokeStyle = CONFIG.colors.ufo; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(sAng) * (clockRadius * 0.98), Math.sin(sAng) * (clockRadius * 0.98)); ctx.stroke();
+                const currentSlotIdx = Math.floor(s / 5) % 12;
+                ctx.fillStyle = "rgba(255, 0, 255, 0.15)"; ctx.beginPath(); ctx.moveTo(0, 0);
+                ctx.arc(0, 0, clockRadius, (currentSlotIdx / 12) * 6.283 - 1.57, ((currentSlotIdx+1) / 12) * 6.283 - 1.57);
+                ctx.fill();
+            }
+            ctx.fillStyle = CONFIG.colors.clock; ctx.beginPath(); ctx.arc(0, 0, 12, 0, 6.283); ctx.fill();
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'lighter';
+            for(let i=0; i<particles.length; i++) particles[i].draw(ctx);
+            ctx.globalCompositeOperation = 'source-over';
+            activeAbilities.forEach(ab => {
+                ctx.save();
+                if (ab.type === 'SHIELD') {
+                    ctx.strokeStyle = ab.color; ctx.lineWidth = 8;
+                    ctx.setLineDash([50, 25]);
+                    ctx.beginPath(); ctx.arc(centerX, centerY, ab.radius, 0, 6.283); ctx.stroke();
+                } else if (ab.type === 'BURST') {
+                    const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, ab.radius);
+                    grad.addColorStop(0, 'rgba(255, 180, 0, 0.8)'); grad.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(centerX, centerY, ab.radius, 0, 6.283); ctx.fill();
+                } else if (ab.type === 'LASER') {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(currentTargetAngle);
+                    const ratio = ab.timer / ab.maxTimer;
+                    ctx.strokeStyle = "rgba(0, 255, 255, 0.3)"; ctx.lineWidth = 200 * ratio;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(2000, 0); ctx.stroke();
+                    ctx.strokeStyle = "#fff"; ctx.lineWidth = 20 * ratio;
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(2000, 0); ctx.stroke();
+                    ctx.restore();
+                } else if (ab.type === 'SLOW') {
+                    ctx.fillStyle = `rgba(100, 100, 255, 0.2)`;
+                    ctx.beginPath(); ctx.arc(centerX, centerY, ab.radius, 0, 6.283); ctx.fill();
+                    ctx.strokeStyle = `rgba(100, 100, 255, 0.5)`; ctx.setLineDash([15, 15]); ctx.stroke();
+                }
+                ctx.restore();
+            });
+            drawHUD();
+            drawSkillHUD();
+            for(let i=0; i<ufos.length; i++) ufos[i].draw(ctx);
+            for(let i=0; i<bullets.length; i++) bullets[i].draw(ctx);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)"; ctx.fillRect(centerX - 120, centerY + clockRadius + 60, 240, 14);
+            ctx.fillStyle = health > 30 ? "var(--neon-cyan)" : "var(--neon-pink)";
+            ctx.fillRect(centerX - 120, centerY + clockRadius + 60, (health / CONFIG.health.max) * 240, 14);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"; ctx.lineWidth = 1.5;
+            ctx.strokeRect(centerX - 120, centerY + clockRadius + 60, 240, 14);
+        }
+
+        function loop() {
+            update(); draw(); requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            document.getElementById('final-score').textContent = `SCORE SECURED: ${score}`;
+            gameOverScreen.style.display = 'flex';
+            let countdown = 7;
+            countdownUI.textContent = `REBOOTING IN ${countdown}...`;
+            const timer = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    countdownUI.textContent = `REBOOTING IN ${countdown}...`;
+                } else {
+                    clearInterval(timer);
+                    resetGame();
+                }
+            }, 1000);
+        }
+
+        function resetGame() {
+            ufos = []; bullets = []; activeAbilities = []; particles = []; mana = 0; health = CONFIG.health.max; score = 0;
+            isGameOver = false; gameStartTime = Date.now();
+            randomizeSlots();
+            gameOverScreen.style.display = 'none';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
