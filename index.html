@@ -581,7 +581,7 @@
             if(!leftCont || !rightCont) return;
             leftCont.innerHTML = ''; rightCont.innerHTML = '';
             CONFIG.MODULES.forEach(m => {
-                const isLocked = state.level < m.reqLevel;
+                const isLocked = m.reqLevel > 7 && state.level < m.reqLevel;
                 const btn = document.createElement('a'); btn.className = `module-btn ${isLocked ? 'locked' : ''}`;
                 btn.innerHTML = isLocked ? `LOCK LV.${m.reqLevel}` : m.label;
                 btn.href = isLocked ? '#' : `https://kitscript.com/game/${m.label.toLowerCase()}`;
@@ -627,6 +627,7 @@
     </script>
 </body>
 </html>
+
 
 
 
