@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eternal Invasion: Roguelike dungeon Edition</title>
+    <style>
+        :root {
+            --bg-color: #020617;
+            --panel-bg: rgba(15, 23, 42, 0.95);
+            --border-color: #475569;
+            --accent-wizard: #a855f7;
+            --accent-mana: #38bdf8;
+            --accent-gold: #fbbf24;
+            --accent-undead: #4ade80;
+            --accent-red: #ef4444;
+            --tile-size: 68px; 
+            --grid-gap: 6px;
+            --tile-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+        }
+
+        /* --- Animations --- */
+        @keyframes wizard-idle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        @keyframes wizard-attack {
+            0% { transform: scale(1) translateX(0); }
+            30% { transform: scale(1.3) translateX(20px); }
+            100% { transform: scale(1) translateX(0); }
+        }
+        @keyframes unit-damage {
+            0% { transform: scale(1); filter: brightness(5) contrast(2); }
+            50% { transform: scale(1.2) rotate(5deg); filter: brightness(3) sepia(1); }
+            100% { transform: scale(1); filter: none; }
+        }
+        @keyframes hud-shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px) scale(1.1); background-color: var(--accent-red); }
+            40%, 80% { transform: translateX(5px) scale(1.1); }
+        }
+        @keyframes screen-flash {
+            0% { box-shadow: inset 0 0 0px var(--accent-red); opacity: 0; }
+            20% { box-shadow: inset 0 0 100px var(--accent-red); opacity: 0.4; }
+            100% { box-shadow: inset 0 0 0px var(--accent-red); opacity: 0; }
+        }
+        @keyframes staff-glow {
+            0%, 100% { filter: drop-shadow(0 0 2px var(--accent-mana)); }
+            50% { filter: drop-shadow(0 0 10px var(--accent-mana)); }
+        }
+        @keyframes leg-move {
+            0%, 100% { transform: rotate(0); }
+            50% { transform: rotate(15deg); }
+        }
+        @keyframes playerEnterPortal {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+            100% { transform: scale(0) rotate(720deg); opacity: 0; filter: brightness(5); }
+        }
+        @keyframes popUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            50% { transform: translateY(-40px) scale(1.5); opacity: 1; }
+            100% { transform: translateY(-70px) scale(1); opacity: 0; }
+        }
+        @keyframes item-reveal {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        @keyframes key-item-pulse {
+            0%, 100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 5px var(--accent-gold)); }
+            50% { transform: scale(1.1) translateY(-5px); filter: drop-shadow(0 0 20px var(--accent-gold)); }
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 20%, #1e1b4b 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, #0f172a 0%, #020617 100%);
+            overflow: hidden; user-select: none;
+        }
+
+        #damage-vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1000; display: none;
+            animation: screen-flash 0.4s ease-out forwards;
+        }
+
+        #top-bar {
+            width: 100%; max-width: 760px; margin-top: 15px;
+            padding: 12px 24px; background: var(--panel-bg);
+            backdrop-filter: blur(15px); border: 1px solid var(--border-color);
+            border-radius: 20px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6); z-index: 100;
+        }
+
+        .brand-box { display: flex; flex-direction: column; gap: 2px; }
+        .brand { 
+            font-weight: 900; font-size: 0.8rem; letter-spacing: 2px;
+            color: var(--accent-mana); opacity: 0.8;
+        }
+        .title-text {
+            font-weight: 800; font-size: 1.1rem;
+            background: linear-gradient(to right, #fff, var(--accent-wizard));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .stats-container { display: flex; gap: 8px; align-items: center; }
+        .stat-badge {
+            background: rgba(2, 6, 23, 0.7); padding: 8px 12px;
+            border-radius: 12px; border: 1px solid var(--border-color);
+            font-size: 0.85rem; display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .stat-badge.hit { animation: hud-shake 0.4s ease-out; border-color: var(--accent-red); }
+
+        #game-area { position: relative; margin-top: 15px; padding: 10px; }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(10, var(--tile-size));
+            grid-template-rows: repeat(10, var(--tile-size));
+            gap: var(--grid-gap);
+            background: rgba(15, 23, 42, 0.98);
+            padding: 12px; border-radius: 16px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+        }
+
+        .tile {
+            width: var(--tile-size); height: var(--tile-size);
+            border-radius: 8px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            transition: all 0.2s ease; position: relative;
+            box-shadow: var(--tile-shadow);
+        }
+
+        .tile-empty { 
+            background: linear-gradient(145deg, #1e293b, #0f172a); 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .tile-player {
+            background: radial-gradient(circle at center, var(--accent-wizard), #4c1d95);
+            z-index: 50; box-shadow: 0 0 20px var(--accent-wizard), var(--tile-shadow);
+            border: 2px solid #e9d5ff; color: white;
+        }
+
+        .tile-player.entering .char-container {
+            animation: playerEnterPortal 0.8s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards !important;
+        }
+
+        .tile-enemy { border: 1.5px solid rgba(255,255,255,0.1); }
+        .enemy-zombie { background: linear-gradient(135deg, #166534, #064e3b); }
+        .enemy-skeleton { background: linear-gradient(135deg, #475569, #1e293b); }
+        .enemy-wraith { background: linear-gradient(135deg, #3730a3, #1e1b4b); filter: opacity(0.9); }
+        .enemy-ghoul { background: linear-gradient(135deg, #7f1d1d, #450a0a); }
+        .enemy-lich { background: linear-gradient(135deg, #4c1d95, #1e1b4b); border-color: #d8b4fe; }
+        .enemy-deathknight { background: linear-gradient(135deg, #0f172a, #020617); border: 2px solid #ef4444; }
+
+        .cluster-active { border: 2px solid var(--accent-undead); box-shadow: 0 0 12px var(--accent-undead), var(--tile-shadow); }
+
+        .tile-exit { 
+            background: #020617; border: 2px dashed var(--accent-wizard); 
+            opacity: 0.6; color: var(--accent-wizard);
+        }
+        .tile-exit.unlocked { 
+            opacity: 1; box-shadow: 0 0 25px var(--accent-wizard), var(--tile-shadow); 
+            background: radial-gradient(circle, #4c1d95, #020617); color: white; border-style: solid;
+        }
+
+        .char-container {
+            width: 48px; height: 48px;
+            display: flex; justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        .ani-idle { animation: wizard-idle 2s infinite ease-in-out; }
+        .ani-attack { animation: wizard-attack 0.4s ease-out; }
+        .ani-damage { animation: unit-damage 0.5s ease-out forwards; }
+
+        .tile-item-wrap {
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            animation: item-reveal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .tile-item-wrap.idle { animation: wizard-idle 2s infinite ease-in-out; }
+        .tile-item-wrap.key-drop { animation: key-item-pulse 2s infinite ease-in-out; }
+
+        .item-orb {
+            border-radius: 50%; width: 44px; height: 44px; 
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.8rem; border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px currentColor, inset 0 0 10px rgba(255,255,255,0.4);
+            background: rgba(0,0,0,0.4);
+        }
+
+        .stat-container {
+            width: 100%; display: flex; justify-content: space-around;
+            background: rgba(0,0,0,0.75); position: absolute; bottom: 0;
+            padding: 2px 0; border-bottom-left-radius: 6px; border-bottom-right-radius: 8px;
+            pointer-events: none;
+        }
+        .unit-stat { font-size: 0.6rem; letter-spacing: -0.2px; line-height: 1.1; font-weight: 900; }
+        .hp-val { color: #fca5a5; }
+        .atk-val { color: #93c5fd; }
+
+        .combat-fx {
+            position: absolute; pointer-events: none;
+            font-weight: 900; z-index: 100; font-size: 1.5rem;
+            animation: popUp 0.8s ease-out forwards;
+            white-space: nowrap; text-shadow: 0 0 10px rgba(0,0,0,1);
+        }
+
+        #log-panel {
+            width: 100%; max-width: 760px; height: 100px; margin-top: 15px;
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 15px; font-size: 0.8rem;
+            display: flex; flex-direction: column-reverse; gap: 6px; overflow: hidden;
+        }
+        .log-msg { padding-left: 10px; border-left: 2px solid var(--accent-wizard); color: #cbd5e1; }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.94);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 500; border-radius: 16px; backdrop-filter: blur(15px); text-align: center; padding: 20px;
+        }
+
+        .btn-restart {
+            background: var(--accent-mana); border: none; padding: 14px 44px; 
+            cursor: pointer; color: white; font-weight: 900; border-radius: 10px;
+            margin-top: 25px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+            transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-restart:hover { transform: scale(1.05); background: var(--accent-wizard); }
+    </style>
+</head>
+<body>
+
+<div id="damage-vignette"></div>
+
+<div id="transition-curtain" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #020617; z-index: 999; display: none; flex-direction: column; justify-content: center; align-items: center; opacity: 1;">
+    <div style="font-size: 4rem; font-weight: 900; color: white; animation: wizard-idle 2s infinite;">DESCENDING</div>
+    <div style="font-size: 2rem; color: var(--accent-mana); font-weight: 700;">DEPTH: <span id="depth-val">1</span>F</div>
+    <div style="margin-top: 40px; width: 240px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+        <div id="progress-bar" style="width: 0%; height: 100%; background: var(--accent-wizard); transition: width 1s linear;"></div>
+    </div>
+</div>
+
+<div id="top-bar">
+    <div class="brand-box">
+        <div class="brand">BUNTGAMES</div>
+        <div class="title-text">Eternal Invasion: Roguelike dungeon Edition</div>
+    </div>
+    <div class="stats-container">
+        <div class="stat-badge"><span style="color:var(--accent-mana)">FLOOR</span> <b id="ui-level">1</b></div>
+        <div id="hud-mana" class="stat-badge"><span style="color:var(--accent-red)">MANA</span> <b id="ui-hp">80</b>/<b id="ui-max-hp">100</b></div>
+        <div class="stat-badge"><span id="ui-key-icon" style="opacity: 0.2; transition: all 0.5s ease;">🔑</span></div>
+        <div id="sound-toggle" style="cursor:pointer">🔇</div>
+    </div>
+</div>
+
+<div id="game-area">
+    <div id="grid"></div>
+    
+    <!-- Simplified Game Over Overlay -->
+    <div id="game-over" class="overlay">
+        <h1 style="color: var(--accent-red); font-size: 4rem; margin: 0; font-weight: 900;">GAME OVER</h1>
+        <p style="color: #f8fafc; font-size: 1.5rem; margin-top: 10px;">Depth reached: <b id="final-level" style="color: var(--accent-mana);">1</b>F</p>
+        <button onclick="resetGame()" class="btn-restart">RESTART</button>
+    </div>
+
+    <!-- Simplified Stuck Overlay -->
+    <div id="stuck-overlay" class="overlay">
+        <h2 style="color: var(--accent-gold); font-size: 3rem; margin: 0; font-weight: 900;">STUCK</h2>
+        <p style="color: #cbd5e1; margin-top: 10px; font-size: 1.2rem;">No viable path: Out of Mana</p>
+        <div id="stuck-timer" style="font-size: 2rem; color: var(--accent-gold); margin-top: 10px; font-weight: 900;">7</div>
+        <button onclick="resetGame()" class="btn-restart">RESTART</button>
+    </div>
+</div>
+
+<div id="log-panel"></div>
+
+<script>
+    /* -------------------------------------------------------------------------- */
+    /* CORE SETTINGS                               */
+    /* -------------------------------------------------------------------------- */
+    const GRID_SIZE = 10;
+    const TRAITS = ['zombie', 'skeleton', 'wraith', 'ghoul', 'lich', 'deathknight'];
+    const ITEM_TYPES = ['potion', 'maxhp', 'shield', 'breaker', 'key'];
+
+    /**
+     * 캐릭터 SVG 생성 (IDLE, ATTACK, DAMAGE 상태 포함)
+     */
+    const getDetailedWizard = (stateClass = 'ani-idle') => `
+        <div class="char-container ${stateClass}">
+            <svg viewBox="0 0 24 24" style="width:100%; height:100%;">
+                <rect x="8" y="19" width="3" height="4" fill="#3b0764" style="animation: leg-move 1s infinite; transform-origin: top;"/>
+                <rect x="13" y="19" width="3" height="4" fill="#3b0764" style="animation: leg-move 1s infinite 0.5s; transform-origin: top;"/>
+                <path d="M6,20 L18,20 L15,10 L9,10 Z" fill="#6b21a8"/>
+                <path d="M7,11 L4,15" stroke="#6b21a8" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M17,11 L20,15" stroke="#6b21a8" stroke-width="2.5" stroke-linecap="round"/>
+                <g style="animation: staff-glow 1.5s infinite;">
+                    <line x1="19" y1="22" x2="21" y2="8" stroke="#78350f" stroke-width="2"/>
+                    <circle cx="21" cy="7" r="2.5" fill="var(--accent-mana)" opacity="0.9"/>
+                </g>
+                <circle cx="12" cy="8" r="4" fill="#f5d0fe"/>
+                <path d="M7,6 L17,6 L12,0 Z" fill="#4c1d95"/>
+                <circle cx="10.5" cy="8" r="0.8" fill="#1e1b4b"/>
+                <circle cx="13.5" cy="8" r="0.8" fill="#1e1b4b"/>
+            </svg>
+        </div>`;
+
+    /**
+     * 적 SVG 생성
+     */
+    const getEnemySVG = (type, stateClass = 'ani-idle') => {
+        let bc = "#166534", hc = "#4ade80";
+        if (type === 'skeleton') { bc = "#475569"; hc = "#f1f5f9"; }
+        if (type === 'wraith') { bc = "#3730a3"; hc = "#a5b4fc"; }
+        if (type === 'ghoul') { bc = "#7f1d1d"; hc = "#f87171"; }
+        if (type === 'lich') { bc = "#4c1d95"; hc = "#d8b4fe"; }
+        if (type === 'deathknight') { bc = "#0f172a"; hc = "#ef4444"; }
+
+        return `
+        <div class="char-container ${stateClass}">
+            <svg viewBox="0 0 24 24" style="width:100%; height:100%;">
+                <rect x="7" y="18" width="3" height="5" fill="${bc}" style="animation: leg-move 1.2s infinite;"/>
+                <rect x="14" y="18" width="3" height="5" fill="${bc}" style="animation: leg-move 1.2s infinite 0.6s;"/>
+                <rect x="6" y="10" width="12" height="9" rx="2" fill="${bc}"/>
+                <path d="M5,11 L2,16" stroke="${bc}" stroke-width="2" stroke-linecap="round"/>
+                <path d="M19,11 L22,16" stroke="${bc}" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="7" r="5" fill="${hc}"/>
+                <circle cx="10" cy="7" r="1.2" fill="black"/>
+                <circle cx="14" cy="7" r="1.2" fill="black"/>
+            </svg>
+        </div>`;
+    };
+
+    /* -------------------------------------------------------------------------- */
+    /* GAME STATE                                 */
+    /* -------------------------------------------------------------------------- */
+    let gameState = {
+        level: 1,
+        player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' },
+        grid: [], isAuto: true, lastInputTime: Date.now(), paused: false, gameOver: false, isAnimating: false, stuckCountDown: null, stuckTimer: null, soundEnabled: false
+    };
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+    function playTone(freq, type = 'sine', duration = 0.1, volume = 0.1) {
+        if (!gameState.soundEnabled || !audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    const Sounds = {
+        move: () => playTone(150, 'triangle', 0.05, 0.04),
+        hit: () => { playTone(80, 'square', 0.2, 0.12); playTone(60, 'sawtooth', 0.1, 0.08); },
+        pick: () => { playTone(600, 'sine', 0.1, 0.08); setTimeout(() => playTone(900, 'sine', 0.1, 0.06), 50); },
+        drop: () => { playTone(440, 'sine', 0.3, 0.05); playTone(880, 'sine', 0.3, 0.03); },
+        portal: () => { for(let i=0; i<10; i++) setTimeout(() => playTone(200 + (i*100), 'sine', 0.1, 0.04), i*50); },
+        gameOver: () => { playTone(200, 'sawtooth', 0.5, 0.08); playTone(150, 'sawtooth', 0.5, 0.08); }
+    };
+
+    const gridEl = document.getElementById('grid');
+    const logPanel = document.getElementById('log-panel');
+    const soundBtn = document.getElementById('sound-toggle');
+
+    soundBtn.onclick = () => { initAudio(); gameState.soundEnabled = !gameState.soundEnabled; soundBtn.innerText = gameState.soundEnabled ? "🔊" : "🔇"; };
+
+    function init() { createMap(); render(); gameLoop(); }
+
+    /**
+     * 맵 생성 및 개체 배치
+     */
+    function createMap() {
+        gameState.grid = Array.from({length: GRID_SIZE}, () => Array.from({length: GRID_SIZE}, () => ({ type: 'empty', anim: 'ani-idle' })));
+        gameState.player.x = 1; gameState.player.y = 5;
+        gameState.player.hasKey = false; gameState.player.enteringPortal = false; gameState.player.anim = 'ani-idle';
+
+        gameState.grid[Math.floor(Math.random()*8)+1][0] = { type: 'exit' };
+        gameState.grid[Math.floor(Math.random()*8)+1][9] = { type: 'exit' };
+
+        const count = 18 + (gameState.level * 2);
+        let placed = 0;
+        while (placed < count) {
+            let rx = Math.floor(Math.random() * GRID_SIZE), ry = Math.floor(Math.random() * GRID_SIZE);
+            if (gameState.grid[ry][rx].type === 'empty' && (rx !== gameState.player.x || ry !== gameState.player.y)) {
+                gameState.grid[ry][rx] = { type: 'enemy', trait: TRAITS[Math.floor(Math.random() * TRAITS.length)], basePower: Math.max(1, Math.floor(Math.random() * 3) + Math.floor(gameState.level * 0.8)), hasKey: false, anim: 'ani-idle' };
+                placed++;
+            }
+        }
+        const enemies = [];
+        gameState.grid.forEach((row, y) => row.forEach((tile, x) => { if (tile.type === 'enemy') enemies.push({x, y}); }));
+        if (enemies.length > 0) { 
+            const target = enemies[Math.floor(Math.random() * enemies.length)]; 
+            gameState.grid[target.y][target.x].hasKey = true; 
+        }
+        updateCalculations();
+    }
+
+    /**
+     * 클러스터 마력 및 가시성 업데이트
+     */
+    function updateCalculations() {
+        const visited = new Set();
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const tile = gameState.grid[y][x];
+                if (tile.type === 'enemy' && !visited.has(`${x},${y}`)) {
+                    const cluster = []; const q = [{x, y}]; visited.add(`${x},${y}`);
+                    while(q.length > 0) {
+                        const curr = q.shift(); cluster.push(curr);
+                        getNeighbors(curr.x, curr.y).forEach(n => {
+                            const nt = gameState.grid[n.y][n.x];
+                            if (nt.type === 'enemy' && nt.trait === tile.trait && !visited.has(`${n.x},${n.y}`)) { visited.add(`${n.x},${n.y}`); q.push(n); }
+                        });
+                    }
+                    cluster.forEach(c => { const ct = gameState.grid[c.y][c.x]; ct.clusterSize = cluster.length; ct.finalPower = ct.basePower + (cluster.length - 1); ct.clusterCoords = cluster; });
+                }
+            }
+        }
+    }
+
+    function getNeighbors(x, y) {
+        const n = [];
+        if (x > 0) n.push({x: x-1, y}); if (x < GRID_SIZE-1) n.push({x: x+1, y});
+        if (y > 0) n.push({x, y: y-1}); if (y < GRID_SIZE-1) n.push({x, y: y+1});
+        return n;
+    }
+
+    /**
+     * 화면 렌더링
+     */
+    function render() {
+        gridEl.innerHTML = '';
+        document.getElementById('ui-hp').innerText = Math.max(0, gameState.player.hp);
+        document.getElementById('ui-max-hp').innerText = gameState.player.maxHp;
+        document.getElementById('ui-level').innerText = gameState.level;
+        document.getElementById('ui-key-icon').style.opacity = gameState.player.hasKey ? "1" : "0.2";
+        document.getElementById('ui-key-icon').style.filter = gameState.player.hasKey ? "drop-shadow(0 0 8px gold)" : "none";
+
+        gameState.grid.forEach((row, y) => {
+            row.forEach((tile, x) => {
+                const el = document.createElement('div');
+                el.className = 'tile';
+                el.id = `tile-${x}-${y}`;
+                if (x === gameState.player.x && y === gameState.player.y) {
+                    el.classList.add('tile-player');
+                    if(gameState.player.enteringPortal) el.classList.add('entering');
+                    el.innerHTML = `
+                        ${getDetailedWizard(gameState.player.anim)}
+                        <div class="stat-container">
+                            <div class="unit-stat hp-val" style="width:100%; text-align:center;">MANA: ${gameState.player.hp}</div>
+                        </div>`;
+                } else {
+                    switch(tile.type) {
+                        case 'empty': el.classList.add('tile-empty'); break;
+                        case 'exit': 
+                            el.classList.add('tile-exit'); 
+                            if (gameState.player.hasKey) { el.classList.add('unlocked'); el.innerHTML = `🌀<div style="font-size:0.55rem">PORTAL</div>`; }
+                            else { el.innerHTML = `🔒<div style="font-size:0.55rem">LOCKED</div>`; }
+                            break;
+                        case 'item':
+                            let it = '💎';
+                            let itemClass = 'idle';
+                            if (tile.subtype === 'potion') it = '🧪'; 
+                            if (tile.subtype === 'maxhp') it = '💖'; 
+                            if (tile.subtype === 'shield') it = '🔮'; 
+                            if (tile.subtype === 'breaker') it = '⚡';
+                            if (tile.subtype === 'key') { it = '🔑'; itemClass = 'key-drop'; }
+                            el.innerHTML = `<div class="tile-item-wrap ${itemClass}"><div class="item-orb" style="${tile.subtype === 'key' ? 'color:gold; border-color:gold;' : ''}">${it}</div></div>`;
+                            break;
+                        case 'enemy':
+                            el.classList.add('tile-enemy', `enemy-${tile.trait}`);
+                            if (tile.clusterSize > 1) el.classList.add('cluster-active');
+                            const power = gameState.player.breaker > 0 ? tile.basePower : tile.finalPower;
+                            el.innerHTML += `${getEnemySVG(tile.trait, tile.anim)}<div class="stat-container"><div class="unit-stat hp-val">H:1</div><div class="unit-stat atk-val">A:${power}</div></div>`;
+                            break;
+                    }
+                }
+                gridEl.appendChild(el);
+            });
+        });
+    }
+
+    function addLog(msg) {
+        const entry = document.createElement('div');
+        entry.className = 'log-msg'; entry.innerText = msg;
+        logPanel.appendChild(entry);
+        if (logPanel.childNodes.length > 5) logPanel.removeChild(logPanel.firstChild);
+    }
+
+    async function handleInput(key) {
+        if (gameState.gameOver || gameState.paused || gameState.isAnimating) return;
+        gameState.isAuto = false; gameState.lastInputTime = Date.now();
+        if (key === 'ArrowUp') await movePlayer(0, -1); if (key === 'ArrowDown') await movePlayer(0, 1);
+        if (key === 'ArrowLeft') await movePlayer(-1, 0); if (key === 'ArrowRight') await movePlayer(1, 0);
+    }
+
+    async function movePlayer(dx, dy) {
+        const nx = gameState.player.x + dx, ny = gameState.player.y + dy;
+        if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
+        const target = gameState.grid[ny][nx];
+        if (target.type === 'enemy') await startBattleSequence(nx, ny);
+        else if (target.type === 'item') { 
+            Sounds.pick(); 
+            applyItem(target.subtype); 
+            gameState.grid[ny][nx] = { type: 'empty' }; 
+            gameState.player.x = nx; 
+            gameState.player.y = ny; 
+            endTurn(); 
+        }
+        else if (target.type === 'exit' && gameState.player.hasKey) {
+            if (getNeighbors(nx, ny).some(n => gameState.grid[n.y][n.x].type === 'enemy')) { addLog("Clear nearby undead to stabilize portal."); }
+            else { 
+                gameState.isAnimating = true; 
+                gameState.player.x = nx; 
+                gameState.player.y = ny; 
+                gameState.player.enteringPortal = true;
+                render(); 
+                Sounds.portal(); 
+                await new Promise(r => setTimeout(r, 800)); 
+                await nextLevel(); 
+            }
+        } else if (target.type === 'empty') { Sounds.move(); gameState.player.x = nx; gameState.player.y = ny; endTurn(); }
+    }
+
+    /**
+     * 전투 로직 및 애니메이션 시퀀스
+     */
+    async function startBattleSequence(x, y) {
+        gameState.isAnimating = true;
+        const enemy = gameState.grid[y][x];
+        const power = gameState.player.breaker > 0 ? enemy.basePower : enemy.finalPower;
+        
+        gameState.player.anim = 'ani-attack'; 
+        render(); 
+        Sounds.hit(); 
+        showFloatingText(x, y, "PURGE", "var(--accent-mana)");
+        await new Promise(r => setTimeout(r, 400));
+        
+        gameState.player.anim = 'ani-damage'; 
+        enemy.anim = 'ani-damage';
+        
+        if (gameState.player.invincible > 0) {
+            showFloatingText(gameState.player.x, gameState.player.y, "BLOCK", "var(--accent-gold)");
+        } else {
+            gameState.player.hp -= power;
+            triggerDamageVisuals();
+            showFloatingText(gameState.player.x, gameState.player.y, `-${power}`, "var(--accent-red)");
+        }
+        
+        render(); 
+        await new Promise(r => setTimeout(r, 500));
+        
+        if (gameState.player.hp > 0) {
+            let kf = false; 
+            enemy.clusterCoords.forEach(c => { 
+                if (gameState.grid[c.y][c.x].hasKey) kf = true; 
+                gameState.grid[c.y][c.x] = { type: 'empty' }; 
+            });
+
+            if (kf) { 
+                gameState.grid[y][x] = { type: 'item', subtype: 'key' };
+                showFloatingText(x, y, "KEY DROPPED", "var(--accent-gold)"); 
+                Sounds.drop();
+                render();
+                await new Promise(r => setTimeout(r, 1000));
+            } else if (Math.random() < 0.28) {
+                const drop = ITEM_TYPES[Math.floor(Math.random() * 4)];
+                gameState.grid[y][x] = { type: 'item', subtype: drop }; 
+                render(); 
+                Sounds.drop();
+                showFloatingText(x, y, "ITEM", "var(--accent-gold)"); 
+                await new Promise(r => setTimeout(r, 1000)); 
+            } else { 
+                render(); 
+                await new Promise(r => setTimeout(r, 200)); 
+            }
+            
+            gameState.player.x = x; gameState.player.y = y;
+            if (gameState.grid[y][x].type === 'item') { 
+                Sounds.pick(); 
+                applyItem(gameState.grid[y][x].subtype); 
+                gameState.grid[y][x] = { type: 'empty' }; 
+            }
+            
+            updateCalculations(); 
+            gameState.player.anim = 'ani-idle'; 
+            endTurn();
+        } else { 
+            gameState.player.hp = 0; 
+            gameState.gameOver = true; 
+            Sounds.gameOver(); 
+            document.getElementById('final-level').innerText = gameState.level; 
+            document.getElementById('game-over').style.display = 'flex'; 
+            render(); 
+        }
+        gameState.isAnimating = false;
+    }
+
+    function triggerDamageVisuals() {
+        const hud = document.getElementById('hud-mana');
+        hud.classList.remove('hit');
+        void hud.offsetWidth; 
+        hud.classList.add('hit');
+        const vignette = document.getElementById('damage-vignette');
+        vignette.style.display = 'block';
+        setTimeout(() => vignette.style.display = 'none', 400);
+    }
+
+    function showFloatingText(x, y, t, c) {
+        const fx = document.createElement('div'); 
+        fx.className = 'combat-fx'; 
+        fx.innerText = t; 
+        fx.style.color = c;
+        if (t.startsWith('-')) fx.style.fontSize = '2rem';
+        fx.style.left = `${(x * 74) + 37}px`; 
+        fx.style.top = `${(y * 74) + 37}px`;
+        document.getElementById('game-area').appendChild(fx); 
+        setTimeout(() => fx.remove(), 800);
+    }
+
+    function applyItem(t) {
+        if (t === 'potion') gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10);
+        if (t === 'maxhp') { gameState.player.maxHp = Math.min(200, gameState.player.maxHp + 10); gameState.player.hp += 10; }
+        if (t === 'shield') gameState.player.invincible = 4;
+        if (t === 'breaker') gameState.player.breaker = 6;
+        if (t === 'key') { 
+            gameState.player.hasKey = true; 
+            addLog("Acquired Ancient Key.");
+        }
+    }
+
+    function endTurn() { if (gameState.player.invincible > 0) gameState.player.invincible--; if (gameState.player.breaker > 0) gameState.player.breaker--; render(); }
+
+    async function nextLevel() {
+        const cur = document.getElementById('transition-curtain'), pb = document.getElementById('progress-bar'), dv = document.getElementById('depth-val');
+        dv.innerText = gameState.level; 
+        cur.style.display = 'flex'; 
+        cur.style.opacity = '1';
+        pb.style.width = '100%';
+        await new Promise(r => setTimeout(r, 1200));
+        gameState.level++; createMap(); render();
+        cur.style.transition = 'opacity 0.6s ease';
+        cur.style.opacity = '0';
+        setTimeout(() => { cur.style.display = 'none'; cur.style.transition = 'none'; pb.style.width = '0%'; gameState.isAnimating = false; }, 600);
+    }
+
+    function resetGame() {
+        clearTimeout(gameState.stuckTimer); document.getElementById('stuck-overlay').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
+        gameState = { ...gameState, level: 1, player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' }, grid: [], isAuto: true, lastInputTime: Date.now(), gameOver: false, isAnimating: false, stuckCountDown: null };
+        init();
+    }
+
+    async function gameLoop() {
+        if (!gameState.gameOver && !gameState.paused && !gameState.isAnimating) {
+            if (!gameState.isAuto && Date.now() - gameState.lastInputTime > 7000) { gameState.isAuto = true; }
+            const path = findPath();
+            if (path && path.length > 1) {
+                if (gameState.stuckCountDown !== null) { gameState.stuckCountDown = null; document.getElementById('stuck-overlay').style.display = 'none'; clearTimeout(gameState.stuckTimer); }
+                if (gameState.isAuto) await movePlayer(path[1].x - gameState.player.x, path[1].y - gameState.player.y);
+            } else if (!gameState.gameOver) {
+                if (gameState.stuckCountDown === null) { gameState.stuckCountDown = 7; startStuckTimer(); }
+            }
+        }
+        setTimeout(gameLoop, 1000);
+    }
+
+    function startStuckTimer() {
+        document.getElementById('stuck-overlay').style.display = 'flex';
+        const te = document.getElementById('stuck-timer');
+        const tick = () => {
+            if (gameState.stuckCountDown === null || gameState.gameOver) return;
+            te.innerText = gameState.stuckCountDown;
+            if (gameState.stuckCountDown <= 0) resetGame();
+            else { gameState.stuckCountDown--; gameState.stuckTimer = setTimeout(tick, 1000); }
+        };
+        tick();
+    }
+
+    function findPath() {
+        const start = { x: gameState.player.x, y: gameState.player.y }, targets = [];
+        let keyOnFloor = null;
+        gameState.grid.forEach((row, y) => row.forEach((t, x) => {
+            if (t.type === 'item' && t.subtype === 'key') keyOnFloor = {x, y};
+        }));
+
+        if (keyOnFloor) targets.push(keyOnFloor);
+        else if (!gameState.player.hasKey) {
+            gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'enemy' && canKill(t)) targets.push({x, y, w: t.clusterSize}); }));
+            targets.sort((a, b) => b.w - a.w);
+        } else {
+            gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'exit') { if (!getNeighbors(x, y).some(n => gameState.grid[n.y][n.x].type === 'enemy')) targets.push({x, y}); } }));
+            if (targets.length === 0) { gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'enemy' && canKill(t)) targets.push({x, y}); })); }
+        }
+        
+        if (targets.length === 0) return null;
+        const q = [[start]], visited = new Set([`${start.x},${start.y}`]);
+        while(q.length > 0) {
+            const p = q.shift(), curr = p[p.length-1];
+            if (targets.some(t => t.x === curr.x && t.y === curr.y)) return p;
+            getNeighbors(curr.x, curr.y).forEach(n => {
+                const nt = gameState.grid[n.y][n.x];
+                let walk = nt.type === 'empty' || nt.type === 'item' || (nt.type === 'enemy' && canKill(nt)) || (nt.type === 'exit' && gameState.player.hasKey);
+                if (walk && !visited.has(`${n.x},${n.y}`)) { visited.add(`${n.x},${n.y}`); q.push([...p, n]); }
+            });
+        }
+        return null;
+    }
+
+    function canKill(enemy) {
+        if (gameState.player.invincible > 0) return true;
+        const p = gameState.player.breaker > 0 ? enemy.basePower : enemy.finalPower;
+        return gameState.player.hp > p;
+    }
+
+    window.addEventListener('keydown', e => { if(e.key.startsWith('Arrow')) handleInput(e.key); });
+    window.onload = init;
+</script>
+</body>
+</html>
