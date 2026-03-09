@@ -39,6 +39,12 @@
             20%, 60% { transform: translateX(-5px) scale(1.1); background-color: var(--accent-red); }
             40%, 80% { transform: translateX(5px) scale(1.1); }
         }
+        @keyframes screen-shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(4px, -4px); }
+            50% { transform: translate(-4px, 4px); }
+            75% { transform: translate(4px, 4px); }
+        }
         @keyframes screen-flash {
             0% { box-shadow: inset 0 0 0px var(--accent-red); opacity: 0; }
             20% { box-shadow: inset 0 0 100px var(--accent-red); opacity: 0.4; }
@@ -69,6 +75,19 @@
             0%, 100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 5px var(--accent-gold)); }
             50% { transform: scale(1.1) translateY(-5px); filter: drop-shadow(0 0 20px var(--accent-gold)); }
         }
+        @keyframes portal-reveal {
+            0% { transform: scale(0.5); filter: brightness(10) blur(10px); opacity: 0; }
+            50% { transform: scale(1.3); filter: brightness(5) blur(0); opacity: 1; }
+            100% { transform: scale(1); filter: brightness(1) blur(0); opacity: 1; }
+        }
+        @keyframes portal-vortex {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes portal-ripple {
+            0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6); }
+            100% { box-shadow: 0 0 0 40px rgba(168, 85, 247, 0); }
+        }
 
         body {
             margin: 0; padding: 0;
@@ -83,6 +102,8 @@
             overflow: hidden; user-select: none;
         }
 
+        body.shaking { animation: screen-shake 0.3s ease-in-out; }
+
         #damage-vignette {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 1000; display: none;
@@ -90,32 +111,53 @@
         }
 
         #top-bar {
-            width: 100%; max-width: 760px; margin-top: 15px;
-            padding: 12px 24px; background: var(--panel-bg);
+            width: 100%; max-width: 860px; margin-top: 15px;
+            padding: 8px 24px; background: var(--panel-bg);
             backdrop-filter: blur(15px); border: 1px solid var(--border-color);
             border-radius: 20px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6); z-index: 100;
         }
 
-        .brand-box { display: flex; flex-direction: column; gap: 2px; }
+        .brand-box { display: flex; flex-direction: column; gap: 0; }
         .brand { 
-            font-weight: 900; font-size: 0.8rem; letter-spacing: 2px;
-            color: var(--accent-mana); opacity: 0.8;
+            font-weight: 900; font-size: 0.7rem; letter-spacing: 2px;
+            color: var(--accent-mana); opacity: 0.8; line-height: 1.2;
         }
         .title-text {
-            font-weight: 800; font-size: 1.1rem;
+            font-weight: 800; font-size: 0.95rem;
             background: linear-gradient(to right, #fff, var(--accent-wizard));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-
-        .stats-container { display: flex; gap: 8px; align-items: center; }
+        
+        .stats-container { display: flex; gap: 10px; align-items: center; }
         .stat-badge {
-            background: rgba(2, 6, 23, 0.7); padding: 8px 12px;
-            border-radius: 12px; border: 1px solid var(--border-color);
-            font-size: 0.85rem; display: flex; align-items: center; gap: 6px;
+            background: rgba(2, 6, 23, 0.7); padding: 6px 12px;
+            border-radius: 10px; border: 1px solid var(--border-color);
+            font-size: 0.8rem; display: flex; align-items: center; gap: 6px;
             transition: all 0.2s ease;
         }
         .stat-badge.hit { animation: hud-shake 0.4s ease-out; border-color: var(--accent-red); }
+
+        .control-links {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .icon-btn {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; font-size: 1.1rem;
+            transition: all 0.2s ease; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(15, 23, 42, 0.5); color: #cbd5e1;
+        }
+        .icon-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            color: white;
+        }
+        .icon-btn.home:hover { background: var(--accent-mana); color: #020617; border-color: transparent; }
+        .icon-btn.youtube:hover { background: var(--accent-red); color: #fff; border-color: transparent; }
+        .icon-btn.sound:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
 
         #game-area { position: relative; margin-top: 15px; padding: 10px; }
 
@@ -163,13 +205,27 @@
 
         .cluster-active { border: 2px solid var(--accent-undead); box-shadow: 0 0 12px var(--accent-undead), var(--tile-shadow); }
 
+        /* --- Portal Styling & Layering --- */
         .tile-exit { 
             background: #020617; border: 2px dashed var(--accent-wizard); 
             opacity: 0.6; color: var(--accent-wizard);
         }
         .tile-exit.unlocked { 
-            opacity: 1; box-shadow: 0 0 25px var(--accent-wizard), var(--tile-shadow); 
-            background: radial-gradient(circle, #4c1d95, #020617); color: white; border-style: solid;
+            opacity: 1; 
+            background: radial-gradient(circle, #2e1065, #020617); 
+            color: white; border: 2px solid var(--accent-wizard);
+            box-shadow: 0 0 25px var(--accent-wizard);
+            z-index: 10; /* 기본 빈 타일보다 상위 */
+        }
+        .tile-exit.opening {
+            animation: portal-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), portal-ripple 1s infinite;
+            z-index: 60; /* 플레이어(50)보다 높은 레이어로 배치하여 강조 */
+        }
+        .portal-vortex-ui {
+            width: 40px; height: 40px;
+            animation: portal-vortex 3s linear infinite;
+            filter: drop-shadow(0 0 10px var(--accent-wizard));
+            pointer-events: none;
         }
 
         .char-container {
@@ -216,7 +272,7 @@
         }
 
         #log-panel {
-            width: 100%; max-width: 760px; height: 100px; margin-top: 15px;
+            width: 100%; max-width: 860px; height: 100px; margin-top: 15px;
             background: var(--panel-bg); border: 1px solid var(--border-color);
             border-radius: 16px; padding: 15px; font-size: 0.8rem;
             display: flex; flex-direction: column-reverse; gap: 6px; overflow: hidden;
@@ -254,27 +310,31 @@
 <div id="top-bar">
     <div class="brand-box">
         <div class="brand">BUNTGAMES</div>
-        <div class="title-text">Eternal Invasion: Roguelike dungeon Edition</div>
+        <div class="title-text">Eternal Invasion: Roguelike dungeon</div>
     </div>
+    
     <div class="stats-container">
-        <div class="stat-badge"><span style="color:var(--accent-mana)">FLOOR</span> <b id="ui-level">1</b></div>
-        <div id="hud-mana" class="stat-badge"><span style="color:var(--accent-red)">MANA</span> <b id="ui-hp">80</b>/<b id="ui-max-hp">100</b></div>
+        <div class="stat-badge"><span style="color:var(--accent-mana)">FL</span> <b id="ui-level">1</b></div>
+        <div id="hud-mana" class="stat-badge"><span style="color:var(--accent-red)">MP</span> <b id="ui-hp">80</b>/<b id="ui-max-hp">100</b></div>
         <div class="stat-badge"><span id="ui-key-icon" style="opacity: 0.2; transition: all 0.5s ease;">🔑</span></div>
-        <div id="sound-toggle" style="cursor:pointer">🔇</div>
+    </div>
+
+    <div class="control-links">
+        <a href="https://kitscript.com/game" target="_blank" class="icon-btn home" title="Homepage">🏠</a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-btn youtube" title="YouTube Channel">📺</a>
+        <div id="sound-toggle" class="icon-btn sound" title="Sound Mute/Unmute">🔇</div>
     </div>
 </div>
 
 <div id="game-area">
     <div id="grid"></div>
     
-    <!-- Simplified Game Over Overlay -->
     <div id="game-over" class="overlay">
         <h1 style="color: var(--accent-red); font-size: 4rem; margin: 0; font-weight: 900;">GAME OVER</h1>
         <p style="color: #f8fafc; font-size: 1.5rem; margin-top: 10px;">Depth reached: <b id="final-level" style="color: var(--accent-mana);">1</b>F</p>
         <button onclick="resetGame()" class="btn-restart">RESTART</button>
     </div>
 
-    <!-- Simplified Stuck Overlay -->
     <div id="stuck-overlay" class="overlay">
         <h2 style="color: var(--accent-gold); font-size: 3rem; margin: 0; font-weight: 900;">STUCK</h2>
         <p style="color: #cbd5e1; margin-top: 10px; font-size: 1.2rem;">No viable path: Out of Mana</p>
@@ -287,15 +347,12 @@
 
 <script>
     /* -------------------------------------------------------------------------- */
-    /* CORE SETTINGS                               */
+    /* 설정 및 헬퍼                              */
     /* -------------------------------------------------------------------------- */
     const GRID_SIZE = 10;
     const TRAITS = ['zombie', 'skeleton', 'wraith', 'ghoul', 'lich', 'deathknight'];
     const ITEM_TYPES = ['potion', 'maxhp', 'shield', 'breaker', 'key'];
 
-    /**
-     * 캐릭터 SVG 생성 (IDLE, ATTACK, DAMAGE 상태 포함)
-     */
     const getDetailedWizard = (stateClass = 'ani-idle') => `
         <div class="char-container ${stateClass}">
             <svg viewBox="0 0 24 24" style="width:100%; height:100%;">
@@ -315,9 +372,6 @@
             </svg>
         </div>`;
 
-    /**
-     * 적 SVG 생성
-     */
     const getEnemySVG = (type, stateClass = 'ani-idle') => {
         let bc = "#166534", hc = "#4ade80";
         if (type === 'skeleton') { bc = "#475569"; hc = "#f1f5f9"; }
@@ -342,14 +396,19 @@
     };
 
     /* -------------------------------------------------------------------------- */
-    /* GAME STATE                                 */
+    /* 게임 상태                                 */
     /* -------------------------------------------------------------------------- */
     let gameState = {
         level: 1,
         player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' },
-        grid: [], isAuto: true, lastInputTime: Date.now(), paused: false, gameOver: false, isAnimating: false, stuckCountDown: null, stuckTimer: null, soundEnabled: false
+        grid: [], isAuto: true, lastInputTime: Date.now(), paused: false, gameOver: false, isAnimating: false, 
+        stuckCountDown: null, stuckTimer: null, soundEnabled: false,
+        portalJustOpened: false 
     };
 
+    /* -------------------------------------------------------------------------- */
+    /* 오디오 시스템                                */
+    /* -------------------------------------------------------------------------- */
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
     function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
@@ -373,21 +432,44 @@
         gameOver: () => { playTone(200, 'sawtooth', 0.5, 0.08); playTone(150, 'sawtooth', 0.5, 0.08); }
     };
 
+    /* -------------------------------------------------------------------------- */
+    /* UI 요소                                */
+    /* -------------------------------------------------------------------------- */
     const gridEl = document.getElementById('grid');
     const logPanel = document.getElementById('log-panel');
     const soundBtn = document.getElementById('sound-toggle');
 
-    soundBtn.onclick = () => { initAudio(); gameState.soundEnabled = !gameState.soundEnabled; soundBtn.innerText = gameState.soundEnabled ? "🔊" : "🔇"; };
+    soundBtn.onclick = () => { 
+        initAudio(); 
+        gameState.soundEnabled = !gameState.soundEnabled; 
+        soundBtn.innerText = gameState.soundEnabled ? "🔊" : "🔇"; 
+    };
 
+    /* -------------------------------------------------------------------------- */
+    /* 로직 함수                              */
+    /* -------------------------------------------------------------------------- */
     function init() { createMap(); render(); gameLoop(); }
 
-    /**
-     * 맵 생성 및 개체 배치
-     */
+    function addLog(msg) {
+        const entry = document.createElement('div');
+        entry.className = 'log-msg';
+        entry.innerText = msg;
+        logPanel.appendChild(entry);
+        if (logPanel.childNodes.length > 5) logPanel.removeChild(logPanel.firstChild);
+    }
+
+    function getNeighbors(x, y) {
+        const n = [];
+        if (x > 0) n.push({x: x-1, y}); if (x < GRID_SIZE-1) n.push({x: x+1, y});
+        if (y > 0) n.push({x, y: y-1}); if (y < GRID_SIZE-1) n.push({x, y: y+1});
+        return n;
+    }
+
     function createMap() {
         gameState.grid = Array.from({length: GRID_SIZE}, () => Array.from({length: GRID_SIZE}, () => ({ type: 'empty', anim: 'ani-idle' })));
         gameState.player.x = 1; gameState.player.y = 5;
         gameState.player.hasKey = false; gameState.player.enteringPortal = false; gameState.player.anim = 'ani-idle';
+        gameState.portalJustOpened = false;
 
         gameState.grid[Math.floor(Math.random()*8)+1][0] = { type: 'exit' };
         gameState.grid[Math.floor(Math.random()*8)+1][9] = { type: 'exit' };
@@ -410,9 +492,6 @@
         updateCalculations();
     }
 
-    /**
-     * 클러스터 마력 및 가시성 업데이트
-     */
     function updateCalculations() {
         const visited = new Set();
         for (let y = 0; y < GRID_SIZE; y++) {
@@ -433,16 +512,6 @@
         }
     }
 
-    function getNeighbors(x, y) {
-        const n = [];
-        if (x > 0) n.push({x: x-1, y}); if (x < GRID_SIZE-1) n.push({x: x+1, y});
-        if (y > 0) n.push({x, y: y-1}); if (y < GRID_SIZE-1) n.push({x, y: y+1});
-        return n;
-    }
-
-    /**
-     * 화면 렌더링
-     */
     function render() {
         gridEl.innerHTML = '';
         document.getElementById('ui-hp').innerText = Math.max(0, gameState.player.hp);
@@ -462,15 +531,34 @@
                     el.innerHTML = `
                         ${getDetailedWizard(gameState.player.anim)}
                         <div class="stat-container">
-                            <div class="unit-stat hp-val" style="width:100%; text-align:center;">MANA: ${gameState.player.hp}</div>
+                            <div class="unit-stat hp-val" style="width:100%; text-align:center;">MP: ${gameState.player.hp}</div>
                         </div>`;
                 } else {
                     switch(tile.type) {
                         case 'empty': el.classList.add('tile-empty'); break;
                         case 'exit': 
                             el.classList.add('tile-exit'); 
-                            if (gameState.player.hasKey) { el.classList.add('unlocked'); el.innerHTML = `🌀<div style="font-size:0.55rem">PORTAL</div>`; }
-                            else { el.innerHTML = `🔒<div style="font-size:0.55rem">LOCKED</div>`; }
+                            if (gameState.player.hasKey) { 
+                                el.classList.add('unlocked'); 
+                                if (gameState.portalJustOpened) el.classList.add('opening');
+                                el.innerHTML = `
+                                    <div class="portal-vortex-ui">
+                                        <svg viewBox="0 0 100 100">
+                                            <defs>
+                                                <radialGradient id="portalGrad" cx="50%" cy="50%" r="50%">
+                                                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
+                                                    <stop offset="40%" style="stop-color:var(--accent-wizard);stop-opacity:1" />
+                                                    <stop offset="100%" style="stop-color:transparent;stop-opacity:1" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="50" cy="50" r="45" fill="url(#portalGrad)" />
+                                            <path d="M50 5 Q70 20 50 50 T50 95" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
+                                            <path d="M5 50 Q20 30 50 50 T95 50" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
+                                        </svg>
+                                    </div>
+                                    <div style="font-size:0.5rem; color:white; font-weight:900; margin-top:2px;">PORTAL</div>`; 
+                            }
+                            else { el.innerHTML = `🔒<div style="font-size:0.5rem">LOCKED</div>`; }
                             break;
                         case 'item':
                             let it = '💎';
@@ -495,20 +583,6 @@
         });
     }
 
-    function addLog(msg) {
-        const entry = document.createElement('div');
-        entry.className = 'log-msg'; entry.innerText = msg;
-        logPanel.appendChild(entry);
-        if (logPanel.childNodes.length > 5) logPanel.removeChild(logPanel.firstChild);
-    }
-
-    async function handleInput(key) {
-        if (gameState.gameOver || gameState.paused || gameState.isAnimating) return;
-        gameState.isAuto = false; gameState.lastInputTime = Date.now();
-        if (key === 'ArrowUp') await movePlayer(0, -1); if (key === 'ArrowDown') await movePlayer(0, 1);
-        if (key === 'ArrowLeft') await movePlayer(-1, 0); if (key === 'ArrowRight') await movePlayer(1, 0);
-    }
-
     async function movePlayer(dx, dy) {
         const nx = gameState.player.x + dx, ny = gameState.player.y + dy;
         if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
@@ -523,23 +597,17 @@
             endTurn(); 
         }
         else if (target.type === 'exit' && gameState.player.hasKey) {
-            if (getNeighbors(nx, ny).some(n => gameState.grid[n.y][n.x].type === 'enemy')) { addLog("Clear nearby undead to stabilize portal."); }
-            else { 
-                gameState.isAnimating = true; 
-                gameState.player.x = nx; 
-                gameState.player.y = ny; 
-                gameState.player.enteringPortal = true;
-                render(); 
-                Sounds.portal(); 
-                await new Promise(r => setTimeout(r, 800)); 
-                await nextLevel(); 
-            }
+            gameState.isAnimating = true; 
+            gameState.player.x = nx; 
+            gameState.player.y = ny; 
+            gameState.player.enteringPortal = true;
+            render(); 
+            Sounds.portal(); 
+            await new Promise(r => setTimeout(r, 800)); 
+            await nextLevel(); 
         } else if (target.type === 'empty') { Sounds.move(); gameState.player.x = nx; gameState.player.y = ny; endTurn(); }
     }
 
-    /**
-     * 전투 로직 및 애니메이션 시퀀스
-     */
     async function startBattleSequence(x, y) {
         gameState.isAnimating = true;
         const enemy = gameState.grid[y][x];
@@ -611,6 +679,25 @@
         gameState.isAnimating = false;
     }
 
+    function applyItem(t) {
+        if (t === 'potion') gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10);
+        if (t === 'maxhp') { gameState.player.maxHp = Math.min(200, gameState.player.maxHp + 10); gameState.player.hp += 10; }
+        if (t === 'shield') gameState.player.invincible = 4;
+        if (t === 'breaker') gameState.player.breaker = 6;
+        if (t === 'key') { 
+            gameState.player.hasKey = true; 
+            gameState.portalJustOpened = true; 
+            document.body.classList.add('shaking'); 
+            addLog("!! PORTAL ACTIVATED !!");
+            render();
+            setTimeout(() => {
+                document.body.classList.remove('shaking');
+                gameState.portalJustOpened = false;
+                render();
+            }, 1000);
+        }
+    }
+
     function triggerDamageVisuals() {
         const hud = document.getElementById('hud-mana');
         hud.classList.remove('hit');
@@ -633,17 +720,6 @@
         setTimeout(() => fx.remove(), 800);
     }
 
-    function applyItem(t) {
-        if (t === 'potion') gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10);
-        if (t === 'maxhp') { gameState.player.maxHp = Math.min(200, gameState.player.maxHp + 10); gameState.player.hp += 10; }
-        if (t === 'shield') gameState.player.invincible = 4;
-        if (t === 'breaker') gameState.player.breaker = 6;
-        if (t === 'key') { 
-            gameState.player.hasKey = true; 
-            addLog("Acquired Ancient Key.");
-        }
-    }
-
     function endTurn() { if (gameState.player.invincible > 0) gameState.player.invincible--; if (gameState.player.breaker > 0) gameState.player.breaker--; render(); }
 
     async function nextLevel() {
@@ -661,7 +737,7 @@
 
     function resetGame() {
         clearTimeout(gameState.stuckTimer); document.getElementById('stuck-overlay').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
-        gameState = { ...gameState, level: 1, player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' }, grid: [], isAuto: true, lastInputTime: Date.now(), gameOver: false, isAnimating: false, stuckCountDown: null };
+        gameState = { ...gameState, level: 1, player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' }, grid: [], isAuto: true, lastInputTime: Date.now(), gameOver: false, isAnimating: false, stuckCountDown: null, portalJustOpened: false };
         init();
     }
 
@@ -703,8 +779,12 @@
             gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'enemy' && canKill(t)) targets.push({x, y, w: t.clusterSize}); }));
             targets.sort((a, b) => b.w - a.w);
         } else {
-            gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'exit') { if (!getNeighbors(x, y).some(n => gameState.grid[n.y][n.x].type === 'enemy')) targets.push({x, y}); } }));
-            if (targets.length === 0) { gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'enemy' && canKill(t)) targets.push({x, y}); })); }
+            gameState.grid.forEach((row, y) => row.forEach((t, x) => { 
+                if (t.type === 'exit') targets.push({x, y}); 
+            }));
+            if (targets.length === 0) { 
+                gameState.grid.forEach((row, y) => row.forEach((t, x) => { if (t.type === 'enemy' && canKill(t)) targets.push({x, y}); })); 
+            }
         }
         
         if (targets.length === 0) return null;
