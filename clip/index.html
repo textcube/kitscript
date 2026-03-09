@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>Local Clipboard Manager PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Initialization with Safety Check
+        let db, auth, appId;
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        } catch (e) {
+            console.warn("Firebase config not found. Running in local-only mode.");
+        }
+
+        window.fb = { 
+            db, auth, appId, doc, setDoc, getDoc, onSnapshot, updateDoc, collection, query,
+            signInAnonymously, signInWithCustomToken 
+        };
+
+        const AppState = {
+            history: [],
+            settings: { theme: 'light', maxItems: 100 },
+            currentUser: null
+        };
+        window.AppState = AppState;
+
+        const storageManager = {
+            db: null,
+            init: function() {
+                return new Promise((resolve) => {
+                    const request = indexedDB.open('ClipboardDB', 4);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('history')) {
+                            db.createObjectStore('history', { keyPath: 'id' });
+                        }
+                    };
+                    request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+                });
+            },
+            saveItem: async function(item) {
+                if(!this.db) return;
+                const tx = this.db.transaction('history', 'readwrite');
+                tx.objectStore('history').put(item);
+            },
+            deleteItem: async function(id) {
+                if(!this.db) return;
+                const tx = this.db.transaction('history', 'readwrite');
+                tx.objectStore('history').delete(id);
+            },
+            getAll: function() {
+                return new Promise((resolve) => {
+                    if(!this.db) return resolve([]);
+                    const tx = this.db.transaction('history', 'readonly');
+                    const request = tx.objectStore('history').getAll();
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+        };
+        window.storageManager = storageManager;
+
+        const historyManager = {
+            add: async function(item) {
+                if (AppState.history.length > 0 && AppState.history[0].content === item.content && AppState.history[0].type === item.type) return;
+                AppState.history.unshift(item);
+                if (AppState.history.length > AppState.settings.maxItems) {
+                    const toDelete = AppState.history.pop();
+                    await storageManager.deleteItem(toDelete.id);
+                }
+                await storageManager.saveItem(item);
+                ui.render();
+            },
+            update: async function(id, newContent) {
+                const item = AppState.history.find(h => h.id === id);
+                if (item && item.content !== newContent) {
+                    item.content = newContent;
+                    await storageManager.saveItem(item);
+                    ui.render(); 
+                    ui.showToast("Changes saved successfully.");
+                }
+            },
+            delete: async function(id) {
+                AppState.history = AppState.history.filter(h => h.id !== id);
+                await storageManager.deleteItem(id);
+                ui.render();
+            },
+            executeClearAll: async function() {
+                AppState.history = [];
+                if (storageManager.db) {
+                    const tx = storageManager.db.transaction('history', 'readwrite');
+                    tx.objectStore('history').clear();
+                }
+                ui.render();
+                ui.closeModals();
+                ui.showToast("All history has been cleared.");
+            }
+        };
+        window.historyManager = historyManager;
+
+        const clipboard = {
+            readFromSystem: async function() {
+                try {
+                    const items = await navigator.clipboard.read();
+                    for (const item of items) {
+                        for (const type of item.types) {
+                            if (type.startsWith('image/')) {
+                                const blob = await item.getType(type);
+                                this.processImage(blob);
+                            } else if (type === 'text/plain') {
+                                const blob = await item.getType(type);
+                                const text = await blob.text();
+                                this.processText(text);
+                            }
+                        }
+                    }
+                    ui.showToast("Clipboard data imported.");
+                } catch (e) {
+                    ui.showToast("Permission denied for clipboard access.");
+                }
+            },
+            processText: function(text) {
+                if(!text || text.trim() === "") return;
+                historyManager.add({ id: crypto.randomUUID(), createdAt: Date.now(), type: 'text', content: text });
+            },
+            processImage: function(blob) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    historyManager.add({ id: crypto.randomUUID(), createdAt: Date.now(), type: 'image', content: e.target.result });
+                };
+                reader.readAsDataURL(blob);
+            }
+        };
+        window.clipboard = clipboard;
+
+        const ui = {
+            init: function() {
+                this.render();
+                window.addEventListener('paste', (e) => {
+                    if (e.target.tagName === 'TEXTAREA' || e.target.contentEditable === "true") return;
+                    const items = e.clipboardData.items;
+                    let handled = false;
+                    for (const item of items) {
+                        if (item.type.indexOf('image') !== -1) {
+                            clipboard.processImage(item.getAsFile());
+                            handled = true;
+                        } else if (item.type === 'text/plain') {
+                            item.getAsString((text) => clipboard.processText(text));
+                            handled = true;
+                        }
+                    }
+                    if(handled) ui.showToast("New item added to history.");
+                });
+            },
+            escapeHTML: (str) => str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])),
+            render: function() {
+                const container = document.getElementById('historyContainer');
+                if(!container) return;
+                const QR_LIMIT = 1000;
+
+                container.innerHTML = AppState.history.map(item => {
+                    const isShortText = item.type === 'text' && item.content.length <= QR_LIMIT;
+                    return `
+                    <div id="card-${item.id}" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full hover:ring-2 hover:ring-blue-500/20 transition-all">
+                        <div class="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">${item.type}</span>
+                                ${item.type === 'text' ? `<span id="count-${item.id}" class="text-[9px] text-slate-400 font-bold">${item.content.length.toLocaleString()} chars</span>` : ''}
+                            </div>
+                            <button onclick="window.delItem('${item.id}')" class="text-slate-300 hover:text-red-500 transition p-1">✕</button>
+                        </div>
+                        <div class="p-4 flex-grow overflow-y-auto custom-scrollbar" style="max-height: 280px;">
+                            ${item.type === 'image' ? 
+                                `<img src="${item.content}" class="w-full rounded-lg shadow-sm cursor-zoom-in" onclick="window.openImage('${item.content}')">` : 
+                                `<textarea 
+                                    id="textarea-${item.id}"
+                                    oninput="window.onTextEdit('${item.id}', this)" 
+                                    class="w-full h-full text-xs font-mono text-slate-700 bg-transparent outline-none resize-none break-all leading-relaxed"
+                                    placeholder="Edit content here..."
+                                >${this.escapeHTML(item.content)}</textarea>`
+                            }
+                        </div>
+                        <div class="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
+                            <span class="text-[10px] text-slate-400 font-bold">${new Date(item.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                            <div class="flex gap-2">
+                                <button id="save-btn-${item.id}" onclick="window.onTextSave('${item.id}')" class="hidden text-[11px] bg-green-600 text-white px-3 py-1.5 rounded-lg font-black hover:bg-green-700 transition shadow-sm animate-pulse uppercase">Save</button>
+                                <div id="qr-btn-container-${item.id}">
+                                    ${isShortText ? `<button onclick="window.showQr('${item.id}')" class="text-[11px] bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-black hover:bg-indigo-700 transition shadow-sm uppercase">QR Share</button>` : ''}
+                                </div>
+                                <button onclick="window.copyItem('${item.id}')" class="text-[11px] bg-blue-600 text-white px-3 py-1.5 rounded-lg font-black hover:bg-blue-700 transition shadow-sm uppercase">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+                document.getElementById('emptyState').classList.toggle('hidden', AppState.history.length > 0);
+            },
+            updateCardUI: function(id) {
+                const item = AppState.history.find(h => h.id === id);
+                if (!item || item.type !== 'text') return;
+                
+                const textarea = document.getElementById(`textarea-${id}`);
+                const currentVal = textarea ? textarea.value : "";
+                const countEl = document.getElementById(`count-${id}`);
+                const qrContainer = document.getElementById(`qr-btn-container-${id}`);
+                const saveBtn = document.getElementById(`save-btn-${id}`);
+                const QR_LIMIT = 1000;
+
+                if (countEl) countEl.innerText = `${currentVal.length.toLocaleString()} chars`;
+                
+                if (qrContainer) {
+                    if (currentVal.length <= QR_LIMIT) {
+                        if (qrContainer.innerHTML.trim() === "") {
+                            qrContainer.innerHTML = `<button onclick="window.showQr('${id}')" class="text-[11px] bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-black hover:bg-indigo-700 transition shadow-sm uppercase">QR Share</button>`;
+                        }
+                    } else {
+                        qrContainer.innerHTML = "";
+                    }
+                }
+
+                if (saveBtn) {
+                    saveBtn.classList.toggle('hidden', currentVal === item.content);
+                }
+            },
+            showToast: function(msg) {
+                const t = document.createElement('div');
+                t.className = 'fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-2.5 rounded-full text-xs font-black z-[200] shadow-2xl transition-all';
+                t.innerText = msg;
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 2500);
+            },
+            closeModals: () => {
+                document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+                document.getElementById('modalOverlay').classList.add('hidden');
+            },
+            openConfirmClear: () => {
+                document.getElementById('modalOverlay').classList.remove('hidden');
+                document.getElementById('confirmClearModal').classList.remove('hidden');
+            },
+            generateItemQR: function(id) {
+                const item = AppState.history.find(i => i.id === id);
+                if(!item) return;
+                this.closeModals();
+                
+                const qr = qrcode(0, 'M');
+                qr.addData(item.content);
+                qr.make();
+                
+                const qrSize = 10;
+                const qrMargin = 4;
+                const qrSvg = qr.createSvgTag(qrSize, qrMargin);
+                
+                const container = document.getElementById('itemQrCode');
+                container.innerHTML = qrSvg;
+                
+                const guideTextEl = document.getElementById('qrLiveTextAnchor');
+                guideTextEl.innerText = item.content.length > 100 ? item.content.substring(0, 100) + "..." : item.content;
+
+                const isUrl = /^https?:\/\//i.test(item.content.trim());
+                document.getElementById('qrGuideText').innerText = isUrl 
+                    ? "On iPhone, tap the yellow 'Open in Browser' popup at the top."
+                    : "On iPhone, tap the [≡] icon at the bottom right of the camera to extract text.";
+
+                document.getElementById('modalOverlay').classList.remove('hidden');
+                document.getElementById('itemQrModal').classList.remove('hidden');
+            }
+        };
+        
+        window.ui = ui;
+        window.delItem = (id) => historyManager.delete(id);
+        
+        window.onTextEdit = (id, el) => {
+            ui.updateCardUI(id);
+        };
+        
+        window.onTextSave = (id) => {
+            const textarea = document.getElementById(`textarea-${id}`);
+            if (textarea) {
+                historyManager.update(id, textarea.value);
+            }
+        };
+        
+        window.copyItem = async (id) => {
+            const item = AppState.history.find(i => i.id === id);
+            if (!item) return;
+            
+            const textarea = document.getElementById(`textarea-${id}`);
+            const contentToCopy = textarea ? textarea.value : item.content;
+            
+            if (item.type === 'text') {
+                try {
+                    await navigator.clipboard.writeText(contentToCopy);
+                    ui.showToast("Copied to clipboard.");
+                } catch (err) {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = contentToCopy;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    textArea.style.top = "0";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        ui.showToast("Copied successfully.");
+                    } catch (err2) {
+                        ui.showToast("Copy failed.");
+                    }
+                    document.body.removeChild(textArea);
+                }
+            } else {
+                try {
+                    const response = await fetch(item.content);
+                    const blob = await response.blob();
+                    await navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
+                    ui.showToast("Image copied to clipboard.");
+                } catch(e) {
+                    const a = document.createElement('a');
+                    a.href = item.content;
+                    a.download = `clip-img-${Date.now()}.png`;
+                    a.click();
+                    ui.showToast("Browser fallback: Saved as image file.");
+                }
+            }
+        };
+        
+        window.showQr = (id) => ui.generateItemQR(id);
+        window.openImage = (src) => {
+            const w = window.open("");
+            w.document.write(`<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;"><img src="${src}" style="max-width:100%;max-height:100%;"></body>`);
+        };
+
+        window.addEventListener('load', async () => {
+            await storageManager.init();
+            AppState.history = await storageManager.getAll();
+            AppState.history.sort((a, b) => b.createdAt - a.createdAt);
+            
+            if (auth) {
+                fb.signInAnonymously(auth).then(u => {
+                    AppState.currentUser = u.user;
+                }).catch(e => console.warn("Auth failed, running locally."));
+            }
+            
+            ui.init();
+        });
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        textarea { border: none !important; resize: none; background: transparent; }
+        .modal-animate { animation: modal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes modal-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        #itemQrCode svg { width: 100%; height: auto; border-radius: 16px; shape-rendering: crispEdges; }
+        .live-text-anchor { font-size: 14px; color: #f1f5f9; user-select: none; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 min-h-screen flex flex-col antialiased">
+
+    <!-- Navbar -->
+    <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/></svg>
+                </div>
+                <div>
+                    <h1 class="font-black text-slate-900 tracking-tighter text-xl leading-none">CLIPBOARD PRO</h1>
+                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Smart Editor & Secure Storage</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 sm:gap-4">
+                <div class="flex items-center gap-1 sm:gap-2 mr-2 border-r border-slate-200 pr-2 sm:pr-4">
+                    <a href="https://youtube.com/@textcube" target="_blank" class="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition shadow-sm bg-white border border-slate-200" title="YouTube Channel">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </a>
+                    <a href="https://kitscript.com/game" target="_blank" class="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition shadow-sm bg-white border border-slate-200" title="Homepage">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </a>
+                </div>
+
+                <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-full border border-slate-200">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    <span class="text-[11px] font-black text-slate-600 uppercase">Local Active</span>
+                </div>
+                <button onclick="document.getElementById('modalOverlay').classList.remove('hidden'); document.getElementById('settingsModal').classList.remove('hidden');" class="bg-white border border-slate-200 p-2.5 rounded-xl hover:bg-slate-50 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1-1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 flex-grow">
+        
+        <!-- Sidebar -->
+        <div class="lg:col-span-3 space-y-6">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 sticky top-24">
+                <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5">Quick Tools</h2>
+                <div class="space-y-4">
+                    <button onclick="clipboard.readFromSystem()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-3 active:scale-[0.98]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        SCAN CLIPBOARD
+                    </button>
+                    
+                    <div class="bg-blue-50/50 rounded-2xl p-5 border border-blue-100">
+                        <p class="text-[11px] text-blue-800 font-bold leading-relaxed">
+                            <span class="block mb-2 text-blue-600 font-black tracking-tight">💡 Editor Pro</span>
+                            Feel free to edit text. A green <span class="text-green-600 font-black">[SAVE]</span> button will appear when content changes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="lg:col-span-9 space-y-6">
+            <div class="flex justify-between items-end px-2">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Clipboard History</h2>
+                    <p class="text-xs text-slate-400 font-bold mt-1">Changes must be saved to apply to local storage.</p>
+                </div>
+                <!-- Red-themed Clear All Button for better visibility -->
+                <button onclick="ui.openConfirmClear()" class="flex items-center gap-2 text-xs font-black bg-red-50 text-red-600 px-4 py-2.5 rounded-xl transition border border-red-100 hover:bg-red-100 hover:border-red-200 shadow-sm active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                    CLEAR ALL
+                </button>
+            </div>
+
+            <div id="historyContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 pb-20">
+                <!-- Items -->
+            </div>
+
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center py-40 opacity-20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                <p class="mt-6 font-black text-xl tracking-tight text-center leading-tight">No history found.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals Overlay -->
+    <div id="modalOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" onclick="ui.closeModals()">
+        <div class="w-full max-w-lg" onclick="event.stopPropagation()">
+            
+            <!-- Clear All Confirmation Modal -->
+            <div id="confirmClearModal" class="modal bg-white rounded-[40px] shadow-2xl overflow-hidden hidden modal-animate">
+                <div class="p-10 text-center">
+                    <div class="inline-flex bg-red-50 p-5 rounded-3xl mb-6 text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/></svg>
+                    </div>
+                    <h3 class="font-black text-2xl mb-2 tracking-tight">Clear All Data?</h3>
+                    <p class="text-sm text-slate-500 font-medium mb-10 leading-relaxed">
+                        This action will permanently delete all your clipboard history from local storage. This cannot be undone.
+                    </p>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="ui.closeModals()" class="bg-slate-100 text-slate-900 font-black py-5 rounded-2xl hover:bg-slate-200 transition active:scale-95 uppercase tracking-tighter">Cancel</button>
+                        <button onclick="historyManager.executeClearAll()" class="bg-red-500 text-white font-black py-5 rounded-2xl hover:bg-red-600 transition shadow-lg shadow-red-200 active:scale-95 uppercase tracking-tighter">Yes, Delete All</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- QR Share Modal -->
+            <div id="itemQrModal" class="modal bg-white rounded-[40px] shadow-2xl overflow-hidden hidden modal-animate">
+                <div class="p-10 text-center flex flex-col items-center">
+                    <div class="inline-flex bg-blue-50 p-4 rounded-3xl mb-6 text-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                    </div>
+                    <h3 class="font-black text-2xl mb-2 tracking-tight">QR Transfer</h3>
+                    <p class="text-xs text-slate-400 font-bold mb-8 tracking-widest uppercase italic">iPhone Live-Text Optimized</p>
+                    
+                    <div class="relative group bg-white p-6 rounded-[32px] shadow-2xl shadow-blue-100 border border-slate-50 mb-6">
+                        <div id="itemQrCode"></div>
+                        <div id="qrLiveTextAnchor" class="live-text-anchor mt-4 text-center break-all opacity-10"></div>
+                    </div>
+                    
+                    <div class="w-full bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-2">
+                        <p id="qrGuideText" class="text-[11px] text-slate-600 font-black leading-relaxed text-center"></p>
+                    </div>
+                    
+                    <button onclick="ui.closeModals()" class="mt-6 w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-black transition active:scale-[0.98]">CLOSE</button>
+                </div>
+            </div>
+
+            <!-- Settings Modal -->
+            <div id="settingsModal" class="modal bg-white rounded-3xl shadow-2xl overflow-hidden hidden modal-animate">
+                <div class="p-8">
+                    <h3 class="font-black text-xl mb-6 tracking-tight">Settings</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <span class="text-sm font-bold text-slate-700 tracking-tight">Storage Limit (IndexedDB)</span>
+                            <span class="text-sm font-black text-blue-600">100 Items</span>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-2xl text-[11px] text-blue-700 font-bold leading-relaxed">
+                            Data is stored locally in your browser's IndexedDB. <br>Manual save ensures data integrity for your edits.
+                        </div>
+                    </div>
+                    <button onclick="ui.closeModals()" class="mt-8 w-full bg-slate-900 text-white font-black py-4 rounded-2xl">CLOSE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
