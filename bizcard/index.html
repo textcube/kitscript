@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizCard Pro | QR Business Card Designer</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@400;700&family=Playfair+Display:wght@700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Html2Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: #ffffff;
+            --accent-color: #4f46e5;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        header {
+            background: var(--panel-bg);
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .logo-area { font-weight: 800; font-size: 1.1rem; color: var(--accent-color); display: flex; align-items: center; gap: 10px; }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 340px 1fr 320px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        @media (max-width: 1024px) {
+            .app-container { grid-template-columns: 300px 1fr 280px; }
+        }
+
+        @media (max-width: 850px) {
+            .app-container { grid-template-columns: 1fr; overflow-y: auto; height: auto; }
+            body { overflow-y: auto; }
+        }
+
+        .panel { background: var(--panel-bg); padding: 1.25rem; overflow-y: auto; border-right: 1px solid var(--border-color); }
+        .panel-right { border-right: none; border-left: 1px solid var(--border-color); }
+        .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+
+        .form-group { margin-bottom: 0.75rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-main); }
+        input[type="text"], input[type="email"], input[type="tel"], input[type="url"], select, textarea {
+            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; transition: all 0.2s;
+        }
+        input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1); }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .btn { background: var(--accent-color); color: white; border: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-outline { background: white; border: 1px solid var(--accent-color); color: var(--accent-color); }
+
+        .preview-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; position: relative; }
+        
+        /* 명함 컨테이너 */
+        #card-container {
+            width: 500px;
+            height: 317px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+
+        .card-body { 
+            flex: 1; 
+            padding: 2.2rem; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            position: relative; 
+            z-index: 5;
+            min-height: 0;
+        }
+        .card-header { display: flex; align-items: flex-start; gap: 1rem; flex-shrink: 0; }
+        .card-logo { width: 45px; height: 45px; object-fit: contain; }
+        .card-profile { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .card-name { font-size: 1.6rem; font-weight: 800; line-height: 1.1; margin-bottom: 2px; }
+        .card-title { font-size: 0.9rem; font-weight: 500; opacity: 0.8; }
+        .card-company { font-size: 0.8rem; font-weight: 700; margin-top: 4px; color: var(--accent-color); }
+
+        .card-contact { font-size: 0.72rem; line-height: 1.6; margin-top: auto; flex-shrink: 1; min-height: 0; }
+        .card-contact div { display: flex; align-items: center; gap: 6px; }
+
+        /* QR 섹션 */
+        .card-qr-section { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1.5rem; 
+            background: rgba(0,0,0,0.03); 
+            position: relative; 
+            z-index: 5; 
+            transition: 0.3s ease;
+            flex-shrink: 0;
+        }
+        #qrcode-wrap { background: #fff; padding: 6px; border-radius: 8px; position: relative; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .qr-logo-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 22%; height: 22%; background: white; padding: 2px; border-radius: 2px; display: none; }
+
+        .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+        .temp-item { padding: 8px 4px; border: 1px solid var(--border-color); border-radius: 6px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 600; background: #fff; }
+        .temp-item.active { border-color: var(--accent-color); background: rgba(79, 70, 229, 0.05); color: var(--accent-color); }
+        
+        .control-group { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .control-group:last-child { border-bottom: none; }
+        .flex-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        input[type="color"] { border: none; width: 24px; height: 24px; cursor: pointer; background: none; }
+        input[type="range"] { cursor: pointer; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-area">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        BizCard Pro
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
+        <button class="btn" onclick="downloadQR()">Save QR Only</button>
+    </div>
+</header>
+
+<main class="app-container">
+    <!-- LEFT: CONTENT INPUT -->
+    <aside class="panel">
+        <div class="panel-title">Information</div>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="in-name" value="Tony Kim">
+        </div>
+        <div class="form-group">
+            <label>Job Title</label>
+            <input type="text" id="in-title" value="Producer">
+        </div>
+        <div class="form-group">
+            <label>Company</label>
+            <input type="text" id="in-company" value="Bunt Games">
+        </div>
+        <div class="row">
+            <div class="form-group"><label>Phone</label><input type="tel" id="in-phone" value="010-0000-0000"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="in-email" value="tony@kitscript.com"></div>
+        </div>
+        <div class="form-group">
+            <label>Website</label>
+            <input type="url" id="in-web" value="kitscript.com">
+        </div>
+        <div class="form-group">
+            <label>YouTube</label>
+            <input type="url" id="in-youtube" value="youtube.com/@textcube">
+        </div>
+        <div class="form-group">
+            <label>Address</label>
+            <input type="text" id="in-addr" value="Seoul, South Korea">
+        </div>
+
+        <div class="panel-title" style="margin-top: 1rem;">Assets</div>
+        <div class="form-group">
+            <label>Company Logo</label>
+            <input type="file" id="f-logo" accept="image/*" style="font-size: 0.7rem;">
+        </div>
+        <div class="form-group">
+            <label>Profile Picture</label>
+            <input type="file" id="f-profile" accept="image/*" style="font-size: 0.7rem;">
+        </div>
+
+        <div class="panel-title" style="margin-top: 1rem;">QR Configuration</div>
+        <div class="form-group">
+            <label>QR Mode</label>
+            <select id="qr-mode">
+                <option value="vcard" selected>Add to Contacts (vCard)</option>
+                <option value="url">Direct Link (Website)</option>
+                <option value="youtube">Direct Link (YouTube)</option>
+            </select>
+        </div>
+    </aside>
+
+    <!-- CENTER: LIVE PREVIEW -->
+    <section class="preview-area">
+        <div id="card-container">
+            <div class="card-body" id="card-main">
+                <div class="card-header" id="view-header">
+                    <img id="view-logo" src="" class="card-logo" alt="logo">
+                    <img id="view-profile" src="" class="card-profile hidden" alt="profile">
+                    <div>
+                        <div class="card-name" id="view-name">Tony Kim</div>
+                        <div class="card-title" id="view-title">Producer</div>
+                        <div class="card-company" id="view-company">Bunt Games</div>
+                    </div>
+                </div>
+                <div class="card-contact" id="view-contact">
+                    <div id="row-phone">📞 <span id="v-phone">010-0000-0000</span></div>
+                    <div id="row-email">✉️ <span id="v-email">tony@kitscript.com</span></div>
+                    <div id="row-web">🌐 <span id="v-web">kitscript.com</span></div>
+                    <div id="row-youtube">🎬 <span id="v-youtube">youtube.com/@textcube</span></div>
+                    <div id="row-addr">📍 <span id="v-addr">Seoul, South Korea</span></div>
+                </div>
+            </div>
+            <div class="card-qr-section" id="qr-box">
+                <div id="qrcode-wrap">
+                    <div id="qrcode"></div>
+                    <img id="qr-logo" class="qr-logo-overlay" src="" alt="">
+                </div>
+            </div>
+        </div>
+        <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.75rem;">Preview rendered at 1:1 scale.</p>
+    </section>
+
+    <!-- RIGHT: DESIGN CONTROLS -->
+    <aside class="panel panel-right">
+        <div class="panel-title">Templates</div>
+        <div class="template-grid">
+            <div class="temp-item active" id="btn-corporate" onclick="applyTemp('corporate')">Corporate</div>
+            <div class="temp-item" id="btn-minimal" onclick="applyTemp('minimal')">Minimal</div>
+            <div class="temp-item" id="btn-dark" onclick="applyTemp('dark')">Dark</div>
+        </div>
+
+        <div class="panel-title">Background</div>
+        <div class="control-group">
+            <div class="flex-row">
+                <label>Gradient Mode</label>
+                <input type="checkbox" id="check-grad">
+            </div>
+            <div class="flex-row">
+                <label>Primary BG</label>
+                <input type="color" id="col-bg1" value="#ffffff">
+            </div>
+            <div class="flex-row" id="grad-col2-row" style="display: none;">
+                <label>Secondary BG</label>
+                <input type="color" id="col-bg2" value="#f1f5f9">
+            </div>
+            <div class="flex-row">
+                <label>Text Color</label>
+                <input type="color" id="col-text" value="#0f172a">
+            </div>
+        </div>
+
+        <div class="panel-title">Typography</div>
+        <div class="control-group">
+            <div class="form-group">
+                <label>Font Family</label>
+                <select id="sel-font">
+                    <option value="'Inter', sans-serif">Inter (Modern)</option>
+                    <option value="'Montserrat', sans-serif">Montserrat (Bold)</option>
+                    <option value="'Playfair Display', serif">Playfair (Classic)</option>
+                    <option value="'Roboto Mono', monospace">Mono (Tech)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Scale (<span id="txt-scale">1.0</span>)</label>
+                <input type="range" id="range-scale" min="0.7" max="1.5" step="0.05" value="1.0" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="panel-title">QR Styling</div>
+        <div class="control-group">
+            <div class="flex-row">
+                <label>QR Color</label>
+                <input type="color" id="qr-fg" value="#000000">
+            </div>
+            <div class="flex-row">
+                <label>QR BG</label>
+                <input type="color" id="qr-bg" value="#ffffff">
+            </div>
+            <div class="flex-row">
+                <label>Overlay Logo</label>
+                <input type="checkbox" id="qr-logo-toggle">
+            </div>
+        </div>
+    </aside>
+</main>
+
+<script>
+    const DEFAULT_LOGO = `data:image/svg+xml;base64,${btoa('<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="20" fill="#4f46e5"/><path d="M30 30h30a15 15 0 0 1 0 30h-30z" fill="white" opacity="0.4"/><path d="M35 35h20a10 10 0 0 1 0 20h-20z" fill="white"/></svg>')}`;
+    
+    const state = {
+        name: "Tony Kim", title: "Producer", company: "Bunt Games",
+        phone: "010-0000-0000", email: "tony@kitscript.com", web: "kitscript.com", youtube: "youtube.com/@textcube", addr: "Seoul, South Korea",
+        logo: DEFAULT_LOGO, profile: null,
+        bg1: "#ffffff", bg2: "#f1f5f9", isGrad: false, txtCol: "#0f172a",
+        font: "'Inter', sans-serif", scale: 1.0,
+        qrFg: "#000000", qrBg: "#ffffff", showQrLogo: false, qrMode: "vcard",
+        template: "corporate"
+    };
+
+    let qrInstance = null;
+
+    window.onload = () => {
+        initQR();
+        bindEvents();
+        render();
+    };
+
+    function initQR() {
+        const container = document.getElementById('qrcode');
+        container.innerHTML = "";
+        qrInstance = new QRCode(container, {
+            text: generateQRData(),
+            width: state.template === 'minimal' ? 85 : 110, 
+            height: state.template === 'minimal' ? 85 : 110,
+            colorDark: state.qrFg, colorLight: state.qrBg,
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
+
+    function generateQRData() {
+        const urlSafeWeb = state.web.trim().startsWith('http') ? state.web.trim() : `https://${state.web.trim()}`;
+        const urlSafeYT = state.youtube.trim().startsWith('http') ? state.youtube.trim() : `https://${state.youtube.trim()}`;
+        
+        if (state.qrMode === 'url') return state.web.trim() ? urlSafeWeb : "https://kitscript.com";
+        if (state.qrMode === 'youtube') return state.youtube.trim() ? urlSafeYT : "https://youtube.com/@textcube";
+        if (state.qrMode === 'email') return `mailto:${state.email}`;
+        
+        return `BEGIN:VCARD\nVERSION:3.0\nFN:${state.name}\nORG:${state.company}\nTITLE:${state.title}\nTEL;TYPE=CELL:${state.phone}\nEMAIL:${state.email}\nURL;type=WORK:${urlSafeWeb}\nURL;type=SOCIAL:${urlSafeYT}\nADR:;;${state.addr}\nEND:VCARD`;
+    }
+
+    /**
+     * 필드 유무에 따라 미리보기 행을 토글하는 헬퍼 함수
+     */
+    function toggleRowVisibility(id, value) {
+        const element = document.getElementById(id);
+        if (value && value.trim() !== "") {
+            element.classList.remove('hidden');
+        } else {
+            element.classList.add('hidden');
+        }
+    }
+
+    function render() {
+        // 데이터 업데이트
+        document.getElementById('view-name').innerText = state.name;
+        document.getElementById('view-title').innerText = state.title;
+        document.getElementById('view-company').innerText = state.company;
+        document.getElementById('v-phone').innerText = state.phone;
+        document.getElementById('v-email').innerText = state.email;
+        document.getElementById('v-web').innerText = state.web;
+        document.getElementById('v-youtube').innerText = state.youtube;
+        document.getElementById('v-addr').innerText = state.addr;
+
+        // 공백 필드 숨기기 로직
+        toggleRowVisibility('row-web', state.web);
+        toggleRowVisibility('row-youtube', state.youtube);
+        toggleRowVisibility('row-addr', state.addr);
+        toggleRowVisibility('row-phone', state.phone);
+        toggleRowVisibility('row-email', state.email);
+
+        const card = document.getElementById('card-container');
+        const qBox = document.getElementById('qr-box');
+        const cBody = document.getElementById('card-main');
+        const cContact = document.getElementById('view-contact');
+        
+        card.style.fontFamily = state.font;
+        card.style.color = state.txtCol;
+        card.style.transform = `scale(${state.scale})`;
+        
+        if (state.isGrad) {
+            card.style.background = `linear-gradient(135deg, ${state.bg1}, ${state.bg2})`;
+        } else {
+            card.style.background = state.bg1;
+        }
+
+        // 템플릿별 레이아웃 보정
+        if (state.template === 'minimal') {
+            card.style.flexDirection = 'column';
+            cBody.style.padding = '1.5rem 2rem';
+            cContact.style.fontSize = '0.65rem';
+            cContact.style.lineHeight = '1.4';
+            cContact.style.marginTop = '0.5rem';
+            
+            qBox.style.width = '100%';
+            qBox.style.height = 'auto';
+            qBox.style.padding = '0 2rem 1.5rem';
+            qBox.style.alignItems = 'flex-end';
+            qBox.style.background = 'transparent';
+        } else {
+            card.style.flexDirection = 'row';
+            cBody.style.padding = '2.2rem';
+            cContact.style.fontSize = '0.72rem';
+            cContact.style.lineHeight = '1.6';
+            cContact.style.marginTop = 'auto';
+
+            qBox.style.width = '170px';
+            qBox.style.height = '100%';
+            qBox.style.padding = '1.5rem';
+            qBox.style.alignItems = 'center';
+            qBox.style.background = 'rgba(0,0,0,0.03)';
+        }
+
+        // 이미지 처리
+        const logo = document.getElementById('view-logo');
+        logo.src = state.logo;
+        const prof = document.getElementById('view-profile');
+        if (state.profile) {
+            prof.src = state.profile;
+            prof.classList.remove('hidden');
+        } else {
+            prof.classList.add('hidden');
+        }
+
+        // QR 재생성
+        const qContainer = document.getElementById('qrcode');
+        qContainer.innerHTML = "";
+        const qrSize = state.template === 'minimal' ? 85 : 105;
+        qrInstance = new QRCode(qContainer, {
+            text: generateQRData(),
+            width: qrSize, height: qrSize,
+            colorDark: state.qrFg, colorLight: state.qrBg,
+            correctLevel: QRCode.CorrectLevel.M
+        });
+
+        const qrLogo = document.getElementById('qr-logo');
+        if (state.showQrLogo) {
+            qrLogo.style.display = 'block';
+            qrLogo.src = state.logo;
+            qrLogo.style.background = state.qrBg;
+        } else {
+            qrLogo.style.display = 'none';
+        }
+    }
+
+    function bindEvents() {
+        const mapping = {
+            'in-name': 'name', 'in-title': 'title', 'in-company': 'company',
+            'in-phone': 'phone', 'in-email': 'email', 'in-web': 'web', 
+            'in-youtube': 'youtube', 'in-addr': 'addr',
+            'col-bg1': 'bg1', 'col-bg2': 'bg2', 'col-text': 'txtCol',
+            'sel-font': 'font', 'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode'
+        };
+
+        Object.entries(mapping).forEach(([id, key]) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                state[key] = e.target.value;
+                render();
+            });
+        });
+
+        document.getElementById('range-scale').addEventListener('input', (e) => {
+            state.scale = parseFloat(e.target.value);
+            document.getElementById('txt-scale').innerText = state.scale.toFixed(2);
+            render();
+        });
+
+        document.getElementById('check-grad').addEventListener('change', (e) => {
+            state.isGrad = e.target.checked;
+            document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
+            render();
+        });
+
+        document.getElementById('qr-logo-toggle').addEventListener('change', (e) => {
+            state.showQrLogo = e.target.checked;
+            render();
+        });
+
+        document.getElementById('f-logo').addEventListener('change', (e) => handleFile(e, 'logo'));
+        document.getElementById('f-profile').addEventListener('change', (e) => handleFile(e, 'profile'));
+    }
+
+    function handleFile(e, key) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            state[key] = ev.target.result;
+            render();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function applyTemp(type) {
+        state.template = type;
+        document.querySelectorAll('.temp-item').forEach(i => i.classList.remove('active'));
+        document.getElementById('btn-' + type).classList.add('active');
+
+        if (type === 'corporate') {
+            state.bg1 = "#ffffff"; state.txtCol = "#0f172a";
+            state.isGrad = false;
+            state.qrBg = "#ffffff"; state.qrFg = "#000000";
+        } else if (type === 'minimal') {
+            state.bg1 = "#ffffff"; state.txtCol = "#0f172a";
+            state.isGrad = false;
+            state.qrBg = "#ffffff"; state.qrFg = "#000000";
+        } else if (type === 'dark') {
+            state.bg1 = "#1e293b"; state.txtCol = "#f8fafc";
+            state.qrBg = "#1e293b"; state.qrFg = "#ffffff";
+            state.isGrad = true; state.bg2 = "#0f172a";
+        }
+        
+        document.getElementById('col-bg1').value = state.bg1;
+        document.getElementById('col-bg2').value = state.bg2;
+        document.getElementById('col-text').value = state.txtCol;
+        document.getElementById('qr-bg').value = state.qrBg;
+        document.getElementById('qr-fg').value = state.qrFg;
+        document.getElementById('check-grad').checked = state.isGrad;
+        document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
+
+        render();
+    }
+
+    async function exportCard() {
+        const card = document.getElementById('card-container');
+        const originalScale = card.style.transform;
+        card.style.transform = 'scale(1)';
+
+        try {
+            const canvas = await html2canvas(card, {
+                scale: 3, 
+                useCORS: true,
+                backgroundColor: null,
+                logging: false
+            });
+            const link = document.createElement('a');
+            link.download = `BizCard_${state.name.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } finally {
+            card.style.transform = originalScale;
+        }
+    }
+
+    function downloadQR() {
+        const canvas = document.querySelector('#qrcode canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = `QR_${state.name.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+</script>
+
+</body>
+</html>
