@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClipCut Pro - 8-BIT EDITION</title>
+    <!-- Retro Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #000000;
+            --bg-surface: #111111;
+            --bg-panel: #222222;
+            --accent: #00ff00; /* Neon Green */
+            --accent-hover: #55ff55;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border: #ffffff;
+            --danger: #ff0000;
+            --success: #00ff00;
+            --warning: #ffff00;
+            --yt-red: #ff0000;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; padding: 0; 
+            outline: none; 
+            image-rendering: pixelated; 
+        }
+
+        body {
+            font-family: 'DotGothic16', 'Press Start 2P', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* CRT Scanline Effect Overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 5000;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+
+        header {
+            height: 70px;
+            padding: 0 1.5rem;
+            background-color: var(--bg-surface);
+            border-bottom: 4px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand h1 { 
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1rem; 
+            color: var(--accent); 
+            text-shadow: 3px 3px 0px #005500;
+        }
+        .brand span { 
+            font-size: 0.6rem; 
+            color: var(--warning); 
+            border: 2px solid var(--warning); 
+            padding: 4px 8px;
+        }
+
+        .header-links { display: flex; align-items: center; gap: 12px; }
+        .icon-link {
+            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px;
+            background: var(--bg-panel);
+            border: 3px solid var(--border);
+            color: var(--text-main);
+            text-decoration: none;
+            box-shadow: 3px 3px 0px #555;
+        }
+        .icon-link:hover { color: var(--accent); border-color: var(--accent); transform: translate(-2px, -2px); box-shadow: 5px 5px 0px var(--accent); }
+        .icon-link:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #555; }
+
+        main { display: grid; grid-template-columns: 320px 1fr 340px; flex-grow: 1; overflow: hidden; }
+
+        .sidebar {
+            background-color: var(--bg-surface);
+            border-right: 4px solid var(--border);
+            display: flex; flex-direction: column; overflow-y: auto; padding: 1.5rem; gap: 1.5rem;
+        }
+        .right-bar { border-right: none; border-left: 4px solid var(--border); }
+
+        .viewport { display: flex; flex-direction: column; background-color: #111; position: relative; }
+        .canvas-wrap { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; position: relative; }
+        
+        canvas { 
+            max-width: 100%; max-height: 100%; 
+            background-color: #000; 
+            border: 4px solid var(--border);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            z-index: 5;
+        }
+
+        /* Color Bar (SMPTE) Empty State Background */
+        #empty-state {
+            position: absolute;
+            width: calc(100% - 4rem);
+            height: calc(100% - 4rem);
+            max-width: 1280px; /* Video default width constraint */
+            max-height: 720px;
+            border: 4px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            z-index: 10;
+            /* SMPTE Color Bars Pattern */
+            background: linear-gradient(90deg, 
+                #c0c0c0 14.28%, #ffff00 14.28% 28.56%, 
+                #00ffff 28.56% 42.84%, #00ff00 42.84% 57.12%, 
+                #ff00ff 57.12% 71.4%, #ff0000 71.4% 85.68%, 
+                #0000ff 85.68%);
+        }
+
+        #empty-state::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4); /* Darken bars for text readability */
+            z-index: 1;
+        }
+
+        .no-signal-content {
+            position: relative;
+            z-index: 5;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border: 2px solid var(--accent);
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .blink {
+            animation: blinker 1s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        .bottom-shelf { background-color: var(--bg-surface); border-top: 4px solid var(--border); padding: 1rem 1.5rem; }
+        .timeline-container { position: relative; margin-bottom: 1rem; padding: 10px 0; }
+        .timeline-track { 
+            height: 40px; background: #000; border: 3px solid var(--border); position: relative; cursor: pointer; 
+        }
+        
+        .trim-range-overlay { position: absolute; height: 100%; background: rgba(0, 255, 0, 0.2); border-left: 4px solid var(--accent); border-right: 4px solid var(--accent); pointer-events: none; z-index: 1; }
+        
+        .trim-handle {
+            position: absolute; top: -12px; width: 16px; height: 64px; background: var(--warning); border: 3px solid #000;
+            cursor: ew-resize; z-index: 20; box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+        }
+        .trim-handle:hover { background: #fff; }
+
+        .playhead { position: absolute; top: 0; width: 4px; height: 100%; background: var(--accent); pointer-events: none; z-index: 10; }
+
+        .controls-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: nowrap;
+            gap: 15px;
+        }
+        
+        .btn {
+            font-family: 'Press Start 2P', cursive;
+            background: var(--bg-panel); color: var(--text-main); border: 3px solid var(--border);
+            padding: 0.6rem 0.8rem; 
+            font-size: 0.7rem; 
+            cursor: pointer; 
+            box-shadow: 3px 3px 0px #444; 
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) { 
+            background: #444; 
+            border-color: var(--accent); 
+            color: var(--accent);
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px #000;
+        }
+        .btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #444; }
+        
+        .btn.primary { background: var(--accent); color: #000; border-color: #000; box-shadow: 3px 3px 0px #008800; }
+        .btn.primary:hover { 
+            background: #ffffff; 
+            color: #000000; 
+            border-color: #000000;
+            box-shadow: 4px 4px 0px var(--accent);
+            transform: translate(-1px, -1px);
+        }
+
+        .btn-icon-only {
+            padding: 0.6rem;
+            min-width: 50px;
+        }
+
+        .btn-group { display: flex; align-items: center; gap: 6px; }
+
+        .panel-head { 
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.55rem; color: var(--accent); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; 
+        }
+        
+        .layer-card { 
+            background: #1a1a1a; border: 3px solid var(--border); padding: 1rem; margin-bottom: 1.25rem;
+            box-shadow: 4px 4px 0px #000;
+        }
+        .layer-card.selected { border-color: var(--accent); box-shadow: 4px 4px 0px var(--accent); }
+
+        input, select { 
+            background: #000; border: 2px solid var(--border); color: var(--accent); padding: 0.6rem; 
+            font-family: 'DotGothic16', sans-serif; font-size: 0.8rem; width: 100%; 
+        }
+        input:focus { border-color: var(--warning); color: var(--warning); }
+        
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+        #time-display { 
+            font-family: 'Press Start 2P', cursive; 
+            font-size: 0.65rem; 
+            color: var(--accent); 
+            background: #000; 
+            padding: 10px 14px; 
+            border: 2px solid var(--accent);
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3);
+            white-space: nowrap;
+            flex-grow: 0;
+        }
+
+        #export-overlay { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
+        .progress-container { width: 500px; height: 30px; background: #111; border: 4px solid var(--border); overflow: hidden; margin: 2rem 0; position: relative; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; box-shadow: inset -10px 0 0 #00aa00; }
+        
+        #status-toast { 
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); 
+            background: var(--warning); color: #000; padding: 1rem 2rem; border: 4px solid #000;
+            font-family: 'Press Start 2P', cursive; font-size: 0.6rem; z-index: 2000; display: none; 
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <h1>CLIP-CUT.EXE</h1>
+        <span>LVL. 25-DEV</span>
+    </div>
+    <div class="header-links">
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" title="YouTube Channel">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.342 1.12.338 3.44.338 3.44s.004 2.32-.338 3.44a2.01 2.01 0 0 1-1.415 1.419c-1.123.302-5.288.332-6.11.335h-.088c-.822-.003-4.987-.033-6.11-.335a2.01 2.01 0 0 1-1.415-1.42C.301 9.26.305 6.94.305 6.94s-.004-2.32.338-3.44a2.01 2.01 0 0 1 1.415-1.419c1.123-.302 5.288-.332 6.11-.335zM6.5 5.5v3l2.65-1.5L6.5 5.5z"/></svg>
+        </a>
+        <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="KitScript Home">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 2.146 7.854L3 7.707V14.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7.707l.854.147a.5.5 0 0 0 .708-.708l-6-6zM13 13.5H4V6.207l4-4 4 4V13.5z"/></svg>
+        </a>
+    </div>
+</header>
+
+<main>
+    <aside class="sidebar">
+        <section>
+            <div class="panel-head">TEXT_LAYER <button class="btn" id="add-text-btn" style="padding: 4px 8px; font-size: 0.5rem;">+ NEW</button></div>
+            <div id="text-layers-list"></div>
+        </section>
+        <section>
+            <div class="panel-head">SPRITE_ASSET 
+                <label class="btn" style="cursor:pointer; padding: 4px 8px; font-size: 0.5rem;">+ LOAD <input type="file" id="image-input" class="hidden" accept="image/*"></label>
+            </div>
+            <div id="image-layers-list"></div>
+        </section>
+        <section>
+            <div class="panel-head">SOUND_MIX</div>
+            <label class="btn" style="width:100%; justify-content:center; cursor:pointer;">
+                LOAD_BGM <input type="file" id="audio-input" class="hidden" accept="audio/*">
+            </label>
+            <div id="audio-controls" class="hidden" style="margin-top:15px">
+                <div class="layer-card">
+                    <label style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">BGM_VOL</label>
+                    <input type="range" id="music-vol" min="0" max="1" step="0.05" value="0.5" style="margin-bottom: 12px;">
+                    <label style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">VID_VOL</label>
+                    <input type="range" id="video-vol" min="0" max="1" step="0.05" value="1">
+                </div>
+            </div>
+        </section>
+        <section>
+            <div class="panel-head">MAP_SOURCE</div>
+            <label class="btn primary" style="width:100%; justify-content:center; cursor:pointer;">
+                IMPORT_VIDEO <input type="file" id="video-input" class="hidden" accept="video/*">
+            </label>
+        </section>
+    </aside>
+
+    <section class="viewport">
+        <div class="canvas-wrap">
+            <canvas id="preview-canvas"></canvas>
+            <div id="empty-state">
+                <div class="no-signal-content">
+                    <p class="blink" style="font-family: 'Press Start 2P'; margin-bottom: 20px; color: var(--accent);">[ NO SIGNAL ]</p>
+                    <p style="font-size:0.8rem; color: #fff;">INSERT VIDEO TO START LEVEL</p>
+                </div>
+            </div>
+        </div>
+        <div class="bottom-shelf">
+            <div class="timeline-container">
+                <div class="timeline-track" id="timeline-track">
+                    <div id="trim-range-visual" class="trim-range-overlay"></div>
+                    <div class="trim-handle left" id="handle-in"></div>
+                    <div class="trim-handle right" id="handle-out"></div>
+                    <div id="playhead" class="playhead"></div>
+                </div>
+            </div>
+            <div class="controls-row">
+                <!-- Grouped Playback Controls -->
+                <div class="btn-group">
+                    <button class="btn" id="prev-frame" title="Prev Frame">&lt;</button>
+                    <button class="btn primary btn-icon-only" id="play-pause-btn" title="Start/Stop">
+                        <svg id="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </button>
+                    <button class="btn" id="next-frame" title="Next Frame">&gt;</button>
+                </div>
+
+                <!-- LCD Style Time Display -->
+                <div id="time-display">00:00.00  00:00.00</div>
+
+                <!-- Sound Toggle -->
+                <div class="btn-group">
+                    <button class="btn btn-icon-only" id="mute-btn" title="Toggle Sound">
+                        <svg id="mute-icon" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/>
+                            <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/>
+                            <path d="M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182l-.707.707A3.489 3.489 0 0 1 9.025 8a3.489 3.489 0 0 1-1.025 2.475l.707.707zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <aside class="sidebar right-bar">
+        <section>
+            <div class="panel-head">TRIM_CONFIG</div>
+            <div class="input-row">
+                <div>
+                    <label style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">IN_PT</label>
+                    <input type="number" id="trim-in" value="0" step="0.1" min="0">
+                </div>
+                <div>
+                    <label style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">OUT_PT</label>
+                    <input type="number" id="trim-out" value="0" step="0.1">
+                </div>
+            </div>
+            <button class="btn" id="reset-trim" style="width:100%; font-size: 0.5rem; margin-top: 10px;">RESET_PTS</button>
+        </section>
+        <section>
+            <div class="panel-head">SPEED_RATE</div>
+            <select id="speed-select">
+                <option value="0.5">0.5x SLOW</option>
+                <option value="1" selected>1.0x NORM</option>
+                <option value="2">2.0x FAST</option>
+            </select>
+        </section>
+        <button class="btn primary" id="export-btn" style="width:100%; padding:1.5rem; margin-top:auto; font-size: 1rem;">
+            BAKE
+        </button>
+    </aside>
+</main>
+
+<div id="status-toast">READY</div>
+<div id="export-overlay">
+    <h1 style="font-family: 'Press Start 2P'; color: #00ff00; margin-bottom: 10px;">ENCODING...</h1>
+    <p id="export-status-msg" style="font-size: 0.7rem; color:var(--text-muted);">BUILDING VIDEO BINARY</p>
+    <div class="progress-container"><div id="progress-fill" class="progress-fill"></div></div>
+    <div id="progress-percent" style="font-family: 'Press Start 2P'; color:var(--warning); font-size: 2rem; margin-bottom: 2rem;">0%</div>
+    <button class="btn" id="cancel-export-btn" style="border-color: var(--danger); color: var(--danger); padding: 1rem 2rem;">TERMINATE</button>
+</div>
+
+<script>
+    /**
+     * ClipCut Pro v2.12.5 - 8-BIT RETRO EDITION
+     * Optimized horizontal UI and SMPTE color bar empty state.
+     */
+    const state = {
+        video: null, videoURL: null, audio: null, audioURL: null,
+        isPlaying: false, duration: 0, trim: { start: 0, end: 0 },
+        speed: 1, isMuted: false,
+        textOverlays: [], imageOverlays: [], selectedLayerId: null,
+        music: { enabled: false, volume: 0.5, videoVolume: 1.0 },
+        canvas: document.getElementById('preview-canvas'),
+        ctx: document.getElementById('preview-canvas').getContext('2d'),
+        exporting: false, exportCancelled: false,
+        audioCtx: null, vSource: null, mSource: null,
+        activeHandle: null, resizingLayer: null, draggingLayer: null,
+        fonts: [
+            { name: "Black Han Sans", value: "'Black Han Sans', sans-serif" },
+            { name: "Retro Pixel", value: "'DotGothic16', sans-serif" },
+            { name: "8-Bit Latin", value: "'Press Start 2P', cursive" },
+            { name: "Mono Code", value: "'JetBrains Mono', monospace" }
+        ]
+    };
+
+    const UI = {
+        videoInput: document.getElementById('video-input'), imageInput: document.getElementById('image-input'),
+        audioInput: document.getElementById('audio-input'), playPauseBtn: document.getElementById('play-pause-btn'),
+        playIcon: document.getElementById('play-icon'),
+        timelineTrack: document.getElementById('timeline-track'), playhead: document.getElementById('playhead'),
+        timeDisplay: document.getElementById('time-display'), trimIn: document.getElementById('trim-in'),
+        trimOut: document.getElementById('trim-out'), trimVisual: document.getElementById('trim-range-visual'), 
+        handleIn: document.getElementById('handle-in'), handleOut: document.getElementById('handle-out'),
+        speedSelect: document.getElementById('speed-select'), muteBtn: document.getElementById('mute-btn'), 
+        muteIcon: document.getElementById('mute-icon'),
+        textList: document.getElementById('text-layers-list'), imageList: document.getElementById('image-layers-list'),
+        audioControls: document.getElementById('audio-controls'), exportBtn: document.getElementById('export-btn'),
+        exportOverlay: document.getElementById('export-overlay'), progressFill: document.getElementById('progress-fill'),
+        progressPercent: document.getElementById('progress-percent'), cancelExportBtn: document.getElementById('cancel-export-btn'),
+        toast: document.getElementById('status-toast')
+    };
+
+    const ICONS = {
+        play: `<path d="M8 5v14l11-7z"/>`,
+        stop: `<path d="M6 6h12v12H6z"/>`,
+        soundOn: `<path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/><path d="M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182l-.707.707A3.489 3.489 0 0 1 9.025 8a3.489 3.489 0 0 1-1.025 2.475l.707.707zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z"/>`,
+        soundOff: `<path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z"/><line x1="1" y1="1" x2="15" y2="15" stroke="currentColor" stroke-width="2" />`
+    };
+
+    function init() {
+        UI.videoInput.addEventListener('change', handleVideoUpload);
+        UI.imageInput.addEventListener('change', handleImageUpload);
+        UI.audioInput.addEventListener('change', handleAudioUpload);
+        UI.playPauseBtn.addEventListener('click', togglePlay);
+        
+        UI.timelineTrack.addEventListener('mousedown', handleTimelineMouseDown);
+        UI.handleIn.addEventListener('mousedown', (e) => { e.stopPropagation(); state.activeHandle = 'in'; });
+        UI.handleOut.addEventListener('mousedown', (e) => { e.stopPropagation(); state.activeHandle = 'out'; });
+        
+        window.addEventListener('mousemove', handleGlobalMouseMove);
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+
+        UI.trimIn.addEventListener('change', updateTrimFromInputs);
+        UI.trimOut.addEventListener('change', updateTrimFromInputs);
+        document.getElementById('reset-trim').addEventListener('click', () => { if(state.video){ UI.trimIn.value=0; UI.trimOut.value=state.duration.toFixed(2); updateTrimFromInputs(); } });
+        
+        UI.speedSelect.addEventListener('change', e => { state.speed = parseFloat(e.target.value); if(state.video) state.video.playbackRate = state.speed; });
+        UI.muteBtn.addEventListener('click', () => { 
+            state.isMuted = !state.isMuted; 
+            UI.muteIcon.innerHTML = state.isMuted ? ICONS.soundOff : ICONS.soundOn;
+            if(state.video) state.video.muted = state.isMuted; 
+        });
+        document.getElementById('add-text-btn').addEventListener('click', addTextOverlay);
+        UI.exportBtn.addEventListener('click', startExport);
+        UI.cancelExportBtn.addEventListener('click', cancelExport);
+        document.getElementById('prev-frame').addEventListener('click', () => seekRelative(-0.1));
+        document.getElementById('next-frame').addEventListener('click', () => seekRelative(0.1));
+        
+        setupLayerInteractions();
+        requestAnimationFrame(renderLoop);
+    }
+
+    function handleTimelineMouseDown(e) {
+        if (!state.video || state.activeHandle) return;
+        const rect = UI.timelineTrack.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        state.video.currentTime = Math.max(0, Math.min(state.duration, pos * state.duration));
+        if(state.audio) state.audio.currentTime = state.video.currentTime;
+    }
+
+    function handleGlobalMouseMove(e) {
+        if (state.activeHandle && state.video) {
+            const rect = UI.timelineTrack.getBoundingClientRect();
+            let pos = (e.clientX - rect.left) / rect.width;
+            pos = Math.max(0, Math.min(1, pos));
+            const time = pos * state.duration;
+
+            if (state.activeHandle === 'in') {
+                state.trim.start = Math.min(time, state.trim.end - 0.1);
+                UI.trimIn.value = state.trim.start.toFixed(2);
+                state.video.currentTime = state.trim.start;
+            } else {
+                state.trim.end = Math.max(time, state.trim.start + 0.1);
+                UI.trimOut.value = state.trim.end.toFixed(2);
+                state.video.currentTime = state.trim.end;
+            }
+            updateTrimVisual();
+            return;
+        }
+
+        const rect = state.canvas.getBoundingClientRect();
+        const mx = ((e.clientX - rect.left) / rect.width) * 100, my = ((e.clientY - rect.top) / rect.height) * 100;
+
+        if (state.resizingLayer) {
+            const l = state.resizingLayer;
+            if (l.img) l.w = Math.max(5, mx - l.x);
+            else l.size = Math.max(10, (my - l.y) * (state.canvas.height / 100));
+            renderLayers(); return;
+        }
+        if (state.draggingLayer) {
+            state.draggingLayer.x = mx - state.dragOffset.x;
+            state.draggingLayer.y = my - state.dragOffset.y; return;
+        }
+    }
+
+    function handleGlobalMouseUp() { state.activeHandle = null; state.resizingLayer = null; state.draggingLayer = null; }
+
+    function updateTrimFromInputs() { state.trim.start = parseFloat(UI.trimIn.value); state.trim.end = parseFloat(UI.trimOut.value); updateTrimVisual(); }
+    
+    function updateTrimVisual() { 
+        if (!state.duration) return; 
+        const s = (state.trim.start / state.duration) * 100;
+        const e = (state.trim.end / state.duration) * 100;
+        UI.trimVisual.style.left = s + '%';
+        UI.trimVisual.style.width = (e - s) + '%';
+        UI.handleIn.style.left = `calc(${s}% - 8px)`;
+        UI.handleOut.style.left = `calc(${e}% - 8px)`;
+    }
+
+    function handleVideoUpload(e) {
+        const file = e.target.files[0]; if(!file) return;
+        state.videoURL = URL.createObjectURL(file);
+        state.video = document.createElement('video');
+        state.video.src = state.videoURL;
+        state.video.onloadeddata = () => {
+            state.duration = state.video.duration; state.trim.start = 0; state.trim.end = state.duration;
+            UI.trimIn.value = 0; UI.trimOut.value = state.duration.toFixed(2);
+            state.canvas.width = state.video.videoWidth; state.canvas.height = state.video.videoHeight;
+            state.video.currentTime = 0;
+            document.getElementById('empty-state').style.display = 'none'; 
+            updateTrimVisual(); 
+            const onInitialSeek = () => {
+                state.video.removeEventListener('seeked', onInitialSeek);
+                drawFrame(state.ctx, 0); showToast("VIDEO_INIT_OK");
+            };
+            state.video.addEventListener('seeked', onInitialSeek);
+        };
+    }
+
+    function handleImageUpload(e) {
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image(); img.src = event.target.result;
+            img.onload = () => { state.imageOverlays.push({ id: Date.now(), img, x: 10, y: 10, w: 20, opacity: 1, start: 0, end: state.duration }); renderLayers(); };
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleAudioUpload(e) { const file = e.target.files[0]; if(!file) return; state.audioURL = URL.createObjectURL(file); state.audio = new Audio(state.audioURL); state.music.enabled = true; UI.audioControls.classList.remove('hidden'); showToast("BGM_ATTACHED"); }
+
+    function addTextOverlay() { 
+        state.textOverlays.push({ id: Date.now(), content: "INSERT_COIN", x: 20, y: 20, size: 80, color: "#00ff00", font: "'Press Start 2P', cursive", start: 0, end: state.duration }); 
+        renderLayers(); 
+    }
+
+    function renderLayers() {
+        UI.textList.innerHTML = '';
+        state.textOverlays.forEach((txt, idx) => {
+            const el = document.createElement('div'); el.className = `layer-card ${state.selectedLayerId === txt.id ? 'selected' : ''}`;
+            el.innerHTML = `
+                <input type="text" value="${txt.content}" oninput="state.textOverlays[${idx}].content=this.value">
+                <div class="input-row" style="margin-top:8px">
+                    <select onchange="state.textOverlays[${idx}].font=this.value">
+                        ${state.fonts.map(f=>`<option value="${f.value}" ${txt.font===f.value?'selected':''}>${f.name}</option>`).join('')}
+                    </select>
+                    <input type="color" value="${txt.color}" oninput="state.textOverlays[${idx}].color=this.value">
+                </div>
+                <button class="btn" style="width:100%; border-color:var(--danger); color:var(--danger); font-size: 0.5rem;" onclick="state.textOverlays.splice(${idx}, 1); renderLayers();">DELETE</button>
+            `;
+            UI.textList.appendChild(el);
+        });
+        UI.imageList.innerHTML = '';
+        state.imageOverlays.forEach((img, idx) => {
+            const el = document.createElement('div'); el.className = `layer-card ${state.selectedLayerId === img.id ? 'selected' : ''}`;
+            el.innerHTML = `<label style="font-size:0.5rem; color:#00ff00">SIZE</label><input type="number" value="${img.w.toFixed(1)}" oninput="state.imageOverlays[${idx}].w=parseFloat(this.value)">
+            <label style="font-size:0.5rem; color:#00ff00; margin-top:8px; display:block">ALPHA</label><input type="range" min="0" max="1" step="0.05" value="${img.opacity}" oninput="state.imageOverlays[${idx}].opacity=parseFloat(this.value)">
+            <button class="btn" style="width:100%; border-color:var(--danger); color:var(--danger); margin-top:12px; font-size: 0.5rem;" onclick="state.imageOverlays.splice(${idx}, 1); renderLayers();">DELETE</button>`;
+            UI.imageList.appendChild(el);
+        });
+    }
+
+    function setupLayerInteractions() {
+        state.canvas.addEventListener('mousedown', e => {
+            if(!state.video) return;
+            const rect = state.canvas.getBoundingClientRect();
+            const mx = ((e.clientX - rect.left) / rect.width) * 100, my = ((e.clientY - rect.top) / rect.height) * 100;
+            const overlays = [...state.textOverlays, ...state.imageOverlays];
+            if (state.selectedLayerId) {
+                const l = overlays.find(o => o.id === state.selectedLayerId);
+                if (l) {
+                    const h = getResizeHandlePos(l);
+                    if (Math.abs(mx - h.x) < 3 && Math.abs(my - h.y) < 3) { state.resizingLayer = l; return; }
+                }
+            }
+            const target = overlays.reverse().find(l => isInsideLayer(l, mx, my));
+            overlays.reverse(); 
+            if (target) {
+                state.selectedLayerId = target.id; state.draggingLayer = target;
+                state.dragOffset = { x: mx - target.x, y: my - target.y };
+                renderLayers();
+            } else { state.selectedLayerId = null; renderLayers(); }
+        });
+    }
+
+    function isInsideLayer(l, mx, my) {
+        if (l.img) {
+            const h = l.w * (l.img.height / l.img.width) * (state.canvas.width / state.canvas.height);
+            return mx >= l.x && mx <= l.x + l.w && my >= l.y && my <= l.y + h;
+        } else {
+            state.ctx.font = `bold ${l.size}px ${l.font}`;
+            const m = state.ctx.measureText(l.content);
+            const w = (m.width / state.canvas.width) * 100, h = (l.size / state.canvas.height) * 100;
+            return mx >= l.x && mx <= l.x + w && my >= l.y && my <= l.y + h;
+        }
+    }
+
+    function getResizeHandlePos(l) {
+        if (l.img) {
+            const h = l.w * (l.img.height / l.img.width) * (state.canvas.width / state.canvas.height);
+            return { x: l.x + l.w, y: l.y + h };
+        } else {
+            state.ctx.font = `bold ${l.size}px ${l.font}`;
+            const m = state.ctx.measureText(l.content);
+            return { x: l.x + (m.width / state.canvas.width) * 100, y: l.y + (l.size / state.canvas.height) * 100 };
+        }
+    }
+
+    function togglePlay() {
+        if (!state.video) return;
+        if (state.isPlaying) { 
+            state.video.pause(); 
+            if(state.audio) state.audio.pause(); 
+            state.isPlaying = false; 
+            UI.playIcon.innerHTML = ICONS.play;
+        } else { 
+            state.video.playbackRate = state.speed; 
+            state.video.play(); 
+            if(state.audio){ 
+                state.audio.currentTime = state.video.currentTime; 
+                state.audio.play(); 
+            } 
+            state.isPlaying = true; 
+            UI.playIcon.innerHTML = ICONS.stop;
+        }
+    }
+
+    function renderLoop() {
+        if (state.video && !state.exporting) {
+            const cur = state.video.currentTime;
+            UI.playhead.style.left = (cur / state.duration) * 100 + '%';
+            UI.timeDisplay.textContent = `${formatTime(cur)}  ${formatTime(state.duration)}`;
+            if(cur >= state.trim.end) state.video.currentTime = state.trim.start;
+            drawFrame(state.ctx, cur);
+        }
+        requestAnimationFrame(renderLoop);
+    }
+
+    function drawFrame(ctx, time) {
+        const { width, height } = state.canvas; ctx.clearRect(0, 0, width, height);
+        if (!state.video) return; 
+        ctx.drawImage(state.video, 0, 0, width, height);
+        
+        state.imageOverlays.forEach(l => {
+            if (time < l.start || time > l.end) return;
+            const dw = (l.w / 100) * width, dh = (l.img.height / l.img.width) * dw;
+            ctx.globalAlpha = l.opacity || 1;
+            ctx.drawImage(l.img, (l.x / 100) * width, (l.y / 100) * height, dw, dh);
+            ctx.globalAlpha = 1;
+            if (state.selectedLayerId === l.id) {
+                ctx.strokeStyle = '#00ff00'; ctx.lineWidth = 4; ctx.strokeRect((l.x/100)*width, (l.y/100)*height, dw, dh);
+                ctx.fillStyle = '#fff'; ctx.fillRect((l.x/100)*width + dw - 10, (l.y/100)*height + dh - 10, 20, 20);
+            }
+        });
+        
+        state.textOverlays.forEach(l => {
+            if (time < l.start || time > l.end) return;
+            ctx.fillStyle = l.color; 
+            ctx.font = `bold ${l.size}px ${l.font}`; 
+            ctx.textBaseline = "top";
+            const x = (l.x / 100) * width, y = (l.y / 100) * height;
+            ctx.fillText(l.content, x, y);
+            if (state.selectedLayerId === l.id) {
+                const m = ctx.measureText(l.content);
+                ctx.strokeStyle = '#00ff00'; ctx.lineWidth = 4; ctx.strokeRect(x - 8, y - 8, m.width + 16, l.size + 16);
+                ctx.fillStyle = '#fff'; ctx.fillRect(x + (m.width / state.canvas.width) * 100 * (state.canvas.width/100) + 8 - 10, y + (l.size / state.canvas.height) * 100 * (state.canvas.height/100) + 8 - 10, 20, 20);
+            }
+        });
+    }
+
+    function formatTime(s) { const m = Math.floor(s/60), sec = (s % 60).toFixed(2); return `${m.toString().padStart(2,'0')}:${sec.padStart(5,'0')}`; }
+    function seekRelative(delta) { if(!state.video) return; state.video.currentTime = Math.max(0, Math.min(state.duration, state.video.currentTime + delta)); }
+    function showToast(msg) { UI.toast.textContent = msg; UI.toast.style.display = 'block'; setTimeout(() => UI.toast.style.display = 'none', 2000); }
+    function cancelExport() { if (state.exporting) { state.exportCancelled = true; showToast("CMD_ABORTED"); } }
+
+    async function startExport() {
+        if (!state.video) return;
+        state.exporting = true; state.exportCancelled = false;
+        UI.exportOverlay.style.display = 'flex';
+        if (!state.audioCtx) state.audioCtx = new AudioContext();
+        await state.audioCtx.resume();
+        let dest = state.audioCtx.createMediaStreamDestination();
+        if (!state.isMuted) {
+            if (!state.vSource) state.vSource = state.audioCtx.createMediaElementSource(state.video);
+            const vg = state.audioCtx.createGain(); vg.gain.value = state.music.videoVolume;
+            state.vSource.disconnect(); state.vSource.connect(vg); vg.connect(dest);
+            state.video.currentTime = state.trim.start; state.video.play(); 
+        }
+        if (state.audio && state.music.enabled) {
+            if (!state.mSource) state.mSource = state.audioCtx.createMediaElementSource(state.audio);
+            const mg = state.audioCtx.createGain(); mg.gain.value = state.music.volume;
+            state.mSource.disconnect(); state.mSource.connect(mg); mg.connect(dest);
+            state.audio.currentTime = state.trim.start; state.audio.play();
+        }
+        const fps = 30, ft = 1/fps, totalDur = state.trim.end - state.trim.start;
+        const ec = document.createElement('canvas'); ec.width = state.canvas.width; ec.height = state.canvas.height;
+        const ectx = ec.getContext('2d');
+        const comb = new MediaStream([...ec.captureStream(fps).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        const rec = new MediaRecorder(comb, { mimeType: 'video/webm;codecs=vp9' });
+        const chunks = [];
+        rec.ondataavailable = e => chunks.push(e.data);
+        rec.onstop = () => {
+            if (!state.exportCancelled) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = `8BIT_STG_${Date.now()}.webm`; a.click(); }
+            state.exporting = false; UI.exportOverlay.style.display = 'none';
+        };
+        rec.start(); state.video.play(); 
+        let elapsed = 0;
+        while (elapsed <= totalDur) {
+            if (state.exportCancelled) { rec.stop(); state.video.pause(); if(state.audio) state.audio.pause(); return; }
+            const avt = state.trim.start + elapsed; state.video.currentTime = avt;
+            await new Promise(res => { const os=()=>{state.video.removeEventListener('seeked',os); requestAnimationFrame(()=>requestAnimationFrame(res));}; state.video.addEventListener('seeked',os); });
+            drawFrame(ectx, avt);
+            const p = (elapsed/totalDur)*100; UI.progressFill.style.width = p+'%'; UI.progressPercent.textContent = Math.floor(p)+'%';
+            elapsed += ft; await new Promise(r => setTimeout(r, 10));
+        }
+        rec.stop(); state.video.pause(); if(state.audio) state.audio.pause();
+    }
+    init();
+</script>
+</body>
+</html>
