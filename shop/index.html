@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RETRO MENU FACTORY - v5.9 BAKE_ENGINE_UPGRADED</title>
+    <!-- 폰트 로드: 영문 Press Start 2P / 한글 둥근모 -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css">
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-magenta: #ff00ff;
+            --neon-blue: #00f2ff;
+            --neon-red: #ff003c;
+            --arcade-black: #050505;
+            --ui-dark: #0a0a0a;
+            --border-color: #333;
+            --main-font: 'Press Start 2P', cursive;
+            --kr-font: 'NeoDunggeunmo', cursive;
+            --green-glow: 0 0 15px rgba(57, 255, 20, 0.6);
+            --magenta-glow: 0 0 10px rgba(255, 0, 255, 0.5);
+            --blue-glow: 0 0 10px rgba(0, 242, 255, 0.5);
+            --red-glow: 0 0 10px rgba(255, 0, 60, 0.5);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0;
+            background-color: var(--arcade-black);
+            color: var(--neon-green);
+            font-family: var(--main-font);
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+            font-size: 11px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* CRT Scanline Effect */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            z-index: 10000;
+            background-size: 100% 4px;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: #000;
+            border-bottom: 2px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .brand-zone { display: flex; align-items: center; gap: 12px; }
+        .title {
+            color: var(--neon-green);
+            text-shadow: var(--green-glow);
+            font-size: 14px;
+            letter-spacing: 1px;
+            margin-right: 10px;
+        }
+
+        /* Brand Icon Buttons */
+        .brand-icon-btn {
+            width: 32px; height: 32px;
+            border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            background: #000; cursor: pointer;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+        .brand-icon-btn svg { width: 18px; height: 18px; fill: #444; transition: 0.2s; }
+        
+        .brand-icon-btn.youtube:hover { border-color: var(--neon-red); box-shadow: var(--red-glow); }
+        .brand-icon-btn.youtube:hover svg { fill: var(--neon-red); }
+        
+        .brand-icon-btn.home:hover { border-color: var(--neon-blue); box-shadow: var(--blue-glow); }
+        .brand-icon-btn.home:hover svg { fill: var(--neon-blue); }
+
+        .controls { display: flex; gap: 10px; }
+        .btn {
+            background: #000;
+            border: 1px solid #444;
+            color: #888;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: var(--main-font);
+            font-size: 8px;
+            transition: 0.1s;
+            text-transform: uppercase;
+        }
+        .btn:hover { border-color: var(--neon-green); color: var(--neon-green); box-shadow: var(--green-glow); }
+        .btn.bake {
+            background: var(--neon-green);
+            color: #000;
+            border-color: var(--neon-green);
+            font-weight: bold;
+        }
+
+        /* Main Container */
+        .main-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #080808;
+            border-right: 2px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .sidebar-label {
+            font-size: 9px;
+            color: #555;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #222;
+            padding-bottom: 5px;
+            letter-spacing: 1px;
+            margin-top: 25px;
+        }
+        .sidebar-label:first-child { margin-top: 0; }
+
+        .add-small-btn {
+            color: var(--neon-green);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 5px;
+            transition: 0.2s;
+        }
+        .add-small-btn:hover { text-shadow: var(--green-glow); transform: scale(1.2); }
+
+        /* Config Zones */
+        .config-zone { margin-bottom: 20px; }
+        .config-zone label { display: block; font-size: 7px; color: #444; margin-bottom: 5px; }
+        .config-zone input {
+            width: 100%; background: #000; border: 1px solid #222;
+            color: var(--neon-blue); font-family: var(--main-font);
+            padding: 10px; font-size: 8px; outline: none;
+        }
+        .config-zone input:focus { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(0, 242, 255, 0.3); }
+
+        /* Category Manager Area */
+        .cat-editor-zone {
+            display: flex; gap: 5px; margin-bottom: 25px;
+        }
+        .cat-editor-zone input {
+            flex-grow: 1; background: #000; border: 1px solid #333;
+            color: var(--neon-green); font-family: var(--main-font);
+            padding: 10px; font-size: 8px; outline: none;
+        }
+        .cat-editor-zone input:focus { border-color: var(--neon-green); box-shadow: var(--green-glow); }
+
+        .category-tabs { margin-bottom: 30px; }
+        .cat-tab-wrapper { position: relative; margin-bottom: 8px; display: flex; gap: 4px; height: 40px; }
+        .cat-tab {
+            flex-grow: 1; text-align: left; padding: 0 12px;
+            background: #000; border: 1px solid #1a1a1a;
+            color: #444; font-size: 8px; cursor: pointer;
+            font-family: var(--main-font);
+            transition: 0.2s;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            line-height: 38px;
+        }
+        .cat-tab:hover { color: #888; border-color: #333; }
+        .cat-tab.active { border-color: var(--neon-magenta); color: var(--neon-magenta); background: rgba(255, 0, 255, 0.05); }
+        
+        .cat-inline-input {
+            flex-grow: 1; background: #111; border: 1px solid var(--neon-magenta);
+            color: var(--neon-magenta); font-family: var(--main-font);
+            padding: 0 11px; font-size: 8px; outline: none;
+            box-shadow: var(--magenta-glow);
+            line-height: 38px;
+        }
+
+        .cat-tool-btn {
+            width: 38px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: #111; border: 1px solid #222; color: #444;
+            cursor: pointer; font-size: 10px;
+        }
+        .cat-tool-btn:hover { color: var(--neon-green); border-color: var(--neon-green); }
+        .cat-tool-btn.del:hover { color: #f00; border-color: #f00; }
+
+        /* Grid System */
+        .menu-grid {
+            padding: 50px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 50px;
+            overflow-y: auto;
+            background: #000;
+            background-image: 
+                linear-gradient(rgba(57, 255, 20, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(57, 255, 20, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            align-content: start;
+        }
+
+        /* Card Styling */
+        .card {
+            background: #0c0c0c;
+            border: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+            position: relative;
+            transition: 0.2s;
+            overflow: hidden;
+            box-shadow: 8px 8px 0 var(--border-color);
+        }
+        
+        .card.small { min-height: 400px; grid-column: span 1; }
+        .card.medium { min-height: 550px; grid-column: span 1; }
+        .card.large { min-height: 550px; grid-column: span 2; }
+
+        .card:hover { border-color: var(--neon-green); box-shadow: 8px 8px 0 var(--neon-green); }
+
+        .card-img {
+            width: 100%; background: #111; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; position: relative;
+        }
+        .small .card-img { height: 180px; }
+        .medium .card-img { height: 300px; }
+        .large .card-img { height: 300px; }
+
+        .card-img::before {
+            content: "ASSET_VIEW";
+            color: #1a1a1a; font-size: 10px; font-family: var(--main-font);
+        }
+        .card-img img { width: 100%; height: 100%; object-fit: cover; z-index: 5; position: absolute; top: 0; left: 0; }
+
+        .card-content { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px; position: relative; }
+        .large .card-content { padding: 35px; gap: 18px; }
+
+        .card-cat-tag { font-size: 8px; color: var(--neon-magenta); opacity: 0.6; }
+        .card-name { font-size: 14px; color: var(--neon-blue); }
+        .large .card-name { font-size: 18px; }
+
+        .desc-qr-wrap { display: flex; gap: 15px; align-items: flex-start; }
+        .card-desc { font-family: var(--kr-font); font-size: 13px; color: #777; line-height: 1.7; min-height: 50px; word-break: keep-all; flex: 1; }
+        .large .card-desc { font-size: 15px; }
+
+        .card-qr-box {
+            width: 70px; height: 70px; 
+            background: #fff; border: 2px solid var(--neon-green);
+            padding: 3px; box-shadow: var(--green-glow);
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card-qr-box img { width: 100%; height: 100%; image-rendering: pixelated; }
+
+        .card-price { font-size: 24px; color: var(--neon-green); margin-top: auto; font-weight: bold; }
+        .large .card-price { font-size: 32px; }
+
+        .badge {
+            position: absolute; top: 15px; right: 15px;
+            background: var(--neon-green); color: #000;
+            padding: 6px 12px; font-size: 9px; font-weight: bold;
+            z-index: 10;
+        }
+
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; margin-top: 15px; background: #222; border: 1px solid #222; }
+        .action-btn {
+            background: #0c0c0c; border: none; color: #444;
+            padding: 12px 0; cursor: pointer; font-family: var(--main-font); font-size: 8px;
+            transition: 0.1s;
+        }
+        .action-btn:hover { background: #1a1a1a; color: var(--neon-green); }
+
+        /* Modal Area */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal {
+            background: #000; border: 1px solid var(--neon-green);
+            padding: 40px; width: 500px; box-shadow: var(--green-glow);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; color: #444; font-size: 8px; font-family: var(--main-font); }
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%; background: #080808; border: 1px solid #222;
+            padding: 15px; color: var(--neon-green); font-family: var(--kr-font); outline: none; font-size: 14px;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: var(--neon-green); background: #000; }
+
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #000; border: 1px solid var(--neon-green);
+            padding: 15px 30px; color: var(--neon-green);
+            box-shadow: var(--green-glow); z-index: 9999; display: none; font-size: 9px;
+        }
+        
+        .preset-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .preset-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px; border: 1px solid #1a1a1a;
+            cursor: pointer; background: #000; color: #555; font-size: 8px;
+        }
+        .preset-item:hover { color: #888; border-color: #333; }
+        .preset-item.active { border-color: var(--neon-green); color: var(--neon-green); background: rgba(57, 255, 20, 0.05); }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="brand-zone">
+            <div class="title" id="mainTitleDisplay">RETRO MENU FACTORY</div>
+            <!-- Branded Link Buttons -->
+            <a href="https://youtube.com/@kitscript" target="_blank" class="brand-icon-btn youtube" title="YouTube Channel">
+                <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+            <a href="https://kitscript.com" target="_blank" class="brand-icon-btn home" title="Official Homepage">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
+            <span style="font-size: 8px; color: #444; margin-left: 10px;" id="sysVersionDisplay">SYSTEM_v5.9_BOOTING...</span>
+        </div>
+        <div class="controls">
+            <button class="btn" onclick="app.newProject()">RESET</button>
+            <button class="btn" onclick="app.loadSample()">SAMPLES</button>
+            <button class="btn" onclick="app.saveToCloud()">SAVE</button>
+            <button class="btn bake" onclick="app.bakeHTML()">BAKE</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <span class="sidebar-label">GLOBAL_CONFIG</span>
+            <div class="config-zone">
+                <label>STORE_NAME (BAKE_TITLE)</label>
+                <input type="text" id="storeNameInput" oninput="app.updateStoreName(this.value)" placeholder="STORE_NAME...">
+            </div>
+            <div class="config-zone">
+                <label>LANDING_PAGE_URL (QR_TARGET)</label>
+                <input type="text" id="shopUrlInput" oninput="app.updateShopUrl(this.value)" placeholder="https://...">
+            </div>
+
+            <span class="sidebar-label">CATEGORY_MANAGER</span>
+            <div class="cat-editor-zone">
+                <input type="text" id="catInput" placeholder="NEW_CAT_NAME...">
+                <button class="btn" onclick="app.addCategory()">ADD</button>
+            </div>
+            
+            <div class="category-tabs" id="catListContainer">
+                <!-- Dynamic tabs -->
+            </div>
+
+            <span class="sidebar-label">
+                QUICK_PRESETS
+                <span class="add-small-btn" onclick="app.openNewItemModal()" title="CREATE_NEW_ASSET">[+]</span>
+            </span>
+            <div id="presetContainer" class="preset-list">
+                <!-- Preset items rendered by JS -->
+            </div>
+        </aside>
+
+        <main class="menu-grid" id="menuGrid"></main>
+    </div>
+
+    <!-- Modal Area -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="sidebar-label" id="modalTitle" style="color:var(--neon-green); border-color:var(--neon-green)">ASSET_PROPERTY_EDITOR</div>
+            <div class="input-group">
+                <label>STRING_NAME</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="input-group">
+                <label>LAYOUT_규격 (SIZE)</label>
+                <select id="editSize">
+                    <option value="small">SMALL (컴팩트 / 1-Col)</option>
+                    <option value="medium" selected>MEDIUM (표준 / 1-Col)</option>
+                    <option value="large">LARGE (히어로 / 2-Col)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>TYPE_CATEGORY</label>
+                <select id="editCategorySelect"></select>
+            </div>
+            <div class="input-group">
+                <label>VAL_PRICE (₩)</label>
+                <input type="text" id="editPrice">
+            </div>
+            <div class="input-group">
+                <label>TEXT_DESCRIPTION</label>
+                <textarea id="editDesc" rows="3"></textarea>
+            </div>
+            <div class="input-group">
+                <label>FLAG_STATUS</label>
+                <select id="editBadge">
+                    <option value="">NULL</option>
+                    <option value="NEW">NEW</option>
+                    <option value="BEST">BEST</option>
+                    <option value="SOLD OUT">SOLD OUT</option>
+                </select>
+            </div>
+            <div class="controls" style="margin-top:20px;">
+                <button class="btn bake" onclick="app.saveEdit()">WRITE_COMMIT</button>
+                <button class="btn" onclick="app.closeModal()">CANCEL_OPS</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">SYSTEM_LOG: READY</div>
+    <input type="file" id="fileInput" style="display:none" accept="image/*">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration Fallback
+        let firebaseConfig = null;
+        try {
+            firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch (e) { firebaseConfig = null; }
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'retro-menu-factory-v5';
+
+        const DEFAULT_CATS = ['PIZZA', 'PASTA', 'SIDE', 'DRINK'];
+        const PIZZA_DATA = [
+            { name: "Margherita", cat: "PIZZA", desc: "나폴리 정통 화덕 피자. 토마토 소스, 모짜렐라, 바질.", price: "18,000", size: "large" },
+            { name: "Diavola", cat: "PIZZA", desc: "매콤한 살라미와 페페론치노가 가미된 중독성 강한 피자.", price: "21,000", size: "medium" },
+            { name: "Pomodoro", cat: "PASTA", desc: "신선한 방울토마토와 바질로 맛을 낸 깔끔한 파스타.", price: "15,000", size: "medium" },
+            { name: "House Salad", cat: "SIDE", desc: "매일 아침 배송되는 신선한 야채와 발사믹 드레싱.", price: "9,000", size: "small" }
+        ];
+
+        class RetroMenuApp {
+            constructor() {
+                this.state = { 
+                    storeName: "OKSUDONG HWADUK PIZZA",
+                    shopUrl: "https://kitscript.com/game/shop",
+                    items: [], 
+                    categories: DEFAULT_CATS,
+                    user: null, 
+                    editingId: null, 
+                    filter: 'ALL',
+                    renamingCat: null
+                };
+                // Check if Firebase is available
+                this.isDemoMode = !firebaseConfig || !firebaseConfig.apiKey;
+                window.app = this;
+                this.init();
+            }
+
+            async init() {
+                if (this.isDemoMode) {
+                    this.setupLocalDemo();
+                    return;
+                }
+
+                try {
+                    const fbApp = initializeApp(firebaseConfig);
+                    const auth = getAuth(fbApp);
+                    this.db = getFirestore(fbApp);
+
+                    const initAuth = async () => {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else { await signInAnonymously(auth); }
+                    };
+                    
+                    await initAuth();
+
+                    onAuthStateChanged(auth, (user) => {
+                        this.state.user = user;
+                        if (user) { 
+                            document.getElementById('sysVersionDisplay').innerText = "SYSTEM_v5.9_CLOUD_SYNC";
+                            this.syncCloud(); 
+                            this.showToast("CLOUD_SYNC_ACTIVE"); 
+                        }
+                    });
+                    this.renderAll();
+                } catch (error) {
+                    console.error("Firebase init failed, fallback to demo:", error);
+                    this.setupLocalDemo();
+                }
+            }
+
+            setupLocalDemo() {
+                this.isDemoMode = true;
+                document.getElementById('sysVersionDisplay').innerText = "SYSTEM_v5.9_LOCAL_DEMO";
+                this.showToast("LOCAL_DEMO_MODE");
+                
+                // Load from localStorage if exists
+                const saved = localStorage.getItem('retro_menu_v5_demo');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        this.state.items = data.items || [];
+                        this.state.categories = data.categories || DEFAULT_CATS;
+                        this.state.storeName = data.storeName || "OKSUDONG HWADUK PIZZA";
+                        this.state.shopUrl = data.shopUrl || "https://kitscript.com/game/shop";
+                    } catch (e) { console.error("Local load fail"); }
+                }
+                this.renderAll();
+            }
+
+            syncCloud() {
+                if (this.isDemoMode || !this.state.user) return;
+                const userDoc = doc(this.db, 'artifacts', appId, 'users', this.state.user.uid, 'settings', 'menuData');
+                onSnapshot(userDoc, (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        this.state.items = data.items || [];
+                        this.state.categories = data.categories || DEFAULT_CATS;
+                        this.state.storeName = data.storeName || "OKSUDONG HWADUK PIZZA";
+                        this.state.shopUrl = data.shopUrl || "https://kitscript.com/game/shop";
+                        this.renderAll();
+                    }
+                }, (err) => console.error("Snapshot error:", err));
+            }
+
+            async saveToCloud() {
+                if (this.isDemoMode) {
+                    localStorage.setItem('retro_menu_v5_demo', JSON.stringify({
+                        items: this.state.items,
+                        categories: this.state.categories,
+                        storeName: this.state.storeName,
+                        shopUrl: this.state.shopUrl
+                    }));
+                    this.showToast("LOCAL_STORAGE_SAVED");
+                    return;
+                }
+                if (!this.state.user) return;
+                try {
+                    const userDoc = doc(this.db, 'artifacts', appId, 'users', this.state.user.uid, 'settings', 'menuData');
+                    await setDoc(userDoc, { 
+                        items: this.state.items,
+                        categories: this.state.categories,
+                        storeName: this.state.storeName,
+                        shopUrl: this.state.shopUrl
+                    });
+                    this.showToast("CLOUD_SAVE_SUCCESS");
+                } catch (e) { this.showToast("SAVE_FAIL: CHECK_CONFIG"); }
+            }
+
+            updateStoreName(val) {
+                this.state.storeName = val;
+                this.renderUIOnly();
+            }
+
+            updateShopUrl(val) {
+                this.state.shopUrl = val;
+                this.renderGrid();
+            }
+
+            addCategory() {
+                const input = document.getElementById('catInput');
+                const name = input.value.trim().toUpperCase();
+                if (name && !this.state.categories.includes(name)) {
+                    this.state.categories.push(name);
+                    input.value = '';
+                    this.renderAll(); 
+                    if (!this.isDemoMode) this.saveToCloud();
+                    this.showToast(`CAT [${name}] ADDED`);
+                }
+            }
+
+            startRename(cat) {
+                this.state.renamingCat = cat;
+                this.renderCategories();
+                setTimeout(() => {
+                    const input = document.getElementById('renameInput-' + cat);
+                    if (input) { input.focus(); input.select(); }
+                }, 50);
+            }
+
+            handleRenameKey(e, oldName) {
+                if (e.key === 'Enter') this.confirmRename(oldName, e.target.value.trim().toUpperCase());
+                else if (e.key === 'Escape') { this.state.renamingCat = null; this.renderCategories(); }
+            }
+
+            confirmRename(oldName, newName) {
+                if (!this.state.renamingCat) return;
+                if (!newName || oldName === newName) { this.state.renamingCat = null; this.renderCategories(); return; }
+                if (this.state.categories.includes(newName)) { this.showToast("ERR: DUPLICATED"); this.state.renamingCat = null; this.renderCategories(); return; }
+
+                this.state.categories = this.state.categories.map(c => c === oldName ? newName : c);
+                this.state.items = this.state.items.map(i => i.category === oldName ? { ...i, category: newName } : i);
+                if (this.state.filter === oldName) this.state.filter = newName;
+                
+                this.state.renamingCat = null;
+                this.renderAll(); 
+                if (!this.isDemoMode) this.saveToCloud();
+            }
+
+            delCategory(name) {
+                if (confirm(`DELETE CATEGORY [${name}]?`)) {
+                    this.state.categories = this.state.categories.filter(c => c !== name);
+                    if (this.state.filter === name) this.state.filter = 'ALL';
+                    const fallback = this.state.categories[0] || 'NONE';
+                    this.state.items = this.state.items.map(i => i.category === name ? { ...i, category: fallback } : i);
+                    this.renderAll(); 
+                    if (!this.isDemoMode) this.saveToCloud();
+                }
+            }
+
+            setFilter(f) { this.state.filter = f; this.renderAll(); }
+
+            renderAll() {
+                this.renderUIOnly();
+                this.renderCategories();
+                this.renderPresets();
+                this.renderGrid();
+                this.updateModalSelect();
+            }
+
+            renderUIOnly() {
+                document.getElementById('storeNameInput').value = this.state.storeName;
+                document.getElementById('shopUrlInput').value = this.state.shopUrl;
+            }
+
+            renderCategories() {
+                const container = document.getElementById('catListContainer');
+                let html = `<div class="cat-tab-wrapper">
+                    <button class="cat-tab ${this.state.filter === 'ALL' ? 'active' : ''}" onclick="app.setFilter('ALL')">ALL_RESOURCES</button>
+                </div>`;
+                
+                this.state.categories.forEach(cat => {
+                    const isEditing = this.state.renamingCat === cat;
+                    html += `
+                    <div class="cat-tab-wrapper">
+                        ${isEditing ? 
+                            `<input type="text" class="cat-inline-input" id="renameInput-${cat}" value="${cat}" onkeydown="app.handleRenameKey(event, '${cat}')" onblur="app.confirmRename('${cat}', this.value.trim().toUpperCase())">` : 
+                            `<button class="cat-tab ${this.state.filter === cat ? 'active' : ''}" onclick="app.setFilter('${cat}')">${cat}</button>`
+                        }
+                        <span class="cat-tool-btn" onclick="app.startRename('${cat}')">✎</span>
+                        <span class="cat-tool-btn del" onclick="app.delCategory('${cat}')">X</span>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            updateModalSelect() {
+                const select = document.getElementById('editCategorySelect');
+                if (!select) return;
+                select.innerHTML = this.state.categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            }
+
+            renderPresets() {
+                const container = document.getElementById('presetContainer');
+                container.innerHTML = PIZZA_DATA.map(p => `
+                    <div class="preset-item ${this.isItemInWorkspace(p.name) ? 'active' : ''}" onclick="app.togglePreset('${p.name}')">
+                        <div class="checkbox" style="width: 14px; height: 14px; border: 1px solid #333; position: relative; flex-shrink:0;">
+                            ${this.isItemInWorkspace(p.name) ? '<span style="position:absolute; left:2px; top:-1px; color:var(--neon-green); font-size:10px;">X</span>' : ''}
+                        </div>
+                        <span>${p.name.toUpperCase()}</span>
+                    </div>
+                `).join('');
+            }
+
+            isItemInWorkspace(name) { return this.state.items.some(i => i.name === name); }
+
+            togglePreset(name) {
+                const idx = this.state.items.findIndex(i => i.name === name);
+                if (idx > -1) {
+                    this.state.items.splice(idx, 1);
+                } else {
+                    const preset = PIZZA_DATA.find(p => p.name === name);
+                    const cat = this.state.categories.includes(preset.cat) ? preset.cat : (this.state.categories[0] || 'PIZZA');
+                    this.state.items.push({
+                        id: 'ID_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                        name: preset.name, desc: preset.desc, price: preset.price,
+                        category: cat, badge: "", image: "", size: preset.size || "medium"
+                    });
+                }
+                this.renderAll(); 
+                if (!this.isDemoMode) this.saveToCloud();
+            }
+
+            renderGrid() {
+                const grid = document.getElementById('menuGrid');
+                const filtered = this.state.filter === 'ALL' ? this.state.items : this.state.items.filter(i => i.category === this.state.filter);
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.state.shopUrl)}`;
+                
+                if (filtered.length === 0) {
+                    grid.innerHTML = `<div class="card" style="grid-column: 1/-1; height: 350px; display: flex; align-items: center; justify-content: center; border: 1px dashed #222;">
+                        <span style="color:#222; font-family:var(--main-font); font-size:10px;">ASSET_BUFFER_EMPTY</span>
+                    </div>`;
+                    return;
+                }
+                grid.innerHTML = filtered.map(item => `
+                    <div class="card ${item.size || 'medium'}" data-id="${item.id}">
+                        ${item.badge ? `<div class="badge">${item.badge}</div>` : ''}
+                        <div class="card-img">${item.image ? `<img src="${item.image}">` : ''}</div>
+                        <div class="card-content">
+                            <div class="card-cat-tag">${item.category}</div>
+                            <div class="card-name">${item.name.toUpperCase()}</div>
+                            <div class="desc-qr-wrap">
+                                <div class="card-desc">${item.desc}</div>
+                                <div class="card-qr-box"><img src="${qrUrl}" alt="QR"></div>
+                            </div>
+                            <div class="card-price">₩ ${item.price}</div>
+                            <div class="card-actions">
+                                <button class="action-btn" onclick="app.changeImage('${item.id}')">IMG</button>
+                                <button class="action-btn" onclick="app.openEdit('${item.id}')">EDIT</button>
+                                <button class="action-btn" onclick="app.deleteItem('${item.id}')">DEL</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            openNewItemModal() {
+                this.state.editingId = null;
+                this.updateModalSelect();
+                document.getElementById('modalTitle').innerText = "NEW_ASSET_CREATOR";
+                document.getElementById('editName').value = "";
+                document.getElementById('editPrice').value = "";
+                document.getElementById('editDesc').value = "";
+                document.getElementById('editBadge').value = "";
+                document.getElementById('editSize').value = "medium";
+                document.getElementById('editCategorySelect').value = (this.state.filter === 'ALL' ? this.state.categories[0] : this.state.filter);
+                document.getElementById('modalOverlay').style.display = 'flex';
+            }
+
+            openEdit(id) {
+                const item = this.state.items.find(i => i.id === id);
+                if (!item) return;
+                this.state.editingId = id;
+                this.updateModalSelect();
+                document.getElementById('modalTitle').innerText = "ASSET_PROPERTY_EDITOR";
+                document.getElementById('editName').value = item.name;
+                document.getElementById('editPrice').value = item.price;
+                document.getElementById('editDesc').value = item.desc;
+                document.getElementById('editBadge').value = item.badge || "";
+                document.getElementById('editSize').value = item.size || "medium";
+                document.getElementById('editCategorySelect').value = item.category;
+                document.getElementById('modalOverlay').style.display = 'flex';
+            }
+
+            closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+            saveEdit() {
+                const nameInput = document.getElementById('editName').value.trim();
+                if (!nameInput) { this.showToast("ERR: NAME_REQUIRED"); return; }
+                if (this.state.editingId === null) {
+                    this.state.items.push({
+                        id: 'ID_' + Date.now(), name: nameInput,
+                        price: document.getElementById('editPrice').value, desc: document.getElementById('editDesc').value,
+                        badge: document.getElementById('editBadge').value, category: document.getElementById('editCategorySelect').value,
+                        size: document.getElementById('editSize').value, image: ""
+                    });
+                } else {
+                    const idx = this.state.items.findIndex(i => i.id === this.state.editingId);
+                    if (idx > -1) {
+                        this.state.items[idx] = {
+                            ...this.state.items[idx], name: nameInput,
+                            price: document.getElementById('editPrice').value, desc: document.getElementById('editDesc').value,
+                            badge: document.getElementById('editBadge').value, category: document.getElementById('editCategorySelect').value,
+                            size: document.getElementById('editSize').value
+                        };
+                    }
+                }
+                this.renderAll(); 
+                if (!this.isDemoMode) this.saveToCloud();
+                this.closeModal();
+            }
+
+            deleteItem(id) {
+                this.state.items = this.state.items.filter(i => i.id !== id);
+                this.renderAll(); 
+                if (!this.isDemoMode) this.saveToCloud();
+            }
+
+            changeImage(id) {
+                const input = document.getElementById('fileInput');
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        this.state.items = this.state.items.map(i => i.id === id ? { ...i, image: re.target.result } : i);
+                        this.renderAll(); 
+                        if (!this.isDemoMode) this.saveToCloud();
+                    };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            }
+
+            newProject() {
+                if (confirm("RESET_WORKSPACE?")) {
+                    this.state.items = []; this.state.categories = DEFAULT_CATS;
+                    this.state.storeName = "OKSUDONG HWADUK PIZZA"; this.state.shopUrl = "https://kitscript.com/game/shop";
+                    this.renderAll(); 
+                    if (!this.isDemoMode) this.saveToCloud();
+                    if (this.isDemoMode) localStorage.removeItem('retro_menu_v5_demo');
+                }
+            }
+
+            loadSample() {
+                this.state.items = PIZZA_DATA.map(p => ({
+                    id: 'ID_' + Math.random().toString(36).substr(2, 9),
+                    name: p.name, desc: p.desc, price: p.price,
+                    category: p.cat, badge: p.name === "Margherita" ? "BEST" : "",
+                    image: "", size: p.size || "medium"
+                }));
+                this.renderAll(); 
+                if (!this.isDemoMode) this.saveToCloud();
+                this.showToast("SAMPLES_LOADED");
+            }
+
+            showToast(msg) {
+                const t = document.getElementById('toast');
+                t.innerText = `[SYS] ${msg}`; t.style.display = 'block';
+                setTimeout(() => { t.style.display = 'none'; }, 2000);
+            }
+
+            bakeHTML() {
+                this.showToast("BAKING...");
+                const storeName = (this.state.storeName || "RETRO MENU").toUpperCase();
+                const shopUrl = this.state.shopUrl || "#";
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shopUrl)}`;
+
+                const sectionsHtml = this.state.categories.map(cat => {
+                    const catItems = this.state.items.filter(i => i.category === cat);
+                    if (catItems.length === 0) return '';
+                    const sectionId = cat.replace(/\s+/g, '_');
+                    const cards = catItems.map(item => `
+                        <div class="card ${item.size || 'medium'}">
+                            ${item.badge ? `<div class="badge">${item.badge}</div>` : ''}
+                            <div class="card-img">${item.image ? `<img src="${item.image}">` : ''}</div>
+                            <div class="card-content">
+                                <div class="card-title">${item.name.toUpperCase()}</div>
+                                <div class="desc-qr-wrap">
+                                    <div class="card-desc">${item.desc}</div>
+                                    <div class="card-qr-box"><img src="${qrUrl}" alt="QR"></div>
+                                </div>
+                                <div class="card-price">₩ ${item.price}</div>
+                            </div>
+                        </div>`).join('');
+                    return `<section id="${sectionId}" class="menu-section"><h2 class="section-title">${cat}</h2><div class="grid">${cards}</div></section>`;
+                }).join('');
+
+                const navLinksHtml = this.state.categories.map(cat => {
+                    if (!this.state.items.some(i => i.category === cat)) return '';
+                    return `<a href="#${cat.replace(/\s+/g, '_')}">${cat}</a>`;
+                }).join('');
+
+                const template = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${storeName}</title><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css"><style>
+                    :root { --ng: #39ff14; --nm: #ff00ff; --nb: #00f2ff; --bg: #050505; }
+                    html { scroll-behavior: smooth; }
+                    body { background: var(--bg); color: var(--ng); font-family: 'NeoDunggeunmo', cursive; padding: 0; margin: 0; overflow-x: hidden; }
+                    body::after { content: " "; display: block; position: fixed; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); z-index: 10000; background-size: 100% 4px; pointer-events: none; opacity: 0.2; }
+                    nav { position: sticky; top: 0; background: #000; border-bottom: 2px solid #333; padding: 0 40px; height: 80px; display: flex; align-items: center; justify-content: space-between; z-index: 500; font-family: 'Press Start 2P', cursive; font-size: 10px; }
+                    .nav-links { display: flex; gap: 30px; } .nav-links a { color: #666; text-decoration: none; transition: 0.2s; } .nav-links a:hover { color: var(--ng); }
+                    .order-btn { background: var(--nm); color: white; border: none; padding: 12px 24px; font-family: 'Press Start 2P', cursive; font-size: 9px; cursor: pointer; text-decoration: none; box-shadow: 0 0 10px var(--nm); }
+                    .header { text-align: center; padding: 120px 20px; background: #000; font-family: 'Press Start 2P', cursive; border-bottom: 2px solid var(--ng); }
+                    .header h1 { font-size: 32px; text-shadow: 0 0 10px var(--ng); margin: 0; text-transform: uppercase; }
+                    section { padding: 100px 40px; max-width: 1400px; margin: 0 auto; scroll-margin-top: 80px; }
+                    .section-title { font-family: 'Press Start 2P', cursive; font-size: 18px; color: var(--nm); margin-bottom: 60px; border-left: 10px solid var(--nm); padding-left: 20px; text-transform: uppercase; }
+                    
+                    /* BAKE GRID ENGINE (Synced with Editor) */
+                    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 50px; align-content: start; }
+                    .card { background: #0c0c0c; border: 1px solid #333; position: relative; box-shadow: 10px 10px 0 var(--ng); display: flex; flex-direction: column; overflow: hidden; }
+                    
+                    /* Multi-Scale Class Definitions */
+                    .card.small { min-height: 400px; grid-column: span 1; }
+                    .card.medium { min-height: 550px; grid-column: span 1; }
+                    .card.large { min-height: 550px; grid-column: span 2; }
+
+                    .card-img { background: #000; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+                    .small .card-img { height: 180px; }
+                    .medium .card-img, .large .card-img { height: 300px; }
+                    
+                    .card-img img { width: 100%; height: 100%; object-fit: cover; }
+                    .card-content { padding: 35px; display: flex; flex-direction: column; flex-grow: 1; position: relative; }
+                    .card-title { font-family: 'Press Start 2P', cursive; color: var(--nb); font-size: 16px; margin-bottom: 20px; }
+                    .large .card-title { font-size: 20px; }
+                    
+                    .desc-qr-wrap { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 30px; }
+                    .card-desc { font-size: 15px; color: #888; line-height: 1.8; word-break: keep-all; flex: 1; }
+                    .card-qr-box { width: 85px; height: 85px; background: #fff; border: 3px solid var(--ng); padding: 5px; box-shadow: 0 0 15px var(--ng); flex-shrink: 0; }
+                    .card-qr-box img { width: 100%; height: 100%; image-rendering: pixelated; }
+                    .card-price { color: var(--ng); font-size: 26px; margin-top: auto; font-weight: bold; }
+                    .large .card-price { font-size: 34px; }
+                    .badge { position: absolute; top: 20px; right: 20px; background: var(--ng); color: black; padding: 10px 18px; font-size: 11px; font-weight: bold; }
+                    
+                    /* Responsive Fallback */
+                    @media (max-width: 950px) { 
+                        .grid { grid-template-columns: 1fr; } 
+                        .card.large { grid-column: span 1; } 
+                        nav { height: auto; padding: 25px; flex-direction: column; gap: 25px; } 
+                        .nav-links { flex-wrap: wrap; justify-content: center; }
+                    }
+                </style></head><body>
+                    <nav><div class="nav-links">${navLinksHtml}</div><a href="${shopUrl}" target="_blank" class="order-btn">[ORDER_NOW]</a></nav>
+                    <div class="header"><h1>${storeName}</h1></div>
+                    ${sectionsHtml}
+                </body></html>`;
+                
+                const blob = new Blob([template], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `${storeName.toLowerCase().replace(/\s+/g, '-')}.html`;
+                a.click();
+            }
+        }
+        const app = new RetroMenuApp();
+    </script>
+</body>
+</html>
