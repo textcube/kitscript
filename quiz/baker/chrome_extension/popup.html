@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Quiz Baker Helper</title>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; width: 360px; margin: 0; padding: 12px; background: #111827; color: #e5e7eb; }
+    h1 { font-size: 14px; margin: 0 0 10px; }
+    .row { margin-bottom: 8px; }
+    button, input[type="file"] { width: 100%; box-sizing: border-box; }
+    button { border: 1px solid #374151; background: #1f2937; color: #e5e7eb; border-radius: 6px; padding: 8px; cursor: pointer; }
+    button:hover { background: #243244; }
+    .inline { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .meta { font-size: 12px; color: #9ca3af; line-height: 1.4; background: #0b1220; border: 1px solid #2b3648; border-radius: 6px; padding: 8px; }
+    code { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <h1>Quiz Baker ChatGPT Helper</h1>
+
+  <div class="row">
+    <input id="jobsFile" type="file" accept="application/json" />
+  </div>
+
+  <div class="row inline">
+    <button id="prevBtn">Prev</button>
+    <button id="nextBtn">Next</button>
+  </div>
+
+  <div class="row inline">
+    <button id="copyBtn">Copy Prompt</button>
+    <button id="fillBtn">Fill Prompt</button>
+  </div>
+
+  <div class="row inline">
+    <button id="sendBtn">Fill + Send</button>
+    <button id="downloadBtn">Download Images</button>
+  </div>
+
+  <div class="row">
+    <button id="openOutputBtn">Copy Target Filename</button>
+  </div>
+
+  <hr style="border-color:#374151; margin:10px 0" />
+  <div class="row">
+    <label style="display:flex; align-items:center; gap:8px; margin-bottom:4px">
+      <input type="number" id="waitSeconds" min="10" max="120" value="30" style="width:48px; padding:4px" />
+      대기 시간 (초)
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; margin-bottom:6px">
+      <input type="checkbox" id="autoCheck" />
+      Auto (현재 항목부터 자동: Send → 대기 → 다운로드 → 다음)
+    </label>
+    <div class="inline">
+      <button id="startAutoBtn">Start Auto</button>
+      <button id="stopAutoBtn">Stop Auto</button>
+    </div>
+    <div class="row" id="autoSkipRow" style="display:none">
+      <button id="skipToNextBtn">다음으로 (건너뛰기)</button>
+    </div>
+    <div id="autoStatus" class="meta" style="margin-top:6px; font-size:11px"></div>
+  </div>
+
+  <div class="meta" id="status">Load browser_jobs.json first.</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

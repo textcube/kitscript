@@ -1,0 +1,72 @@
+﻿[
+  {
+    "id": "galaga",
+    "title": "Galaga",
+    "year": 1981,
+    "genre": "space shooter",
+    "hint": "벌떼처럼 몰려오는 적을 상대하는 고전 우주 슈팅",
+    "description": "Player controls a small spaceship at the bottom of the screen, shooting waves of alien enemies that attack in formation and dive toward the player.",
+    "visual_keywords": [
+      "pixel spaceship",
+      "alien swarm formation",
+      "starfield background",
+      "arcade shooter action"
+    ]
+  },
+  {
+    "id": "pacman",
+    "title": "Pac-Man",
+    "year": 1980,
+    "genre": "maze chase",
+    "hint": "미로에서 점을 먹고 유령을 피하는 대표 아케이드",
+    "description": "A bright maze with a hungry round character collecting pellets while being chased by colorful ghosts through narrow corridors.",
+    "visual_keywords": [
+      "neon maze",
+      "chase tension",
+      "retro arcade",
+      "ghost silhouettes"
+    ]
+  },
+  {
+    "id": "donkey-kong",
+    "title": "Donkey Kong",
+    "year": 1981,
+    "genre": "platformer",
+    "hint": "배럴을 피하며 위층으로 올라가는 초창기 점프 액션",
+    "description": "A determined hero climbs ladders and jumps over rolling barrels on stacked construction girders to rescue someone at the top.",
+    "visual_keywords": [
+      "construction girders",
+      "rolling barrels",
+      "jumping hero",
+      "retro platform challenge"
+    ]
+  },
+  {
+    "id": "space-invaders",
+    "title": "Space Invaders",
+    "year": 1978,
+    "genre": "fixed shooter",
+    "hint": "줄지어 내려오는 외계 침략자를 막는 상징적 슈팅",
+    "description": "Rows of descending alien invaders move in unison toward defensive bunkers while a lone cannon at the bottom fires upward across a stark black sky.",
+    "visual_keywords": [
+      "descending alien rows",
+      "defense bunkers",
+      "bottom cannon",
+      "minimal arcade battlefield"
+    ]
+  },
+  {
+    "id": "frogger",
+    "title": "Frogger",
+    "year": 1981,
+    "genre": "crossing action",
+    "hint": "도로와 강을 건너 안전지대로 향하는 길찾기 액션",
+    "description": "A tiny frog struggles to cross lanes of speeding traffic and then leap across moving logs and turtles on a dangerous river.",
+    "visual_keywords": [
+      "busy traffic lanes",
+      "river crossing",
+      "floating logs",
+      "small green hero"
+    ]
+  }
+]

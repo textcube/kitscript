@@ -1,0 +1,31 @@
+﻿{
+  "item": {
+    "id": "pacman",
+    "title": "Pac-Man",
+    "year": 1980,
+    "genre": "maze chase",
+    "hint": "미로에서 점을 먹고 유령을 피하는 대표 아케이드",
+    "description": "A bright maze with a hungry round character collecting pellets while being chased by colorful ghosts through narrow corridors.",
+    "visual_keywords": [
+      "neon maze",
+      "chase tension",
+      "retro arcade",
+      "ghost silhouettes"
+    ]
+  },
+  "slug": "pacman",
+  "generated_at": "2026-03-11T00:47:30.703414+00:00",
+  "model": "browser_manual",
+  "size": "1024x1024",
+  "status": "pending_browser",
+  "prompts": [
+    {
+      "type": "action",
+      "variant_slug": "action",
+      "prompt": "Game reference context: title=Pac-Man, year=1980, genre=maze chase. Core scene description: A bright maze with a hungry round character collecting pellets while being chased by colorful ghosts through narrow corridors. Quiz hint context: 미로에서 점을 먹고 유령을 피하는 대표 아케이드 Visual motifs: neon maze, chase tension, retro arcade, ghost silhouettes Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s).",
+      "filename": "pacman_action_01.png",
+      "status": "pending_browser",
+      "created_at": "2026-03-11T00:47:30.703390+00:00"
+    }
+  ]
+}

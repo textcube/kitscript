@@ -1,0 +1,72 @@
+[
+  {
+    "id": "tetris",
+    "title": "Tetris",
+    "year": 1984,
+    "genre": "puzzle",
+    "hint": "떨어지는 블록을 맞춰 줄을 없애는 전설의 퍼즐",
+    "description": "Colorful geometric blocks fall from the top of the screen; the player rotates and positions them to form solid horizontal lines that disappear.",
+    "visual_keywords": [
+      "falling blocks",
+      "stacked rows",
+      "retro puzzle grid",
+      "clear line effect"
+    ]
+  },
+  {
+    "id": "dig-dug",
+    "title": "Dig Dug",
+    "year": 1982,
+    "genre": "maze action",
+    "hint": "땅을 파고 적을 펌프로 부풀려 터뜨리는 지하 액션",
+    "description": "A character with a pump digs through dirt tunnels, inflating enemy monsters until they pop while avoiding fire-breathing dragons.",
+    "visual_keywords": [
+      "underground tunnels",
+      "pump weapon",
+      "inflating enemies",
+      "dirt and rocks"
+    ]
+  },
+  {
+    "id": "asteroids",
+    "title": "Asteroids",
+    "year": 1979,
+    "genre": "space shooter",
+    "hint": "소행성을 부수고 UFO를 격추하는 벡터 그래픽 슈팅",
+    "description": "A small triangular ship rotates and shoots through a field of drifting asteroids and occasional UFOs in black space.",
+    "visual_keywords": [
+      "vector graphics",
+      "floating asteroids",
+      "triangular ship",
+      "black space field"
+    ]
+  },
+  {
+    "id": "defender",
+    "title": "Defender",
+    "year": 1981,
+    "genre": "side-scrolling shooter",
+    "hint": "횡스크롤로 외계인에게 납치된 인질을 구하는 슈팅",
+    "description": "A fast spaceship flies horizontally over a mountainous landscape, shooting aliens and rescuing falling humanoids before they hit the ground.",
+    "visual_keywords": [
+      "side-scrolling",
+      "mountain landscape",
+      "rescuing humanoids",
+      "fast horizontal shooter"
+    ]
+  },
+  {
+    "id": "qbert",
+    "title": "Q*bert",
+    "year": 1982,
+    "genre": "platform puzzle",
+    "hint": "계단 피라미드를 점프하며 타일 색을 바꾸는 캐릭터",
+    "description": "A round orange creature with a trunk hops on a pyramid of cubes, changing their color while avoiding snakes and other enemies.",
+    "visual_keywords": [
+      "pyramid of cubes",
+      "hopping character",
+      "color-changing tiles",
+      "isometric view"
+    ]
+  }
+]

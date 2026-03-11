@@ -1,0 +1,51 @@
+﻿{
+  "generated_at": "2026-03-11T00:47:30.708161+00:00",
+  "job_count": 5,
+  "jobs": [
+    {
+      "item_id": "galaga",
+      "item_title": "Galaga",
+      "slug": "galaga",
+      "type": "action",
+      "variant_slug": "action",
+      "filename": "galaga_action_01.png",
+      "prompt": "Game reference context: title=Galaga, year=1981, genre=space shooter. Core scene description: Player controls a small spaceship at the bottom of the screen, shooting waves of alien enemies that attack in formation and dive toward the player. Quiz hint context: 벌떼처럼 몰려오는 적을 상대하는 고전 우주 슈팅 Visual motifs: pixel spaceship, alien swarm formation, starfield background, arcade shooter action Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s)."
+    },
+    {
+      "item_id": "pacman",
+      "item_title": "Pac-Man",
+      "slug": "pacman",
+      "type": "action",
+      "variant_slug": "action",
+      "filename": "pacman_action_01.png",
+      "prompt": "Game reference context: title=Pac-Man, year=1980, genre=maze chase. Core scene description: A bright maze with a hungry round character collecting pellets while being chased by colorful ghosts through narrow corridors. Quiz hint context: 미로에서 점을 먹고 유령을 피하는 대표 아케이드 Visual motifs: neon maze, chase tension, retro arcade, ghost silhouettes Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s)."
+    },
+    {
+      "item_id": "donkey-kong",
+      "item_title": "Donkey Kong",
+      "slug": "donkey-kong",
+      "type": "action",
+      "variant_slug": "action",
+      "filename": "donkey-kong_action_01.png",
+      "prompt": "Game reference context: title=Donkey Kong, year=1981, genre=platformer. Core scene description: A determined hero climbs ladders and jumps over rolling barrels on stacked construction girders to rescue someone at the top. Quiz hint context: 배럴을 피하며 위층으로 올라가는 초창기 점프 액션 Visual motifs: construction girders, rolling barrels, jumping hero, retro platform challenge Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s)."
+    },
+    {
+      "item_id": "space-invaders",
+      "item_title": "Space Invaders",
+      "slug": "space-invaders",
+      "type": "action",
+      "variant_slug": "action",
+      "filename": "space-invaders_action_01.png",
+      "prompt": "Game reference context: title=Space Invaders, year=1978, genre=fixed shooter. Core scene description: Rows of descending alien invaders move in unison toward defensive bunkers while a lone cannon at the bottom fires upward across a stark black sky. Quiz hint context: 줄지어 내려오는 외계 침략자를 막는 상징적 슈팅 Visual motifs: descending alien rows, defense bunkers, bottom cannon, minimal arcade battlefield Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s)."
+    },
+    {
+      "item_id": "frogger",
+      "item_title": "Frogger",
+      "slug": "frogger",
+      "type": "action",
+      "variant_slug": "action",
+      "filename": "frogger_action_01.png",
+      "prompt": "Game reference context: title=Frogger, year=1981, genre=crossing action. Core scene description: A tiny frog struggles to cross lanes of speeding traffic and then leap across moving logs and turtles on a dangerous river. Quiz hint context: 도로와 강을 건너 안전지대로 향하는 길찾기 액션 Visual motifs: busy traffic lanes, river crossing, floating logs, small green hero Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s)."
+    }
+  ]
+}

@@ -1,0 +1,357 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RETRO GAME FACTORY - STANDALONE QUIZ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css">
+    <style>:root {
+            --neon-green: #39ff14;
+            --neon-magenta: #ff00ff;
+            --neon-blue: #00f2ff;
+            --neon-red: #ff003c;
+            --arcade-black: #050505;
+            --ui-dark: #0a0a0a;
+            --border-color: #333;
+            --main-font: 'Press Start 2P', cursive;
+            --kr-font: 'NeoDunggeunmo', cursive;
+            --green-glow: 0 0 15px rgba(57, 255, 20, 0.6);
+            --magenta-glow: 0 0 15px rgba(255, 0, 255, 0.6);
+            --blue-glow: 0 0 15px rgba(0, 242, 255, 0.6);
+            --red-glow: 0 0 25px rgba(255, 0, 60, 0.9);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0; background-color: var(--arcade-black); color: var(--neon-green);
+            font-family: var(--main-font); -webkit-font-smoothing: none; font-smooth: never;
+            font-size: 11px; overflow: hidden; display: flex; flex-direction: column; height: 100vh;
+        }
+
+        /* Scanline Effect */
+        body::after {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            z-index: 10000; background-size: 100% 4px; pointer-events: none; opacity: 0.15;
+        }
+
+        /* FX Animations */
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            10% { transform: translate(-5px, -5px); }
+            30% { transform: translate(5px, 5px); }
+            50% { transform: translate(-5px, 5px); }
+            70% { transform: translate(5px, -5px); }
+            100% { transform: translate(0, 0); }
+        }
+        .shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes flash {
+            0% { background: rgba(255, 255, 255, 0); }
+            20% { background: rgba(255, 255, 255, 0.4); }
+            100% { background: rgba(255, 255, 255, 0); }
+        }
+        .reveal-flash-screen { position: fixed; inset: 0; z-index: 9999; pointer-events: none; }
+        .active-flash { animation: flash 0.4s ease-out; }
+
+        /* Top Bar */
+        .top-bar {
+            background: #000; border-bottom: 2px solid var(--border-color); padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .brand-zone { display: flex; align-items: center; gap: 12px; }
+        .title { color: var(--neon-green); text-shadow: var(--green-glow); font-size: 14px; letter-spacing: 1px; }
+
+        .brand-icon-btn {
+            width: 32px; height: 32px; border: 1px solid #333; display: flex; align-items: center; justify-content: center;
+            background: #000; cursor: pointer; transition: 0.2s; text-decoration: none;
+        }
+        .brand-icon-btn svg { width: 18px; height: 18px; fill: #444; }
+        .brand-icon-btn:hover svg { fill: var(--neon-magenta); }
+
+        .mode-switcher { display: flex; background: #111; padding: 4px; border: 1px solid #222; gap: 4px; }
+        .mode-btn {
+            background: transparent; border: none; color: #444; padding: 8px 16px;
+            cursor: pointer; font-family: var(--main-font); font-size: 8px; transition: 0.2s;
+        }
+        .mode-btn.active { background: #222; color: var(--neon-blue); text-shadow: var(--blue-glow); }
+
+        .controls { display: flex; gap: 10px; }
+        .btn {
+            background: #000; border: 1px solid #444; color: #888; padding: 8px 16px;
+            cursor: pointer; font-family: var(--main-font); font-size: 8px; text-transform: uppercase;
+        }
+        .btn:hover { border-color: var(--neon-green); color: var(--neon-green); box-shadow: var(--green-glow); }
+        .btn.bake { background: var(--neon-green); color: #000; border-color: var(--neon-green); font-weight: bold; }
+        .btn.active-blue { color: var(--neon-blue); border-color: var(--neon-blue); box-shadow: var(--blue-glow); }
+
+        /* Main Container */
+        .main-container { display: grid; grid-template-columns: 420px 1fr; flex-grow: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { background: #080808; border-right: 2px solid var(--border-color); padding: 30px; overflow-y: auto; }
+        .sidebar-label {
+            font-size: 10px; color: #555; margin-bottom: 25px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 1px solid #222; padding-bottom: 10px; letter-spacing: 1px; margin-top: 35px;
+        }
+        .sidebar-label:first-child { margin-top: 0; }
+
+        .config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .config-row label { font-size: 8px; color: #444; flex: 1; padding-right: 10px; }
+        .config-row input, .config-row select { 
+            width: 230px; background: #000; border: 1px solid #333; color: var(--neon-blue); 
+            font-family: var(--main-font); padding: 14px; font-size: 10px; text-align: right;
+            outline: none; transition: 0.2s;
+        }
+
+        .add-cat-zone { display: flex; gap: 5px; margin-bottom: 20px; }
+        .add-cat-zone input { 
+            flex: 1; background: #000; border: 1px solid #222; color: var(--neon-blue); padding: 14px; 
+            font-family: var(--main-font); font-size: 10px; 
+        }
+
+        .category-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .cat-tab-wrapper { display: flex; align-items: center; background: #111; border: 1px solid #222; transition: 0.2s; }
+        .cat-tab-wrapper:hover { border-color: #555; }
+        .cat-tab { background: transparent; border: none; color: #555; padding: 8px 12px; font-family: var(--main-font); font-size: 8px; cursor: pointer; }
+        .cat-tab.active { color: var(--neon-magenta); text-shadow: var(--magenta-glow); }
+        .cat-tool-btn { color: #333; padding-right: 8px; cursor: pointer; font-size: 10px; font-family: var(--main-font); }
+        .cat-tool-btn:hover { color: var(--neon-red); }
+
+        /* Content Area */
+        .content-area { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        .menu-grid { padding: 50px; display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 50px; overflow-y: auto; background: #000; flex-grow: 1; }
+
+        /* --- QUIZ PLAYER --- */
+        #quizPlayer {
+            position: absolute; inset: 0; background: #000; z-index: 50; display: none;
+            flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px;
+            overflow-x: hidden; overflow-y: auto;
+        }
+
+        .quiz-card {
+            width: 100%; max-width: 850px; background: #0c0c0c; border: 4px solid var(--neon-magenta);
+            padding: 20px; box-shadow: var(--magenta-glow); position: relative;
+            display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; overflow: hidden;
+        }
+
+        @keyframes countSlam {
+            0% { transform: scale(4); opacity: 0; }
+            20% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .count-slam { animation: countSlam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; will-change: transform, opacity; }
+
+        .quiz-countdown-wrapper {
+            height: 100px; width: 100%; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; margin-bottom: 10px;
+        }
+
+        .quiz-countdown-display { 
+            font-family: var(--main-font); font-size: 80px; color: var(--neon-magenta); 
+            text-shadow: var(--magenta-glow); display: flex; align-items: center; justify-content: center;
+        }
+        .quiz-countdown-display.warning { color: var(--neon-red); text-shadow: var(--red-glow); }
+
+        .quiz-image-box { 
+            width: 100%; max-height: 45vh; min-height: 250px; background: #000; border: 2px solid #222; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; flex-shrink: 1; position: relative;
+        }
+        .quiz-image-box img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+        .big-hint-text {
+            font-family: var(--kr-font); color: #fff; font-size: 28px; text-align: center;
+            padding: 40px; text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            line-height: 1.5; letter-spacing: 1px;
+        }
+        .big-hint-label {
+            position: absolute; top: 10px; left: 10px; font-family: var(--main-font);
+            font-size: 8px; color: var(--neon-blue); opacity: 0.6;
+        }
+
+        .quiz-answer-zone { 
+            opacity: 0; transform: translateY(20px); transition: 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex; border: 2px solid var(--neon-blue); background: #000; box-shadow: var(--blue-glow);
+            min-height: 110px; flex-shrink: 0;
+        }
+        .quiz-answer-zone.reveal { opacity: 1; transform: translateY(0); }
+        
+        .ans-side-info { 
+            flex: 0 0 30%; background: var(--neon-blue); color: #000; padding: 15px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+            font-family: var(--main-font);
+        }
+        .ans-name { font-size: 15px; font-weight: bold; margin-bottom: 5px; text-align: right; line-height: 1.2; }
+        .ans-meta { font-size: 7px; opacity: 0.8; }
+        .ans-main-desc { flex: 1; padding: 15px 20px; text-align: left; font-family: var(--kr-font); font-size: 16px; color: #fff; line-height: 1.4; display: flex; align-items: center; }
+
+        /* Card System */
+        .card { background: #0c0c0c; border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: 0.2s; position: relative; box-shadow: 6px 6px 0 var(--border-color); }
+        .card:hover { border-color: var(--neon-green); box-shadow: 6px 6px 0 var(--neon-green); }
+        .card.large { grid-column: span 2; }
+        .card-img { height: 280px; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .card-img img { width: 100%; height: 100%; object-fit: cover; }
+        .card-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-name { font-size: 12px; color: var(--neon-blue); margin-bottom: 10px; }
+        .card-desc { font-family: var(--kr-font); color: #777; font-size: 13px; line-height: 1.6; flex-grow: 1; }
+        .card-price { font-size: 20px; color: var(--neon-green); font-weight: bold; margin-top: 15px; }
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; margin-top: 15px; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal { background: #000; border: 2px solid var(--neon-green); padding: 40px; width: 500px; box-shadow: var(--green-glow); }
+        
+        /* 확인 모달 스타일 */
+        #confirmModal { border-color: var(--neon-red); box-shadow: var(--red-glow); text-align: center; }
+
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #000; border: 1px solid var(--neon-green); padding: 10px 20px; color: var(--neon-green); z-index: 2000; display: none; }
+        #quizPlayer { display: flex; position: static; height: calc(100vh - 60px); overflow-x: hidden; }
+        .standalone-header {
+            height: 60px; background: #000; border-bottom: 2px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 30px; position: relative; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="flashOverlay" class="reveal-flash-screen"></div>
+    <header class="standalone-header">
+        <div class="header-title">RETRO GAME FACTORY</div>
+        <a href="https://kitscript.com/game/quiz/" target="_blank" rel="noopener noreferrer" class="header-home"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></a>
+    </header>
+    <div id="quizPlayer">
+        <div class="quiz-card" id="quizCard">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
+                <div style="font-size:8px; color:var(--neon-blue);">QUIZ</div>
+                <div id="quizIndex" style="font-size:8px; color:#444;">STAGE 00/00</div>
+            </div>
+            <div class="quiz-countdown-wrapper"><div id="quizCountdownDisplay" class="quiz-countdown-display">00</div></div>
+            <div id="quizMedia" class="quiz-image-box"></div>
+            <div id="quizAnswerZone" class="quiz-answer-zone">
+                <div class="ans-side-info">
+                    <div id="ansName" class="ans-name"></div>
+                    <div id="ansMeta" class="ans-meta"></div>
+                </div>
+                <div id="ansDesc" class="ans-main-desc"></div>
+            </div>
+        </div>
+        <div style="margin-top:15px; display:flex; gap:10px;">
+            <button class="btn" onclick="location.reload()">RESTART</button>
+            <button class="btn" id="nextBtn">SKIP</button>
+            <button id="soundToggleBtn" class="btn">SOUND: OFF</button>
+        </div>
+    </div>
+    <script>
+        const items = [{"id": "galaga", "name": "Galaga", "cat": "GAME", "price": "1981", "desc": "Player controls a small spaceship at the bottom of the screen, shooting waves of alien enemies that attack in formation and dive toward the player.", "hint": "벌떼처럼 몰려오는 적을 상대하는 고전 우주 슈팅", "meta": "1981 / space shooter", "size": "large", "image": null}, {"id": "pacman", "name": "Pac-Man", "cat": "GAME", "price": "1980", "desc": "A bright maze with a hungry round character collecting pellets while being chased by colorful ghosts through narrow corridors.", "hint": "미로에서 점을 먹고 유령을 피하는 대표 아케이드", "meta": "1980 / maze chase", "size": "large", "image": null}, {"id": "donkey-kong", "name": "Donkey Kong", "cat": "GAME", "price": "1981", "desc": "A determined hero climbs ladders and jumps over rolling barrels on stacked construction girders to rescue someone at the top.", "hint": "배럴을 피하며 위층으로 올라가는 초창기 점프 액션", "meta": "1981 / platformer", "size": "large", "image": null}, {"id": "space-invaders", "name": "Space Invaders", "cat": "GAME", "price": "1978", "desc": "Rows of descending alien invaders move in unison toward defensive bunkers while a lone cannon at the bottom fires upward across a stark black sky.", "hint": "줄지어 내려오는 외계 침략자를 막는 상징적 슈팅", "meta": "1978 / fixed shooter", "size": "large", "image": null}, {"id": "frogger", "name": "Frogger", "cat": "GAME", "price": "1981", "desc": "A tiny frog struggles to cross lanes of speeding traffic and then leap across moving logs and turtles on a dangerous river.", "hint": "도로와 강을 건너 안전지대로 향하는 길찾기 액션", "meta": "1981 / crossing action", "size": "large", "image": null}];
+        const config = {"countdown": 5, "reveal": 3};
+        class ArcadeSound {
+            constructor() { 
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+                this.enabled = false;
+            }
+            playTone(freq, dur, type = 'square', vol = 0.1) {
+                if (!this.enabled) return;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + dur);
+            }
+            playTick() { if(this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(880, 0.1, 'square', 0.05); }
+            playWarning() { if(this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(1760, 0.1, 'square', 0.05); }
+            playReveal() {
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+                this.playTone(523.25, 0.1); setTimeout(() => this.playTone(659.25, 0.1), 100); setTimeout(() => this.playTone(783.99, 0.3), 200);
+            }
+        }
+
+        const sound = new ArcadeSound();
+        let activeIndex = 0;
+        let timerId = null;
+        let intervalId = null;
+        const shuffled = [...items].sort(() => Math.random() - 0.5);
+
+        function updateCountdownUI(count) {
+            const el = document.getElementById('quizCountdownDisplay');
+            if (!el) return;
+            el.innerText = count.toString().padStart(2, '0');
+            el.classList.remove('count-slam');
+            void el.offsetWidth;
+            el.classList.add('count-slam');
+            if (count <= 3 && count > 0) {
+                el.classList.add('warning');
+                sound.playWarning();
+            } else {
+                el.classList.remove('warning');
+                sound.playTick();
+            }
+        }
+
+        function revealAnswer(item) {
+            document.getElementById('ansName').innerText = (item.name || '').toUpperCase();
+            document.getElementById('ansMeta').innerText = item.meta || 'UNKNOWN';
+            document.getElementById('ansDesc').innerText = item.desc || '';
+            document.getElementById('flashOverlay').classList.add('active-flash');
+            document.getElementById('quizCard').classList.add('shake');
+            document.getElementById('quizAnswerZone').classList.add('reveal');
+            sound.playReveal();
+            timerId = setTimeout(() => {
+                activeIndex += 1;
+                runLoop();
+            }, (Number(config.reveal) || 3) * 1000);
+            setTimeout(() => document.getElementById('flashOverlay').classList.remove('active-flash'), 400);
+        }
+
+        function renderMedia(item) {
+            const media = document.getElementById('quizMedia');
+            if (!media) return;
+            if (item.image) {
+                media.innerHTML = '<img alt="quiz" src="' + item.image + '">';
+            } else {
+                media.innerHTML = '<div class="big-hint-label">MISSION_HINT</div><div class="big-hint-text">' + (item.hint || 'NO HINT') + '</div>';
+            }
+        }
+
+        function runLoop() {
+            if (!shuffled.length) return;
+            if (activeIndex >= shuffled.length) activeIndex = 0;
+            const item = shuffled[activeIndex];
+
+            document.getElementById('quizAnswerZone').classList.remove('reveal');
+            document.getElementById('quizCard').classList.remove('shake');
+            document.getElementById('quizIndex').innerText = 'STAGE ' + (activeIndex + 1).toString().padStart(2, '0') + '/' + shuffled.length.toString().padStart(2, '0');
+            renderMedia(item);
+
+            let count = Number(config.countdown) || 5;
+            updateCountdownUI(count);
+            clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                count -= 1;
+                updateCountdownUI(count);
+                if (count <= 0) {
+                    clearInterval(intervalId);
+                    revealAnswer(item);
+                }
+            }, 1000);
+        }
+
+        document.getElementById('nextBtn').onclick = () => {
+            clearTimeout(timerId);
+            clearInterval(intervalId);
+            activeIndex += 1;
+            runLoop();
+        };
+
+        document.getElementById('soundToggleBtn').onclick = (e) => {
+            sound.enabled = !sound.enabled;
+            e.target.innerText = 'SOUND: ' + (sound.enabled ? 'ON' : 'OFF');
+            if (sound.enabled) e.target.classList.add('active-blue');
+            else e.target.classList.remove('active-blue');
+        };
+
+        window.onload = runLoop;
+    </script>
+</body>
+</html>

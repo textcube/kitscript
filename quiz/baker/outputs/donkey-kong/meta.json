@@ -1,0 +1,31 @@
+﻿{
+  "item": {
+    "id": "donkey-kong",
+    "title": "Donkey Kong",
+    "year": 1981,
+    "genre": "platformer",
+    "hint": "배럴을 피하며 위층으로 올라가는 초창기 점프 액션",
+    "description": "A determined hero climbs ladders and jumps over rolling barrels on stacked construction girders to rescue someone at the top.",
+    "visual_keywords": [
+      "construction girders",
+      "rolling barrels",
+      "jumping hero",
+      "retro platform challenge"
+    ]
+  },
+  "slug": "donkey-kong",
+  "generated_at": "2026-03-11T00:47:30.704716+00:00",
+  "model": "browser_manual",
+  "size": "1024x1024",
+  "status": "pending_browser",
+  "prompts": [
+    {
+      "type": "action",
+      "variant_slug": "action",
+      "prompt": "Game reference context: title=Donkey Kong, year=1981, genre=platformer. Core scene description: A determined hero climbs ladders and jumps over rolling barrels on stacked construction girders to rescue someone at the top. Quiz hint context: 배럴을 피하며 위층으로 올라가는 초창기 점프 액션 Visual motifs: construction girders, rolling barrels, jumping hero, retro platform challenge Create a dynamic gameplay-like action scene in retro arcade spirit, with strong motion, clear player-vs-threat composition, cinematic lighting, and sharp silhouette readability. Square 1:1 composition, high detail, game art style. No text, no letters, no logo, no watermark, no brand marks, no title words, no readable UI labels. Generate the image now. Do not ask for clarification, style choices, or details. Do not reply with text first—output only the image(s).",
+      "filename": "donkey-kong_action_01.png",
+      "status": "pending_browser",
+      "created_at": "2026-03-11T00:47:30.704699+00:00"
+    }
+  ]
+}
