@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Motion Factory | Pro Studio</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <style>
+        :root {
+            /* 게이밍 분위기를 위한 색상 테마 (Cyberpunk Neon) */
+            --bg-darker: #050505;
+            --bg-dark: #0d1117;
+            --bg-light: #161b22;
+            --accent: #00d2ff;
+            --accent-glow: rgba(0, 210, 255, 0.4);
+            --accent-pink: #f033ff;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-darker);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            height: 70px;
+            background: linear-gradient(90deg, var(--bg-dark), var(--bg-light));
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 210, 255, 0.2);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-right: 20px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .icon-link {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: var(--text);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .icon-link:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        .icon-link.youtube:hover {
+            color: #ff0000;
+            border-color: #ff0000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+        }
+
+        .btn {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: var(--border);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            color: var(--bg-darker);
+            border: none;
+        }
+
+        .btn.primary:hover {
+            background: #4de5ff;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 0 15px;
+            border-right: 1px solid var(--border);
+        }
+
+        main { flex: 1; display: flex; overflow: hidden; background: #000; }
+
+        aside {
+            width: 320px;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+
+        #right-panel { width: 360px; border-left: 1px solid var(--border); border-right: none; }
+
+        .panel-header {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #layer-list { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .layer-item {
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .layer-item.active {
+            border-color: var(--accent);
+            background: #1c2128;
+            box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.1);
+        }
+
+        .layer-item:hover { border-color: #444; }
+
+        .layer-preview {
+            width: 40px;
+            height: 40px;
+            background: #000;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        .layer-info { flex: 1; overflow: hidden; }
+        .layer-name { font-size: 12px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
+        .layer-actions { display: flex; gap: 5px; }
+        .layer-actions .btn { padding: 6px; background: transparent; border: none; color: var(--text-muted); }
+        .layer-actions .btn:hover { color: var(--accent); }
+
+        #viewport {
+            flex: 1;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 210, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: relative;
+        }
+
+        canvas { 
+            box-shadow: 0 0 60px rgba(0,0,0,1), 0 0 20px var(--accent-glow);
+            background: transparent;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border: 1px solid #222;
+        }
+
+        .properties-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .prop-group { margin-bottom: 30px; }
+        .prop-label { display: block; font-size: 11px; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+        .prop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        
+        input[type="range"] { 
+            width: 100%; 
+            accent-color: var(--accent); 
+            background: var(--bg-light);
+            height: 6px;
+            border-radius: 3px;
+            appearance: none;
+        }
+        input[type="number"], input[type="text"], textarea, select {
+            width: 100%;
+            background: #000;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Consolas', monospace;
+        }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .timeline-controls {
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid var(--border);
+        }
+
+        #timeDisplay {
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            color: var(--accent);
+            text-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        #overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+        .modal { 
+            background: var(--bg-dark); 
+            padding: 50px; 
+            border-radius: 12px; 
+            text-align: center; 
+            border: 2px solid var(--accent); 
+            width: 400px;
+            box-shadow: 0 0 50px var(--accent-glow);
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <i data-lucide="zap" style="color: var(--accent); fill: var(--accent)"></i>
+            <span class="logo-text">MOTION FACTORY</span>
+        </div>
+
+        <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="Kitscript Games">
+            <i data-lucide="home" size="20"></i>
+        </a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" title="TextCube YouTube">
+            <i data-lucide="youtube" size="20"></i>
+        </a>
+
+        <div class="toolbar-group">
+            <button class="btn primary" onclick="document.getElementById('fileInput').click()">
+                <i data-lucide="plus-square"></i> IMPORT ASSET
+            </button>
+            <input type="file" id="fileInput" hidden accept="image/*" multiple>
+            <button class="btn" onclick="app.addTextLayer()">
+                <i data-lucide="type"></i> ADD TEXT
+            </button>
+        </div>
+
+        <div class="toolbar-group">
+            <select id="resPresets" onchange="app.setResolution(this.value)">
+                <option value="1280x720">16:9 CINEMATIC (720p)</option>
+                <option value="1024x1024">1:1 SQUARE</option>
+                <option value="720x1280">9:16 MOBILE VERTICAL</option>
+                <option value="1920x1080">16:9 FULL HD (1080p)</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group" style="border-right: none;">
+            <button class="btn" onclick="app.export('png')">EXPORT PNG</button>
+            <button class="btn" onclick="app.export('gif')">GEN GIF</button>
+            <button class="btn" onclick="app.export('webm')">RENDER WebM</button>
+        </div>
+    </header>
+
+    <main>
+        <aside>
+            <div class="panel-header">
+                LAYER STACK
+                <i data-lucide="layers" size="14"></i>
+            </div>
+            <div id="layer-list"></div>
+            
+            <div class="panel-header">
+                ENGINE SETTINGS
+                <i data-lucide="sliders" size="14"></i>
+            </div>
+            <div class="timeline-controls">
+                <div class="prop-row">
+                    <div>
+                        <label class="prop-label">DURATION (S)</label>
+                        <input type="number" id="globalDuration" value="5" min="1" max="60" onchange="app.duration = parseFloat(this.value)">
+                    </div>
+                    <div>
+                        <label class="prop-label">FPS</label>
+                        <input type="number" id="globalFPS" value="30" min="1" max="120" onchange="app.fps = parseInt(this.value)">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="timeDisplay">00.00 / 05.00</span>
+                    <button class="btn primary" style="border-radius: 50%; width: 50px; height: 50px; padding: 0; justify-content: center;" onclick="app.togglePlayback()" id="playBtn">
+                        <i data-lucide="play" fill="currentColor"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div id="viewport">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <aside id="right-panel">
+            <div class="panel-header">
+                PROPERTIES
+                <i data-lucide="edit-3" size="14"></i>
+            </div>
+            <div class="properties-scroll" id="propPanel">
+                <div style="text-align: center; color: var(--text-muted); margin-top: 80px; font-size: 13px;">
+                    [ NO LAYER SELECTED ]
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <div id="overlay">
+        <div class="modal">
+            <div class="spinner"></div>
+            <h3 id="statusMsg" style="color: var(--accent); margin-bottom: 15px;">INITIALIZING RENDER...</h3>
+            <p id="statusSub" style="color: var(--text-muted); font-size: 13px;">Processing frames for high-quality export.</p>
+        </div>
+    </div>
+
+    <script>
+        const Easing = {
+            linear: t => t,
+            easeIn: t => t * t,
+            easeOut: t => t * (2 - t),
+            easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+            elastic: t => t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1,
+            bounce: t => {
+                const n1 = 7.5625, d1 = 2.75;
+                if (t < 1 / d1) return n1 * t * t;
+                else if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+                else if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+                else return n1 * (t -= 2.625 / d1) * t + 0.984375;
+            }
+        };
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        const app = {
+            layers: [],
+            selectedId: null,
+            width: 1280,
+            height: 720,
+            duration: 5,
+            fps: 30, 
+            currentTime: 0,
+            isPlaying: false,
+            isExporting: false, // EXPORT 상태 플래그 추가
+            lastFrameTime: 0,
+            
+            fonts: ['Impact', 'Arial Black', 'Verdana', 'Georgia', 'Consolas', 'system-ui'],
+
+            init() {
+                this.setResolution("1280x720");
+                this.renderLoop();
+                lucide.createIcons();
+                this.setupEventListeners();
+                this.updateTimeUI();
+            },
+
+            setupEventListeners() {
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    Array.from(e.target.files).forEach(file => this.importImage(file));
+                });
+                canvas.addEventListener('mousedown', e => this.handleCanvasDown(e));
+                window.addEventListener('mousemove', e => this.handleCanvasMove(e));
+                window.addEventListener('mouseup', () => this.isDragging = false);
+            },
+
+            setResolution(val) {
+                const [w, h] = val.split('x').map(Number);
+                this.width = w; this.height = h;
+                canvas.width = w; canvas.height = h;
+            },
+
+            importImage(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.layers.push({
+                            id: Date.now() + Math.random(),
+                            type: 'image', name: file.name, img: img,
+                            x: this.width / 2, y: this.height / 2, scale: 0.5, rotation: 0, opacity: 1, visible: true,
+                            chroma: { mode: 'none', threshold: 45, softness: 10 },
+                            animation: this.getDefaultAnim()
+                        });
+                        this.selectLayer(this.layers[this.layers.length-1].id);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            },
+
+            addTextLayer() {
+                this.layers.push({
+                    id: Date.now() + Math.random(),
+                    type: 'text', name: '텍스트', text: 'MOTION FACTORY',
+                    x: this.width / 2, y: this.height / 2, scale: 1, rotation: 0, opacity: 1, visible: true,
+                    fontSize: 100, fontFamily: 'Impact', color: '#00d2ff', stroke: '#000000', strokeWidth: 4,
+                    animation: this.getDefaultAnim()
+                });
+                this.selectLayer(this.layers[this.layers.length-1].id);
+            },
+
+            getDefaultAnim() {
+                return {
+                    type: 'none', easing: 'easeInOut', duration: 2, delay: 0, loopCount: 0, amplitude: 50, direction: 'top'
+                };
+            },
+
+            selectLayer(id) {
+                this.selectedId = id;
+                this.updateLayerUI();
+                this.updatePropertiesUI();
+            },
+
+            updateLayerUI() {
+                const container = document.getElementById('layer-list');
+                container.innerHTML = '';
+                [...this.layers].reverse().forEach((layer) => {
+                    const div = document.createElement('div');
+                    div.className = `layer-item ${layer.id === this.selectedId ? 'active' : ''}`;
+                    div.onclick = () => this.selectLayer(layer.id);
+                    div.innerHTML = `
+                        <div class="layer-preview">${layer.type === 'image' ? '<i data-lucide="image" size="14"></i>' : '<i data-lucide="type" size="14"></i>'}</div>
+                        <div class="layer-info"><div class="layer-name">${layer.type === 'text' ? layer.text : layer.name}</div></div>
+                        <div class="layer-actions">
+                            <button class="btn" onclick="app.moveLayer(${layer.id}, 1); event.stopPropagation();"><i data-lucide="arrow-up" size="14"></i></button>
+                            <button class="btn" onclick="app.moveLayer(${layer.id}, -1); event.stopPropagation();"><i data-lucide="arrow-down" size="14"></i></button>
+                            <button class="btn" onclick="app.deleteLayer(${layer.id}); event.stopPropagation();"><i data-lucide="trash-2" size="14"></i></button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+                lucide.createIcons();
+            },
+
+            moveLayer(id, dir) {
+                const idx = this.layers.findIndex(l => l.id === id);
+                const nIdx = idx + dir;
+                if (nIdx >= 0 && nIdx < this.layers.length) {
+                    [this.layers[idx], this.layers[nIdx]] = [this.layers[nIdx], this.layers[idx]];
+                    this.updateLayerUI();
+                }
+            },
+
+            deleteLayer(id) {
+                this.layers = this.layers.filter(l => l.id !== id);
+                if (this.selectedId === id) this.selectedId = null;
+                this.updateLayerUI(); this.updatePropertiesUI();
+            },
+
+            updatePropertiesUI() {
+                const panel = document.getElementById('propPanel');
+                const l = this.layers.find(l => l.id === this.selectedId);
+                if (!l) { panel.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 80px; font-size: 13px;">[ NO LAYER SELECTED ]</div>'; return; }
+
+                let html = `
+                    <div class="prop-group">
+                        <label class="prop-label">Core Transform</label>
+                        <div class="prop-row">
+                            <div><label class="prop-label">Scale</label><input type="range" min="0.1" max="5" step="0.01" value="${l.scale}" oninput="app.updateProp('scale', this.value)"></div>
+                            <div><label class="prop-label">Rotation</label><input type="range" min="0" max="360" value="${l.rotation}" oninput="app.updateProp('rotation', this.value)"></div>
+                        </div>
+                        <div><label class="prop-label">Opacity</label><input type="range" min="0" max="1" step="0.01" value="${l.opacity}" oninput="app.updateProp('opacity', this.value)"></div>
+                    </div>
+                `;
+
+                if (l.type === 'image') {
+                    html += `
+                        <div class="prop-group">
+                            <label class="prop-label">Chroma Key FX</label>
+                            <select onchange="app.updateChroma('mode', this.value)" style="margin-bottom:12px">
+                                <option value="none" ${l.chroma.mode==='none'?'selected':''}>NONE</option>
+                                <option value="green" ${l.chroma.mode==='green'?'selected':''}>GREEN SCREEN</option>
+                                <option value="blue" ${l.chroma.mode==='blue'?'selected':''}>BLUE SCREEN</option>
+                            </select>
+                            ${l.chroma.mode !== 'none' ? `
+                                <div class="prop-row">
+                                    <div><label class="prop-label">Threshold</label><input type="range" min="0" max="255" value="${l.chroma.threshold}" oninput="app.updateChroma('threshold', this.value)"></div>
+                                    <div><label class="prop-label">Softness</label><input type="range" min="0" max="100" value="${l.chroma.softness}" oninput="app.updateChroma('softness', this.value)"></div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else if (l.type === 'text') {
+                    html += `
+                        <div class="prop-group">
+                            <label class="prop-label">Typography</label>
+                            <textarea oninput="app.updateProp('text', this.value)">${l.text}</textarea>
+                            <div class="prop-row" style="margin-top:10px">
+                                <div><label class="prop-label">Fill Color</label><input type="color" value="${l.color}" oninput="app.updateProp('color', this.value)"></div>
+                                <div><label class="prop-label">Font Face</label><select onchange="app.updateProp('fontFamily', this.value)">
+                                    ${this.fonts.map(f => `<option value="${f}" ${l.fontFamily===f?'selected':''}>${f}</option>`).join('')}
+                                </select></div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="prop-group">
+                        <label class="prop-label">Animation Script</label>
+                        <div class="prop-row">
+                            <div><label class="prop-label">Type</label><select onchange="app.updateAnim('type', this.value)">
+                                <option value="none" ${l.animation.type==='none'?'selected':''}>NONE</option>
+                                <option value="slide" ${l.animation.type==='slide'?'selected':''}>SLIDE</option>
+                                <option value="zoom" ${l.animation.type==='zoom'?'selected':''}>ZOOM FX</option>
+                                <option value="float" ${l.animation.type==='float'?'selected':''}>FLOAT</option>
+                                <option value="bounce" ${l.animation.type==='bounce'?'selected':''}>BOUNCE</option>
+                                <option value="wobble" ${l.animation.type==='wobble'?'selected':''}>WOBBLE</option>
+                                <option value="rotate" ${l.animation.type==='rotate'?'selected':''}>SPIN</option>
+                            </select></div>
+                            <div><label class="prop-label">Easing</label><select onchange="app.updateAnim('easing', this.value)">
+                                ${Object.keys(Easing).map(k => `<option value="${k}" ${l.animation.easing===k?'selected':''}>${k}</option>`).join('')}
+                            </select></div>
+                        </div>
+                        <div class="prop-row">
+                            <div><label class="prop-label">Speed(S)</label><input type="number" step="0.1" value="${l.animation.duration}" oninput="app.updateAnim('duration', this.value)"></div>
+                            <div><label class="prop-label">Force</label><input type="range" min="0" max="200" value="${l.animation.amplitude}" oninput="app.updateAnim('amplitude', this.value)"></div>
+                        </div>
+                        <div class="prop-row">
+                            <div><label class="prop-label">Loops</label><input type="number" min="0" value="${l.animation.loopCount}" oninput="app.updateAnim('loopCount', this.value)"></div>
+                            <div><label class="prop-label">Delay</label><input type="number" step="0.1" value="${l.animation.delay}" oninput="app.updateAnim('delay', this.value)"></div>
+                        </div>
+                    </div>
+                `;
+
+                panel.innerHTML = html;
+            },
+
+            updateProp(k, v) {
+                const l = this.layers.find(l => l.id === this.selectedId);
+                if (l) l[k] = (isNaN(v) || k==='text' || k==='fontFamily' || k==='color') ? v : parseFloat(v);
+                if (k === 'text') this.updateLayerUI();
+            },
+
+            updateChroma(k, v) {
+                const l = this.layers.find(l => l.id === this.selectedId);
+                if (l) {
+                    l.chroma[k] = isNaN(v) ? v : parseFloat(v);
+                    if (k === 'mode') this.updatePropertiesUI();
+                }
+            },
+
+            updateAnim(k, v) {
+                const l = this.layers.find(l => l.id === this.selectedId);
+                if (l) {
+                    l.animation[k] = isNaN(v) ? v : parseFloat(v);
+                    if (k === 'type') this.updatePropertiesUI();
+                }
+            },
+
+            renderLoop(timestamp) {
+                // EXPORT 중일 때는 일반 렌더링 루프의 draw() 호출을 중단하여 화면 깜빡임 방지
+                if (!this.isExporting) {
+                    if (this.isPlaying) {
+                        const elapsed = (timestamp - this.lastFrameTime) / 1000;
+                        if (this.lastFrameTime) {
+                            this.currentTime += elapsed;
+                            if (this.currentTime >= this.duration) this.currentTime = 0;
+                        }
+                        this.updateTimeUI();
+                    }
+                    this.draw(ctx);
+                }
+                this.lastFrameTime = timestamp;
+                requestAnimationFrame(t => this.renderLoop(t));
+            },
+
+            updateTimeUI() {
+                const fmt = s => s.toFixed(2).padStart(5, '0');
+                const display = document.getElementById('timeDisplay');
+                if (display) display.innerText = `${fmt(this.currentTime)} / ${fmt(parseFloat(this.duration))}`;
+            },
+
+            togglePlayback() {
+                this.isPlaying = !this.isPlaying;
+                const btn = document.getElementById('playBtn');
+                btn.innerHTML = this.isPlaying ? '<i data-lucide="pause" fill="currentColor"></i>' : '<i data-lucide="play" fill="currentColor"></i>';
+                lucide.createIcons();
+                if (this.isPlaying) this.lastFrameTime = performance.now();
+            },
+
+            draw(targetCtx, timeOffset = -1, isExportPass = false) {
+                const drawTime = timeOffset >= 0 ? timeOffset : this.currentTime;
+                targetCtx.clearRect(0, 0, this.width, this.height);
+                
+                this.layers.forEach(l => {
+                    if (!l.visible) return;
+                    targetCtx.save();
+                    
+                    let { x, y, scale: s, rotation, opacity: alpha } = l;
+                    let r = rotation * Math.PI / 180;
+
+                    const t = drawTime - l.animation.delay;
+                    if (t > 0 && l.animation.type !== 'none') {
+                        const duration = l.animation.duration;
+                        const loopCount = l.animation.loopCount || 0;
+                        const currentCycle = t / duration;
+                        let rawT, isFinished = false;
+
+                        if (loopCount === 0) rawT = (t % duration) / duration;
+                        else {
+                            if (currentCycle >= loopCount) { rawT = 1.0; isFinished = true; }
+                            else rawT = (t % duration) / duration;
+                        }
+
+                        const easedT = Easing[l.animation.easing](rawT);
+                        const amp = l.animation.amplitude;
+
+                        switch(l.animation.type) {
+                            case 'slide':
+                                if (l.animation.direction === 'top') y -= (1 - easedT) * amp * 5;
+                                else if (l.animation.direction === 'bottom') y += (1 - easedT) * amp * 5;
+                                else if (l.animation.direction === 'left') x -= (1 - easedT) * amp * 5;
+                                else if (l.animation.direction === 'right') x += (1 - easedT) * amp * 5;
+                                alpha *= easedT; break;
+                            case 'zoom': s *= (easedT * (amp/50)); alpha *= easedT; break;
+                            case 'float': y += (isFinished ? 0 : Math.sin(rawT * Math.PI * 2)) * amp; break;
+                            case 'bounce': y -= (isFinished ? 0 : Math.abs(Math.sin(rawT * Math.PI * 3)) * (1 - rawT)) * amp * 2; break;
+                            case 'wobble': r += (isFinished ? 0 : Math.sin(rawT * Math.PI * 4)) * (amp / 100); break;
+                            case 'rotate': r += easedT * Math.PI * 2 * (amp / 50); break;
+                        }
+                    }
+
+                    targetCtx.translate(x, y);
+                    targetCtx.rotate(r);
+                    targetCtx.scale(s, s);
+                    targetCtx.globalAlpha = alpha;
+
+                    if (l.type === 'image') {
+                        if (l.chroma.mode !== 'none') {
+                            this.drawChromaImage(targetCtx, l);
+                        } else {
+                            targetCtx.drawImage(l.img, -l.img.width/2, -l.img.height/2);
+                        }
+                    } else {
+                        targetCtx.font = `${l.fontSize}px ${l.fontFamily}`;
+                        targetCtx.fillStyle = l.color;
+                        targetCtx.textAlign = 'center';
+                        targetCtx.textBaseline = 'middle';
+                        if (l.strokeWidth > 0) {
+                            targetCtx.strokeStyle = l.stroke;
+                            targetCtx.lineWidth = l.strokeWidth;
+                            targetCtx.strokeText(l.text, 0, 0);
+                        }
+                        targetCtx.fillText(l.text, 0, 0);
+                    }
+
+                    // 출력 시에는 선택 상자를 절대 그리지 않음
+                    if (l.id === this.selectedId && !isExportPass && !this.isExporting) {
+                        targetCtx.strokeStyle = '#00d2ff';
+                        targetCtx.lineWidth = 3 / s;
+                        targetCtx.setLineDash([10, 5]);
+                        let w, h;
+                        if (l.type === 'image') {
+                            w = l.img.width; h = l.img.height;
+                        } else {
+                            targetCtx.font = `${l.fontSize}px ${l.fontFamily}`;
+                            w = targetCtx.measureText(l.text).width;
+                            h = l.fontSize;
+                        }
+                        targetCtx.strokeRect(-w/2-10, -h/2-10, w+20, h+20);
+                    }
+                    targetCtx.restore();
+                });
+            },
+
+            drawChromaImage(targetCtx, layer) {
+                if (!this.offscreen) {
+                    this.offscreen = document.createElement('canvas');
+                    this.oCtx = this.offscreen.getContext('2d', { willReadFrequently: true });
+                }
+                const img = layer.img;
+                this.offscreen.width = img.width;
+                this.offscreen.height = img.height;
+                this.oCtx.drawImage(img, 0, 0);
+                const imageData = this.oCtx.getImageData(0, 0, img.width, img.height);
+                const data = imageData.data;
+                const isGreen = layer.chroma.mode === 'green';
+                const targetR = 0, targetG = isGreen ? 255 : 0, targetB = isGreen ? 0 : 255;
+                const threshold = layer.chroma.threshold, softness = layer.chroma.softness;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    const dist = Math.sqrt(Math.pow(r - targetR, 2) + Math.pow(g - targetG, 2) + Math.pow(b - targetB, 2));
+                    if (dist < threshold) data[i+3] = 0;
+                    else if (dist < threshold + softness) data[i+3] = ((dist - threshold) / softness) * 255;
+                }
+                this.oCtx.putImageData(imageData, 0, 0);
+                targetCtx.drawImage(this.offscreen, -img.width/2, -img.height/2);
+            },
+
+            handleCanvasDown(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+                for (let i = this.layers.length - 1; i >= 0; i--) {
+                    const l = this.layers[i];
+                    if (this.hitTest(mx, my, l)) {
+                        this.selectLayer(l.id); this.isDragging = true;
+                        this.dragOffset = { x: mx - l.x, y: my - l.y }; return;
+                    }
+                }
+                this.selectLayer(null);
+            },
+
+            hitTest(mx, my, l) {
+                const dx = mx - l.x, dy = my - l.y;
+                const rad = -l.rotation * Math.PI / 180;
+                const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+                let w, h;
+                if (l.type === 'image') {
+                    w = l.img.width; h = l.img.height;
+                } else {
+                    ctx.font = `${l.fontSize}px ${l.fontFamily}`;
+                    w = ctx.measureText(l.text).width;
+                    h = l.fontSize;
+                }
+                return Math.abs(lx) <= (w*l.scale)/2 + 20 && Math.abs(ly) <= (h*l.scale)/2 + 20;
+            },
+
+            handleCanvasMove(e) {
+                if (!this.isDragging || !this.selectedId) return;
+                const rect = canvas.getBoundingClientRect();
+                const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+                const l = this.layers.find(l => l.id === this.selectedId);
+                l.x = mx - this.dragOffset.x; l.y = my - this.dragOffset.y;
+            },
+
+            async export(fmt) {
+                const ov = document.getElementById('overlay');
+                const status = document.getElementById('statusMsg');
+                ov.style.display = 'flex'; 
+                
+                this.isExporting = true; // EXPORT 시작
+                this.isPlaying = false;
+                
+                const btn = document.getElementById('playBtn');
+                btn.innerHTML = '<i data-lucide="play" fill="currentColor"></i>';
+                lucide.createIcons();
+
+                if (fmt === 'png') {
+                    // 단일 프레임 렌더링 (isExportPass=true 강제)
+                    this.draw(ctx, this.currentTime, true); 
+                    const link = document.createElement('a');
+                    link.download = `factory_snapshot_${Date.now()}.png`; 
+                    link.href = canvas.toDataURL(); 
+                    link.click();
+                    this.isExporting = false;
+                    ov.style.display = 'none';
+                } else if (fmt === 'webm') {
+                    status.innerText = "RENDERING WebM...";
+                    const chunks = [];
+                    const stream = canvas.captureStream(this.fps);
+                    const rec = new MediaRecorder(stream, { mimeType: 'video/webm', videoBitsPerSecond: 8000000 });
+                    rec.ondataavailable = e => chunks.push(e.data);
+                    rec.onstop = () => {
+                        const link = document.createElement('a');
+                        link.download = `factory_video_${Date.now()}.webm`; 
+                        link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+                        link.click(); 
+                        this.isExporting = false;
+                        ov.style.display = 'none';
+                    };
+                    rec.start();
+                    this.currentTime = 0;
+                    const frameDuration = 1 / this.fps;
+                    const step = () => {
+                        this.currentTime += frameDuration;
+                        this.draw(ctx, this.currentTime, true); 
+                        if (this.currentTime < this.duration) setTimeout(step, frameDuration * 1000);
+                        else rec.stop();
+                    };
+                    step();
+                } else if (fmt === 'gif') {
+                    status.innerText = "ENCODING GIF...";
+                    const workerBlob = new Blob(['importScripts("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js");'], { type: 'application/javascript' });
+                    const workerUrl = URL.createObjectURL(workerBlob);
+                    const gif = new GIF({ workers: 4, quality: 5, width: this.width, height: this.height, workerScript: workerUrl });
+                    const totalFrames = this.duration * this.fps;
+                    const frameDelay = 1000 / this.fps;
+                    for (let i = 0; i < totalFrames; i++) {
+                        const sampleTime = (i / totalFrames) * this.duration;
+                        this.draw(ctx, sampleTime, true); 
+                        gif.addFrame(ctx, { copy: true, delay: frameDelay });
+                    }
+                    gif.on('finished', b => {
+                        const link = document.createElement('a');
+                        link.download = `factory_anim_${Date.now()}.gif`; 
+                        link.href = URL.createObjectURL(b); 
+                        link.click(); URL.revokeObjectURL(workerUrl); 
+                        this.isExporting = false;
+                        ov.style.display = 'none';
+                    });
+                    gif.render();
+                }
+            }
+        };
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
