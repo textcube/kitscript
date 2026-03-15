@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KitScript Clock Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05070a;
+            --panel-bg: rgba(10, 15, 25, 0.85);
+            --neon-blue: #00f2ff;
+            --neon-glow: 0 0 10px rgba(0, 242, 255, 0.5), 0 0 20px rgba(0, 242, 255, 0.2);
+            --accent-purple: #bc13fe;
+            --text-main: #e0e6ed;
+            --text-dim: #8892b0;
+            --border: 1px solid rgba(0, 242, 255, 0.3);
+            --grid-size: 40px;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Scanline overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.03));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Video Background: 맨 뒤 레이어, z-index 0으로 확실히 표시 */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.35;
+            background: #000;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .video-background .yt-embed-wrap {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100vw;
+            height: 56.25vw; /* 16:9 */
+            min-height: 100vh;
+            min-width: 177.77vh;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .video-background .yt-embed-wrap iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+            z-index: 1;
+        }
+
+        /* Global HUD Navigation */
+        .global-hud {
+            position: fixed;
+            top: 20px;
+            right: 340px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+            background: var(--panel-bg);
+            padding: 8px;
+            border: var(--border);
+            border-radius: 4px;
+            backdrop-filter: blur(5px);
+        }
+
+        .hud-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-blue);
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .hud-btn:hover {
+            border-color: var(--neon-blue);
+            background: rgba(0, 242, 255, 0.1);
+            box-shadow: var(--neon-glow);
+            transform: translateY(-2px);
+        }
+
+        .hud-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Main Layout */
+        .app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Side Panels */
+        .side-panel {
+            width: 320px;
+            background: var(--panel-bg);
+            border-right: var(--border);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .side-panel.right {
+            border-right: none;
+            border-left: var(--border);
+        }
+
+        .panel-header {
+            padding: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            border-bottom: var(--border);
+            background: rgba(0, 242, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 패널 공통 스크롤바: 브라우저별 동일한 경험 */
+        .tool-list,
+        #details-content {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 242, 255, 0.5) rgba(10, 15, 25, 0.9);
+        }
+        .tool-list::-webkit-scrollbar,
+        #details-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .tool-list::-webkit-scrollbar-track,
+        #details-content::-webkit-scrollbar-track {
+            background: rgba(10, 15, 25, 0.9);
+            border-radius: 4px;
+        }
+        .tool-list::-webkit-scrollbar-thumb,
+        #details-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 242, 255, 0.4);
+            border-radius: 4px;
+        }
+        .tool-list::-webkit-scrollbar-thumb:hover,
+        #details-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 242, 255, 0.65);
+        }
+
+        .tool-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 12px;
+            padding: 15px;
+            border-radius: 4px;
+            cursor: grab;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card:hover {
+            border-color: var(--neon-blue);
+            background: rgba(0, 242, 255, 0.05);
+            box-shadow: var(--neon-glow);
+        }
+
+        .tool-card:active { cursor: grabbing; }
+
+        .tool-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .tool-icon { font-size: 24px; }
+
+        .launch-icon-btn {
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .launch-icon-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: var(--neon-glow);
+        }
+
+        .tool-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--neon-blue);
+        }
+
+        .tool-desc {
+            font-size: 11px;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        /* Clock Hub Area */
+        .clock-center-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .clock-outer {
+            width: 500px;
+            height: 500px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .clock-face {
+            width: 340px;
+            height: 340px;
+            border: 4px solid var(--neon-blue);
+            border-radius: 50%;
+            position: relative;
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: inset 0 0 30px rgba(0, 242, 255, 0.2), var(--neon-glow);
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            border-radius: 10px;
+            z-index: 5;
+        }
+
+        .hour-hand { width: 8px; height: 80px; background: var(--text-main); margin-left: -4px; }
+        .min-hand { width: 4px; height: 120px; background: var(--neon-blue); margin-left: -2px; }
+        .sec-hand { width: 2px; height: 140px; background: var(--accent-purple); margin-left: -1px; z-index: 6; }
+
+        .clock-hub {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: var(--accent-purple);
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .time-slot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 2px dashed rgba(0, 242, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .time-slot.active {
+            border: 2px solid var(--neon-blue);
+            box-shadow: var(--neon-glow);
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .time-slot.drag-over {
+            border: 2px solid var(--accent-purple);
+            background: rgba(188, 19, 254, 0.1);
+            transform: scale(1.1);
+        }
+
+        .time-slot .slot-label {
+            position: absolute;
+            top: -20px;
+            font-size: 10px;
+            color: var(--text-dim);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .slot-content { font-size: 24px; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 5px var(--neon-blue); }
+            50% { box-shadow: 0 0 25px var(--neon-blue); }
+            100% { box-shadow: 0 0 5px var(--neon-blue); }
+        }
+        .near-active { animation: pulse 1s infinite; }
+
+        /* System Details (스크롤바는 .tool-list 와 함께 위에서 정의) */
+        #details-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .detail-item h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-blue);
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+
+        .manual-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .manual-section h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            color: var(--accent-purple);
+            text-transform: uppercase;
+        }
+
+        .manual-section ul {
+            margin: 0;
+            padding-left: 15px;
+            font-size: 11px;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 10px 20px;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: var(--neon-blue);
+            color: black;
+            box-shadow: var(--neon-glow);
+        }
+
+        .btn-danger { border-color: #ff4757; color: #ff4757; }
+        .btn-danger:hover { background: #ff4757; color: white; box-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+
+        .notification-area {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .notification {
+            width: 300px;
+            background: var(--panel-bg);
+            border: 2px solid var(--neon-blue);
+            padding: 15px;
+            pointer-events: all;
+            transform: translateX(350px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--neon-glow);
+            border-left: 5px solid var(--neon-blue);
+        }
+
+        .notification.show { transform: translateX(0); }
+
+        .notif-header {
+            color: var(--neon-blue);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .notif-body { font-size: 13px; margin-bottom: 12px; }
+        .notif-actions { display: flex; gap: 10px; }
+
+        @media (max-width: 1024px) {
+            .side-panel { position: absolute; height: 100%; z-index: 50; width: 280px; }
+            .side-panel.left { left: 0; transform: translateX(-100%); }
+            .side-panel.right { right: 0; transform: translateX(100%); }
+            .side-panel.open { transform: translateX(0); }
+            .mobile-toggle {
+                display: block !important;
+                position: fixed;
+                bottom: 20px;
+                background: var(--panel-bg);
+                border: var(--border);
+                color: var(--neon-blue);
+                padding: 15px;
+                z-index: 60;
+                font-family: 'Orbitron';
+            }
+            #toggle-left { left: 20px; }
+            #toggle-right { right: 20px; }
+            .clock-outer { transform: scale(0.7); }
+            .global-hud { right: 20px; top: auto; bottom: 80px; }
+        }
+
+        .mobile-toggle { display: none; }
+        .dragging { opacity: 0.5; }
+        .empty-state { text-align: center; color: var(--text-dim); margin-top: 50px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1) 비디오: 맨 뒤, HTML에 iframe 직접 넣어 API 없이도 유튜브 화면 표시 -->
+    <div class="video-background">
+        <div class="yt-embed-wrap" id="yt-player">
+            <iframe
+                src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&rel=0&playsinline=1"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                referrerpolicy="strict-origin-when-cross-origin"
+                frameborder="0"
+                title="YouTube background"
+            ></iframe>
+        </div>
+    </div>
+
+    <div class="grid-bg"></div>
+    <div class="overlay"></div>
+
+    <!-- Global HUD Bar -->
+    <nav class="global-hud">
+        <a href="https://kitscript.com/" target="_blank" class="hud-btn" title="Home">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </a>
+        <a href="https://kitscript.com/game/" target="_blank" class="hud-btn" title="Game Hub">
+            <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4M8 10v4M15 13l2-2M15 11l2 2"></path></svg>
+        </a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="hud-btn" title="YouTube Channel">
+            <svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
+        </a>
+        <a href="https://github.com/textcube/kitscript" target="_blank" class="hud-btn" title="GitHub Repo">
+            <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+        </a>
+    </nav>
+
+    <div class="app-container">
+        <!-- Left Panel: Tool Library -->
+        <aside class="side-panel left" id="left-panel">
+            <div class="panel-header">
+                Tool Library
+                <span style="font-size: 10px;">V.08</span>
+            </div>
+            <div class="tool-list" id="tool-library"></div>
+        </aside>
+
+        <!-- Center: Clock Hub -->
+        <main class="clock-center-wrapper">
+            <div class="clock-outer">
+                <div class="clock-face">
+                    <div class="hand hour-hand" id="hr"></div>
+                    <div class="hand min-hand" id="mn"></div>
+                    <div class="hand sec-hand" id="sc"></div>
+                    <div class="clock-hub"></div>
+                </div>
+                <div id="clock-slots-container"></div>
+            </div>
+        </main>
+
+        <!-- Right Panel: System Console -->
+        <aside class="side-panel right" id="right-panel">
+            <div class="panel-header">System Console</div>
+            <div id="details-content"></div>
+        </aside>
+    </div>
+
+    <button class="mobile-toggle" id="toggle-left">LIBRARY</button>
+    <button class="mobile-toggle" id="toggle-right">CONSOLE</button>
+
+    <div class="notification-area" id="notif-area"></div>
+
+    <script>
+        // --- Data Definitions ---
+        const TOOLS = [
+            { id: 'motion-factory', icon: '🎬', name: 'Motion Factory', desc: 'Advanced keyframe animation and curve generator.', url: 'https://kitscript.com/game/motion/' },
+            { id: 'quiz-factory', icon: '❓', name: 'Quiz Factory', desc: 'Interactive assessment and educational engine.', url: 'https://kitscript.com/game/quiz/' },
+            { id: 'menu-factory', icon: '🍔', name: 'Menu Factory', desc: 'Dynamic UI navigation and layout designer.', url: 'https://kitscript.com/game/shop/' },
+            { id: 'clip-tool', icon: '✂️', name: 'Clip Tool', desc: 'Video snippet extraction and editing utility.', url: 'https://kitscript.com/game/clipcut/' },
+            { id: 'bizcard-tool', icon: '📇', name: 'BizCard Tool', desc: 'Digital professional card and contact manager.', url: 'https://kitscript.com/game/bizcard/' },
+            { id: 'qr-generator', icon: '🏁', name: 'QR Generator', desc: 'Instant vector-based QR code generation.', url: 'https://kitscript.com/game/bizcard/' },
+            { id: 'clipboard-tool', icon: '📋', name: 'Clipboard Tool', desc: 'Enhanced multi-entry buffer management.', url: 'https://kitscript.com/game/clip/' }
+        ];
+
+        let slotAssignments = JSON.parse(localStorage.getItem('ks_slot_assignments')) || {};
+        let notifiedSlots = new Set();
+
+        const hr = document.getElementById('hr');
+        const mn = document.getElementById('mn');
+        const sc = document.getElementById('sc');
+        const toolLibrary = document.getElementById('tool-library');
+        const slotsContainer = document.getElementById('clock-slots-container');
+        const detailsContent = document.getElementById('details-content');
+        const notifArea = document.getElementById('notif-area');
+
+        // --- Core Hub Logic ---
+        function init() {
+            renderLibrary();
+            createSlots();
+            startTime();
+            setupMobileToggles();
+            showInitialConsole();
+            setInterval(checkNotifications, 10000); 
+        }
+
+        function renderLibrary() {
+            toolLibrary.innerHTML = '';
+            TOOLS.forEach(tool => {
+                const card = document.createElement('div');
+                card.className = 'tool-card';
+                card.draggable = true;
+                card.innerHTML = `
+                    <div class="tool-header-row">
+                        <span class="tool-icon">${tool.icon}</span>
+                        <div class="launch-icon-btn" title="Launch Now" onclick="event.stopPropagation(); launchTool('${tool.id}')">🚀</div>
+                    </div>
+                    <div class="tool-name">${tool.name}</div>
+                    <div class="tool-desc">${tool.desc}</div>
+                `;
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('toolId', tool.id);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
+                card.addEventListener('click', () => showDetails(null, tool.id));
+                toolLibrary.appendChild(card);
+            });
+        }
+
+        function createSlots() {
+            slotsContainer.innerHTML = '';
+            const radius = 220;
+            for (let i = 1; i <= 12; i++) {
+                const angle = (i * 30 - 90) * (Math.PI / 180);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+
+                const slot = document.createElement('div');
+                slot.className = 'time-slot';
+                if (slotAssignments[i]) slot.classList.add('active');
+                slot.style.left = `calc(50% + ${x}px - 30px)`;
+                slot.style.top = `calc(50% + ${y}px - 30px)`;
+                slot.innerHTML = `
+                    <div class="slot-label">${i}:00</div>
+                    <div class="slot-content">${slotAssignments[i] ? getToolById(slotAssignments[i].toolId).icon : ''}</div>
+                `;
+
+                slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+                slot.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    const toolId = e.dataTransfer.getData('toolId');
+                    assignToolToSlot(i, toolId);
+                });
+
+                slot.addEventListener('click', () => showDetails(i));
+                slot.dataset.hour = i;
+                slotsContainer.appendChild(slot);
+            }
+        }
+
+        function assignToolToSlot(hour, toolId) {
+            slotAssignments[hour] = { toolId: toolId };
+            saveData();
+            createSlots();
+            showDetails(hour);
+            showNotification("SLOT UPDATED", `${getToolById(toolId).name} assigned to ${hour}:00.`);
+        }
+
+        function removeToolFromSlot(hour) {
+            delete slotAssignments[hour];
+            saveData();
+            createSlots();
+            showInitialConsole();
+        }
+
+        function saveData() { localStorage.setItem('ks_slot_assignments', JSON.stringify(slotAssignments)); }
+        function getToolById(id) { return TOOLS.find(t => t.id === id); }
+
+        function startTime() {
+            const now = new Date();
+            const hh = now.getHours();
+            const mm = now.getMinutes();
+            const ss = now.getSeconds();
+            hr.style.transform = `rotate(${30 * hh + mm / 2}deg)`;
+            mn.style.transform = `rotate(${6 * mm}deg)`;
+            sc.style.transform = `rotate(${6 * ss}deg)`;
+            updateVisualAlerters(hh, mm);
+            requestAnimationFrame(startTime);
+        }
+
+        function updateVisualAlerters(hh, mm) {
+            const currentHour12 = (hh % 12) || 12;
+            const nextHour12 = ((hh + 1) % 12) || 12;
+            document.querySelectorAll('.time-slot').forEach(slot => {
+                const hour = parseInt(slot.dataset.hour);
+                slot.classList.toggle('near-active', hour === nextHour12 && mm >= 55);
+                slot.style.borderColor = (hour === currentHour12) ? 'var(--accent-purple)' : '';
+            });
+        }
+
+        function checkNotifications() {
+            const now = new Date();
+            const mm = now.getMinutes();
+            const hourKey = `${now.getHours()}-${now.getDate()}`;
+            const nextH = ((now.getHours() + 1) % 12) || 12;
+            const currentH = (now.getHours() % 12) || 12;
+
+            if (mm === 55 && slotAssignments[nextH] && !notifiedSlots.has(`pre-${nextH}-${hourKey}`)) {
+                showNotification("⚡ SLOT ALERT", `Session for ${getToolById(slotAssignments[nextH].toolId).name} starts in 5 minutes.`, slotAssignments[nextH].toolId);
+                notifiedSlots.add(`pre-${nextH}-${hourKey}`);
+            }
+            if (mm === 0 && slotAssignments[currentH] && !notifiedSlots.has(`active-${currentH}-${hourKey}`)) {
+                showNotification("🚀 SYSTEM ACTIVE", `${getToolById(slotAssignments[currentH].toolId).name} slot is now active.`, slotAssignments[currentH].toolId, true);
+                notifiedSlots.add(`active-${currentH}-${hourKey}`);
+            }
+        }
+
+        function showNotification(title, message, toolId = null, persistent = false) {
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.innerHTML = `
+                <div class="notif-header"><span>${title}</span><span style="cursor:pointer" onclick="this.parentElement.parentElement.remove()">✕</span></div>
+                <div class="notif-body">${message}</div>
+                <div class="notif-actions">
+                    ${toolId ? `<button class="btn" onclick="launchTool('${toolId}')">Launch</button>` : ''}
+                </div>
+            `;
+            notifArea.appendChild(notif);
+            setTimeout(() => notif.classList.add('show'), 10);
+            if (!persistent) {
+                setTimeout(() => { notif.classList.remove('show'); setTimeout(() => notif.remove(), 500); }, 8000);
+            }
+        }
+
+        function launchTool(toolId) {
+            const tool = getToolById(toolId);
+            if (tool && tool.url) {
+                window.open(tool.url, '_blank');
+                showNotification("EXECUTING", `Initializing ${tool.name} kernel...`);
+            }
+        }
+
+        function showInitialConsole() {
+            detailsContent.innerHTML = `
+                <div class="detail-item">
+                    <h3>KitScript Hub OS</h3>
+                    <p class="tool-desc" style="font-size:13px; color: var(--neon-blue);">Unified Tool Launcher & Scheduling Interface.</p>
+                </div>
+                <div class="manual-section">
+                    <h4>Overview</h4>
+                    <ul>
+                        <li>Monitor real-time system clock.</li>
+                        <li>Schedule tools to specific time slots.</li>
+                        <li>Automated visual & system notifications.</li>
+                    </ul>
+                </div>
+                <div class="manual-section" style="border-left-color: var(--neon-blue);">
+                    <h4 style="color: var(--neon-blue);">How to Use</h4>
+                    <ul>
+                        <li><strong>Drag:</strong> Move a tool from the Library to any Clock Slot (1-12).</li>
+                        <li><strong>Alerts:</strong> System pulses at T-5m and triggers HUD alerts at T-0.</li>
+                        <li><strong>Details:</strong> Click any slot or tool to view parameters.</li>
+                        <li><strong>Persistence:</strong> Assignments are saved to local system storage.</li>
+                    </ul>
+                </div>
+                <div style="font-size: 10px; color: var(--text-dim); text-align: center; margin-top: 20px;">
+                    Select a slot to manage schedules.
+                </div>
+            `;
+        }
+
+        function showDetails(hour, toolId = null) {
+            let tool = null;
+            if (hour) {
+                const assignment = slotAssignments[hour];
+                if (assignment) tool = getToolById(assignment.toolId);
+            } else if (toolId) {
+                tool = getToolById(toolId);
+            }
+
+            if (!tool) {
+                detailsContent.innerHTML = `
+                    <div class="empty-state">
+                        ${hour ? 'Slot ' + hour + ':00 is currently unassigned.' : 'Select a tool to view its profile.'}<br>
+                        Drag a utility to this location to schedule.
+                    </div>
+                    <button class="btn" style="margin: 20px auto; width: 100%;" onclick="showInitialConsole()">Return to Console</button>
+                `;
+                return;
+            }
+
+            detailsContent.innerHTML = `
+                <div class="detail-item">
+                    <span style="font-size: 40px;">${tool.icon}</span>
+                    <h3>${tool.name}</h3>
+                    <p class="tool-desc" style="font-size:14px">${tool.desc}</p>
+                </div>
+                ${hour ? `
+                    <div class="detail-item">
+                        <label style="color: var(--text-dim); font-size: 10px; display: block; margin-bottom: 5px;">SCHEDULED WINDOW</label>
+                        <div style="font-size: 20px; color: var(--neon-blue); font-family: 'Orbitron'">${hour}:00 HRS</div>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                        <button class="btn" onclick="launchTool('${tool.id}')">🚀 EXECUTE NOW</button>
+                        <button class="btn btn-danger" onclick="removeToolFromSlot(${hour})">CLEAR ASSIGNMENT</button>
+                    </div>
+                ` : `
+                    <div class="detail-item">
+                        <p style="font-size:12px; color: var(--accent-purple)">Drag to clock slots to enable temporal scheduling.</p>
+                        <button class="btn" onclick="launchTool('${tool.id}')">🚀 QUICK LAUNCH</button>
+                    </div>
+                `}
+                <button class="btn" style="border-color: #444; color: #888;" onclick="showInitialConsole()">BACK TO INFO</button>
+            `;
+        }
+
+        function setupMobileToggles() {
+            const left = document.getElementById('left-panel');
+            const right = document.getElementById('right-panel');
+            document.getElementById('toggle-left').onclick = () => { left.classList.toggle('open'); right.classList.remove('open'); };
+            document.getElementById('toggle-right').onclick = () => { right.classList.toggle('open'); left.classList.remove('open'); };
+        }
+
+        window.launchTool = launchTool;
+        window.removeToolFromSlot = removeToolFromSlot;
+        window.showInitialConsole = showInitialConsole;
+        window.onload = init;
+    </script>
+</body>
+</html>
