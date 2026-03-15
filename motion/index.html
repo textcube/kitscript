@@ -6,9 +6,18 @@
     <title>Image Motion Factory | Pro Studio</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.firebaseCore = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, setDoc, getDoc, collection };
+    </script>
+
     <style>
         :root {
-            /* 게이밍 분위기를 위한 색상 테마 (Cyberpunk Neon) */
             --bg-darker: #050505;
             --bg-dark: #0d1117;
             --bg-light: #161b22;
@@ -18,7 +27,8 @@
             --text: #c9d1d9;
             --text-muted: #8b949e;
             --border: #30363d;
-            --panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            --track-h: 46px;
+            --label-w: 160px;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', 'Inter', sans-serif; }
@@ -33,7 +43,7 @@
         }
 
         header {
-            height: 70px;
+            height: 60px;
             background: linear-gradient(90deg, var(--bg-dark), var(--bg-light));
             border-bottom: 2px solid var(--accent);
             display: flex;
@@ -41,240 +51,160 @@
             padding: 0 24px;
             gap: 15px;
             z-index: 100;
-            box-shadow: 0 4px 20px rgba(0, 210, 255, 0.2);
+            flex-shrink: 0;
         }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-right: 20px;
-        }
+        .logo-area { display: flex; align-items: center; gap: 12px; margin-right: 20px; }
+        .logo-text { font-size: 16px; font-weight: 900; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
 
-        .logo-text {
-            font-size: 18px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            color: var(--accent);
-            text-shadow: 0 0 10px var(--accent-glow);
-        }
-
-        .icon-link {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            color: var(--text);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-decoration: none;
-        }
-
-        .icon-link:hover {
-            color: var(--accent);
-            border-color: var(--accent);
-            box-shadow: 0 0 15px var(--accent-glow);
-            transform: translateY(-2px);
-        }
-
-        .icon-link.youtube:hover {
-            color: #ff0000;
-            border-color: #ff0000;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
-        }
+        #sync-status { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; margin-left: auto; padding: 4px 8px; background: rgba(0,0,0,0.3); border-radius: 20px; border: 1px solid var(--border); }
+        #sync-status.active { color: var(--accent); border-color: var(--accent); }
+        #sync-status.local { color: #ffcc00; border-color: #ffcc00; }
+        #sync-status.error { color: #ff4444; border-color: #ff4444; }
 
         .btn {
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s;
-            text-transform: uppercase;
+            background: var(--bg-light); border: 1px solid var(--border); color: var(--text);
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; display: flex;
+            align-items: center; gap: 6px; font-size: 12px; font-weight: 600; transition: all 0.2s; text-transform: uppercase;
         }
+        .btn:hover { background: var(--border); border-color: var(--accent); color: white; }
+        .btn.primary { background: var(--accent); color: var(--bg-darker); border: none; }
 
-        .btn:hover {
-            background: var(--border);
-            border-color: var(--accent);
-            color: white;
-        }
+        .toolbar-group { display: flex; gap: 10px; align-items: center; padding: 0 15px; border-right: 1px solid var(--border); }
 
-        .btn.primary {
-            background: var(--accent);
-            color: var(--bg-darker);
-            border: none;
-        }
-
-        .btn.primary:hover {
-            background: #4de5ff;
-            box-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        .toolbar-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            padding: 0 15px;
-            border-right: 1px solid var(--border);
-        }
-
-        main { flex: 1; display: flex; overflow: hidden; background: #000; }
-
-        aside {
-            width: 320px;
-            background: var(--bg-dark);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-        }
-
-        #right-panel { width: 360px; border-left: 1px solid var(--border); border-right: none; }
+        main { flex: 1; display: flex; overflow: hidden; background: #000; position: relative; }
 
         .panel-header {
-            padding: 15px 20px;
+            padding: 18px 20px;
             background: rgba(255, 255, 255, 0.03);
-            font-size: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
+            font-size: 11px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
             letter-spacing: 2px;
-            color: var(--accent);
+            color: var(--accent); 
             border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
+            display: flex; 
+            justify-content: space-between; 
             align-items: center;
+            height: 54px;
         }
 
-        #layer-list { flex: 1; overflow-y: auto; padding: 15px; }
-
+        aside {
+            width: 320px; background: var(--bg-dark); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        #layer-list { flex: 1; overflow-y: auto; padding: 12px; }
+        
         .layer-item {
-            background: var(--bg-light);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s;
+            background: var(--bg-light); padding: 10px; border-radius: 10px; margin-bottom: 12px;
+            display: flex; flex-direction: column; gap: 10px; cursor: pointer; border: 1px solid transparent;
+            transition: all 0.2s; position: relative;
         }
-
-        .layer-item.active {
-            border-color: var(--accent);
-            background: #1c2128;
-            box-shadow: inset 0 0 10px rgba(0, 210, 255, 0.1);
+        .layer-item.active { border-color: var(--accent); background: #1c2128; box-shadow: 0 0 20px rgba(0, 210, 255, 0.2); }
+        
+        .layer-thumb-container {
+            display: flex; gap: 12px; align-items: center;
         }
-
-        .layer-item:hover { border-color: #444; }
-
-        .layer-preview {
-            width: 40px;
-            height: 40px;
-            background: #000;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--border);
+        .layer-thumb {
+            width: 96px; height: 96px; background: #000; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            border: 1px solid var(--border); flex-shrink: 0;
         }
-
-        .layer-info { flex: 1; overflow: hidden; }
-        .layer-name { font-size: 12px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-
-        .layer-actions { display: flex; gap: 5px; }
-        .layer-actions .btn { padding: 6px; background: transparent; border: none; color: var(--text-muted); }
-        .layer-actions .btn:hover { color: var(--accent); }
-
-        #viewport {
-            flex: 1;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            overflow: hidden;
-            background-image: 
-                linear-gradient(rgba(0, 210, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-            position: relative;
+        .layer-thumb img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .layer-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; height: 96px; }
+        .layer-name { 
+            font-size: 11px; font-weight: 800; color: var(--text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            margin-bottom: 4px;
         }
+        .layer-type-tag { font-size: 9px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 900; }
 
+        .layer-actions { display: flex; gap: 6px; margin-top: auto; }
+        .action-btn { 
+            background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: var(--text-muted); 
+            padding: 6px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; flex: 1;
+        }
+        .action-btn:hover { color: var(--accent); border-color: var(--accent); background: rgba(0, 210, 255, 0.1); }
+        .action-btn.delete:hover { color: #ff4444; border-color: #ff4444; }
+
+        #viewport-area {
+            flex: 1; display: flex; flex-direction: column; background: #000; position: relative; overflow: hidden;
+        }
+        #canvas-container {
+            flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px;
+            background-image: radial-gradient(circle, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
         canvas { 
-            box-shadow: 0 0 60px rgba(0,0,0,1), 0 0 20px var(--accent-glow);
-            background: transparent;
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            border: 1px solid #222;
+            box-shadow: 0 0 100px rgba(0,0,0,1); background: transparent;
+            max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;
         }
 
-        .properties-scroll { flex: 1; overflow-y: auto; padding: 24px; }
+        #timeline-editor {
+            height: 250px; background: var(--bg-dark); border-top: 2px solid var(--border);
+            display: flex; flex-direction: column; z-index: 50; flex-shrink: 0; position: relative;
+        }
+        #timeline-header {
+            height: 40px; background: var(--bg-light); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 15px; gap: 15px;
+        }
+        #timeline-content {
+            flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; background: rgba(0,0,0,0.5);
+            scroll-behavior: smooth;
+        }
+        .track-row { display: flex; height: var(--track-h); border-bottom: 1px solid rgba(255,255,255,0.03); align-items: center; transition: background 0.2s; }
+        .track-row.highlight { background: rgba(0, 210, 255, 0.1); }
+        .track-label {
+            width: var(--label-w); padding: 0 12px; font-size: 10px; color: var(--text-muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border);
+            height: 100%; display: flex; align-items: center; background: rgba(0,0,0,0.5); flex-shrink: 0; z-index: 20;
+        }
+        .track-area { flex: 1; position: relative; height: 100%; background: rgba(0,0,0,0.05); z-index: 10; }
+        .anim-bar {
+            position: absolute; height: 28px; top: 9px; 
+            background: linear-gradient(90deg, var(--accent), var(--accent-pink));
+            border-radius: 4px; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: #000; font-weight: 900; min-width: 20px;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4); white-space: nowrap; overflow: hidden;
+        }
+        #playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #ff4444; z-index: 80; pointer-events: none; }
+        #playhead::after {
+            content: ''; position: absolute; top: 0; left: -5px; 
+            border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #ff4444;
+        }
 
+        #right-panel { width: 340px; background: var(--bg-dark); border-left: 1px solid var(--border); flex-shrink: 0; }
+        .properties-scroll { flex: 1; overflow-y: auto; padding: 24px; height: calc(100vh - 60px); }
         .prop-group { margin-bottom: 30px; }
-        .prop-label { display: block; font-size: 11px; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+        .prop-label { display: block; font-size: 10px; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
         .prop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
         
-        input[type="range"] { 
-            width: 100%; 
-            accent-color: var(--accent); 
-            background: var(--bg-light);
-            height: 6px;
-            border-radius: 3px;
-            appearance: none;
-        }
+        input[type="range"] { width: 100%; accent-color: var(--accent); appearance: none; background: #333; height: 4px; border-radius: 2px; }
         input[type="number"], input[type="text"], textarea, select {
-            width: 100%;
-            background: #000;
-            border: 1px solid var(--border);
-            color: var(--accent);
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-family: 'Consolas', monospace;
-        }
-        textarea { resize: vertical; min-height: 60px; }
-
-        .timeline-controls {
-            padding: 20px;
-            background: rgba(0,0,0,0.3);
-            border-top: 1px solid var(--border);
-        }
-
-        #timeDisplay {
-            font-family: 'Consolas', monospace;
-            font-size: 16px;
-            color: var(--accent);
-            text-shadow: 0 0 8px var(--accent-glow);
+            width: 100%; background: #000; border: 1px solid var(--border); color: var(--accent);
+            padding: 10px; border-radius: 4px; font-size: 11px; font-family: 'Consolas', monospace;
         }
 
         #overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            display: none; align-items: center; justify-content: center; z-index: 1000;
-            backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px);
         }
-        .modal { 
-            background: var(--bg-dark); 
-            padding: 50px; 
-            border-radius: 12px; 
-            text-align: center; 
-            border: 2px solid var(--accent); 
-            width: 400px;
-            box-shadow: 0 0 50px var(--accent-glow);
+        .modal { background: var(--bg-dark); padding: 40px; border-radius: 12px; text-align: center; border: 2px solid var(--accent); width: 380px; }
+        .spinner { border: 4px solid #222; border-left-color: var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #restore-modal {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-light); border: 2px solid var(--accent); border-radius: 10px;
+            padding: 20px; z-index: 2000; display: none; flex-direction: column; gap: 15px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); width: 400px;
         }
 
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
     </style>
 </head>
 <body>
@@ -285,85 +215,70 @@
             <span class="logo-text">MOTION FACTORY</span>
         </div>
 
-        <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="Kitscript Games">
-            <i data-lucide="home" size="20"></i>
-        </a>
-        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" title="TextCube YouTube">
-            <i data-lucide="youtube" size="20"></i>
-        </a>
+        <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="Kitscript Games" style="text-decoration: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text);"><i data-lucide="home" size="18"></i></a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" style="text-decoration: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text);"><i data-lucide="youtube" size="18"></i></a>
 
         <div class="toolbar-group">
-            <button class="btn primary" onclick="document.getElementById('fileInput').click()">
-                <i data-lucide="plus-square"></i> IMPORT ASSET
-            </button>
+            <button class="btn primary" onclick="document.getElementById('fileInput').click()"><i data-lucide="plus"></i> ASSET</button>
             <input type="file" id="fileInput" hidden accept="image/*" multiple>
-            <button class="btn" onclick="app.addTextLayer()">
-                <i data-lucide="type"></i> ADD TEXT
-            </button>
+            <button class="btn" onclick="app.addTextLayer()"><i data-lucide="type"></i> TEXT</button>
         </div>
 
         <div class="toolbar-group">
             <select id="resPresets" onchange="app.setResolution(this.value)">
-                <option value="1280x720">16:9 CINEMATIC (720p)</option>
+                <option value="1280x720">16:9 HD</option>
+                <option value="1920x1080">16:9 FULL HD</option>
                 <option value="1024x1024">1:1 SQUARE</option>
-                <option value="720x1280">9:16 MOBILE VERTICAL</option>
-                <option value="1920x1080">16:9 FULL HD (1080p)</option>
+                <option value="720x1280">9:16 MOBILE</option>
             </select>
         </div>
 
+        <div id="sync-status">
+            <i data-lucide="shield-alert" size="14"></i> INITIALIZING
+        </div>
+
         <div class="toolbar-group" style="border-right: none;">
-            <button class="btn" onclick="app.export('png')">EXPORT PNG</button>
-            <button class="btn" onclick="app.export('gif')">GEN GIF</button>
-            <button class="btn" onclick="app.export('webm')">RENDER WebM</button>
+            <button class="btn" onclick="app.export('png')">PNG</button>
+            <button class="btn" onclick="app.export('gif')">GIF</button>
+            <button class="btn" onclick="app.export('webm')">WebM</button>
         </div>
     </header>
 
     <main>
         <aside>
-            <div class="panel-header">
-                LAYER STACK
-                <i data-lucide="layers" size="14"></i>
-            </div>
+            <div class="panel-header">LAYER STACK <i data-lucide="layers" size="14"></i></div>
             <div id="layer-list"></div>
-            
-            <div class="panel-header">
-                ENGINE SETTINGS
-                <i data-lucide="sliders" size="14"></i>
-            </div>
-            <div class="timeline-controls">
-                <div class="prop-row">
-                    <div>
-                        <label class="prop-label">DURATION (S)</label>
-                        <input type="number" id="globalDuration" value="5" min="1" max="60" onchange="app.duration = parseFloat(this.value)">
-                    </div>
-                    <div>
-                        <label class="prop-label">FPS</label>
-                        <input type="number" id="globalFPS" value="30" min="1" max="120" onchange="app.fps = parseInt(this.value)">
-                    </div>
-                </div>
-                
-                <div style="margin-top: 25px; display: flex; justify-content: space-between; align-items: center;">
-                    <span id="timeDisplay">00.00 / 05.00</span>
-                    <button class="btn primary" style="border-radius: 50%; width: 50px; height: 50px; padding: 0; justify-content: center;" onclick="app.togglePlayback()" id="playBtn">
-                        <i data-lucide="play" fill="currentColor"></i>
-                    </button>
-                </div>
-            </div>
         </aside>
 
-        <div id="viewport">
-            <canvas id="mainCanvas"></canvas>
-        </div>
+        <section id="viewport-area">
+            <div id="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+
+            <div id="timeline-editor">
+                <div id="timeline-header">
+                    <button class="btn primary" style="width: 40px; height: 30px; justify-content: center;" onclick="app.togglePlayback()" id="playBtn">
+                        <i data-lucide="play" fill="currentColor"></i>
+                    </button>
+                    <span id="timeDisplay" style="font-family: 'Consolas', monospace; color: var(--accent); font-weight: bold; font-size: 14px;">00.00 / 05.00</span>
+                    <div style="display: flex; align-items: center; gap: 15px; margin-left: auto;">
+                        <span class="prop-label" style="margin: 0;">DUR:</span>
+                        <input type="number" id="globalDuration" value="5" min="1" max="60" style="width: 50px; padding: 4px;" onchange="app.setGlobalDuration(this.value)">
+                        <span class="prop-label" style="margin: 0;">FPS:</span>
+                        <input type="number" id="globalFPS" value="30" min="1" max="120" style="width: 50px; padding: 4px;" onchange="app.fps = parseInt(this.value)">
+                    </div>
+                </div>
+                <div id="timeline-content">
+                    <div id="playhead"></div>
+                    <div id="timeline-tracks"></div>
+                </div>
+            </div>
+        </section>
 
         <aside id="right-panel">
-            <div class="panel-header">
-                PROPERTIES
-                <i data-lucide="edit-3" size="14"></i>
-            </div>
+            <div class="panel-header">PROPERTIES <i data-lucide="edit-3" size="14"></i></div>
             <div class="properties-scroll" id="propPanel">
-                <div style="text-align: center; color: var(--text-muted); margin-top: 80px; font-size: 13px;">
-                    [ NO LAYER SELECTED ]
-                </div>
+                <div style="text-align: center; color: var(--text-muted); margin-top: 100px; font-size: 13px;">[ SELECT LAYER TO EDIT ]</div>
             </div>
         </aside>
     </main>
@@ -371,12 +286,62 @@
     <div id="overlay">
         <div class="modal">
             <div class="spinner"></div>
-            <h3 id="statusMsg" style="color: var(--accent); margin-bottom: 15px;">INITIALIZING RENDER...</h3>
-            <p id="statusSub" style="color: var(--text-muted); font-size: 13px;">Processing frames for high-quality export.</p>
+            <h3 id="statusMsg" style="color: var(--accent); margin-bottom: 10px; letter-spacing: 1px;">RENDERING...</h3>
+            <p id="statusSub" style="color: var(--text-muted); font-size: 13px;">Synthesizing high-quality frames.</p>
+        </div>
+    </div>
+
+    <div id="restore-modal">
+        <h3 style="color: var(--accent);">이전 작업 발견</h3>
+        <p style="font-size: 13px; color: var(--text-muted);">종료 전의 작업 내용이 남아있습니다. 불러오시겠습니까?</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn" onclick="app.dismissRestore()">새로 시작</button>
+            <button class="btn primary" onclick="app.restoreWork()">복구하기</button>
         </div>
     </div>
 
     <script>
+        // --- IndexedDB Wrapper for Pro Storage ---
+        const ProStorage = {
+            dbName: 'MotionFactoryDB',
+            storeName: 'projects',
+            version: 1,
+            db: null,
+            init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName);
+                        }
+                    };
+                    request.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+                    request.onerror = (e) => reject(e);
+                });
+            },
+            async set(key, val) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(this.storeName, 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+                    store.put(val, key);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = (e) => reject(e);
+                });
+            },
+            async get(key) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(this.storeName, 'readonly');
+                    const store = tx.objectStore(this.storeName);
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = (e) => reject(e);
+                });
+            }
+        };
+
         const Easing = {
             linear: t => t,
             easeIn: t => t * t,
@@ -404,17 +369,178 @@
             fps: 30, 
             currentTime: 0,
             isPlaying: false,
-            isExporting: false, // EXPORT 상태 플래그 추가
+            isExporting: false,
             lastFrameTime: 0,
-            
-            fonts: ['Impact', 'Arial Black', 'Verdana', 'Georgia', 'Consolas', 'system-ui'],
+            saveTimeout: null,
+            user: null,
+            db: null,
+            isCloudEnabled: false,
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'default-factory-id',
 
-            init() {
+            async init() {
                 this.setResolution("1280x720");
                 this.renderLoop();
                 lucide.createIcons();
                 this.setupEventListeners();
-                this.updateTimeUI();
+                this.updateTimelineUI();
+                await this.initFirebase();
+            },
+
+            async initFirebase() {
+                try {
+                    if (typeof __firebase_config === 'undefined' || !__firebase_config || __firebase_config.length < 10) {
+                        throw new Error("No Cloud Config");
+                    }
+
+                    const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore } = window.firebaseCore;
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const fireApp = initializeApp(firebaseConfig);
+                    const auth = getAuth(fireApp);
+                    this.db = getFirestore(fireApp);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        this.user = user;
+                        if (user) {
+                            this.isCloudEnabled = true;
+                            this.updateSyncStatus('active', 'SYNC (CLOUD)');
+                            this.checkForExistingWork();
+                        } else {
+                            this.fallbackToLocal();
+                        }
+                    });
+                } catch (err) {
+                    this.fallbackToLocal();
+                }
+            },
+
+            fallbackToLocal() {
+                this.isCloudEnabled = false;
+                this.user = null;
+                this.updateSyncStatus('local', 'LOCAL (INDEXED)');
+                this.checkForExistingWork();
+            },
+
+            updateSyncStatus(state, msg) {
+                const el = document.getElementById('sync-status');
+                if (!el) return;
+                el.className = state;
+                el.innerHTML = `<i data-lucide="${state === 'active' ? 'cloud' : (state === 'local' ? 'database' : (state==='error'?'alert-triangle':'cloud-off'))}" size="14"></i> ${msg}`;
+                lucide.createIcons();
+            },
+
+            async checkForExistingWork() {
+                let data = null;
+                try {
+                    if (this.isCloudEnabled && this.user && this.db) {
+                        const { doc, getDoc } = window.firebaseCore;
+                        const docRef = doc(this.db, 'artifacts', this.appId, 'users', this.user.uid, 'sessions', 'current');
+                        const snap = await getDoc(docRef);
+                        if (snap.exists()) data = snap.data();
+                    } else {
+                        // Use IndexedDB for local restore
+                        data = await ProStorage.get(`factory_save_${this.appId}`);
+                    }
+                    
+                    if (data && data.layers && data.layers.length > 0) {
+                        document.getElementById('restore-modal').style.display = 'flex';
+                        this.existingData = data;
+                    }
+                } catch(e) { console.error("Restore Check Failed", e); }
+            },
+
+            dismissRestore() {
+                document.getElementById('restore-modal').style.display = 'none';
+                this.existingData = null;
+            },
+
+            async restoreWork() {
+                if (!this.existingData) return;
+                const data = this.existingData;
+                
+                if (data.width && data.height) {
+                    this.width = data.width;
+                    this.height = data.height;
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    const presetSelect = document.getElementById('resPresets');
+                    if (presetSelect) presetSelect.value = `${this.width}x${this.height}`;
+                }
+
+                this.duration = data.duration || 5;
+                this.fps = data.fps || 30;
+                document.getElementById('globalDuration').value = this.duration;
+                document.getElementById('globalFPS').value = this.fps;
+
+                this.layers = [];
+                for (const lData of data.layers) {
+                    if (lData.type === 'image') {
+                        const img = new Image();
+                        img.onload = () => { this.updateLayerUI(); this.updateTimelineUI(); };
+                        img.src = lData.src; 
+                        lData.img = img;
+                    }
+                    this.layers.push(lData);
+                }
+                
+                this.updateLayerUI();
+                this.updateTimelineUI();
+                this.dismissRestore();
+            },
+
+            triggerAutoSave() {
+                if (this.saveTimeout) clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(() => this.saveWork(), 1000);
+            },
+
+            async saveWork() {
+                const serializedLayers = this.layers.map(l => {
+                    const copy = { ...l };
+                    if (l.type === 'image') {
+                        copy.src = l.img.src; 
+                        delete copy.img; 
+                    }
+                    return copy;
+                });
+
+                const payload = {
+                    layers: serializedLayers,
+                    duration: this.duration,
+                    fps: this.fps,
+                    width: this.width,
+                    height: this.height,
+                    updatedAt: Date.now()
+                };
+
+                if (this.isCloudEnabled && this.user && this.db) {
+                    const { doc, setDoc } = window.firebaseCore;
+                    this.updateSyncStatus('active', 'SAVING CLOUD...');
+                    try {
+                        const docRef = doc(this.db, 'artifacts', this.appId, 'users', this.user.uid, 'sessions', 'current');
+                        await setDoc(docRef, payload);
+                        this.updateSyncStatus('active', 'SYNC (CLOUD)');
+                    } catch (err) {
+                        this.updateSyncStatus('error', 'CLOUD ERROR');
+                        this.saveToIndexedDB(payload);
+                    }
+                } else {
+                    this.saveToIndexedDB(payload);
+                }
+            },
+
+            async saveToIndexedDB(payload) {
+                try {
+                    this.updateSyncStatus('local', 'SAVING LOCAL...');
+                    await ProStorage.set(`factory_save_${this.appId}`, payload);
+                    setTimeout(() => this.updateSyncStatus('local', 'LOCAL (INDEXED)'), 500);
+                } catch (e) {
+                    this.updateSyncStatus('error', 'STORAGE FULL');
+                }
             },
 
             setupEventListeners() {
@@ -423,13 +549,38 @@
                 });
                 canvas.addEventListener('mousedown', e => this.handleCanvasDown(e));
                 window.addEventListener('mousemove', e => this.handleCanvasMove(e));
-                window.addEventListener('mouseup', () => this.isDragging = false);
+                window.addEventListener('mouseup', () => { 
+                    if (this.isDragging) {
+                        this.isDragging = false;
+                        this.triggerAutoSave();
+                    }
+                });
+
+                const tc = document.getElementById('timeline-content');
+                tc.onmousedown = (e) => {
+                    if(e.target.closest('.anim-bar')) return;
+                    const rect = tc.getBoundingClientRect();
+                    const labelW = 160;
+                    const mouseX = e.clientX - rect.left - labelW;
+                    if (mouseX >= 0) {
+                        const trackWidth = rect.width - labelW;
+                        this.currentTime = Math.max(0, Math.min(this.duration, (mouseX / trackWidth) * this.duration));
+                        this.updateTimeUI();
+                    }
+                };
             },
 
             setResolution(val) {
                 const [w, h] = val.split('x').map(Number);
                 this.width = w; this.height = h;
                 canvas.width = w; canvas.height = h;
+                this.triggerAutoSave();
+            },
+
+            setGlobalDuration(val) {
+                this.duration = Math.max(1, parseFloat(val));
+                this.updateTimelineUI();
+                this.triggerAutoSave();
             },
 
             importImage(file) {
@@ -445,6 +596,7 @@
                             animation: this.getDefaultAnim()
                         });
                         this.selectLayer(this.layers[this.layers.length-1].id);
+                        this.triggerAutoSave();
                     };
                     img.src = e.target.result;
                 };
@@ -454,24 +606,35 @@
             addTextLayer() {
                 this.layers.push({
                     id: Date.now() + Math.random(),
-                    type: 'text', name: '텍스트', text: 'MOTION FACTORY',
+                    type: 'text', name: 'TEXT', text: 'MOTION FACTORY',
                     x: this.width / 2, y: this.height / 2, scale: 1, rotation: 0, opacity: 1, visible: true,
                     fontSize: 100, fontFamily: 'Impact', color: '#00d2ff', stroke: '#000000', strokeWidth: 4,
                     animation: this.getDefaultAnim()
                 });
                 this.selectLayer(this.layers[this.layers.length-1].id);
+                this.triggerAutoSave();
             },
 
             getDefaultAnim() {
-                return {
-                    type: 'none', easing: 'easeInOut', duration: 2, delay: 0, loopCount: 0, amplitude: 50, direction: 'top'
-                };
+                return { type: 'none', easing: 'easeInOut', duration: 2, delay: 0, loopCount: 0, amplitude: 50, direction: 'top' };
             },
 
             selectLayer(id) {
                 this.selectedId = id;
                 this.updateLayerUI();
                 this.updatePropertiesUI();
+                this.updateTimelineUI();
+                
+                setTimeout(() => {
+                    const track = document.getElementById(`track-row-${id}`);
+                    const container = document.getElementById('timeline-content');
+                    if (track && container) {
+                        const containerHeight = container.clientHeight;
+                        const trackTop = track.offsetTop;
+                        const trackHeight = track.clientHeight;
+                        container.scrollTop = trackTop - (containerHeight / 2) + (trackHeight / 2);
+                    }
+                }, 50);
             },
 
             updateLayerUI() {
@@ -481,13 +644,30 @@
                     const div = document.createElement('div');
                     div.className = `layer-item ${layer.id === this.selectedId ? 'active' : ''}`;
                     div.onclick = () => this.selectLayer(layer.id);
+                    
+                    let thumbContent = `<i data-lucide="type" size="32" style="color:var(--accent)"></i>`;
+                    if (layer.type === 'image' && layer.img) {
+                        thumbContent = `<img src="${layer.img.src}" alt="thumb">`;
+                    }
+
                     div.innerHTML = `
-                        <div class="layer-preview">${layer.type === 'image' ? '<i data-lucide="image" size="14"></i>' : '<i data-lucide="type" size="14"></i>'}</div>
-                        <div class="layer-info"><div class="layer-name">${layer.type === 'text' ? layer.text : layer.name}</div></div>
-                        <div class="layer-actions">
-                            <button class="btn" onclick="app.moveLayer(${layer.id}, 1); event.stopPropagation();"><i data-lucide="arrow-up" size="14"></i></button>
-                            <button class="btn" onclick="app.moveLayer(${layer.id}, -1); event.stopPropagation();"><i data-lucide="arrow-down" size="14"></i></button>
-                            <button class="btn" onclick="app.deleteLayer(${layer.id}); event.stopPropagation();"><i data-lucide="trash-2" size="14"></i></button>
+                        <div class="layer-thumb-container">
+                            <div class="layer-thumb">${thumbContent}</div>
+                            <div class="layer-info">
+                                <div class="layer-name" title="${layer.type === 'text' ? layer.text : layer.name}">${layer.type === 'text' ? layer.text : layer.name}</div>
+                                <div class="layer-type-tag">${layer.type}</div>
+                                <div class="layer-actions">
+                                    <button class="action-btn" title="레이어 위로" onclick="app.moveLayer(${layer.id}, 1); event.stopPropagation();">
+                                        <i data-lucide="chevron-up" size="14"></i>
+                                    </button>
+                                    <button class="action-btn" title="레이어 아래로" onclick="app.moveLayer(${layer.id}, -1); event.stopPropagation();">
+                                        <i data-lucide="chevron-down" size="14"></i>
+                                    </button>
+                                    <button class="action-btn delete" title="삭제" onclick="app.deleteLayer(${layer.id}); event.stopPropagation();">
+                                        <i data-lucide="trash-2" size="14"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     `;
                     container.appendChild(div);
@@ -495,29 +675,87 @@
                 lucide.createIcons();
             },
 
+            updateTimelineUI() {
+                const container = document.getElementById('timeline-tracks');
+                if(!container) return;
+                container.innerHTML = '';
+                
+                this.layers.forEach((l) => {
+                    const row = document.createElement('div');
+                    row.id = `track-row-${l.id}`;
+                    row.className = 'track-row';
+                    if (l.id === this.selectedId) row.classList.add('highlight');
+                    
+                    const label = document.createElement('div');
+                    label.className = 'track-label';
+                    label.innerText = (l.type === 'text' ? l.text : l.name);
+                    label.onclick = () => this.selectLayer(l.id);
+                    
+                    const area = document.createElement('div');
+                    area.className = 'track-area';
+
+                    const bar = document.createElement('div');
+                    bar.className = 'anim-bar';
+                    const startPct = (l.animation.delay / this.duration) * 100;
+                    
+                    let effectiveDuration = l.animation.duration;
+                    if (l.animation.loopCount > 0) {
+                        effectiveDuration *= l.animation.loopCount;
+                    } else if (l.animation.loopCount === 0 && l.animation.type !== 'none') {
+                        effectiveDuration = this.duration - l.animation.delay;
+                    }
+                    
+                    const widthPct = (effectiveDuration / this.duration) * 100;
+                    bar.style.left = `${startPct}%`;
+                    bar.style.width = `${widthPct}%`;
+                    bar.innerText = l.animation.type.toUpperCase();
+                    
+                    area.appendChild(bar);
+                    row.appendChild(label);
+                    row.appendChild(area);
+                    container.appendChild(row);
+                });
+                this.updatePlayheadPosition();
+            },
+
+            updatePlayheadPosition() {
+                const ph = document.getElementById('playhead');
+                if (ph) {
+                    const scrollContainer = document.getElementById('timeline-content');
+                    const labelW = 160;
+                    const trackWidth = scrollContainer.clientWidth - labelW;
+                    const pos = labelW + (this.currentTime / this.duration) * trackWidth;
+                    ph.style.left = `${pos}px`;
+                }
+            },
+
             moveLayer(id, dir) {
                 const idx = this.layers.findIndex(l => l.id === id);
                 const nIdx = idx + dir;
                 if (nIdx >= 0 && nIdx < this.layers.length) {
                     [this.layers[idx], this.layers[nIdx]] = [this.layers[nIdx], this.layers[idx]];
-                    this.updateLayerUI();
+                    this.updateLayerUI(); 
+                    this.updateTimelineUI();
+                    this.draw(ctx);
+                    this.triggerAutoSave();
                 }
             },
 
             deleteLayer(id) {
                 this.layers = this.layers.filter(l => l.id !== id);
                 if (this.selectedId === id) this.selectedId = null;
-                this.updateLayerUI(); this.updatePropertiesUI();
+                this.updateLayerUI(); this.updatePropertiesUI(); this.updateTimelineUI();
+                this.triggerAutoSave();
             },
 
             updatePropertiesUI() {
                 const panel = document.getElementById('propPanel');
                 const l = this.layers.find(l => l.id === this.selectedId);
-                if (!l) { panel.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 80px; font-size: 13px;">[ NO LAYER SELECTED ]</div>'; return; }
+                if (!l) { panel.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 100px; font-size: 13px;">[ SELECT LAYER TO EDIT ]</div>'; return; }
 
                 let html = `
                     <div class="prop-group">
-                        <label class="prop-label">Core Transform</label>
+                        <label class="prop-label">Basic Transform</label>
                         <div class="prop-row">
                             <div><label class="prop-label">Scale</label><input type="range" min="0.1" max="5" step="0.01" value="${l.scale}" oninput="app.updateProp('scale', this.value)"></div>
                             <div><label class="prop-label">Rotation</label><input type="range" min="0" max="360" value="${l.rotation}" oninput="app.updateProp('rotation', this.value)"></div>
@@ -529,9 +767,9 @@
                 if (l.type === 'image') {
                     html += `
                         <div class="prop-group">
-                            <label class="prop-label">Chroma Key FX</label>
+                            <label class="prop-label">Chroma Key (BG Removal)</label>
                             <select onchange="app.updateChroma('mode', this.value)" style="margin-bottom:12px">
-                                <option value="none" ${l.chroma.mode==='none'?'selected':''}>NONE</option>
+                                <option value="none" ${l.chroma.mode==='none'?'selected':''}>DISABLED</option>
                                 <option value="green" ${l.chroma.mode==='green'?'selected':''}>GREEN SCREEN</option>
                                 <option value="blue" ${l.chroma.mode==='blue'?'selected':''}>BLUE SCREEN</option>
                             </select>
@@ -543,29 +781,16 @@
                             ` : ''}
                         </div>
                     `;
-                } else if (l.type === 'text') {
-                    html += `
-                        <div class="prop-group">
-                            <label class="prop-label">Typography</label>
-                            <textarea oninput="app.updateProp('text', this.value)">${l.text}</textarea>
-                            <div class="prop-row" style="margin-top:10px">
-                                <div><label class="prop-label">Fill Color</label><input type="color" value="${l.color}" oninput="app.updateProp('color', this.value)"></div>
-                                <div><label class="prop-label">Font Face</label><select onchange="app.updateProp('fontFamily', this.value)">
-                                    ${this.fonts.map(f => `<option value="${f}" ${l.fontFamily===f?'selected':''}>${f}</option>`).join('')}
-                                </select></div>
-                            </div>
-                        </div>
-                    `;
                 }
 
                 html += `
                     <div class="prop-group">
-                        <label class="prop-label">Animation Script</label>
+                        <label class="prop-label">Animation Seq (Pro)</label>
                         <div class="prop-row">
                             <div><label class="prop-label">Type</label><select onchange="app.updateAnim('type', this.value)">
                                 <option value="none" ${l.animation.type==='none'?'selected':''}>NONE</option>
                                 <option value="slide" ${l.animation.type==='slide'?'selected':''}>SLIDE</option>
-                                <option value="zoom" ${l.animation.type==='zoom'?'selected':''}>ZOOM FX</option>
+                                <option value="zoom" ${l.animation.type==='zoom'?'selected':''}>ZOOM</option>
                                 <option value="float" ${l.animation.type==='float'?'selected':''}>FLOAT</option>
                                 <option value="bounce" ${l.animation.type==='bounce'?'selected':''}>BOUNCE</option>
                                 <option value="wobble" ${l.animation.type==='wobble'?'selected':''}>WOBBLE</option>
@@ -575,13 +800,29 @@
                                 ${Object.keys(Easing).map(k => `<option value="${k}" ${l.animation.easing===k?'selected':''}>${k}</option>`).join('')}
                             </select></div>
                         </div>
+
+                        ${l.animation.type === 'slide' ? `
+                            <div>
+                                <label class="prop-label">Direction</label>
+                                <select onchange="app.updateAnim('direction', this.value)" style="margin-bottom:15px">
+                                    <option value="top" ${l.animation.direction==='top'?'selected':''}>FROM TOP</option>
+                                    <option value="bottom" ${l.animation.direction==='bottom'?'selected':''}>FROM BOTTOM</option>
+                                    <option value="left" ${l.animation.direction==='left'?'selected':''}>FROM LEFT</option>
+                                    <option value="right" ${l.animation.direction==='right'?'selected':''}>FROM RIGHT</option>
+                                </select>
+                            </div>
+                        ` : ''}
+
+                        ${l.animation.type !== 'none' ? `
+                            <div class="prop-row">
+                                <div><label class="prop-label">Amplitude (Strength)</label><input type="range" min="0" max="500" value="${l.animation.amplitude}" oninput="app.updateAnim('amplitude', this.value)"></div>
+                                <div><label class="prop-label">Loop (0=Inf)</label><input type="number" value="${l.animation.loopCount || 0}" oninput="app.updateAnim('loopCount', this.value)"></div>
+                            </div>
+                        ` : ''}
+
                         <div class="prop-row">
-                            <div><label class="prop-label">Speed(S)</label><input type="number" step="0.1" value="${l.animation.duration}" oninput="app.updateAnim('duration', this.value)"></div>
-                            <div><label class="prop-label">Force</label><input type="range" min="0" max="200" value="${l.animation.amplitude}" oninput="app.updateAnim('amplitude', this.value)"></div>
-                        </div>
-                        <div class="prop-row">
-                            <div><label class="prop-label">Loops</label><input type="number" min="0" value="${l.animation.loopCount}" oninput="app.updateAnim('loopCount', this.value)"></div>
-                            <div><label class="prop-label">Delay</label><input type="number" step="0.1" value="${l.animation.delay}" oninput="app.updateAnim('delay', this.value)"></div>
+                            <div><label class="prop-label">Start Delay(S)</label><input type="number" step="0.01" value="${l.animation.delay.toFixed(2)}" oninput="app.updateAnim('delay', this.value)"></div>
+                            <div><label class="prop-label">Cycle Duration(S)</label><input type="number" step="0.1" value="${l.animation.duration.toFixed(2)}" oninput="app.updateAnim('duration', this.value)"></div>
                         </div>
                     </div>
                 `;
@@ -591,8 +832,9 @@
 
             updateProp(k, v) {
                 const l = this.layers.find(l => l.id === this.selectedId);
-                if (l) l[k] = (isNaN(v) || k==='text' || k==='fontFamily' || k==='color') ? v : parseFloat(v);
-                if (k === 'text') this.updateLayerUI();
+                if (l) l[k] = (isNaN(v) || k==='text') ? v : parseFloat(v);
+                if (k === 'text') { this.updateLayerUI(); this.updateTimelineUI(); }
+                this.triggerAutoSave();
             },
 
             updateChroma(k, v) {
@@ -600,6 +842,7 @@
                 if (l) {
                     l.chroma[k] = isNaN(v) ? v : parseFloat(v);
                     if (k === 'mode') this.updatePropertiesUI();
+                    this.triggerAutoSave();
                 }
             },
 
@@ -607,12 +850,13 @@
                 const l = this.layers.find(l => l.id === this.selectedId);
                 if (l) {
                     l.animation[k] = isNaN(v) ? v : parseFloat(v);
-                    if (k === 'type') this.updatePropertiesUI();
+                    this.updateTimelineUI();
+                    if (k === 'type' || k === 'direction') this.updatePropertiesUI();
+                    this.triggerAutoSave();
                 }
             },
 
             renderLoop(timestamp) {
-                // EXPORT 중일 때는 일반 렌더링 루프의 draw() 호출을 중단하여 화면 깜빡임 방지
                 if (!this.isExporting) {
                     if (this.isPlaying) {
                         const elapsed = (timestamp - this.lastFrameTime) / 1000;
@@ -622,6 +866,7 @@
                         }
                         this.updateTimeUI();
                     }
+                    this.updatePlayheadPosition();
                     this.draw(ctx);
                 }
                 this.lastFrameTime = timestamp;
@@ -648,39 +893,68 @@
                 
                 this.layers.forEach(l => {
                     if (!l.visible) return;
+
+                    const startTime = l.animation.delay;
+                    const loopCount = l.animation.loopCount || 0;
+                    
+                    let effectiveDuration = l.animation.duration;
+                    if (loopCount > 0) {
+                        effectiveDuration *= loopCount;
+                    } else if (loopCount === 0 && l.animation.type !== 'none') {
+                        effectiveDuration = this.duration - startTime;
+                    }
+                    
+                    const endTime = startTime + effectiveDuration;
+                    if (drawTime < startTime || drawTime > endTime) return;
+
                     targetCtx.save();
                     
                     let { x, y, scale: s, rotation, opacity: alpha } = l;
                     let r = rotation * Math.PI / 180;
-
                     const t = drawTime - l.animation.delay;
-                    if (t > 0 && l.animation.type !== 'none') {
-                        const duration = l.animation.duration;
-                        const loopCount = l.animation.loopCount || 0;
+                    const duration = l.animation.duration;
+                    
+                    if (t >= 0 && l.animation.type !== 'none') {
                         const currentCycle = t / duration;
                         let rawT, isFinished = false;
-
-                        if (loopCount === 0) rawT = (t % duration) / duration;
-                        else {
-                            if (currentCycle >= loopCount) { rawT = 1.0; isFinished = true; }
-                            else rawT = (t % duration) / duration;
+                        
+                        if (loopCount === 0) {
+                            rawT = (t % duration) / duration;
+                        } else {
+                            if (currentCycle >= loopCount) { 
+                                rawT = 1.0; 
+                                isFinished = true; 
+                            } else {
+                                rawT = (t % duration) / duration;
+                            }
                         }
-
+                        
                         const easedT = Easing[l.animation.easing](rawT);
                         const amp = l.animation.amplitude;
-
+                        
                         switch(l.animation.type) {
                             case 'slide':
-                                if (l.animation.direction === 'top') y -= (1 - easedT) * amp * 5;
-                                else if (l.animation.direction === 'bottom') y += (1 - easedT) * amp * 5;
-                                else if (l.animation.direction === 'left') x -= (1 - easedT) * amp * 5;
-                                else if (l.animation.direction === 'right') x += (1 - easedT) * amp * 5;
+                                const slideAmp = amp || 250;
+                                if (l.animation.direction === 'top') y -= (1 - easedT) * slideAmp;
+                                else if (l.animation.direction === 'bottom') y += (1 - easedT) * slideAmp;
+                                else if (l.animation.direction === 'left') x -= (1 - easedT) * slideAmp;
+                                else if (l.animation.direction === 'right') x += (1 - easedT) * slideAmp;
                                 alpha *= easedT; break;
-                            case 'zoom': s *= (easedT * (amp/50)); alpha *= easedT; break;
-                            case 'float': y += (isFinished ? 0 : Math.sin(rawT * Math.PI * 2)) * amp; break;
-                            case 'bounce': y -= (isFinished ? 0 : Math.abs(Math.sin(rawT * Math.PI * 3)) * (1 - rawT)) * amp * 2; break;
-                            case 'wobble': r += (isFinished ? 0 : Math.sin(rawT * Math.PI * 4)) * (amp / 100); break;
-                            case 'rotate': r += easedT * Math.PI * 2 * (amp / 50); break;
+                            case 'zoom': 
+                                const zoomBase = amp / 100 || 1;
+                                s *= (easedT * zoomBase); alpha *= easedT; break;
+                            case 'float': 
+                                const floatAmp = amp / 5 || 10;
+                                y += (isFinished ? 0 : Math.sin(rawT * Math.PI * 2)) * floatAmp; break;
+                            case 'bounce': 
+                                const bounceAmp = amp / 2 || 50;
+                                y -= (isFinished ? 0 : Math.abs(Math.sin(rawT * Math.PI * 3)) * (1 - rawT)) * bounceAmp; break;
+                            case 'wobble': 
+                                const wobbleAmp = amp / 500 || 0.1;
+                                r += (isFinished ? 0 : Math.sin(rawT * Math.PI * 4)) * wobbleAmp; break;
+                            case 'rotate': 
+                                const rotAmp = amp / 50 || 1;
+                                r += easedT * Math.PI * 2 * rotAmp; break;
                         }
                     }
 
@@ -690,11 +964,8 @@
                     targetCtx.globalAlpha = alpha;
 
                     if (l.type === 'image') {
-                        if (l.chroma.mode !== 'none') {
-                            this.drawChromaImage(targetCtx, l);
-                        } else {
-                            targetCtx.drawImage(l.img, -l.img.width/2, -l.img.height/2);
-                        }
+                        if (l.chroma.mode !== 'none') this.drawChromaImage(targetCtx, l);
+                        else if (l.img) targetCtx.drawImage(l.img, -l.img.width/2, -l.img.height/2);
                     } else {
                         targetCtx.font = `${l.fontSize}px ${l.fontFamily}`;
                         targetCtx.fillStyle = l.color;
@@ -708,19 +979,12 @@
                         targetCtx.fillText(l.text, 0, 0);
                     }
 
-                    // 출력 시에는 선택 상자를 절대 그리지 않음
                     if (l.id === this.selectedId && !isExportPass && !this.isExporting) {
                         targetCtx.strokeStyle = '#00d2ff';
                         targetCtx.lineWidth = 3 / s;
                         targetCtx.setLineDash([10, 5]);
-                        let w, h;
-                        if (l.type === 'image') {
-                            w = l.img.width; h = l.img.height;
-                        } else {
-                            targetCtx.font = `${l.fontSize}px ${l.fontFamily}`;
-                            w = targetCtx.measureText(l.text).width;
-                            h = l.fontSize;
-                        }
+                        let w = l.type === 'image' && l.img ? l.img.width : targetCtx.measureText(l.text).width;
+                        let h = l.type === 'image' && l.img ? l.img.height : l.fontSize;
                         targetCtx.strokeRect(-w/2-10, -h/2-10, w+20, h+20);
                     }
                     targetCtx.restore();
@@ -728,13 +992,13 @@
             },
 
             drawChromaImage(targetCtx, layer) {
+                if (!layer.img) return;
                 if (!this.offscreen) {
                     this.offscreen = document.createElement('canvas');
                     this.oCtx = this.offscreen.getContext('2d', { willReadFrequently: true });
                 }
                 const img = layer.img;
-                this.offscreen.width = img.width;
-                this.offscreen.height = img.height;
+                this.offscreen.width = img.width; this.offscreen.height = img.height;
                 this.oCtx.drawImage(img, 0, 0);
                 const imageData = this.oCtx.getImageData(0, 0, img.width, img.height);
                 const data = imageData.data;
@@ -742,8 +1006,7 @@
                 const targetR = 0, targetG = isGreen ? 255 : 0, targetB = isGreen ? 0 : 255;
                 const threshold = layer.chroma.threshold, softness = layer.chroma.softness;
                 for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i], g = data[i+1], b = data[i+2];
-                    const dist = Math.sqrt(Math.pow(r - targetR, 2) + Math.pow(g - targetG, 2) + Math.pow(b - targetB, 2));
+                    const dist = Math.sqrt(Math.pow(data[i] - targetR, 2) + Math.pow(data[i+1] - targetG, 2) + Math.pow(data[i+2] - targetB, 2));
                     if (dist < threshold) data[i+3] = 0;
                     else if (dist < threshold + softness) data[i+3] = ((dist - threshold) / softness) * 255;
                 }
@@ -756,10 +1019,9 @@
                 const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
                 const my = (e.clientY - rect.top) * (canvas.height / rect.height);
                 for (let i = this.layers.length - 1; i >= 0; i--) {
-                    const l = this.layers[i];
-                    if (this.hitTest(mx, my, l)) {
-                        this.selectLayer(l.id); this.isDragging = true;
-                        this.dragOffset = { x: mx - l.x, y: my - l.y }; return;
+                    if (this.hitTest(mx, my, this.layers[i])) {
+                        this.selectLayer(this.layers[i].id); this.isDragging = true;
+                        this.dragOffset = { x: mx - this.layers[i].x, y: my - this.layers[i].y }; return;
                     }
                 }
                 this.selectLayer(null);
@@ -770,14 +1032,7 @@
                 const rad = -l.rotation * Math.PI / 180;
                 const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
                 const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
-                let w, h;
-                if (l.type === 'image') {
-                    w = l.img.width; h = l.img.height;
-                } else {
-                    ctx.font = `${l.fontSize}px ${l.fontFamily}`;
-                    w = ctx.measureText(l.text).width;
-                    h = l.fontSize;
-                }
+                let w = l.type === 'image' && l.img ? l.img.width : 200, h = l.type === 'image' && l.img ? l.img.height : l.fontSize;
                 return Math.abs(lx) <= (w*l.scale)/2 + 20 && Math.abs(ly) <= (h*l.scale)/2 + 20;
             },
 
@@ -792,38 +1047,21 @@
 
             async export(fmt) {
                 const ov = document.getElementById('overlay');
-                const status = document.getElementById('statusMsg');
-                ov.style.display = 'flex'; 
-                
-                this.isExporting = true; // EXPORT 시작
-                this.isPlaying = false;
-                
-                const btn = document.getElementById('playBtn');
-                btn.innerHTML = '<i data-lucide="play" fill="currentColor"></i>';
-                lucide.createIcons();
-
+                ov.style.display = 'flex'; this.isExporting = true; this.isPlaying = false;
                 if (fmt === 'png') {
-                    // 단일 프레임 렌더링 (isExportPass=true 강제)
                     this.draw(ctx, this.currentTime, true); 
                     const link = document.createElement('a');
-                    link.download = `factory_snapshot_${Date.now()}.png`; 
-                    link.href = canvas.toDataURL(); 
-                    link.click();
-                    this.isExporting = false;
-                    ov.style.display = 'none';
+                    link.download = `factory_shot_${Date.now()}.png`; link.href = canvas.toDataURL(); link.click();
+                    this.isExporting = false; ov.style.display = 'none';
                 } else if (fmt === 'webm') {
-                    status.innerText = "RENDERING WebM...";
                     const chunks = [];
                     const stream = canvas.captureStream(this.fps);
                     const rec = new MediaRecorder(stream, { mimeType: 'video/webm', videoBitsPerSecond: 8000000 });
                     rec.ondataavailable = e => chunks.push(e.data);
                     rec.onstop = () => {
                         const link = document.createElement('a');
-                        link.download = `factory_video_${Date.now()}.webm`; 
-                        link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
-                        link.click(); 
-                        this.isExporting = false;
-                        ov.style.display = 'none';
+                        link.download = `factory_video_${Date.now()}.webm`; link.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); link.click(); 
+                        this.isExporting = false; ov.style.display = 'none';
                     };
                     rec.start();
                     this.currentTime = 0;
@@ -836,24 +1074,18 @@
                     };
                     step();
                 } else if (fmt === 'gif') {
-                    status.innerText = "ENCODING GIF...";
                     const workerBlob = new Blob(['importScripts("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js");'], { type: 'application/javascript' });
                     const workerUrl = URL.createObjectURL(workerBlob);
                     const gif = new GIF({ workers: 4, quality: 5, width: this.width, height: this.height, workerScript: workerUrl });
-                    const totalFrames = this.duration * this.fps;
-                    const frameDelay = 1000 / this.fps;
+                    const totalFrames = this.duration * 15;
                     for (let i = 0; i < totalFrames; i++) {
                         const sampleTime = (i / totalFrames) * this.duration;
-                        this.draw(ctx, sampleTime, true); 
-                        gif.addFrame(ctx, { copy: true, delay: frameDelay });
+                        this.draw(ctx, sampleTime, true); gif.addFrame(ctx, { copy: true, delay: 1000/15 });
                     }
                     gif.on('finished', b => {
                         const link = document.createElement('a');
-                        link.download = `factory_anim_${Date.now()}.gif`; 
-                        link.href = URL.createObjectURL(b); 
-                        link.click(); URL.revokeObjectURL(workerUrl); 
-                        this.isExporting = false;
-                        ov.style.display = 'none';
+                        link.download = `factory_anim_${Date.now()}.gif`; link.href = URL.createObjectURL(b); link.click();
+                        URL.revokeObjectURL(workerUrl); this.isExporting = false; ov.style.display = 'none';
                     });
                     gif.render();
                 }
