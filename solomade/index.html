@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From Platforms to Personal Worlds</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #f4f4f5;
+        }
+
+        .glass-nav {
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(39, 39, 42, 0.5);
+        }
+
+        .hero-gradient {
+            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15), transparent 70%);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #3b82f6, #818cf8, #71717a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-hover:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-4px);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+
+        .mobile-menu-open {
+            display: flex !important;
+        }
+    </style>
+</head>
+<body class="selection:bg-blue-600 selection:text-white">
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-500 py-8 px-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="text-xl font-black tracking-tighter flex items-center gap-2 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                    <i data-lucide="box" class="text-white w-5 h-5"></i>
+                </div>
+                <span class="bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent uppercase">Personal World</span>
+            </div>
+
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex gap-10 text-sm font-bold text-zinc-400 uppercase tracking-widest">
+                <a href="#vision" class="hover:text-blue-400 transition-colors relative group">Vision</a>
+                <a href="#reversing" class="hover:text-blue-400 transition-colors relative group">Reversing</a>
+                <a href="#agents" class="hover:text-blue-400 transition-colors relative group">Agents</a>
+                <a href="#meta" class="hover:text-blue-400 transition-colors relative group">Meta World</a>
+            </div>
+
+            <!-- Mobile Toggle -->
+            <button class="md:hidden text-white" id="menu-toggle">
+                <i data-lucide="menu" id="menu-icon"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="hidden fixed inset-0 top-[72px] bg-black/95 backdrop-blur-2xl z-40 flex-col items-center justify-center gap-8 md:hidden transition-all duration-300">
+            <a href="#vision" class="mobile-link text-2xl font-black text-white hover:text-blue-400">Vision</a>
+            <a href="#reversing" class="mobile-link text-2xl font-black text-white hover:text-blue-400">Reversing</a>
+            <a href="#agents" class="mobile-link text-2xl font-black text-white hover:text-blue-400">Agents</a>
+            <a href="#meta" class="mobile-link text-2xl font-black text-white hover:text-blue-400">Meta World</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop" 
+                 alt="Background" class="w-full h-full object-cover opacity-40">
+            <div class="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
+            <div class="absolute inset-0 hero-gradient"></div>
+        </div>
+
+        <div class="relative z-10 text-center px-6">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900/80 border border-zinc-800 text-[10px] font-black text-blue-400 mb-8 tracking-[0.3em] uppercase backdrop-blur-md">
+                <i data-lucide="zap" class="w-3 h-3 fill-current"></i> The Paradigm Shift
+            </div>
+            <h1 class="text-6xl md:text-9xl font-black tracking-tighter mb-8 leading-[0.9]">
+                <span class="block text-white">플랫폼의 시대에서</span>
+                <span class="text-gradient block">개인 세계의 시대로</span>
+            </h1>
+            <p class="text-lg md:text-2xl text-zinc-400 max-w-3xl mx-auto leading-relaxed mb-12 font-light">
+                인터넷의 초심으로 돌아가는 여정. <br />
+                이제 우리는 남이 만든 공간의 소비자가 아닌, <br />
+                <span class="text-white font-medium italic underline decoration-blue-500/50 underline-offset-4">자신만의 디지털 영토를 개척하는 설계자</span>가 됩니다.
+            </p>
+            <div class="flex flex-col md:flex-row gap-6 justify-center">
+                <a href="#vision" class="group px-10 py-5 bg-white text-black font-black rounded-full hover:bg-blue-600 hover:text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(255,255,255,0.1)]">
+                    변화의 흐름 살펴보기 <i data-lucide="arrow-right" class="group-hover:translate-x-1 transition-transform w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce text-zinc-500 flex flex-col items-center gap-2">
+            <span class="text-[10px] uppercase tracking-widest font-bold">Scroll to explore</span>
+            <i data-lucide="chevron-down"></i>
+        </div>
+    </header>
+
+    <!-- Vision Section -->
+    <section id="vision" class="py-24 px-6 md:px-12 max-w-6xl mx-auto scroll-mt-20">
+        <div class="grid md:grid-cols-2 gap-20 items-center">
+            <div>
+                <h2 class="text-4xl md:text-6xl font-black mb-10 text-white leading-tight tracking-tighter">
+                    거대한 플랫폼이라는<br />사무실에서 벗어나기
+                </h2>
+                <div class="space-y-8 text-zinc-400 text-xl leading-relaxed font-light">
+                    <p>인터넷의 시작은 각자의 공간이 연결된 자유로운 세상이었습니다.</p>
+                    <p>하지만 현실은 달랐습니다. 우리는 플랫폼의 영화관, 음식점, 사무실에 갇혀 <span class="text-white font-normal">'디지털 소작농'</span>의 삶에 익숙해졌습니다.</p>
+                    <div class="p-6 border-l-4 border-blue-500 bg-blue-500/5 rounded-r-2xl">
+                        <p class="text-blue-400 font-bold italic text-2xl">"지금, 그 견고한 구조가 무너지고 있습니다."</p>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <div class="absolute -inset-4 bg-blue-500/20 blur-3xl rounded-full opacity-30"></div>
+                <div class="aspect-square bg-zinc-900/50 backdrop-blur-md rounded-[3rem] border border-zinc-800 flex items-center justify-center p-16 overflow-hidden relative shadow-2xl">
+                    <div class="grid grid-cols-3 gap-6 w-full h-full relative z-10">
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-blue-600/30 border-blue-400 shadow-[0_0_30px_rgba(37,99,235,0.3)] scale-110 z-20 flex items-center justify-center">
+                            <i data-lucide="globe" class="text-blue-400 animate-pulse w-10 h-10"></i>
+                        </div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                        <div class="rounded-2xl border bg-zinc-800/40 border-zinc-700 opacity-40 flex items-center justify-center"><i data-lucide="box" class="text-zinc-600"></i></div>
+                    </div>
+                    <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 30px 30px;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reverse Engineering -->
+    <div class="bg-zinc-950 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-20">
+            <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop" class="w-full h-full object-cover">
+        </div>
+        <section id="reversing" class="relative z-10 py-24 px-6 md:px-12 max-w-6xl mx-auto scroll-mt-20">
+            <div class="text-center mb-24">
+                <h2 class="text-sm font-black text-blue-500 uppercase tracking-[0.5em] mb-6">Technological Breakthrough</h2>
+                <h3 class="text-4xl md:text-7xl font-black text-white tracking-tighter italic">행동을 보면 구조가 보인다</h3>
+            </div>
+            <div class="grid md:grid-cols-3 gap-10">
+                <div class="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 p-8 rounded-2xl card-hover transition-all group">
+                    <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6"><i data-lucide="terminal" class="text-blue-400"></i></div>
+                    <h3 class="text-xl font-bold mb-4 text-white">리버스 엔지니어링</h3>
+                    <p class="text-zinc-400 leading-relaxed">내부 코드를 몰라도 입력과 출력, 패턴을 분석하면 시스템의 본질을 유추하고 재건할 수 있습니다.</p>
+                </div>
+                <div class="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 p-8 rounded-2xl card-hover transition-all group">
+                    <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6"><i data-lucide="cpu" class="text-blue-400"></i></div>
+                    <h3 class="text-xl font-bold mb-4 text-white">AI 증류 (Distillation)</h3>
+                    <p class="text-zinc-400 leading-relaxed">거대 모델의 행동을 기록해 더 작고 효율적인 나만의 모델을 만듭니다. 행동의 복제가 곧 지능의 소유입니다.</p>
+                </div>
+                <div class="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 p-8 rounded-2xl card-hover transition-all group">
+                    <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6"><i data-lucide="layers" class="text-blue-400"></i></div>
+                    <h3 class="text-xl font-bold mb-4 text-white">사설 서버의 교훈</h3>
+                    <p class="text-zinc-400 leading-relaxed">공식 서버가 없어도 유저는 분석을 통해 자신만의 서버를 구축해왔습니다. 기술적 독립은 언제나 가능합니다.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Agents Section -->
+    <section id="agents" class="py-24 px-6 md:px-12 max-w-6xl mx-auto scroll-mt-20">
+        <div class="text-center mb-20">
+            <h2 class="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter">인간 집단에서 에이전트 집단으로</h2>
+            <p class="text-zinc-400 max-w-2xl mx-auto text-lg font-light">복잡한 조직도가 필요하던 시대는 끝났습니다. 이제는 지능형 에이전트들의 오케스트레이션이 그 역할을 대신합니다.</p>
+        </div>
+        
+        <div class="relative max-w-5xl mx-auto">
+            <div class="absolute inset-0 bg-blue-500/5 blur-[100px] rounded-full"></div>
+            <div class="relative flex flex-col md:flex-row items-stretch justify-center gap-6">
+                <div class="flex-1 bg-zinc-900/60 backdrop-blur-md border border-zinc-800 p-10 rounded-[2rem] flex flex-col items-center text-center gap-6">
+                    <div class="w-20 h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center border border-blue-500/30">
+                        <i data-lucide="layout" class="text-blue-400 w-8 h-8"></i>
+                    </div>
+                    <h5 class="text-xl font-bold text-white">분석 에이전트</h5>
+                </div>
+                <div class="flex items-center justify-center"><i data-lucide="arrow-right" class="text-zinc-700 rotate-90 md:rotate-0 w-8 h-8"></i></div>
+                <div class="flex-1 bg-zinc-900/60 backdrop-blur-md border border-zinc-800 p-10 rounded-[2rem] flex flex-col items-center text-center gap-6">
+                    <div class="w-20 h-20 bg-purple-500/10 rounded-3xl flex items-center justify-center border border-purple-500/30">
+                        <i data-lucide="code" class="text-purple-400 w-8 h-8"></i>
+                    </div>
+                    <h5 class="text-xl font-bold text-white">추론 에이전트</h5>
+                </div>
+                <div class="flex items-center justify-center"><i data-lucide="arrow-right" class="text-zinc-700 rotate-90 md:rotate-0 w-8 h-8"></i></div>
+                <div class="flex-1 bg-zinc-900/60 backdrop-blur-md border border-zinc-800 p-10 rounded-[2rem] flex flex-col items-center text-center gap-6">
+                    <div class="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center border border-emerald-500/30">
+                        <i data-lucide="settings" class="text-emerald-400 w-8 h-8"></i>
+                    </div>
+                    <h5 class="text-xl font-bold text-white">실행 에이전트</h5>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SaaS is Dying -->
+    <div class="relative py-32 overflow-hidden bg-blue-600">
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay">
+            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2064&auto=format&fit=crop" class="w-full h-full object-cover">
+        </div>
+        <section class="relative z-10 text-center px-6">
+            <h2 class="text-5xl md:text-8xl font-black text-white mb-10 italic tracking-tighter uppercase">“SaaS is Dying.”</h2>
+            <div class="bg-white/95 backdrop-blur-md p-10 rounded-[2rem] shadow-2xl max-w-4xl mx-auto">
+                <p class="text-blue-600 font-bold text-xl md:text-3xl leading-tight">
+                    구독하는 소프트웨어는 '기성복'입니다. <br class="hidden md:block" />
+                    이제 우리는 AI라는 개인 재봉사를 통해 자신에게 <br class="hidden md:block" />
+                    완벽히 맞춘 '맞춤복' 소프트웨어 생태계를 직접 창조합니다.
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Meta World -->
+    <section id="meta" class="py-24 px-6 md:px-12 max-w-6xl mx-auto scroll-mt-20">
+        <div class="text-center mb-24">
+            <h2 class="text-sm font-black text-zinc-500 uppercase tracking-[0.5em] mb-4">Ultimate Destination</h2>
+            <h3 class="text-4xl md:text-7xl font-black text-white tracking-tighter">나의 개인 메타 월드</h3>
+        </div>
+        <div class="grid md:grid-cols-3 gap-16">
+            <div class="text-center group">
+                <div class="aspect-[4/5] bg-zinc-900 rounded-[2.5rem] mb-8 border border-zinc-800 flex items-center justify-center overflow-hidden relative card-hover">
+                    <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-20">
+                    <i data-lucide="monitor" class="text-zinc-700 w-20 h-20 relative z-10 group-hover:text-blue-400 transition-colors"></i>
+                </div>
+                <h4 class="text-2xl font-black mb-3 text-white">내 영화관</h4>
+                <p class="text-zinc-500 font-light">창조한 콘텐츠가 상영되는 공간</p>
+            </div>
+            <div class="text-center group">
+                <div class="aspect-[4/5] bg-zinc-900 rounded-[2.5rem] mb-8 border border-zinc-800 flex items-center justify-center overflow-hidden relative card-hover">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1974&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-20">
+                    <i data-lucide="users" class="text-zinc-700 w-20 h-20 relative z-10 group-hover:text-indigo-400 transition-colors"></i>
+                </div>
+                <h4 class="text-2xl font-black mb-3 text-white">내 음식점</h4>
+                <p class="text-zinc-500 font-light">서비스가 직접 교환되는 생태계</p>
+            </div>
+            <div class="text-center group">
+                <div class="aspect-[4/5] bg-zinc-900 rounded-[2.5rem] mb-8 border border-zinc-800 flex items-center justify-center overflow-hidden relative card-hover">
+                    <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-20">
+                    <i data-lucide="layers" class="text-zinc-700 w-20 h-20 relative z-10 group-hover:text-emerald-400 transition-colors"></i>
+                </div>
+                <h4 class="text-2xl font-black mb-3 text-white">내 사무실</h4>
+                <p class="text-zinc-500 font-light">나를 위해 자동화된 워크스페이스</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="pb-32 px-6">
+        <div class="max-w-5xl mx-auto relative group">
+            <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 rounded-[4rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+            <div class="relative bg-zinc-900 border border-zinc-800 p-16 md:p-28 rounded-[4rem] text-center overflow-hidden">
+                <h2 class="text-4xl md:text-7xl font-black text-white mb-12 leading-[1.1] tracking-tighter">
+                    코드를 잘 쓰는 능력인가,<br />세계를 설계하는 능력인가.
+                </h2>
+                <p class="text-zinc-400 text-xl md:text-2xl mb-16 font-light max-w-3xl mx-auto leading-relaxed">
+                    AI가 당신의 손이 되어주는 시대, <br />
+                    진정한 창조는 '어떻게'가 아닌 <span class="text-white font-bold">'무엇을'</span>에 달려 있습니다.
+                </p>
+                <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="px-14 py-6 bg-blue-600 rounded-full text-white font-black text-2xl hover:bg-blue-500 transition-all shadow-xl active:scale-95">
+                    당신의 세계를 설계하십시오
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-16 px-6 border-t border-zinc-900 bg-zinc-950/50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-zinc-600 text-xs">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-zinc-800 rounded flex items-center justify-center"><i data-lucide="box" class="w-3 h-3"></i></div>
+                <span class="font-black tracking-widest">PERSONAL WORLD ARCHITECT</span>
+            </div>
+            <p class="uppercase tracking-[0.2em]">© 2025. Built for the New Era of Independence.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Navbar Scroll Effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('glass-nav');
+                navbar.classList.remove('py-8');
+                navbar.classList.add('py-4');
+            } else {
+                navbar.classList.remove('glass-nav');
+                navbar.classList.remove('py-4');
+                navbar.classList.add('py-8');
+            }
+        });
+
+        // Mobile Menu Logic
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIcon = document.getElementById('menu-icon');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
+
+        let isMenuOpen = false;
+
+        function toggleMenu() {
+            isMenuOpen = !isMenuOpen;
+            mobileMenu.classList.toggle('hidden');
+            mobileMenu.classList.toggle('flex');
+            menuIcon.setAttribute('data-lucide', isMenuOpen ? 'x' : 'menu');
+            lucide.createIcons();
+        }
+
+        menuToggle.addEventListener('click', toggleMenu);
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', toggleMenu);
+        });
+
+        // Smooth Scroll for Internal Links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
