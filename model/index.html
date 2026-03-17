@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model2Sprite | BUNTGAMES</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js and Loaders -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+        :root {
+            --accent: #00f3ff;
+            --bg-dark: #010305;
+            --panel-bg: rgba(5, 10, 18, 0.95);
+            --border: rgba(0, 243, 255, 0.15);
+        }
+
+        body {
+            font-family: 'JetBrains+Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--accent);
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .hud-scanlines {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.05;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: var(--bg-dark); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.3); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(0, 243, 255, 0.1);
+            height: 2px;
+            border-radius: 2px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 8px;
+            height: 16px;
+            background: var(--accent);
+            cursor: pointer;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+        }
+
+        .hud-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-color: var(--border);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2300f3ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: black;
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #00d8ff;
+            transform: scale(1.02);
+            box-shadow: 0 0 35px rgba(0, 243, 255, 0.5);
+        }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-outline {
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            background: rgba(0, 243, 255, 0.05);
+            transition: all 0.2s;
+        }
+        .btn-outline:hover {
+            border-color: var(--accent);
+            background: rgba(0, 243, 255, 0.15);
+        }
+
+        @keyframes scan {
+            from { top: -100%; }
+            to { top: 100%; }
+        }
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0.1;
+            animation: scan 4s linear infinite;
+        }
+    </style>
+</head>
+<body class="h-screen flex text-xs">
+    <div class="hud-scanlines"></div>
+
+    <!-- Sidebar Left -->
+    <aside class="w-80 h-full border-r hud-panel z-20 flex flex-col shrink-0 shadow-[20px_0_60px_rgba(0,0,0,0.7)]">
+        <!-- Header -->
+        <div class="p-6 border-b border-[#00f3ff33] relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-1 h-full bg-[#00f3ff] shadow-[0_0_15px_#00f3ff]"></div>
+            <div class="flex flex-col relative z-10">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="cpu" class="w-6 h-6 text-[#00f3ff] animate-pulse"></i>
+                    <div>
+                        <h1 class="text-sm font-black tracking-[0.2em] uppercase leading-none">Model2Sprite</h1>
+                        <p class="text-[9px] text-[#00f3ff66] tracking-tighter italic uppercase mt-1">BUNTGAMES_CORE</p>
+                    </div>
+                </div>
+                <!-- Links -->
+                <div class="flex gap-2 mt-4 ml-9">
+                    <a href="https://kitscript.com/tool/" target="_blank" class="p-1.5 border border-[#00f3ff22] hover:border-[#00f3ff] hover:bg-[#00f3ff11] transition-all"><i data-lucide="home" class="w-3.5 h-3.5 opacity-60"></i></a>
+                    <a href="https://youtube.com/@textcube" target="_blank" class="p-1.5 border border-[#00f3ff22] hover:border-[#00f3ff] hover:bg-red-500/10 transition-all"><i data-lucide="youtube" class="w-3.5 h-3.5 opacity-60"></i></a>
+                    <a href="https://github.com/textcube" target="_blank" class="p-1.5 border border-[#00f3ff22] hover:border-[#00f3ff] hover:bg-[#00f3ff11] transition-all"><i data-lucide="github" class="w-3.5 h-3.5 opacity-60"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ingestion -->
+        <div class="p-5 border-b border-[#00f3ff22]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-[10px] tracking-widest font-black uppercase flex items-center gap-2 opacity-60"><i data-lucide="database" class="w-3 h-3"></i> Data_Ingestion</span>
+                <div id="loadingSpinner" class="hidden animate-spin opacity-50"><i data-lucide="refresh-cw" class="w-3 h-3"></i></div>
+            </div>
+            <div class="space-y-3">
+                <label class="relative block group cursor-pointer">
+                    <input type="file" id="fileInput" accept=".glb,.gltf,.fbx" class="hidden">
+                    <div class="w-full py-4 border border-[#00f3ff44] bg-[#00f3ff05] rounded-sm flex flex-col items-center justify-center gap-2 group-hover:bg-[#00f3ff11] group-hover:border-[#00f3ff] transition-all">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span class="text-[9px] font-black tracking-widest uppercase">LOAD_LOCAL_MESH</span>
+                    </div>
+                </label>
+                <button id="loadSampleBtn" class="w-full py-4 border border-[#00f3ff44] bg-[#00f3ff15] rounded-sm flex flex-col items-center justify-center gap-2 hover:bg-[#00f3ff25] hover:border-[#00f3ff] transition-all active:scale-95 group">
+                    <i data-lucide="rocket" class="w-4 h-4 group-hover:animate-bounce text-[#00f3ff]"></i>
+                    <span class="text-[9px] font-black tracking-widest uppercase italic">LOAD_SHOWREEL_ASSET</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Motion Index -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-5">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-[10px] tracking-widest font-black uppercase flex items-center gap-2 opacity-40"><i data-lucide="activity" class="w-3 h-3"></i> Motion_Index</span>
+            </div>
+            <div id="animList" class="space-y-1.5">
+                <div class="h-32 flex flex-col items-center justify-center opacity-10 border border-dashed border-[#00f3ff22] rounded-sm">
+                    <i data-lucide="hard-drive" class="w-8 h-8 mb-2"></i>
+                    <span class="tracking-[0.3em]">STORAGE_EMPTY</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal -->
+        <div class="p-4 bg-black/60 border-t border-[#00f3ff11] h-44 flex flex-col">
+            <div class="flex items-center gap-2 mb-2 text-[9px] font-black opacity-40 uppercase tracking-widest"><i data-lucide="terminal" class="w-2.5 h-2.5"></i> Terminal_Sync</div>
+            <div id="terminalLog" class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 text-[8px] leading-tight opacity-80">
+                <div class="flex gap-2"><span>[INIT]</span><span class="text-[#00f3ffaa]">BUNTGAMES_OPERATIONAL_READY</span></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Engine View -->
+    <main class="flex-1 relative flex flex-col bg-[#010203]">
+        <div id="canvasContainer" class="flex-1 relative">
+            <canvas id="mainCanvas" class="w-full h-full block"></canvas>
+            
+            <div class="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-10">
+                <!-- HUD Top -->
+                <div class="flex justify-between items-start">
+                    <div class="p-4 border border-[#00f3ff22] bg-[#000a1588] backdrop-blur-md relative min-w-[160px] shadow-2xl">
+                        <div class="absolute top-0 right-0 w-16 h-[1px] bg-[#00f3ff]"></div>
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="target" class="w-5 h-5 opacity-40 text-[#00f3ff]"></i>
+                            <div>
+                                <p class="text-[8px] opacity-40 font-black uppercase tracking-[0.2em]">Cam_State</p>
+                                <p class="text-[10px] font-bold text-white tracking-widest uppercase italic">Orbit_Active</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[22px] font-black text-[#00f3ff15] tracking-[0.5em] leading-none mb-1">MODEL2SPRITE</div>
+                        <div class="text-[9px] font-black text-[#00f3ff] animate-pulse flex items-center justify-end gap-2 tracking-widest uppercase italic">
+                            <div class="w-1 h-1 bg-[#00f3ff] rounded-full shadow-[0_0_8px_#00f3ff]"></div>
+                            BUNTGAMES_OPERATIONAL
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HUD Timeline -->
+                <div class="flex flex-col gap-4 pointer-events-auto max-w-2xl mx-auto w-full">
+                    <div class="bg-[#000a18cc] border border-[#00f3ff33] backdrop-blur-xl p-4 flex flex-col gap-2 shadow-[0_20px_50px_rgba(0,0,0,0.9)] rounded-sm">
+                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <div class="flex items-center gap-2"><i data-lucide="sliders" class="w-3 h-3 text-[#00f3ff88]"></i> MOTION_TIMELINE_SYNC</div>
+                            <span id="timeDisplay" class="text-white tracking-tighter font-bold">0.000s / 0.000s</span>
+                        </div>
+                        <input type="range" id="timeScrubber" min="0" max="1" step="0.001" value="0" class="w-full">
+                    </div>
+                    <div class="flex justify-center items-center gap-1 bg-[#000a18ee] border border-[#00f3ff33] px-1 py-1 rounded-sm self-center">
+                        <button onclick="setCameraView('front')" class="px-6 py-2.5 hover:bg-[#00f3ff11] hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-transparent hover:border-[#00f3ff33]">Front</button>
+                        <button onclick="setCameraView('side')" class="px-6 py-2.5 hover:bg-[#00f3ff11] hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-transparent hover:border-[#00f3ff33]">Side</button>
+                        <button onclick="setCameraView('top')" class="px-6 py-2.5 hover:bg-[#00f3ff11] hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-transparent hover:border-[#00f3ff33]">Top</button>
+                        <button onclick="setCameraView('back')" class="px-6 py-2.5 hover:bg-[#00f3ff11] hover:text-white text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-transparent hover:border-[#00f3ff33]">Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rendering Overlay -->
+        <div id="exportOverlay" class="hidden absolute inset-0 bg-[#000a15f8] backdrop-blur-3xl flex flex-col items-center justify-center z-[100]">
+            <div class="w-[480px] p-12 border border-[#00f3ff33] relative bg-[#050a10] shadow-[0_0_150px_rgba(0,243,255,0.15)]">
+                <div class="flex items-center gap-6 mb-10 text-[#00f3ff]">
+                    <i data-lucide="activity" class="w-8 h-8 animate-pulse"></i>
+                    <h3 class="text-base font-black uppercase tracking-[0.3em]">SPRITE_PIXEL_DUMPING...</h3>
+                </div>
+                <div class="relative h-10 border border-[#00f3ff22] bg-black/40 mb-6 p-1.5 overflow-hidden">
+                    <div id="exportProgress" class="h-full bg-[#00f3ff] shadow-[0_0_15px_#00f3ff] transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                    <span id="progressText">PROGRESS: 0%</span>
+                    <span class="opacity-40 italic">Buffer_Write_Active</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sidebar Right -->
+    <aside class="w-80 h-full border-l hud-panel flex flex-col shrink-0 z-20 shadow-[-20px_0_60px_rgba(0,0,0,0.7)] overflow-y-auto custom-scrollbar">
+        <div class="p-6 border-b border-[#00f3ff44] flex items-center justify-between bg-[#00f3ff05]">
+            <div class="flex items-center gap-2">
+                <i data-lucide="settings" class="w-4 h-4 text-[#00f3ff]"></i>
+                <h2 class="text-[10px] font-black uppercase tracking-[0.3em]">System_Tweak</h2>
+            </div>
+        </div>
+
+        <!-- Lighting -->
+        <div class="p-5 border-b border-[#00f3ff22] space-y-4">
+            <div class="flex items-center gap-2 mb-2 text-[#00f3ff] opacity-60"><i data-lucide="sun" class="w-3.5 h-3.5"></i> <span class="text-[10px] font-black uppercase tracking-widest">LIGHT_ILLUMINANCE</span></div>
+            <div class="space-y-4 bg-black/40 p-4 border border-[#00f3ff11]">
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[8px] font-black uppercase opacity-50 tracking-widest"><span>ENV_AMBIENT</span><span id="ambientVal">0.4</span></div>
+                    <input type="range" id="ambientLight" min="0" max="4" step="0.1" value="0.4" class="w-full">
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[8px] font-black uppercase opacity-50 tracking-widest"><span>KEY_DIRECTIONAL</span><span id="dirVal">1.2</span></div>
+                    <input type="range" id="dirLight" min="0" max="10" step="0.1" value="1.2" class="w-full">
+                </div>
+            </div>
+        </div>
+
+        <!-- Playback -->
+        <div class="p-5 border-b border-[#00f3ff22] space-y-7">
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 mb-2 text-[#00f3ff] opacity-40"><i data-lucide="clock" class="w-3.5 h-3.5"></i> <span class="text-[10px] font-black uppercase tracking-widest">Motion_Flux</span></div>
+                <div class="flex items-center gap-4">
+                    <input type="range" id="playSpeed" min="0.1" max="2" step="0.1" value="1" class="w-full">
+                    <span id="speedVal" class="text-[10px] w-8 font-black">1.0x</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="playBtn" class="flex-1 py-3 bg-[#00f3ff22] border border-[#00f3ff44] hover:bg-[#00f3ff44] transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em]"><i data-lucide="play" class="w-3 h-3"></i> ENGAGE</button>
+                    <button id="stopBtn" class="px-4 py-3 bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center"><i data-lucide="square" class="w-3 h-3"></i></button>
+                </div>
+            </div>
+
+            <!-- Visual Buffer -->
+            <div class="space-y-4">
+                <div class="flex items-center gap-2 mb-2 text-[#00f3ff] opacity-40"><i data-lucide="palette" class="w-3.5 h-3.5"></i> <span class="text-[10px] font-black uppercase tracking-widest">Visual_Buffer</span></div>
+                <select id="bgMode" class="w-full bg-[#000d18] border border-[#00f3ff33] text-[#00f3ff] text-[10px] font-black py-3 px-3 focus:outline-none focus:border-[#00f3ff] appearance-none mb-3">
+                    <option value="transparent">ALPHA_CH_TRANSPARENT</option>
+                    <option value="green">CHROMA_00FF00_GREEN</option>
+                    <option value="custom">CUSTOM_HEX_OVERRIDE</option>
+                </select>
+                <div id="colorPickerContainer" class="hidden flex items-center gap-3 p-3 bg-black/40 border border-[#00f3ff22] rounded-sm animate-in fade-in">
+                    <i data-lucide="paintbrush" class="w-3 h-3 opacity-60 text-[#00f3ff]"></i>
+                    <input type="color" id="bgColor" value="#1a1a1a" class="w-full h-6 bg-transparent border-none cursor-pointer">
+                    <span id="hexVal" class="text-[9px] font-black opacity-60">#1A1A1A</span>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between py-3 px-4 bg-[#00f3ff05] border border-[#00f3ff11] rounded-sm">
+                <label class="text-[9px] font-black uppercase opacity-60 tracking-widest">Display_Reference_Grid</label>
+                <input type="checkbox" id="showGrid" checked class="w-4 h-4 accent-[#00f3ff] cursor-pointer">
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-8 mt-auto space-y-4 bg-[#00f3ff08]">
+            <button id="exportPngBtn" class="w-full py-6 btn-primary disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.4em] text-[11px] flex flex-col items-center justify-center gap-1 active:scale-95">
+                <div class="flex items-center gap-3"><i data-lucide="image" class="w-5 h-5"></i> <span>GEN_SPRITE_PACK</span></div>
+            </button>
+            <button id="exportWebmBtn" class="w-full py-4 btn-outline text-[#00f3ff] font-black uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="film" class="w-4 h-4"></i> <span>GEN_VP9_VIDEO</span>
+            </button>
+            <div class="text-center mt-4">
+                <p class="text-[9px] font-black opacity-30 tracking-[0.4em] uppercase italic">Built by BUNTGAMES</p>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        // --- Core Application Engine ---
+        lucide.createIcons();
+
+        let scene, camera, renderer, controls, clock, mixer;
+        let activeModel, activeAction, animations = [];
+        let isPlaying = false;
+        let isExporting = false;
+        let playbackSpeed = 1;
+        const SAMPLE_MODEL_URL = "https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb";
+
+        const terminalLog = document.getElementById('terminalLog');
+        function addLog(msg, type = 'INFO') {
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            const logEntry = document.createElement('div');
+            logEntry.className = 'flex gap-2';
+            const colorClass = type === 'ERROR' ? 'text-red-500' : type === 'SUCCESS' ? 'text-green-500' : 'text-[#00f3ffaa]';
+            logEntry.innerHTML = `<span class="opacity-20 shrink-0 text-[7px]">[${time}]</span><span class="${colorClass}">${msg}</span>`;
+            terminalLog.prepend(logEntry);
+        }
+
+        // --- Init Scene ---
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+            camera.position.set(2, 2, 5);
+
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.getElementById('mainCanvas'),
+                alpha: true,
+                antialias: true,
+                preserveDrawingBuffer: true
+            });
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+            ambient.name = "ambientLight";
+            scene.add(ambient);
+
+            const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+            dir.position.set(5, 10, 7);
+            dir.name = "dirLight";
+            scene.add(dir);
+
+            const grid = new THREE.GridHelper(20, 20, 0x00f3ff, 0x004444);
+            grid.name = "grid";
+            scene.add(grid);
+
+            clock = new THREE.Clock();
+
+            window.addEventListener('resize', onResize);
+            onResize();
+            animate();
+            
+            document.getElementById('exportPngBtn').disabled = true;
+            document.getElementById('exportWebmBtn').disabled = true;
+        }
+
+        function onResize() {
+            const container = document.getElementById('canvasContainer');
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (mixer && isPlaying && !isExporting) {
+                mixer.update(delta * playbackSpeed);
+                if (activeAction) {
+                    const progress = mixer.time % activeAction._clip.duration;
+                    document.getElementById('timeScrubber').value = progress / activeAction._clip.duration;
+                    updateTimeDisplay(progress, activeAction._clip.duration);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function updateTimeDisplay(current, total) {
+            document.getElementById('timeDisplay').innerText = `${current.toFixed(3)}s / ${total.toFixed(3)}s`;
+        }
+
+        // --- Model Handling ---
+        async function setupModel(obj, clips) {
+            if (activeModel) scene.remove(activeModel);
+            activeModel = obj;
+            scene.add(obj);
+
+            const box = new THREE.Box3().setFromObject(obj);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            controls.target.copy(center);
+            camera.position.set(center.x, center.y + size.y * 0.5, center.z + size.z * 2.5);
+
+            mixer = new THREE.AnimationMixer(obj);
+            animations = clips;
+            renderAnimList();
+            
+            if (clips.length > 0) selectAnimation(0);
+            
+            document.getElementById('exportPngBtn').disabled = false;
+            document.getElementById('exportWebmBtn').disabled = false;
+            addLog("INGESTION_SUCCESS: OBJECT_STAGED", "SUCCESS");
+        }
+
+        function renderAnimList() {
+            const list = document.getElementById('animList');
+            list.innerHTML = '';
+            animations.forEach((clip, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left px-3 py-3 border border-[#00f3ff08] bg-transparent hover:border-[#00f3ff44] text-[#00f3ff44] transition-all flex items-center justify-between group rounded-sm';
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="opacity-20 text-[8px]">[${String(i).padStart(2, '0')}]</span>
+                        <span class="font-bold uppercase tracking-widest truncate max-w-[140px] text-[10px]">${clip.name || 'CLIP_'+i}</span>
+                    </div>
+                    <i data-lucide="zap" class="w-3 h-3 opacity-0 group-hover:opacity-100 group-hover:animate-pulse"></i>
+                `;
+                btn.onclick = () => selectAnimation(i);
+                list.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function selectAnimation(index) {
+            const clip = animations[index];
+            mixer.stopAllAction();
+            activeAction = mixer.clipAction(clip);
+            activeAction.play();
+            mixer.setTime(0); // 0-frame lock by default
+            isPlaying = false;
+            
+            document.getElementById('playBtn').innerHTML = '<i data-lucide="play" class="w-3 h-3"></i> ENGAGE';
+            updateTimeDisplay(0, clip.duration);
+            document.getElementById('timeScrubber').value = 0;
+            
+            // UI Sync
+            Array.from(document.getElementById('animList').children).forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('border-[#00f3ff]', 'bg-[#00f3ff15]', 'text-[#00f3ff]');
+                    el.classList.remove('text-[#00f3ff44]');
+                } else {
+                    el.classList.remove('border-[#00f3ff]', 'bg-[#00f3ff15]', 'text-[#00f3ff]');
+                    el.classList.add('text-[#00f3ff44]');
+                }
+            });
+            lucide.createIcons();
+            addLog(`CLIP_LOCKED: ${clip.name.toUpperCase()}`);
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            const reader = new FileReader();
+            
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+            addLog(`UPLOADING: ${file.name.toUpperCase()}`);
+
+            reader.onload = async (event) => {
+                try {
+                    const data = event.target.result;
+                    if (ext === 'glb' || ext === 'gltf') {
+                        const loader = new THREE.GLTFLoader();
+                        loader.parse(data, '', (gltf) => {
+                            setupModel(gltf.scene, gltf.animations);
+                            document.getElementById('loadingSpinner').classList.add('hidden');
+                        });
+                    } else if (ext === 'fbx') {
+                        const loader = new THREE.FBXLoader();
+                        const model = loader.parse(data);
+                        setupModel(model, model.animations);
+                        document.getElementById('loadingSpinner').classList.add('hidden');
+                    }
+                } catch (err) {
+                    addLog("DATA_PARSE_ERROR", "ERROR");
+                    document.getElementById('loadingSpinner').classList.add('hidden');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('loadSampleBtn').onclick = () => {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+            addLog("STREAMING_SHOWREEL_ASSET...");
+            const loader = new THREE.GLTFLoader();
+            loader.load(SAMPLE_MODEL_URL, (gltf) => {
+                setupModel(gltf.scene, gltf.animations);
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                addLog("SHOWREEL_LOAD_COMPLETE", "SUCCESS");
+            }, undefined, () => {
+                addLog("REMOTE_FETCH_FAILURE", "ERROR");
+                document.getElementById('loadingSpinner').classList.add('hidden');
+            });
+        };
+
+        document.getElementById('playBtn').onclick = () => {
+            if (!activeAction) return;
+            isPlaying = !isPlaying;
+            document.getElementById('playBtn').innerHTML = isPlaying ? 
+                '<i data-lucide="pause" class="w-3 h-3"></i> STALL' : 
+                '<i data-lucide="play" class="w-3 h-3"></i> ENGAGE';
+            lucide.createIcons();
+        };
+
+        document.getElementById('stopBtn').onclick = () => {
+            if (mixer) mixer.setTime(0);
+            isPlaying = false;
+            document.getElementById('playBtn').innerHTML = '<i data-lucide="play" class="w-3 h-3"></i> ENGAGE';
+            document.getElementById('timeScrubber').value = 0;
+            updateTimeDisplay(0, activeAction ? activeAction._clip.duration : 0);
+            lucide.createIcons();
+        };
+
+        document.getElementById('timeScrubber').oninput = (e) => {
+            if (!activeAction) return;
+            const time = e.target.value * activeAction._clip.duration;
+            mixer.setTime(time);
+            updateTimeDisplay(time, activeAction._clip.duration);
+        };
+
+        // Light Controls
+        document.getElementById('ambientLight').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            scene.getObjectByName('ambientLight').intensity = val;
+            document.getElementById('ambientVal').innerText = val.toFixed(1);
+        };
+        document.getElementById('dirLight').oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            scene.getObjectByName('dirLight').intensity = val;
+            document.getElementById('dirVal').innerText = val.toFixed(1);
+        };
+
+        // Playback Speed
+        document.getElementById('playSpeed').oninput = (e) => {
+            playbackSpeed = parseFloat(e.target.value);
+            document.getElementById('speedVal').innerText = playbackSpeed.toFixed(1) + 'x';
+        };
+
+        // Background
+        document.getElementById('bgMode').onchange = (e) => {
+            const mode = e.target.value;
+            const picker = document.getElementById('colorPickerContainer');
+            if (mode === 'custom') picker.classList.remove('hidden');
+            else picker.classList.add('hidden');
+            updateBackground();
+        };
+
+        document.getElementById('bgColor').oninput = (e) => {
+            document.getElementById('hexVal').innerText = e.target.value.toUpperCase();
+            updateBackground();
+        };
+
+        function updateBackground() {
+            const mode = document.getElementById('bgMode').value;
+            const color = document.getElementById('bgColor').value;
+            if (mode === 'transparent') {
+                renderer.setClearColor(0x000000, 0);
+                scene.background = null;
+            } else if (mode === 'green') {
+                renderer.setClearColor(0x00ff00, 1);
+                scene.background = new THREE.Color(0x00ff00);
+            } else {
+                renderer.setClearColor(color, 1);
+                scene.background = new THREE.Color(color);
+            }
+        }
+
+        document.getElementById('showGrid').onchange = (e) => {
+            scene.getObjectByName('grid').visible = e.target.checked;
+        };
+
+        function setCameraView(view) {
+            if (!activeModel) return;
+            const box = new THREE.Box3().setFromObject(activeModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const dist = size.length() * 1.5;
+
+            switch(view) {
+                case 'front': camera.position.set(center.x, center.y, center.z + dist); break;
+                case 'side': camera.position.set(center.x + dist, center.y, center.z); break;
+                case 'top': camera.position.set(center.x, center.y + dist, center.z); break;
+                case 'back': camera.position.set(center.x, center.y, center.z - dist); break;
+            }
+            controls.target.copy(center);
+        }
+
+        // --- Exporters ---
+        async function exportPNG() {
+            if (!activeAction || isExporting) return;
+            isExporting = true;
+            isPlaying = false;
+            document.getElementById('exportOverlay').classList.remove('hidden');
+            addLog("PIXEL_DUMP_SEQUENCE_INIT", "INFO");
+
+            const zip = new JSZip();
+            const fps = 30;
+            const duration = activeAction._clip.duration;
+            const totalFrames = Math.ceil(duration * fps);
+            
+            const grid = scene.getObjectByName('grid');
+            const prevGrid = grid.visible;
+            grid.visible = false;
+
+            for (let i = 0; i < totalFrames; i++) {
+                const time = i * (1 / fps);
+                mixer.setTime(time);
+                renderer.render(scene, camera);
+                const data = document.getElementById('mainCanvas').toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
+                zip.file(`frame_${String(i).padStart(4, '0')}.png`, data, { base64: true });
+                
+                const prog = Math.round((i / totalFrames) * 100);
+                document.getElementById('exportProgress').style.width = prog + '%';
+                document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `BUNTGAMES_SpritePack.zip`;
+            link.click();
+
+            grid.visible = prevGrid;
+            isExporting = false;
+            document.getElementById('exportOverlay').classList.add('hidden');
+            addLog("SPRITE_ARCHIVE_DEPLOYED", "SUCCESS");
+        }
+
+        async function exportWebM() {
+            if (!activeAction || isExporting) return;
+            isExporting = true;
+            isPlaying = false;
+            document.getElementById('exportOverlay').classList.remove('hidden');
+            addLog("ENCODING_VP9_STREAM", "INFO");
+
+            const fps = 30;
+            const duration = activeAction._clip.duration;
+            const totalFrames = Math.ceil(duration * fps);
+            
+            const stream = document.getElementById('mainCanvas').captureStream(fps);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+            const chunks = [];
+            
+            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `BUNTGAMES_Video.webm`;
+                link.click();
+                isExporting = false;
+                document.getElementById('exportOverlay').classList.add('hidden');
+                addLog("VIDEO_STREAM_READY", "SUCCESS");
+            };
+
+            recorder.start();
+            for (let i = 0; i < totalFrames; i++) {
+                const time = i * (1 / fps);
+                mixer.setTime(time);
+                renderer.render(scene, camera);
+                const prog = Math.round((i / totalFrames) * 100);
+                document.getElementById('exportProgress').style.width = prog + '%';
+                document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
+                await new Promise(r => setTimeout(r, 1000/fps));
+            }
+            recorder.stop();
+        }
+
+        document.getElementById('exportPngBtn').onclick = exportPNG;
+        document.getElementById('exportWebmBtn').onclick = exportWebM;
+
+        init();
+    </script>
+</body>
+</html>
