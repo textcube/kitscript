@@ -78,14 +78,33 @@
             transition: all 0.1s; 
             border-left: 3px solid transparent; 
             padding: 9px 20px;
+            position: relative;
         }
         .active-node { 
             background-color: rgba(0, 229, 255, 0.12); 
             border-left-color: var(--pro-cyan); 
             color: var(--pro-cyan); 
         }
-        .node-action-btn { opacity: 0; transition: opacity 0.2s; }
-        .node-item:hover .node-action-btn { opacity: 1; }
+        .node-label {
+            flex: 1;
+            min-width: 0;
+        }
+        .node-action-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, rgba(13, 17, 23, 0), rgba(13, 17, 23, 0.96) 24%);
+            padding-left: 18px;
+        }
+        .node-item:hover .node-action-btn,
+        .node-item.active-node .node-action-btn {
+            opacity: 1;
+            pointer-events: auto;
+        }
 
         .pro-input {
             background-color: var(--pro-input); 
@@ -131,6 +150,54 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
+        }
+        .timeline-bar.editing {
+            outline: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.25), 0 0 14px rgba(0, 229, 255, 0.45);
+        }
+        .timeline-handle {
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            width: 8px;
+            background: rgba(255, 255, 255, 0.35);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            cursor: ew-resize;
+        }
+        .timeline-handle.left {
+            left: 2px;
+            border-radius: 3px 0 0 3px;
+        }
+        .timeline-handle.right {
+            right: 2px;
+            border-radius: 0 3px 3px 0;
+        }
+        .timeline-bar:hover .timeline-handle,
+        .timeline-bar.editing .timeline-handle {
+            opacity: 1;
+        }
+        .node-action-btn .mini-btn {
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--pro-border);
+            border-radius: 4px;
+            background: #161b22;
+            color: #94a3b8;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px !important;
+        }
+        .node-action-btn .mini-btn:hover {
+            border-color: var(--pro-cyan);
+            color: var(--pro-cyan);
+            background: var(--pro-hover);
+        }
+        .node-action-btn .mini-btn.warn:hover {
+            border-color: #f43f5e;
+            color: #f43f5e;
+            background: rgba(244, 63, 94, 0.08);
         }
         .timeline-bar.none-bar {
             background: #161b22 !important;
@@ -283,12 +350,16 @@
                         <span class="text-slate-800 opacity-30">/</span>
                         <span id="timeTotal" class="time-display">05.00</span>
                     </div>
-                    <button onclick="engine.globalTime = 0" class="text-slate-600 hover:text-pro transition-all">
+                    <button onclick="engine.setGlobalTime(0)" class="text-slate-600 hover:text-pro transition-all">
                         <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                 </div>
             </div>
             <div class="flex items-center gap-10">
+                <div class="flex items-center gap-3">
+                    <span class="text-pro opacity-70">TIME (S):</span>
+                    <input type="number" id="globalTimeInput" value="0" min="0" step="0.1" oninput="engine.updateGlobalTimeFromInput()" class="w-16 h-7 text-center bg-black border border-[#30363d] rounded">
+                </div>
                 <div class="flex items-center gap-3">
                     <span class="text-pro opacity-70">DUR (S):</span>
                     <input type="number" id="globalDuration" value="5" onchange="engine.updateGlobalSettings()" class="w-14 h-7 text-center bg-black border border-[#30363d] rounded">
@@ -351,12 +422,12 @@
                 });
             }
 
-            async save(nodes) {
+            async save(project) {
                 return new Promise((resolve, reject) => {
                     const tx = this.db.transaction(this.storeName, "readwrite");
                     const store = tx.objectStore(this.storeName);
-                    const payload = JSON.parse(JSON.stringify(nodes));
-                    const request = store.put({ nodes: payload, timestamp: Date.now() }, "current_v2");
+                    const payload = JSON.parse(JSON.stringify(project));
+                    const request = store.put({ ...payload, timestamp: Date.now() }, "current_v2");
                     request.onsuccess = () => resolve(true);
                     request.onerror = (e) => reject(false);
                 });
@@ -367,7 +438,7 @@
                     const tx = this.db.transaction(this.storeName, "readonly");
                     const store = tx.objectStore(this.storeName);
                     const request = store.get("current_v2");
-                    request.onsuccess = (e) => resolve(e.target.result ? e.target.result.nodes : null);
+                    request.onsuccess = (e) => resolve(e.target.result || null);
                     request.onerror = () => resolve(null);
                 });
             }
@@ -391,27 +462,74 @@
                 this.isDragging = false;
                 this.dragStartMousePos = { x: 0, y: 0 };
                 this.dragStartNodePos = { x: 0, y: 0 };
+                this.timelineEdit = null;
+                this.timelineSnap = 0.1;
 
                 this.init();
             }
 
             async init() {
                 await this.storage.connect();
-                const savedNodes = await this.storage.load();
-                if (savedNodes) {
-                    this.nodes = savedNodes;
-                    this.nodes.forEach(n => {
-                        if (n.motion && !n.motion.target) n.motion.target = 'POSITION';
-                    });
-                    const loadPromises = this.nodes.filter(n => n.visual.imageSrc).map(n => this.loadImgAsync(n.visual.imageSrc));
-                    await Promise.all(loadPromises);
+                const savedProject = await this.storage.load();
+                if (savedProject) {
+                    await this.applyProjectData(savedProject);
                 } else {
                     this.nodes = this.getDefaultStructure();
+                    document.getElementById('globalDuration').value = this.totalDuration;
+                    document.getElementById('globalFPS').value = this.fps;
+                    document.getElementById('timeTotal').innerText = this.totalDuration.toFixed(2);
                 }
                 this.selectedNodeId = 'BODY';
                 this.setupEvents();
                 this.updateUI();
                 this.renderLoop();
+            }
+
+            getDefaultMotion() {
+                return { target: 'POSITION', type: 'FLOAT', easing: 'linear', direction: 'TOP', strength: 10, delay: 0, duration: 2, loop: 0 };
+            }
+
+            getProjectData() {
+                return {
+                    version: "2.1",
+                    global: { duration: this.totalDuration, fps: this.fps },
+                    nodes: this.nodes
+                };
+            }
+
+            syncTimeUI() {
+                document.getElementById('timeCurrent').innerText = this.globalTime.toFixed(2).padStart(5, '0');
+                document.getElementById('timeTotal').innerText = this.totalDuration.toFixed(2);
+                const timeInput = document.getElementById('globalTimeInput');
+                if (timeInput && document.activeElement !== timeInput) {
+                    timeInput.value = this.globalTime.toFixed(2);
+                }
+                document.getElementById('playhead').style.left = (TIMELINE_LABEL_W + this.globalTime * PX_PER_SEC) + 'px';
+            }
+
+            setGlobalTime(value) {
+                this.globalTime = this.clamp(parseFloat(value) || 0, 0, this.totalDuration);
+                this.syncTimeUI();
+            }
+
+            async applyProjectData(rawProject) {
+                const project = Array.isArray(rawProject) ? { nodes: rawProject } : rawProject;
+                this.nodes = (project.nodes || []).map(node => ({
+                    ...node,
+                    motion: {
+                        ...this.getDefaultMotion(),
+                        ...(node.motion || {})
+                    }
+                }));
+                if (project.global) {
+                    this.totalDuration = parseFloat(project.global.duration) || 5;
+                    this.fps = parseInt(project.global.fps, 10) || 30;
+                }
+                document.getElementById('globalDuration').value = this.totalDuration;
+                document.getElementById('globalFPS').value = this.fps;
+                this.setGlobalTime(this.globalTime);
+                const loadPromises = this.nodes.filter(n => n.visual.imageSrc).map(n => this.loadImgAsync(n.visual.imageSrc));
+                await Promise.all(loadPromises);
             }
 
             getDefaultStructure() {
@@ -428,7 +546,11 @@
             newProject() {
                 this.nodes = this.getDefaultStructure();
                 this.selectedNodeId = 'BODY';
-                this.globalTime = 0;
+                this.totalDuration = 5;
+                this.fps = 30;
+                document.getElementById('globalDuration').value = this.totalDuration;
+                document.getElementById('globalFPS').value = this.fps;
+                this.setGlobalTime(0);
                 this.requestSave();
                 this.updateUI();
             }
@@ -446,7 +568,7 @@
                     indicator.classList.add('saving', 'saving-active');
                     text.innerText = "SAVING...";
                     dot.className = "w-1.5 h-1.5 rounded-full bg-cyan-400";
-                    const success = await this.storage.save(this.nodes);
+                    const success = await this.storage.save(this.getProjectData());
                     setTimeout(() => {
                         indicator.classList.remove('saving', 'saving-active');
                         if (success) {
@@ -477,7 +599,7 @@
                 indicator.classList.add('recording');
                 dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500 recording-blink";
                 text.innerText = "RECORDING...";
-                this.globalTime = 0;
+                this.setGlobalTime(0);
                 this.isPlaying = true;
                 const stream = this.canvas.captureStream(this.fps);
                 const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
@@ -504,8 +626,8 @@
                 });
                 document.getElementById('fileInput').onchange = e => this.loadJSON(e);
                 this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-                window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-                window.addEventListener('mouseup', () => this.handleMouseUp());
+                window.addEventListener('mousemove', (e) => this.handlePointerMove(e));
+                window.addEventListener('mouseup', () => this.handlePointerUp());
             }
 
             getMousePos(e) {
@@ -559,13 +681,46 @@
                 this.updateUI();
             }
 
-            handleMouseUp() { this.isDragging = false; }
+            handleTimelineDrag(e) {
+                if (!this.timelineEdit) return;
+                const deltaSec = this.snapTime((e.clientX - this.timelineEdit.startClientX) / PX_PER_SEC);
+                const motion = this.timelineEdit.node.motion;
+                const minDuration = 0.2;
+                if (this.timelineEdit.mode === 'move') {
+                    motion.delay = this.clamp(this.timelineEdit.startDelay + deltaSec, 0, Math.max(0, this.totalDuration - motion.duration));
+                } else if (this.timelineEdit.mode === 'resize-start') {
+                    const nextDelay = this.clamp(this.timelineEdit.startDelay + deltaSec, 0, this.timelineEdit.startDelay + this.timelineEdit.startDuration - minDuration);
+                    motion.delay = nextDelay;
+                    motion.duration = this.snapTime(this.timelineEdit.startDuration - (nextDelay - this.timelineEdit.startDelay));
+                } else if (this.timelineEdit.mode === 'resize-end') {
+                    motion.duration = this.clamp(this.snapTime(this.timelineEdit.startDuration + deltaSec), minDuration, Math.max(minDuration, this.totalDuration - motion.delay));
+                }
+                this.updateUI();
+                this.requestSave();
+            }
+
+            handlePointerMove(e) {
+                if (this.timelineEdit) {
+                    this.handleTimelineDrag(e);
+                    return;
+                }
+                this.handleMouseMove(e);
+            }
+
+            handlePointerUp() {
+                this.isDragging = false;
+                this.timelineEdit = null;
+            }
 
             updateGlobalSettings() {
                 this.totalDuration = parseFloat(document.getElementById('globalDuration').value) || 5;
                 this.fps = parseInt(document.getElementById('globalFPS').value) || 30;
-                document.getElementById('timeTotal').innerText = this.totalDuration.toFixed(2);
+                this.setGlobalTime(this.globalTime);
                 this.requestSave(); this.updateUI();
+            }
+
+            updateGlobalTimeFromInput() {
+                this.setGlobalTime(document.getElementById('globalTimeInput').value);
             }
 
             togglePlay() {
@@ -579,8 +734,80 @@
                 const x = event.clientX - rect.left - TIMELINE_LABEL_W; 
                 if (x >= 0) {
                     const time = x / PX_PER_SEC;
-                    this.globalTime = Math.max(0, Math.min(time, this.totalDuration));
+                    this.setGlobalTime(time);
                 }
+            }
+
+            clamp(v, min, max) {
+                return Math.min(max, Math.max(min, v));
+            }
+
+            snapTime(v) {
+                return Math.round(v / this.timelineSnap) * this.timelineSnap;
+            }
+
+            getNode(id) {
+                return this.nodes.find(node => node.id === id);
+            }
+
+            makeUniqueId(baseId) {
+                const safeBase = (baseId || 'NODE').toUpperCase().replace(/[^A-Z0-9_]/g, '_') || 'NODE';
+                let candidate = safeBase;
+                let index = 2;
+                while (this.nodes.some(node => node.id === candidate)) {
+                    candidate = `${safeBase}_${index}`;
+                    index += 1;
+                }
+                return candidate;
+            }
+
+            duplicateNode(id, asChild = false) {
+                const source = this.getNode(id);
+                if (!source) return;
+                const duplicate = JSON.parse(JSON.stringify(source));
+                duplicate.id = this.makeUniqueId(`${source.id}_COPY`);
+                duplicate.parent = asChild ? source.id : source.parent;
+                duplicate.transform.x += asChild ? 0 : 18;
+                duplicate.transform.y += asChild ? 0 : 18;
+                const sourceIndex = this.nodes.findIndex(node => node.id === id);
+                this.nodes.splice(sourceIndex + 1, 0, duplicate);
+                this.selectedNodeId = duplicate.id;
+                this.requestSave();
+                this.updateUI();
+            }
+
+            moveNode(id, direction) {
+                const node = this.getNode(id);
+                if (!node) return;
+                const siblingIndexes = this.nodes
+                    .map((candidate, index) => ({ candidate, index }))
+                    .filter(entry => entry.candidate.parent === node.parent)
+                    .map(entry => entry.index);
+                const currentSiblingPos = siblingIndexes.findIndex(index => this.nodes[index].id === id);
+                const targetSiblingPos = currentSiblingPos + direction;
+                if (currentSiblingPos < 0 || targetSiblingPos < 0 || targetSiblingPos >= siblingIndexes.length) return;
+                const fromIndex = siblingIndexes[currentSiblingPos];
+                const toIndex = siblingIndexes[targetSiblingPos];
+                const [moved] = this.nodes.splice(fromIndex, 1);
+                this.nodes.splice(toIndex, 0, moved);
+                this.requestSave();
+                this.updateUI();
+            }
+
+            beginTimelineEdit(event, nodeId, mode) {
+                const node = this.getNode(nodeId);
+                if (!node || !node.motion || node.motion.target === 'NONE') return;
+                event.stopPropagation();
+                event.preventDefault();
+                this.selectedNodeId = nodeId;
+                this.timelineEdit = {
+                    node,
+                    mode,
+                    startClientX: event.clientX,
+                    startDelay: node.motion.delay || 0,
+                    startDuration: node.motion.duration || 0
+                };
+                this.updateUI();
             }
 
             getMotionOffset(node) {
@@ -660,17 +887,203 @@
                 const dt = (time - this.lastTime) / 1000;
                 this.lastTime = time;
                 if (this.isPlaying) {
-                    this.globalTime += dt;
-                    if (this.globalTime >= this.totalDuration) this.globalTime = 0;
+                    const nextTime = this.globalTime + dt;
+                    this.setGlobalTime(nextTime >= this.totalDuration ? 0 : nextTime);
+                } else {
+                    this.syncTimeUI();
                 }
-                document.getElementById('timeCurrent').innerText = this.globalTime.toFixed(2).padStart(5, '0');
-                document.getElementById('playhead').style.left = (TIMELINE_LABEL_W + this.globalTime * PX_PER_SEC) + 'px';
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 this.nodes.forEach(node => this.drawNode(node));
                 requestAnimationFrame(t => this.renderLoop(t));
             }
 
             updateUI() {
+                {
+                const list = document.getElementById('nodeList');
+                list.innerHTML = '';
+                const render = (parentId, depth) => {
+                    this.nodes.filter(node => node.parent === parentId).forEach(node => {
+                        const div = document.createElement('div');
+                        div.className = `node-item flex items-center cursor-pointer ${this.selectedNodeId === node.id ? 'active-node' : 'text-slate-400 opacity-60'}`;
+                        div.style.paddingLeft = `${depth * 24 + 20}px`;
+
+                        const label = document.createElement('span');
+                        label.className = 'node-label truncate';
+                        label.textContent = `${parentId ? '> ' : '* '}${node.id}`;
+
+                        const actions = document.createElement('div');
+                        actions.className = 'node-action-btn flex gap-1';
+                        const buttons = [
+                            { text: '+', title: 'Add child node', handler: () => this.addNode(node.id), kind: 'mini-btn' },
+                            { text: 'D', title: 'Duplicate node', handler: () => this.duplicateNode(node.id, false), kind: 'mini-btn' },
+                            { text: 'F', title: 'Move forward', handler: () => this.moveNode(node.id, -1), kind: 'mini-btn' },
+                            { text: 'B', title: 'Move backward', handler: () => this.moveNode(node.id, 1), kind: 'mini-btn' }
+                        ];
+                        if (node.id !== 'BODY') {
+                            buttons.push({ text: 'X', title: 'Delete node', handler: () => this.deleteNode(node.id), kind: 'mini-btn warn' });
+                        }
+                        buttons.forEach(config => {
+                            const btn = document.createElement('button');
+                            btn.className = config.kind;
+                            btn.textContent = config.text;
+                            btn.title = config.title;
+                            btn.onclick = event => {
+                                event.stopPropagation();
+                                config.handler();
+                            };
+                            actions.appendChild(btn);
+                        });
+
+                        div.appendChild(label);
+                        div.appendChild(actions);
+                        div.onclick = () => {
+                            this.selectedNodeId = node.id;
+                            this.updateUI();
+                        };
+                        list.appendChild(div);
+                        render(node.id, depth + 1);
+                    });
+                };
+                render(null, 0);
+
+                const tl = document.getElementById('timelineContent');
+                tl.innerHTML = '';
+                const renderTimeline = (parentId, depth) => {
+                    this.nodes.filter(node => node.parent === parentId).forEach(node => {
+                        const row = document.createElement('div');
+                        row.className = `flex items-center h-9 timeline-track-row ${this.selectedNodeId === node.id ? 'bg-slate-900/40' : ''}`;
+
+                        const label = document.createElement('div');
+                        label.className = 'border-r border-[#30363d] px-6 text-slate-500 truncate shrink-0';
+                        label.style.width = `${TIMELINE_LABEL_W}px`;
+                        label.style.paddingLeft = `${depth * 15 + 24}px`;
+                        label.textContent = node.id;
+
+                        const track = document.createElement('div');
+                        track.className = 'flex-1 relative h-full';
+
+                        const bar = document.createElement('div');
+                        const isNone = !node.motion || node.motion.target === 'NONE';
+                        bar.className = `timeline-bar ${isNone ? 'none-bar' : ''}${this.timelineEdit && this.timelineEdit.node.id === node.id ? ' editing' : ''}`;
+                        bar.style.left = `${(node.motion?.delay || 0) * PX_PER_SEC}px`;
+                        bar.style.width = `${Math.max(0.2, node.motion?.duration || 0) * PX_PER_SEC}px`;
+                        bar.textContent = isNone ? '' : node.motion.target;
+                        if (!isNone) {
+                            bar.onmousedown = event => this.beginTimelineEdit(event, node.id, 'move');
+
+                            const leftHandle = document.createElement('div');
+                            leftHandle.className = 'timeline-handle left';
+                            leftHandle.onmousedown = event => this.beginTimelineEdit(event, node.id, 'resize-start');
+
+                            const rightHandle = document.createElement('div');
+                            rightHandle.className = 'timeline-handle right';
+                            rightHandle.onmousedown = event => this.beginTimelineEdit(event, node.id, 'resize-end');
+
+                            bar.appendChild(leftHandle);
+                            bar.appendChild(rightHandle);
+                        }
+
+                        track.appendChild(bar);
+                        row.appendChild(label);
+                        row.appendChild(track);
+                        row.onclick = () => {
+                            this.selectedNodeId = node.id;
+                            this.updateUI();
+                        };
+                        tl.appendChild(row);
+                        renderTimeline(node.id, depth + 1);
+                    });
+                };
+                renderTimeline(null, 0);
+
+                const panel = document.getElementById('editorPanel');
+                const active = this.nodes.find(node => node.id === this.selectedNodeId);
+                if (!active) {
+                    panel.innerHTML = '';
+                    return;
+                }
+                if (!active.motion) active.motion = this.getDefaultMotion();
+                panel.innerHTML = `
+                    <div class="space-y-8">
+                        <section>
+                            <h3 class="inspector-group-title">NODE INFO</h3>
+                            <input type="text" value="${active.id}" onchange="engine.updateNodeId(this.value)" class="pro-input">
+                            <div class="grid grid-cols-2 gap-2 mt-3">
+                                <button onclick="engine.duplicateNode('${active.id}', false)" class="pro-btn">DUPLICATE</button>
+                                <button onclick="engine.duplicateNode('${active.id}', true)" class="pro-btn">DUP AS CHILD</button>
+                            </div>
+                        </section>
+                        <section>
+                            <h3 class="inspector-group-title">XFORM (LOCAL)</h3>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                                <div><label class="inspector-label">POS X</label><input type="number" value="${Math.round(active.transform.x)}" oninput="engine.updateTransform('x', this.value)" class="pro-input"></div>
+                                <div><label class="inspector-label">POS Y</label><input type="number" value="${Math.round(active.transform.y)}" oninput="engine.updateTransform('y', this.value)" class="pro-input"></div>
+                                <div><label class="inspector-label">SCL X</label><input type="number" step="0.1" value="${active.transform.scaleX}" oninput="engine.updateTransform('scaleX', this.value)" class="pro-input"></div>
+                                <div><label class="inspector-label">SCL Y</label><input type="number" step="0.1" value="${active.transform.scaleY}" oninput="engine.updateTransform('scaleY', this.value)" class="pro-input"></div>
+                                <div class="col-span-2">
+                                    <div class="flex justify-between items-center mb-1"><label class="inspector-label">ROT</label><span class="text-pro text-[10px]">${active.transform.rotation}deg</span></div>
+                                    <input type="range" min="-360" max="360" value="${active.transform.rotation}" oninput="engine.updateTransform('rotation', this.value); engine.updateUI()" class="w-full">
+                                </div>
+                            </div>
+                        </section>
+                        <section>
+                            <h3 class="inspector-group-title">VISUAL</h3>
+                            <select onchange="engine.updateVisual('type', this.value); engine.updateUI()" class="pro-input mb-3">
+                                <option value="RECTANGLE" ${active.visual.type==='RECTANGLE'?'selected':''}>RECTANGLE</option>
+                                <option value="CIRCLE" ${active.visual.type==='CIRCLE'?'selected':''}>CIRCLE</option>
+                                <option value="SPRITE_ASSET" ${active.visual.type==='SPRITE_ASSET'?'selected':''}>SPRITE</option>
+                            </select>
+                            <button onclick="document.getElementById('spriteLoader').click()" class="pro-btn w-full mb-2">LOAD IMAGE</button>
+                            <input type="file" id="spriteLoader" class="hidden" onchange="engine.handleUpload(event)">
+                            ${active.visual.type !== 'SPRITE_ASSET' ? '<div class="mt-2"><label class="inspector-label">COLOR</label><input type="color" value="'+active.visual.color+'" oninput="engine.updateVisual(\'color\', this.value)" class="pro-input !p-1 h-9"></div>' : ''}
+                        </section>
+                        <section>
+                            <h3 class="inspector-group-title">ANIMATION</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="inspector-label">TARGET</label>
+                                    <select onchange="engine.updateMotion('target', this.value); engine.updateUI()" class="pro-input">
+                                        <option value="NONE" ${active.motion.target==='NONE'?'selected':''}>NONE</option>
+                                        <option value="POSITION" ${active.motion.target==='POSITION'?'selected':''}>POS (XY)</option>
+                                        <option value="ROTATION" ${active.motion.target==='ROTATION'?'selected':''}>ROT (DEG)</option>
+                                        <option value="SCALE" ${active.motion.target==='SCALE'?'selected':''}>SCL (%)</option>
+                                    </select>
+                                </div>
+                                ${active.motion.target === 'POSITION' ? `
+                                <div>
+                                    <label class="inspector-label">TYPE</label>
+                                    <select onchange="engine.updateMotion('type', this.value); engine.updateUI()" class="pro-input">
+                                        <option value="FLOAT" ${active.motion.type==='FLOAT'?'selected':''}>FLOAT</option>
+                                        <option value="BOUNCE" ${active.motion.type==='BOUNCE'?'selected':''}>BOUNCE</option>
+                                        <option value="SLIDE" ${active.motion.type==='SLIDE'?'selected':''}>SLIDE</option>
+                                    </select>
+                                </div>` : ''}
+                                ${active.motion.type === 'SLIDE' && active.motion.target === 'POSITION' ? `
+                                <div>
+                                    <label class="inspector-label">DIR</label>
+                                    <select onchange="engine.updateMotion('direction', this.value)" class="pro-input">
+                                        <option value="TOP" ${active.motion.direction==='TOP'?'selected':''}>TOP</option><option value="BOTTOM" ${active.motion.direction==='BOTTOM'?'selected':''}>BOTTOM</option><option value="LEFT" ${active.motion.direction==='LEFT'?'selected':''}>LEFT</option><option value="RIGHT" ${active.motion.direction==='RIGHT'?'selected':''}>RIGHT</option>
+                                    </select>
+                                </div>` : ''}
+                                <div>
+                                    <label class="inspector-label">EASING</label>
+                                    <select onchange="engine.updateMotion('easing', this.value)" class="pro-input">
+                                        <option value="linear" ${active.motion.easing==='linear'?'selected':''}>LINEAR</option><option value="easeIn" ${active.motion.easing==='easeIn'?'selected':''}>EASE-IN</option><option value="easeOut" ${active.motion.easing==='easeOut'?'selected':''}>EASE-OUT</option><option value="easeInOut" ${active.motion.easing==='easeInOut'?'selected':''}>EASE-INOUT</option><option value="bounce" ${active.motion.easing==='bounce'?'selected':''}>BOUNCE</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                                    <div><label class="inspector-label">DUR (S)</label><input type="number" step="0.1" value="${active.motion.duration}" oninput="engine.updateMotion('duration', this.value)" class="pro-input"></div>
+                                    <div><label class="inspector-label">STR</label><input type="number" value="${active.motion.strength}" oninput="engine.updateMotion('strength', this.value)" class="pro-input"></div>
+                                    <div><label class="inspector-label">DLY (S)</label><input type="number" step="0.1" value="${active.motion.delay}" oninput="engine.updateMotion('delay', this.value)" class="pro-input"></div>
+                                    <div><label class="inspector-label">LP (0=INF)</label><input type="number" value="${active.motion.loop}" oninput="engine.updateMotion('loop', this.value)" class="pro-input"></div>
+                                </div>
+                                <p class="text-slate-500 leading-relaxed">Use child nodes to combine position, rotation, and scale on the same visual part.</p>
+                            </div>
+                        </section>
+                    </div>
+                `;
+                }
+                return;
                 const list = document.getElementById('nodeList');
                 list.innerHTML = '';
                 const render = (p, d) => {
@@ -791,18 +1204,49 @@
                 }
             }
 
-            updateNodeId(v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.id = v; this.requestSave(); this.updateUI(); } }
+            updateNodeId(v) {
+                const node = this.getNode(this.selectedNodeId);
+                if (!node) return;
+                const prevId = node.id;
+                const baseId = (v.trim() || node.id).toUpperCase().replace(/[^A-Z0-9_]/g, '_') || prevId;
+                let nextId = baseId;
+                let index = 2;
+                while (this.nodes.some(candidate => candidate !== node && candidate.id === nextId)) {
+                    nextId = `${baseId}_${index}`;
+                    index += 1;
+                }
+                if (nextId === prevId) return;
+                node.id = nextId;
+                this.nodes.forEach(candidate => {
+                    if (candidate.parent === prevId) candidate.parent = nextId;
+                });
+                this.selectedNodeId = nextId;
+                this.requestSave();
+                this.updateUI();
+            }
             updateTransform(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.transform[k] = parseFloat(v); this.requestSave(); } }
             updateVisual(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.visual[k] = (k==='type'||k==='imageSrc'||k==='color') ? v : parseFloat(v); this.requestSave(); } }
             updateMotion(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.motion[k] = (k==='target'||k==='type'||k==='easing'||k==='direction') ? v : parseFloat(v); this.requestSave(); this.updateUI(); } }
             async loadImgAsync(src) { if (this.imageCache.has(src)) return this.imageCache.get(src); return new Promise(res => { const img = new Image(); img.onload = () => { this.imageCache.set(src, img); res(img); }; img.src = src; }); }
             processImg(blob) { const MAX_W = 480; const reader = new FileReader(); reader.onload = e => { const dataUrl = e.target.result; const img = new Image(); img.onload = () => { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.visual.type = 'SPRITE_ASSET'; n.visual.imageSrc = dataUrl; const ratio = img.width > MAX_W ? MAX_W / img.width : 1; n.visual.width = img.width * ratio; n.visual.height = img.height * ratio; this.imageCache.set(dataUrl, img); this.requestSave(); this.updateUI(); } }; img.src = dataUrl; }; reader.readAsDataURL(blob); }
             handleUpload(e) { if (e.target.files[0]) this.processImg(e.target.files[0]); }
-            addNode(p) { const id = "NODE_" + Math.random().toString(36).substr(2, 4).toUpperCase(); this.nodes.push({ id, parent: p, transform:{x:0, y:0, rotation:0, scaleX:1, scaleY:1}, visual:{type:'RECTANGLE', width:40, height:40, radius:20, color:'#f43f5e', imageSrc:null}, motion:{target:'POSITION', type:'FLOAT', easing:'linear', direction:'TOP', strength:10, delay:0, duration:2, loop:0}}); this.selectedNodeId = id; this.requestSave(); this.updateUI(); }
+            addNode(p) {
+                const id = this.makeUniqueId("NODE");
+                this.nodes.push({
+                    id,
+                    parent: p,
+                    transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+                    visual: { type: 'RECTANGLE', width: 40, height: 40, radius: 20, color: '#f43f5e', imageSrc: null },
+                    motion: this.getDefaultMotion()
+                });
+                this.selectedNodeId = id;
+                this.requestSave();
+                this.updateUI();
+            }
             deleteNode(id) { if (id === 'BODY') return; const toDelete = [id]; const collectChildren = (parentId) => { this.nodes.forEach(n => { if (n.parent === parentId) { toDelete.push(n.id); collectChildren(n.id); } }); }; collectChildren(id); this.nodes = this.nodes.filter(n => !toDelete.includes(n.id)); if (toDelete.includes(this.selectedNodeId)) this.selectedNodeId = 'BODY'; this.requestSave(); this.updateUI(); }
             
             exportJSON() { 
-                const data = { version: "2.0", global: { duration: this.totalDuration, fps: this.fps }, nodes: this.nodes };
+                const data = this.getProjectData();
                 const blob = new Blob([JSON.stringify(data)], {type:'application/json'}); 
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
                 a.download = `avatar_project_${Date.now()}.json`; a.click(); 
@@ -813,20 +1257,8 @@
                 reader.onload = async ev => { 
                     try {
                         const raw = JSON.parse(ev.target.result);
-                        let loadedNodes = Array.isArray(raw) ? raw : raw.nodes;
-                        if (raw.global) {
-                            this.totalDuration = raw.global.duration;
-                            this.fps = raw.global.fps;
-                            document.getElementById('globalDuration').value = this.totalDuration;
-                            document.getElementById('globalFPS').value = this.fps;
-                        }
-                        loadedNodes.forEach(n => {
-                            if (!n.motion) n.motion = { target: 'NONE', type: 'FLOAT', easing: 'linear', direction: 'TOP', strength: 10, delay: 0, duration: 2, loop: 0 };
-                            if (!n.motion.target) n.motion.target = 'POSITION';
-                        });
-                        const loadPromises = loadedNodes.filter(n => n.visual.imageSrc).map(n => this.loadImgAsync(n.visual.imageSrc));
-                        await Promise.all(loadPromises);
-                        this.nodes = loadedNodes; 
+                        await this.applyProjectData(raw);
+                        this.selectedNodeId = this.nodes[0]?.id || null;
                         this.requestSave(); 
                         this.updateUI(); 
                     } catch (err) {
