@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>root@webshell: ~</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a; /* Desktop background */
+            --window-bg: #0c0c0c; /* Terminal background */
+            --text-color: #dcdcdc;
+            --prompt-user: #ff5555;
+            --prompt-host: #00ff41;
+            --prompt-dir: #3465a4;
+            --cursor-color: #ffffff;
+            --ai-color: #a855f7;
+            --font-main: 'Fira Code', 'Source Code Pro', 'Courier New', monospace;
+            --header-bg: #333333;
+            --button-red: #ff5f56;
+            --button-yellow: #ffbd2e;
+            --button-green: #27c93f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Desktop Container */
+        #desktop {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Terminal Window Frame */
+        .terminal-window {
+            width: 100%;
+            max-width: 1000px;
+            height: 85vh;
+            background-color: var(--window-bg);
+            border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #444;
+        }
+
+        /* Title Bar */
+        .window-header {
+            background-color: var(--header-bg);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            user-select: none;
+        }
+
+        .window-buttons {
+            position: absolute;
+            left: 15px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .red { background-color: var(--button-red); }
+        .yellow { background-color: var(--button-yellow); }
+        .green { background-color: var(--button-green); }
+
+        .window-title {
+            font-size: 13px;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        /* Terminal Content Area */
+        #terminal {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #333 transparent;
+        }
+
+        #terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+        #terminal::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .output-line {
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-bottom: 2px;
+        }
+
+        .prompt-container {
+            display: flex;
+            align-items: center;
+            gap: 0px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .prompt-text {
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .user { color: var(--prompt-user); font-weight: bold; }
+        .host { color: var(--prompt-host); font-weight: bold; }
+        .dir { color: var(--prompt-dir); font-weight: bold; }
+
+        #command-input {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-family: var(--font-main);
+            font-size: 14px;
+            outline: none;
+            padding: 0;
+            margin: 0;
+            width: 0ch;
+            min-width: 1px;
+            caret-color: transparent; 
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: var(--cursor-color);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .dir-item { color: #729fcf; font-weight: bold; }
+        .file-item { color: var(--text-color); }
+        .error { color: #ef2929; }
+        .success { color: #4e9a06; }
+        .info { color: #729fcf; }
+        .ai-text { color: var(--ai-color); font-style: italic; }
+        
+        .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .motd {
+            color: #fce94f;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #444;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="desktop">
+    <div class="terminal-window" onclick="focusInput()">
+        <div class="window-header">
+            <div class="window-buttons">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="window-title">root@webshell: ~</div>
+        </div>
+        <div id="terminal">
+            <div id="output"></div>
+            <div class="prompt-container" id="input-line">
+                <span class="prompt-text" id="main-prompt">
+                    <span class="user">root</span>@<span class="host">webshell</span>:<span class="dir" id="display-cwd">~</span>#
+                </span>
+                <input type="text" id="command-input" spellcheck="false" autocomplete="off">
+                <span class="cursor"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Configuration ---
+    const apiKey = ""; 
+    const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+    const SYSTEM_PROMPT = `당신은 'webshell'이라는 리눅스 서버의 root 계정 AI 어시스턴트입니다. 사용자는 베테랑 개발자입니다. 간결하고 전문적인 답변을 터미널 출력 형식으로 제공하세요.`;
+
+    // --- Virtual Filesystem ---
+    const fs = {
+        type: 'dir',
+        children: {
+            'bin': { type: 'dir', date: 'Oct 12 10:24', children: { 'sh': {type: 'file', date: 'Oct 12 10:24', content: 'Binary'}, 'ls': {type: 'file', date: 'Oct 12 10:24', content: 'Binary'} } },
+            'etc': { type: 'dir', date: 'Oct 12 10:24', children: { 'passwd': {type: 'file', date: 'Oct 12 10:24', content: 'root:x:0:0:root:/root:/bin/bash'}, 'hosts': {type: 'file', date: 'Oct 12 10:24', content: '127.0.0.1 localhost'} } },
+            'root': {
+                type: 'dir',
+                date: 'Mar 19 21:44',
+                children: {
+                    'scripts': { type: 'dir', date: 'Mar 19 21:44', children: {} },
+                    'server_info.log': { type: 'file', date: 'Mar 19 21:00', content: 'Server Status: Operational\nUptime: 452 days\nMemory: 16GB\nStorage: 512GB SSD' },
+                    '.bashrc': { type: 'file', date: 'Mar 19 21:00', content: 'alias ll="ls -la"\nalias h="history"' }
+                }
+            },
+            'home': { type: 'dir', date: 'Oct 12 10:24', children: { 'user': { type: 'dir', date: 'Oct 12 10:24', children: {} } } },
+            'var': { type: 'dir', date: 'Oct 12 10:24', children: { 'log': { type: 'dir', date: 'Oct 12 10:24', children: { 'syslog': { type: 'file', date: 'Mar 19 21:45', content: 'Mar 19 21:00:01 systemd[1]: Starting session.\nMar 19 21:05:22 kernel: [   42.123] eth0 link up.\nMar 19 21:10:45 sshd[1242]: Accepted password for root.\nMar 19 21:15:00 cron[456]: (root) CMD (/usr/local/bin/backup.sh)\nMar 19 21:20:01 systemd[1]: Session 12 opened.\nMar 19 21:30:15 kernel: [  1542.456] TCP established.\nMar 19 21:40:50 ai-core[1350]: Optimization phase 2 complete.\nMar 19 21:42:11 webshell: User root executed "ls -la".\nMar 19 21:44:00 systemd[1]: Starting Periodic Command Scheduler.\nMar 19 21:45:01 cron[789]: (root) CMD (node /usr/src/app/index.js)' } } } } },
+            'tmp': { type: 'dir', date: 'Mar 19 21:44', children: {} }
+        }
+    };
+
+    let currentPath = ['root'];
+    let history = [];
+    let historyIndex = -1;
+    
+    let isRedirectionMode = false;
+    let redirectionFile = '';
+    let redirectionBuffer = [];
+
+    const outputEl = document.getElementById('output');
+    const inputEl = document.getElementById('command-input');
+    const cwdEl = document.getElementById('display-cwd');
+    const terminalEl = document.getElementById('terminal');
+    const mainPromptEl = document.getElementById('main-prompt');
+
+    function focusInput() { inputEl.focus(); }
+    function syncInputWidth() { inputEl.style.width = inputEl.value.length + "ch"; }
+
+    function print(text, className = '') {
+        const div = document.createElement('div');
+        div.className = 'output-line ' + className;
+        div.textContent = text;
+        outputEl.appendChild(div);
+        terminalEl.scrollTop = terminalEl.scrollHeight;
+        return div;
+    }
+
+    function printHTML(html, className = '') {
+        const div = document.createElement('div');
+        div.className = 'output-line ' + className;
+        div.innerHTML = html;
+        outputEl.appendChild(div);
+        terminalEl.scrollTop = terminalEl.scrollHeight;
+        return div;
+    }
+
+    function getDir(pathArray) {
+        if (!pathArray) return null;
+        let curr = fs;
+        for (const segment of pathArray) {
+            if (curr.children && curr.children[segment]) curr = curr.children[segment];
+            else return null;
+        }
+        return curr;
+    }
+
+    function formatCwd() {
+        const pathStr = '/' + currentPath.join('/');
+        return pathStr === '/root' ? '~' : (pathStr.startsWith('/root') ? '~' + pathStr.substring(5) : pathStr);
+    }
+
+    function updatePrompt() { cwdEl.textContent = formatCwd(); }
+    async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function callGemini(userQuery) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+        const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } };
+        let retries = 0;
+        while (retries <= 5) {
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
+            } catch {
+                if (retries === 5) return "Error: AI core connection failure.";
+                await sleep(Math.pow(2, retries++) * 1000);
+            }
+        }
+    }
+
+    function resolvePath(pathStr) {
+        if (!pathStr) return [...currentPath];
+        let parts = pathStr.split('/').filter(p => p !== '');
+        let newPath = pathStr.startsWith('/') ? [] : [...currentPath];
+        if (pathStr.startsWith('~')) { newPath = ['root']; parts = pathStr.substring(1).split('/').filter(p => p !== ''); }
+        for (const part of parts) {
+            if (part === '.') continue;
+            if (part === '..') { if (newPath.length > 0) newPath.pop(); }
+            else newPath.push(part);
+        }
+        return getDir(newPath) ? newPath : null;
+    }
+
+    function parseArgs(args) {
+        const options = [];
+        const params = [];
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            if (arg.startsWith('-')) {
+                options.push(arg.substring(1));
+            } else {
+                params.push(arg);
+            }
+        }
+        return { options: options.join(''), params };
+    }
+
+    // --- Commands ---
+    const commands = {
+        help: () => {
+            print("Usage: [command] [options] [arguments]");
+            print("Basic: ls (-la), cd, pwd, mkdir (-p), rmdir, touch, rm (-rf), cat (-n), tail (-n), head (-n), clear, whoami, uname (-a), id, ifconfig, w, ps (-aux), last, ping (-c)");
+            print("System: exit, reboot, shutdown");
+            print("AI: ✨-ask [q], ✨-genfile [n] [d]");
+            print("Input: cat > filename (Enter lines, Ctrl+D to save)");
+        },
+        pwd: () => print('/' + currentPath.join('/')),
+        whoami: () => print('root'),
+        id: () => print('uid=0(root) gid=0(root) groups=0(root)'),
+        uname: (args) => {
+            const { options } = parseArgs(args);
+            if (options.includes('a')) {
+                print('Linux webshell 6.5.0-27-generic #28~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC x86_64 x86_64 x86_64 GNU/Linux');
+            } else {
+                print('Linux');
+            }
+        },
+        clear: () => outputEl.innerHTML = '',
+        exit: async () => {
+            print("Closing session and redirecting to kitscript games...");
+            await sleep(1000);
+            window.location.href = 'https://kitscript.com/game/';
+        },
+        reboot: async () => {
+            print("Broadcast message from root@webshell");
+            print("The system is going down for reboot NOW!");
+            await sleep(1500);
+            window.location.reload();
+        },
+        shutdown: async () => {
+            print("Broadcast message from root@webshell");
+            print("The system is going down for powered off NOW!");
+            await sleep(1500);
+            window.location.href = 'https://kitscript.com/tool/';
+        },
+        ifconfig: () => {
+            print("eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500");
+            print("        inet 192.168.1.15  netmask 255.255.255.0  broadcast 192.168.1.255");
+            print("        ether 08:00:27:4e:66:a1  txqueuelen 1000  (Ethernet)");
+            print("");
+            print("lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536");
+            print("        inet 127.0.0.1  netmask 255.0.0.0");
+        },
+        w: () => {
+            const now = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            print(` ${now} up 452 days,  3:21,  1 user,  load average: 0.05, 0.03, 0.01`);
+            print("USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT");
+            print("root     pts/0    192.168.1.55     21:00    0.00s  0.15s  0.05s w");
+        },
+        last: () => {
+            print("root     pts/0    192.168.1.55     Thu Mar 19 21:00   still logged in");
+            print("root     pts/0    192.168.1.55     Thu Mar 19 18:42 - 20:15  (01:33)");
+            print("reboot   system boot  6.5.0-27-generic Thu Mar 19 18:40   still running");
+            print("");
+            print("wtmp begins Wed Mar 18 14:10:01 2026");
+        },
+        ping: async (args) => {
+            const { params } = parseArgs(args);
+            const target = params[0] || '127.0.0.1';
+            let count = 5;
+            const cIdx = args.indexOf('-c');
+            if (cIdx !== -1 && args[cIdx+1]) {
+                count = parseInt(args[cIdx+1]) || 5;
+            }
+            print(`PING ${target} (${target}) 56(84) bytes of data.`);
+            inputEl.disabled = true;
+            document.getElementById('input-line').style.display = 'none';
+            let received = 0;
+            let times = [];
+            for (let i = 1; i <= count; i++) {
+                await sleep(800);
+                const time = (Math.random() * 0.4 + 0.02).toFixed(3);
+                times.push(parseFloat(time));
+                print(`64 bytes from ${target}: icmp_seq=${i} ttl=64 time=${time} ms`);
+                received++;
+            }
+            const min = Math.min(...times).toFixed(3);
+            const avg = (times.reduce((a, b) => a + b, 0) / times.length).toFixed(3);
+            const max = Math.max(...times).toFixed(3);
+            print(`\n--- ${target} ping statistics ---`);
+            print(`${count} packets transmitted, ${received} received, 0% packet loss, time ${count * 800}ms`);
+            print(`rtt min/avg/max/mdev = ${min}/${avg}/${max}/0.012 ms`);
+            inputEl.disabled = false;
+            document.getElementById('input-line').style.display = 'flex';
+            focusInput();
+        },
+        ps: (args) => {
+            const { options } = parseArgs(args);
+            if (options.includes('a') || options.includes('u') || options.includes('x') || options.includes('ef')) {
+                print("USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND");
+                print("root         1  0.0  0.1  16844  9520 ?        Ss   Mar18   0:01 /sbin/init");
+                print("root      1242  0.1  0.2  24560 12340 pts/0    Ss   21:00   0:02 /bin/bash");
+                print("root      1350  0.0  0.5 158200 45600 ?        Sl   21:05   0:15 /usr/bin/ai-core");
+                print("root      1401  0.0  0.1  18900  3400 pts/0    R+   21:45   0:00 ps aux");
+            } else {
+                print("  PID TTY          TIME CMD");
+                print(" 1242 pts/0    00:00:02 bash");
+                print(" 1401 pts/0    00:00:00 ps");
+            }
+        },
+        ls: (args) => {
+            const { options, params } = parseArgs(args);
+            const targetPath = resolvePath(params[0]);
+            const dir = getDir(targetPath);
+            if (!dir || dir.type !== 'dir') { print(`ls: cannot access '${params[0] || ""}': No such directory`, 'error'); return; }
+            const showAll = options.includes('a');
+            const showLong = options.includes('l');
+            let items = Object.keys(dir.children).sort();
+            if (showAll) { items = ['.', '..', ...items]; } 
+            else { items = items.filter(name => !name.startsWith('.')); }
+            if (showLong) {
+                print(`total ${items.length * 4}`);
+                items.forEach(name => {
+                    let item;
+                    if (name === '.') item = dir;
+                    else if (name === '..') item = { type: 'dir', date: 'Oct 12 10:24' }; 
+                    else item = dir.children[name];
+                    const typeChar = item.type === 'dir' ? 'd' : '-';
+                    const perms = item.type === 'dir' ? 'rwxr-xr-x' : 'rw-r--r--';
+                    const date = item.date || 'Mar 19 21:44';
+                    const size = item.type === 'dir' ? 4096 : (item.content ? item.content.length : 0);
+                    const nameSpan = `<span class="${item.type === 'dir' ? 'dir-item' : 'file-item'}">${name}</span>`;
+                    printHTML(`${typeChar}${perms} 1 root root ${String(size).padStart(5)} ${date} ${nameSpan}`);
+                });
+            } else {
+                printHTML(items.map(n => {
+                    const item = (n === '.' || n === '..') ? {type:'dir'} : dir.children[n];
+                    return `<span class="${item.type === 'dir' ? 'dir-item' : 'file-item'}">${n}</span>`;
+                }).join('  '));
+            }
+        },
+        cd: (args) => {
+            const { params } = parseArgs(args);
+            const target = params[0] || '~';
+            const newPath = resolvePath(target);
+            if (!newPath) { print(`cd: ${target}: No such directory`, 'error'); return; }
+            const dir = getDir(newPath);
+            if (!dir || dir.type !== 'dir') { print(`cd: ${target}: Not a directory`, 'error'); return; }
+            currentPath = newPath; updatePrompt();
+        },
+        mkdir: (args) => {
+            const { options, params } = parseArgs(args);
+            if (!params[0]) return;
+            if (options.includes('p')) {
+                let parts = params[0].split('/').filter(p => p !== '');
+                let current = fs;
+                if (params[0].startsWith('/')) { current = fs; } 
+                else if (params[0].startsWith('~')) { current = fs.children.root; parts = params[0].substring(1).split('/').filter(p => p !== ''); } 
+                else { current = getDir(currentPath); }
+                parts.forEach(part => {
+                    if (!current.children[part]) { current.children[part] = { type: 'dir', date: 'Mar 19 21:44', children: {} }; }
+                    current = current.children[part];
+                });
+            } else {
+                const parent = getDir(currentPath);
+                if (parent.children[params[0]]) { print(`mkdir: '${params[0]}': File exists`, 'error'); return; }
+                parent.children[params[0]] = { type: 'dir', date: 'Mar 19 21:44', children: {} };
+            }
+        },
+        rmdir: (args) => {
+            const { params } = parseArgs(args);
+            const parent = getDir(currentPath);
+            const target = parent.children[params[0]];
+            if (!target || target.type !== 'dir') { print(`rmdir: '${params[0]}': No such directory`, 'error'); return; }
+            if (Object.keys(target.children).length > 0) { print(`rmdir: '${params[0]}': Directory not empty`, 'error'); return; }
+            delete parent.children[params[0]];
+        },
+        touch: (args) => {
+            const { params } = parseArgs(args);
+            if (!params[0]) return;
+            const parent = getDir(currentPath);
+            if (!parent.children[params[0]]) parent.children[params[0]] = { type: 'file', date: 'Mar 19 21:44', content: '' };
+        },
+        rm: (args) => {
+            const { options, params } = parseArgs(args);
+            if (!params[0]) return;
+            const parent = getDir(currentPath);
+            const target = parent.children[params[0]];
+            if (options.includes('r') || options.includes('f')) {
+                if (target) delete parent.children[params[0]];
+                else if (!options.includes('f')) print(`rm: cannot remove '${params[0]}': No such file`, 'error');
+            } else {
+                if (target && target.type !== 'dir') delete parent.children[params[0]];
+                else if (target && target.type === 'dir') print(`rm: cannot remove '${params[0]}': Is a directory`, 'error');
+                else print(`rm: cannot remove '${params[0]}': No such file`, 'error');
+            }
+        },
+        cat: (args) => {
+            const { options, params } = parseArgs(args);
+            if (!params[0]) return;
+            const parent = getDir(currentPath);
+            const file = parent.children[params[0]];
+            if (!file || file.type === 'dir') { print(`cat: ${params[0]}: No such file`, 'error'); return; }
+            let content = file.content || "";
+            if (options.includes('n')) {
+                const lines = content.split('\n');
+                content = lines.map((line, idx) => `${String(idx + 1).padStart(6)}  ${line}`).join('\n');
+            }
+            print(content);
+        },
+        tail: (args) => {
+            const { options, params } = parseArgs(args);
+            let n = 10;
+            let fileName = '';
+            if (options.includes('n')) {
+                const cIdx = args.indexOf('-n');
+                if (cIdx !== -1 && args[cIdx+1]) { n = parseInt(args[cIdx+1]); fileName = params[0]; }
+            } else { fileName = params[0]; }
+            if (!fileName) return;
+            const file = getDir(currentPath).children[fileName];
+            if (!file || file.type === 'dir') return;
+            const lines = (file.content || "").split('\n');
+            print(lines.slice(-n).join('\n'));
+        },
+        head: (args) => {
+            const { options, params } = parseArgs(args);
+            let n = 10;
+            let fileName = '';
+            if (options.includes('n')) {
+                const cIdx = args.indexOf('-n');
+                if (cIdx !== -1 && args[cIdx+1]) { n = parseInt(args[cIdx+1]); fileName = params[0]; }
+            } else { fileName = params[0]; }
+            if (!fileName) return;
+            const file = getDir(currentPath).children[fileName];
+            if (!file || file.type === 'dir') return;
+            const lines = (file.content || "").split('\n');
+            print(lines.slice(0, n).join('\n'));
+        },
+        '✨-ask': async (args) => {
+            const query = args.join(' '); if (!query) return;
+            const load = printHTML('<span class="loading">⌛</span> Analyzing...', 'ai-text');
+            const res = await callGemini(query); load.remove();
+            printHTML(`✨ AI: ${res}`, 'ai-text');
+        },
+        '✨-genfile': async (args) => {
+            const { params } = parseArgs(args);
+            if (params.length < 2) return;
+            const fileName = params[0]; const desc = params.slice(1).join(' ');
+            const load = printHTML(`<span class="loading">⌛</span> Writing '${fileName}'...`, 'ai-text');
+            const content = await callGemini(`Write file content for '${fileName}': ${desc}. Raw text only.`);
+            load.remove(); getDir(currentPath).children[fileName] = { type: 'file', date: 'Mar 19 21:44', content };
+            print(`File '${fileName}' written.`, 'success');
+        }
+    };
+
+    function finishRedirection() {
+        const parent = getDir(currentPath);
+        parent.children[redirectionFile] = { type: 'file', date: 'Mar 19 21:44', content: redirectionBuffer.join('\n') };
+        isRedirectionMode = false;
+        redirectionFile = '';
+        redirectionBuffer = [];
+        mainPromptEl.style.display = 'inline';
+        syncInputWidth();
+    }
+
+    async function handleCommand(input) {
+        const trimmed = input.trim();
+        if (isRedirectionMode) { print(input); redirectionBuffer.push(input); syncInputWidth(); return; }
+        if (!trimmed) return;
+        history.push(trimmed);
+        historyIndex = history.length;
+        printHTML(`<span class="user">root</span>@<span class="host">webshell</span>:<span class="dir">${formatCwd()}</span># ${trimmed}`);
+        if (trimmed.startsWith('cat >')) {
+            const parts = trimmed.split('>');
+            const filename = parts[1]?.trim();
+            if (filename) { isRedirectionMode = true; redirectionFile = filename; mainPromptEl.style.display = 'none'; syncInputWidth(); return; }
+        }
+        const tokens = trimmed.split(/\s+/);
+        const cmd = tokens[0];
+        const args = tokens.slice(1);
+        if (commands[cmd]) await commands[cmd](args);
+        else { print(`${cmd}: command not found`, 'error'); }
+        syncInputWidth();
+    }
+
+    inputEl.addEventListener('input', syncInputWidth);
+    inputEl.addEventListener('keydown', async (e) => {
+        if (e.ctrlKey && e.key === 'd') { e.preventDefault(); if (isRedirectionMode) finishRedirection(); return; }
+        if (e.key === 'Enter') { const val = inputEl.value; inputEl.value = ''; await handleCommand(val); } 
+        else if (e.key === 'ArrowUp' && !isRedirectionMode) {
+            e.preventDefault();
+            if (historyIndex > 0) { historyIndex--; inputEl.value = history[historyIndex]; syncInputWidth(); }
+        } else if (e.key === 'ArrowDown' && !isRedirectionMode) {
+            e.preventDefault();
+            if (historyIndex < history.length - 1) { historyIndex++; inputEl.value = history[historyIndex]; syncInputWidth(); }
+            else { historyIndex = history.length; inputEl.value = ''; syncInputWidth(); }
+        }
+    });
+
+    window.onload = async () => {
+        printHTML(`<div class="motd">
+******************************************************************************
+* WEBSHELL v1.5.2 (Ubuntu 22.04 LTS) - Session & Power Management Active     *
+* Authorized access only. AI Core is ONLINE.                                *
+******************************************************************************</div>`);
+        print("Authenticating root...");
+        await sleep(400);
+        print("Access granted.");
+        updatePrompt(); focusInput(); syncInputWidth();
+    };
+</script>
+</body>
+</html>
