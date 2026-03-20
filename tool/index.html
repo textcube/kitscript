@@ -140,6 +140,36 @@
             stroke-linejoin: round;
         }
 
+        .hud-sound-btn {
+            width: auto;
+            min-width: 90px;
+            padding: 0 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 9px;
+            letter-spacing: 1px;
+            background: rgba(0, 242, 255, 0.06);
+            border-color: rgba(0, 242, 255, 0.22);
+            color: var(--text-dim);
+            gap: 6px;
+        }
+
+        .hud-sound-btn:hover {
+            background: rgba(0, 242, 255, 0.12);
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
+
+        .hud-sound-btn .sound-label {
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .hud-sound-btn.is-on {
+            color: var(--neon-blue);
+            border-color: rgba(0, 242, 255, 0.4);
+            background: rgba(0, 242, 255, 0.12);
+        }
+
         /* Main Layout */
         .app-container {
             display: flex;
@@ -501,10 +531,11 @@
     <div class="video-background">
         <div class="yt-embed-wrap" id="yt-player">
             <iframe
-                src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&rel=0&playsinline=1"
+                src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&rel=0&playsinline=1&enablejsapi=1"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 referrerpolicy="strict-origin-when-cross-origin"
                 frameborder="0"
+                id="background-video-frame"
                 title="YouTube background"
             ></iframe>
         </div>
@@ -527,6 +558,14 @@
         <a href="https://github.com/textcube/kitscript" target="_blank" class="hud-btn" title="GitHub Repo">
             <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
         </a>
+        <button type="button" class="hud-btn hud-sound-btn" id="sound-toggle-btn" title="Background Sound Toggle" aria-label="Background Sound Toggle">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polygon points="5 10 9 10 14 6 14 18 9 14 5 14"></polygon>
+                <path d="M17 9a4 4 0 0 1 0 6"></path>
+                <path d="M19.5 6.5a7.5 7.5 0 0 1 0 11"></path>
+            </svg>
+            <span class="sound-label">SOUND OFF</span>
+        </button>
     </nav>
 
     <div class="app-container">
@@ -588,15 +627,81 @@
         const slotsContainer = document.getElementById('clock-slots-container');
         const detailsContent = document.getElementById('details-content');
         const notifArea = document.getElementById('notif-area');
+        const backgroundVideoFrame = document.querySelector('#yt-player iframe');
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        const DEFAULT_YOUTUBE_ID = 'kFnxuOnbHU0';
+        let isBackgroundSoundOn = localStorage.getItem('ks_background_sound') === 'on';
 
         // --- Core Hub Logic ---
         function init() {
+            applyBackgroundVideoFromUrl();
+            setupBackgroundSoundControls();
             renderLibrary();
             createSlots();
             startTime();
             setupMobileToggles();
             showInitialConsole();
             setInterval(checkNotifications, 10000); 
+        }
+
+        function buildYoutubeEmbedUrl(videoId) {
+            return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&enablejsapi=1`;
+        }
+
+        function getYoutubeVideoIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const rawVideoId = (params.get('youtube') || '').trim();
+            if (!rawVideoId) return null;
+            return /^[A-Za-z0-9_-]{11}$/.test(rawVideoId) ? rawVideoId : null;
+        }
+
+        function applyBackgroundVideoFromUrl() {
+            if (!backgroundVideoFrame) return;
+            const videoId = getYoutubeVideoIdFromUrl();
+            if (!videoId) return;
+            backgroundVideoFrame.src = buildYoutubeEmbedUrl(videoId);
+        }
+
+        function postYoutubeCommand(func, args = []) {
+            if (!backgroundVideoFrame || !backgroundVideoFrame.contentWindow) return;
+            backgroundVideoFrame.contentWindow.postMessage(JSON.stringify({
+                event: 'command',
+                func,
+                args
+            }), 'https://www.youtube-nocookie.com');
+        }
+
+        function updateSoundToggleLabel() {
+            if (!soundToggleBtn) return;
+            const label = soundToggleBtn.querySelector('.sound-label');
+            if (label) label.textContent = isBackgroundSoundOn ? 'SOUND ON' : 'SOUND OFF';
+            soundToggleBtn.classList.toggle('is-on', isBackgroundSoundOn);
+            soundToggleBtn.title = isBackgroundSoundOn ? 'Background sound is on' : 'Background sound is off until you enable it';
+            soundToggleBtn.setAttribute('aria-label', isBackgroundSoundOn ? 'Background sound is on' : 'Background sound is off until you enable it');
+        }
+
+        function applyBackgroundSoundState() {
+            postYoutubeCommand('mute');
+            if (!isBackgroundSoundOn) return;
+            postYoutubeCommand('playVideo');
+            postYoutubeCommand('unMute');
+            postYoutubeCommand('setVolume', [100]);
+        }
+
+        function setupBackgroundSoundControls() {
+            updateSoundToggleLabel();
+            if (!soundToggleBtn || !backgroundVideoFrame) return;
+
+            soundToggleBtn.addEventListener('click', () => {
+                isBackgroundSoundOn = !isBackgroundSoundOn;
+                localStorage.setItem('ks_background_sound', isBackgroundSoundOn ? 'on' : 'off');
+                updateSoundToggleLabel();
+                applyBackgroundSoundState();
+            });
+
+            backgroundVideoFrame.addEventListener('load', () => {
+                setTimeout(applyBackgroundSoundState, 800);
+            });
         }
 
         function renderLibrary() {
