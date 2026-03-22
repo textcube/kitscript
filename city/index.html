@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuntGames | Alley Explorer Cinematic</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <style>
+        :root {
+            --accent: #00f2ff;
+            --bg: #010101;
+            --glass: rgba(10, 10, 10, 0.96);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: var(--bg);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            color: white;
+        }
+
+        canvas { display: block; outline: none; }
+
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;
+            padding: 1.75rem 1.75rem 0; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10;
+            box-sizing: border-box;
+            gap: 1.25rem;
+        }
+
+        .brand-zone { pointer-events: auto; }
+        .hud-actions {
+            pointer-events: auto;
+            flex-shrink: 0;
+            padding-right: 0.4rem;
+        }
+        .brand-name { font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; color: var(--accent); margin-bottom: 0.5rem; text-shadow: 0 0 10px var(--accent); }
+        .location-info { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .hud-button {
+            pointer-events: auto;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid #333;
+            color: #aaa;
+            padding: 0.8rem 1.8rem;
+            cursor: pointer;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+        .hud-button:hover {
+            border-color: rgba(0, 242, 255, 0.45);
+            color: #fff;
+            box-shadow: 0 0 24px rgba(0, 242, 255, 0.14);
+        }
+
+        @media (max-width: 700px) {
+            #hud {
+                padding: 1rem 1rem 0;
+                gap: 0.75rem;
+            }
+
+            .hud-button {
+                padding: 0.72rem 1.15rem;
+                font-size: 0.74rem;
+            }
+        }
+
+        .guide-box {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            background: var(--glass); padding: 0.8rem 2.2rem; border-radius: 50px;
+            border: 1px solid rgba(0, 242, 255, 0.3); backdrop-filter: blur(20px);
+            font-size: 0.85rem; display: flex; gap: 2rem; pointer-events: none; letter-spacing: 1px;
+            box-shadow: 0 15px 50px rgba(0,0,0,1); white-space: nowrap;
+        }
+
+        /* Cinematic Modal */
+        #modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none; justify-content: center; align-items: center;
+            z-index: 100; backdrop-filter: blur(20px);
+        }
+
+        .modal-content {
+            background: #080808; width: 94%; max-width: 860px; border: 1px solid var(--accent);
+            border-radius: 28px; padding: 3rem; position: relative; 
+            box-shadow: 0 0 120px rgba(0, 242, 255, 0.2);
+            animation: cinematicUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cinematicUp { from { transform: translateY(50px) scale(0.92); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+        .close-btn { 
+            position: absolute; top: 1.5rem; right: 2rem; font-size: 3.5rem; cursor: pointer; 
+            color: #444; transition: 0.3s; z-index: 130; line-height: 1; border: none; background: none; 
+        }
+        .close-btn:hover { color: var(--accent); transform: rotate(90deg); }
+
+        .modal-media { 
+            width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 16px; 
+            margin-bottom: 2.5rem; overflow: hidden; border: 1px solid #1a1a1a; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8); 
+        }
+        .modal-media iframe, .modal-media img { width: 100%; height: 100%; border: none; display: block; }
+        
+        .modal-title { font-size: 2.4rem; margin-bottom: 1.2rem; color: var(--accent); font-weight: 900; letter-spacing: -1.5px; }
+        .modal-desc { color: #888; line-height: 1.9; margin-bottom: 3.5rem; font-size: 1.15rem; }
+        .modal-link { 
+            display: block; text-align: center; background: var(--accent); color: #000; 
+            padding: 1.5rem; border-radius: 16px; text-decoration: none; font-weight: 900; 
+            transition: 0.3s; font-size: 1.2rem; letter-spacing: 1px;
+        }
+        .modal-link:hover { filter: brightness(1.25); transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4); }
+
+        #loading { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .spinner { width: 64px; height: 64px; border: 6px solid rgba(0, 242, 255, 0.1); border-top: 6px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top: 2rem; letter-spacing: 7px; font-size: 0.85rem; color: var(--accent); font-weight: 500;">BUNTGAMES HUB BOOTING...</p>
+    </div>
+
+    <div id="hud">
+        <div class="brand-zone">
+            <div class="brand-name">BUNT GAMES</div>
+            <div class="location-info">Cinematic District / <span id="current-node" style="color: #fff;">Asset Lab Area</span></div>
+        </div>
+        <div class="hud-actions">
+            <button onclick="resetPosition()" class="hud-button">RESET VIEW</button>
+        </div>
+    </div>
+
+    <div class="guide-box">
+        <span>🚶 CLICK ROAD TO MOVE</span>
+        <span>✨ DBL-CLICK WINDOW TO WATCH</span>
+        <span>🎡 ZOOM WHEEL</span>
+    </div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div class="modal-media" id="modal-media"></div>
+            <h2 class="modal-title" id="modal-title">Project Title</h2>
+            <p class="modal-desc" id="modal-desc">Description</p>
+            <a href="#" target="_blank" class="modal-link" id="modal-link">EXPLORE PROJECT</a>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 1. PROJECT DATA
+         */
+        const WORLD_DATA = {
+            nodes: [
+                { id: "n0", pos: [0, 0, 12], neighbors: ["n1"], label: "Entrance" },
+                { id: "n1", pos: [0, 0, 4], neighbors: ["n0", "n2"], label: "Asset Lab Area" },
+                { id: "n2", pos: [0, 0, -4], neighbors: ["n1", "n3"], label: "Tutorial Arcade" },
+                { id: "n3", pos: [0, 0, -12], neighbors: ["n2", "n4"], label: "Developer Hub" },
+                { id: "n4", pos: [0, 0, -20], neighbors: ["n3"], label: "Deep End Plaza" }
+            ],
+            arcadeSlots: [
+                {
+                    id: "s1", pos: [-5.5, 0, 4], color: 0x050505,
+                    content: { 
+                        title: "Unity Mega Pack", 
+                        desc: "56만 구독자가 검증한 최강의 유니티 개발 키트입니다. 실전용 알고리즘과 고도화된 최적화 코드가 포함되어 있습니다.", 
+                        media: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&q=80", 
+                        youtubeId: "OgupBsqNHWw", 
+                        link: "https://shop.buntgames.com/" 
+                    }
+                },
+                {
+                    id: "s2", pos: [-5.5, 0, -4], color: 0x030303,
+                    content: { 
+                        title: "Dev Master Class", 
+                        desc: "25년 IT 경력의 정수를 담은 실전 게임 개발 강의입니다. 복잡한 시스템 아키텍처를 누구나 이해하기 쉽게 풀어드립니다.", 
+                        media: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200&q=80", 
+                        youtubeId: "XkWdnyq87Ww", 
+                        link: "https://www.youtube.com/@textcube" 
+                    }
+                },
+                {
+                    id: "s3", pos: [-5.5, 0, -12], color: 0x050505,
+                    content: { 
+                        title: "Action Framework v2", 
+                        desc: "즉시 출시 가능한 수준의 2D 액션 게임용 프레임워크입니다. 물리 연산과 캐릭터 컨트롤러가 완벽히 구성되어 있습니다.", 
+                        media: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=1200&q=80", 
+                        link: "https://buntgames.itch.io/" 
+                    }
+                },
+                {
+                    id: "s4", pos: [-5.5, 0, -20], color: 0x030303,
+                    content: { 
+                        title: "Private Membership", 
+                        desc: "번트게임즈 크루 전용 커뮤니티입니다. 매달 업데이트되는 전용 에셋과 실시간 코드 리뷰 혜택을 누리세요.", 
+                        media: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200&q=80", 
+                        link: "https://patreon.com/BuntGames" 
+                    }
+                }
+            ]
+        };
+
+        /**
+         * 2. CORE SYSTEM STATE
+         */
+        let scene, camera, renderer, raycaster;
+        let interactiveObjects = [];
+        let nodes = [], currentNodeId = "n1"; 
+        let isMoving = false, isInspecting = false;
+        let playerGroup, floor;
+        const mouse = new THREE.Vector2();
+
+        const originalCamState = { 
+            pos: new THREE.Vector3(), 
+            rot: new THREE.Euler(),
+            fov: 55
+        };
+
+        const CAM_OFFSET = new THREE.Vector3(4.5, 1.8, 6.8); 
+        let targetFOV = 55;
+        const MIN_FOV = 15;
+        const MAX_FOV = 85;
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x010101);
+            scene.fog = new THREE.FogExp2(0x010101, 0.08);
+
+            camera = new THREE.PerspectiveCamera(targetFOV, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            document.body.appendChild(renderer.domElement);
+
+            raycaster = new THREE.Raycaster();
+
+            // Balanced Scene Light
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+            // Road Mesh
+            const floorGeo = new THREE.PlaneGeometry(300, 300);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.12, metalness: 0.8 });
+            floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.userData = { isFloor: true };
+            scene.add(floor);
+            interactiveObjects.push(floor);
+            
+            scene.add(new THREE.GridHelper(300, 100, 0x111111, 0x050505));
+
+            createPlayer();
+            createArcadeAlley();
+            createNodes();
+            createStreetlights();
+
+            // Set Initial Node (n1)
+            const startNode = WORLD_DATA.nodes.find(n => n.id === currentNodeId);
+            playerGroup.position.set(startNode.pos[0], 0, startNode.pos[2]);
+            camera.position.copy(playerGroup.position).add(CAM_OFFSET);
+            camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(-2, 1.8, -3)));
+
+            // High-fidelity Event Listeners
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+            renderer.domElement.addEventListener('dblclick', onDoubleClick);
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('wheel', onWheel, { passive: false });
+            window.addEventListener('keydown', onKeyDown);
+
+            setTimeout(() => document.getElementById('loading').style.display = 'none', 1500);
+        }
+
+        function createStreetlights() {
+            const streetlights = [
+                { z: 12, x: 1.6, height: 4.8, reach: -0.45, warm: 0xffc78a },
+                { z: 4, x: 1.85, height: 5.2, reach: -0.5, warm: 0xffbc73 },
+                { z: -4, x: 1.55, height: 4.7, reach: -0.42, warm: 0xffd2a6 },
+                { z: -12, x: 1.95, height: 5.4, reach: -0.58, warm: 0xffb15c },
+                { z: -20, x: 1.7, height: 4.9, reach: -0.48, warm: 0xffca8f }
+            ];
+
+            const poleMat = new THREE.MeshStandardMaterial({
+                color: 0x121212,
+                metalness: 0.85,
+                roughness: 0.28
+            });
+            const accentMat = new THREE.MeshStandardMaterial({
+                color: 0x00f2ff,
+                emissive: 0x00f2ff,
+                emissiveIntensity: 1.6,
+                metalness: 0.3,
+                roughness: 0.35
+            });
+
+            streetlights.forEach((config, index) => {
+                const group = new THREE.Group();
+                group.position.set(config.x, 0, config.z);
+
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.18, 14), poleMat);
+                base.position.y = 0.09;
+                group.add(base);
+
+                const baseRing = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.035, 12, 32), accentMat);
+                baseRing.rotation.x = Math.PI / 2;
+                baseRing.position.y = 0.12;
+                group.add(baseRing);
+
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, config.height, 12), poleMat);
+                pole.position.y = config.height / 2;
+                group.add(pole);
+
+                const spine = new THREE.Mesh(new THREE.BoxGeometry(0.025, config.height - 0.5, 0.025), accentMat);
+                spine.position.set(-0.05, config.height / 2 + 0.05, 0);
+                group.add(spine);
+
+                const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.04, 1.2, 10), poleMat);
+                arm.rotation.z = Math.PI / 2;
+                arm.position.set(config.reach / 2, config.height - 0.18, 0);
+                group.add(arm);
+
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.18, 0.3), poleMat);
+                head.position.set(config.reach - 0.16, config.height - 0.2, 0);
+                group.add(head);
+
+                const bulb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 12, 12),
+                    new THREE.MeshBasicMaterial({ color: config.warm })
+                );
+                bulb.position.set(config.reach - 0.3, config.height - 0.23, 0);
+                group.add(bulb);
+
+                const glowOrb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.22, 12, 12),
+                    new THREE.MeshBasicMaterial({
+                        color: config.warm,
+                        transparent: true,
+                        opacity: 0.16
+                    })
+                );
+                glowOrb.position.copy(bulb.position);
+                group.add(glowOrb);
+
+                const light = new THREE.PointLight(config.warm, 2.8, 14, 2);
+                light.position.copy(bulb.position);
+                group.add(light);
+
+                const cyanFill = new THREE.PointLight(0x00f2ff, 0.55, 6, 2);
+                cyanFill.position.set(config.reach + 0.15, config.height - 0.55, 0);
+                group.add(cyanFill);
+
+                const groundPool = new THREE.Mesh(
+                    new THREE.CircleGeometry(0.72 + index * 0.05, 32),
+                    new THREE.MeshBasicMaterial({
+                        color: config.warm,
+                        transparent: true,
+                        opacity: 0.18,
+                        side: THREE.DoubleSide
+                    })
+                );
+                groundPool.rotation.x = -Math.PI / 2;
+                groundPool.position.set(config.reach - 0.48, 0.02, 0);
+                group.add(groundPool);
+
+                const innerPool = new THREE.Mesh(
+                    new THREE.CircleGeometry(0.26, 24),
+                    new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.28,
+                        side: THREE.DoubleSide
+                    })
+                );
+                innerPool.rotation.x = -Math.PI / 2;
+                innerPool.position.set(config.reach - 0.48, 0.03, 0);
+                group.add(innerPool);
+
+                scene.add(group);
+            });
+        }
+
+        function createPlayer() {
+            playerGroup = new THREE.Group();
+            const shellMat = new THREE.MeshStandardMaterial({
+                color: 0xc9d2d8,
+                metalness: 0.72,
+                roughness: 0.34
+            });
+            const darkMat = new THREE.MeshStandardMaterial({
+                color: 0x11161c,
+                metalness: 0.55,
+                roughness: 0.42
+            });
+            const accentMat = new THREE.MeshStandardMaterial({
+                color: 0x00f2ff,
+                emissive: 0x00f2ff,
+                emissiveIntensity: 1.2,
+                metalness: 0.25,
+                roughness: 0.3
+            });
+
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 1.2, 18), shellMat);
+            torso.position.y = 0.86;
+            playerGroup.add(torso);
+
+            const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.3, 18), darkMat);
+            shoulder.position.y = 1.52;
+            playerGroup.add(shoulder);
+
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.18, 12), darkMat);
+            neck.position.y = 1.69;
+            playerGroup.add(neck);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 20, 0, Math.PI * 2, 0, Math.PI * 0.82), shellMat);
+            head.position.y = 1.9;
+            playerGroup.add(head);
+
+            const facePlate = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.12, 20), darkMat);
+            facePlate.rotation.z = Math.PI / 2;
+            facePlate.position.set(0.27, 1.9, 0);
+            playerGroup.add(facePlate);
+
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 16), accentMat);
+            eye.position.set(0.35, 1.9, 0);
+            playerGroup.add(eye);
+
+            const eyeHalo = new THREE.Mesh(
+                new THREE.SphereGeometry(0.12, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.22 })
+            );
+            eyeHalo.position.copy(eye.position);
+            playerGroup.add(eyeHalo);
+
+            const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.5, 0.28), darkMat);
+            backpack.position.set(-0.2, 1.0, 0);
+            playerGroup.add(backpack);
+
+            const chestLight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.16), accentMat);
+            chestLight.position.set(0.24, 0.98, 0);
+            playerGroup.add(chestLight);
+
+            const hip = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 0.22, 18), darkMat);
+            hip.position.y = 0.23;
+            playerGroup.add(hip);
+
+            [-0.11, 0.11].forEach((zOffset) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, 0.72, 12), shellMat);
+                leg.position.set(0, 0.48, zOffset);
+                playerGroup.add(leg);
+
+                const foot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.16), darkMat);
+                foot.position.set(0.08, 0.06, zOffset);
+                playerGroup.add(foot);
+            });
+
+            const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.34, 8), darkMat);
+            antenna.position.set(-0.08, 2.23, 0);
+            playerGroup.add(antenna);
+
+            const antennaTip = new THREE.Mesh(new THREE.SphereGeometry(0.04, 10, 10), accentMat);
+            antennaTip.position.set(-0.08, 2.42, 0);
+            playerGroup.add(antennaTip);
+
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(0.48, 0.045, 16, 40),
+                new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.9 })
+            );
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = 0.05;
+            playerGroup.add(ring);
+
+            const ringFill = new THREE.Mesh(
+                new THREE.CircleGeometry(0.34, 32),
+                new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
+            );
+            ringFill.rotation.x = -Math.PI / 2;
+            ringFill.position.y = 0.03;
+            playerGroup.add(ringFill);
+
+            scene.add(playerGroup);
+        }
+
+        function createArcadeAlley() {
+            const loader = new THREE.TextureLoader();
+            loader.setCrossOrigin('anonymous');
+
+            WORLD_DATA.arcadeSlots.forEach(s => {
+                const group = new THREE.Group();
+                group.position.set(s.pos[0], 6, s.pos[2]);
+
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 12, 8), new THREE.MeshStandardMaterial({ color: s.color, roughness: 1 }));
+                group.add(wall);
+
+                // Shop Window Mesh - 핵심 수정: MeshBasicMaterial 사용하여 텍스처 순수 출력
+                const windowGeo = new THREE.PlaneGeometry(6.9, 5.4);
+                const windowMat = new THREE.MeshBasicMaterial({ 
+                    color: 0x222222,
+                    side: THREE.DoubleSide
+                });
+                
+                const shopWindow = new THREE.Mesh(windowGeo, windowMat);
+                
+                // Texture Loading 로직 강화
+                applyWindowTexture(loader, windowMat, s.content);
+
+                // Z-fighting 방지를 위해 프레임보다 0.05 더 앞으로 돌출
+                shopWindow.position.set(2.06, -3, 0); 
+                shopWindow.rotation.y = Math.PI/2;
+                
+                shopWindow.userData = { isContent: true, data: s.content };
+                interactiveObjects.push(shopWindow); 
+                group.add(shopWindow);
+
+                const clickZone = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.45, 5.9, 7.4),
+                    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+                );
+                clickZone.position.set(2.3, -3, 0);
+                clickZone.userData = { isContent: true, data: s.content, focusTarget: shopWindow };
+                interactiveObjects.push(clickZone);
+                group.add(clickZone);
+
+                // Neon frame built from four bars so it doesn't cover the texture surface
+                const frameMat = new THREE.MeshStandardMaterial({
+                    color: 0x00f2ff,
+                    emissive: 0x00f2ff,
+                    emissiveIntensity: 5,
+                    metalness: 0.2,
+                    roughness: 0.25
+                });
+                const frameX = 2.15;
+                const frameHeight = 5.6;
+                const frameWidth = 7.1;
+                const frameThickness = 0.08;
+                const frameDepth = 0.14;
+
+                const frameTop = new THREE.Mesh(new THREE.BoxGeometry(frameDepth, frameThickness, frameWidth), frameMat);
+                frameTop.position.set(frameX, -3 + frameHeight / 2, 0);
+                group.add(frameTop);
+
+                const frameBottom = new THREE.Mesh(new THREE.BoxGeometry(frameDepth, frameThickness, frameWidth), frameMat);
+                frameBottom.position.set(frameX, -3 - frameHeight / 2, 0);
+                group.add(frameBottom);
+
+                const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(frameDepth, frameHeight, frameThickness), frameMat);
+                frameLeft.position.set(frameX, -3, -frameWidth / 2);
+                group.add(frameLeft);
+
+                const frameRight = new THREE.Mesh(new THREE.BoxGeometry(frameDepth, frameHeight, frameThickness), frameMat);
+                frameRight.position.set(frameX, -3, frameWidth / 2);
+                group.add(frameRight);
+
+                scene.add(group);
+            });
+        }
+
+        function applyWindowTexture(loader, material, content) {
+            material.map = createFallbackTexture(content.title);
+            material.color.set(0xffffff);
+            material.needsUpdate = true;
+
+            loader.load(
+                content.media,
+                (tex) => {
+                    tex.encoding = THREE.sRGBEncoding;
+                    tex.minFilter = THREE.LinearFilter;
+                    material.map = tex;
+                    material.needsUpdate = true;
+                },
+                undefined,
+                () => {
+                    material.map = createFallbackTexture(content.title);
+                    material.needsUpdate = true;
+                }
+            );
+        }
+
+        function createFallbackTexture(title) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 768;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#041116');
+            gradient.addColorStop(0.5, '#0a5660');
+            gradient.addColorStop(1, '#02191f');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.28)';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
+
+            ctx.fillStyle = '#00f2ff';
+            ctx.font = '900 72px Pretendard, sans-serif';
+            ctx.fillText('BUNT GAMES', 80, 132);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.92)';
+            ctx.font = '700 58px Pretendard, sans-serif';
+            wrapCanvasText(ctx, title, 80, 280, canvas.width - 160, 72);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = '500 28px Pretendard, sans-serif';
+            ctx.fillText('ASSET PREVIEW', 80, canvas.height - 90);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function wrapCanvasText(ctx, text, x, startY, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let y = startY;
+
+            words.forEach((word, index) => {
+                const testLine = `${line}${word} `;
+                if (ctx.measureText(testLine).width > maxWidth && index > 0) {
+                    ctx.fillText(line.trim(), x, y);
+                    line = `${word} `;
+                    y += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            });
+
+            if (line.trim()) {
+                ctx.fillText(line.trim(), x, y);
+            }
+        }
+
+        function createNodes() {
+            WORLD_DATA.nodes.forEach(n => {
+                const disk = new THREE.Mesh(new THREE.CircleGeometry(0.8, 32), new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.25, side: THREE.DoubleSide }));
+                disk.rotation.x = -Math.PI/2;
+                disk.position.set(n.pos[0], 0.1, n.pos[2]);
+                
+                const hitbox = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.6, 16), new THREE.MeshBasicMaterial({ visible: false }));
+                hitbox.position.copy(disk.position);
+                hitbox.userData = { isNode: true, id: n.id, label: n.label };
+                
+                interactiveObjects.push(hitbox);
+                scene.add(disk);
+                scene.add(hitbox);
+                nodes.push(disk);
+            });
+        }
+
+        /**
+         * 3. NAVIGATION & LOGIC
+         */
+        function findPath(startId, endId) {
+            const queue = [[startId]], visited = new Set();
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const node = path[path.length - 1];
+                if (node === endId) return path;
+                if (!visited.has(node)) {
+                    visited.add(node);
+                    const neighbors = WORLD_DATA.nodes.find(n => n.id === node).neighbors;
+                    neighbors.forEach(neighbor => queue.push([...path, neighbor]));
+                }
+            }
+            return null;
+        }
+
+        async function navigateTo(targetId) {
+            if (isMoving || isInspecting || currentNodeId === targetId) return;
+            isMoving = true;
+            const path = findPath(currentNodeId, targetId);
+            if (!path) { isMoving = false; return; }
+
+            for (let i = 1; i < path.length; i++) {
+                const nextNode = WORLD_DATA.nodes.find(n => n.id === path[i]);
+                await new Promise(res => {
+                    new TWEEN.Tween(playerGroup.position)
+                        .to({ x: nextNode.pos[0], z: nextNode.pos[2] }, 600)
+                        .easing(TWEEN.Easing.Quadratic.InOut)
+                        .onComplete(res)
+                        .start();
+                });
+                currentNodeId = path[i];
+                document.getElementById('current-node').innerText = nextNode.label;
+            }
+            isMoving = false;
+        }
+
+        /**
+         * 4. INTERACTION HANDLERS
+         */
+        function handlePointerDown(e) {
+            if (isMoving || isInspecting) return;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            if (intersects.length === 0) return;
+
+            const hit = intersects[0];
+            const obj = hit.object;
+
+            if (obj.userData.isNode) {
+                navigateTo(obj.userData.id);
+            } else if (obj.userData.isFloor) {
+                handleRoadClick(hit.point);
+            }
+        }
+
+        function onDoubleClick(e) {
+            if (isMoving || isInspecting) return;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            if (intersects.length === 0) return;
+
+            const hitObject = intersects[0].object;
+            if (!hitObject.userData.isContent) return;
+
+            const focusTarget = hitObject.userData.focusTarget || hitObject;
+            focusOnWindow(focusTarget);
+        }
+
+        function onPointerDown(e) {
+            return handlePointerDown(e);
+
+            if (isMoving || isInspecting) return;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                const obj = hit.object;
+
+                // 1. 더블 클릭 감지 (300ms 이내) -> 쇼윈도우 상세 보기
+                if (timeDiff < 300) {
+                    if (obj.userData.isContent) {
+                        focusOnWindow(obj);
+                        return;
+                    }
+                }
+
+                // 2. 단일 클릭 -> 이동
+                if (obj.userData.isNode) {
+                    navigateTo(obj.userData.id);
+                } else if (obj.userData.isFloor) {
+                    handleRoadClick(hit.point);
+                }
+            }
+        }
+
+        function updatePointer(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        function focusOnWindow(obj) {
+            isInspecting = true;
+            originalCamState.pos.copy(camera.position);
+            originalCamState.rot.copy(camera.rotation);
+            originalCamState.fov = camera.fov;
+
+            const worldPos = new THREE.Vector3();
+            obj.getWorldPosition(worldPos);
+
+            // 카메라 포커싱 (정면 거리 3.8 유닛 확보)
+            new TWEEN.Tween(camera.position)
+                .to({ x: worldPos.x + 3.8, y: 1.8, z: worldPos.z }, 900)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .start();
+
+            new TWEEN.Tween(camera.rotation)
+                .to({ y: Math.PI / 2, x: 0, z: 0 }, 900)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .onComplete(() => {
+                    showModal(obj.userData.data);
+                })
+                .start();
+        }
+
+        function showModal(data) {
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-desc').innerText = data.desc;
+            document.getElementById('modal-link').href = data.link;
+            
+            const mediaBox = document.getElementById('modal-media');
+            if (data.youtubeId) {
+                mediaBox.innerHTML = `<iframe src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            } else {
+                mediaBox.innerHTML = `<img src="${data.media}" alt="Project Detail Image">`;
+            }
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('modal-media').innerHTML = ""; 
+            
+            new TWEEN.Tween(camera.position)
+                .to({ x: originalCamState.pos.x, y: originalCamState.pos.y, z: originalCamState.pos.z }, 800)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .start();
+
+            new TWEEN.Tween(camera.rotation)
+                .to({ x: originalCamState.rot.x, y: originalCamState.rot.y, z: originalCamState.rot.z }, 800)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .onComplete(() => {
+                    isInspecting = false;
+                })
+                .start();
+        }
+
+        function handleRoadClick(hitPoint) {
+            const pZ = playerGroup.position.z;
+            const cZ = hitPoint.z;
+            const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+            if (cZ < pZ - 1 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+            else if (cZ > pZ + 1 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
+        }
+
+        function onMouseMove(e) {
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+            document.body.style.cursor = (intersects.length > 0) ? 'pointer' : 'default';
+        }
+
+        function onKeyDown(e) {
+            if (isMoving || isInspecting) return;
+            const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+            if ((e.key === 'w' || e.key === 'ArrowUp') && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+            if ((e.key === 's' || e.key === 'ArrowDown') && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
+        }
+
+        function onWheel(e) {
+            if (e.cancelable) e.preventDefault();
+            targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + e.deltaY * 0.04));
+        }
+
+        function resetPosition() { targetFOV = 55; navigateTo("n1"); }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /**
+         * 5. ENGINE LOOP
+         */
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update(time);
+
+            if (!isInspecting) {
+                const desiredPos = playerGroup.position.clone().add(CAM_OFFSET);
+                camera.position.lerp(desiredPos, 0.08);
+                const lookTarget = playerGroup.position.clone().add(new THREE.Vector3(-2, 1.8, -3));
+                camera.lookAt(lookTarget);
+            }
+
+            if (Math.abs(camera.fov - targetFOV) > 0.01) {
+                camera.fov += (targetFOV - camera.fov) * 0.1;
+                camera.updateProjectionMatrix();
+            }
+
+            nodes.forEach((n, i) => { 
+                const isAhead = WORLD_DATA.nodes[i].pos[2] < playerGroup.position.z - 0.5;
+                n.material.opacity = (isAhead ? 0.45 : 0.2) + Math.sin(time * 0.005) * 0.1; 
+            });
+            
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
