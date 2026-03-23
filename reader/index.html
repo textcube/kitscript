@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BuntStream Pro | Cinematic Typing Overlay</title>
+  <style>
+    :root {
+      --accent: #00f2ff;
+      --text-color: #ffffff;
+      --font-size: 42px;
+      --font-family: 'Pretendard', -apple-system, sans-serif;
+      --glass: rgba(255, 255, 255, 0.05);
+      --text-shadow: 0 4px 15px rgba(0,0,0,0.9);
+      --dimming: 0.4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden; background: #000;
+      color: var(--text-color); font-family: var(--font-family);
+    }
+
+    .video-background {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+
+    .video-background iframe {
+      position: absolute; top: 50%; left: 50%;
+      width: 100vw; height: 100vh;
+      transform: translate(-50%, -50%);
+      @media (min-aspect-ratio: 16/9) { height: 56.25vw; }
+      @media (max-aspect-ratio: 16/9) { width: 177.78vh; }
+      filter: brightness(var(--dimming)) contrast(1.1);
+    }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 1;
+      background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.5) 100%);
+      pointer-events: none;
+    }
+
+    .text-stage {
+      position: fixed; inset: 0; z-index: 2;
+      padding: 0 10vw; 
+      display: flex; flex-direction: column;
+      justify-content: flex-start; 
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+    }
+
+    .text-container {
+      width: 100%;
+      display: flex; flex-direction: column;
+      gap: 1.8rem;
+      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      will-change: transform;
+      margin-top: 75vh; 
+    }
+
+    .line {
+      font-size: var(--font-size);
+      font-weight: 800; line-height: 1.5;
+      text-shadow: var(--text-shadow);
+      white-space: pre-wrap; word-break: keep-all;
+      opacity: 0.7; transition: opacity 0.4s, color 0.4s;
+    }
+
+    .line.current {
+      opacity: 1; color: #fff;
+    }
+
+    .current::after {
+      content: '_';
+      display: inline-block; margin-left: 10px;
+      color: var(--accent);
+      animation: blink 0.8s infinite steps(2);
+    }
+
+    @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* UI 요소 */
+    .floating-ui {
+      position: fixed; top: 2rem; right: 2rem; z-index: 100;
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+
+    .icon-btn {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: var(--glass); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; display: flex; justify-content: center; align-items: center;
+      cursor: pointer; backdrop-filter: blur(15px);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .icon-btn:hover { background: var(--accent); color: #000; transform: scale(1.1); }
+    .icon-btn label { font-size: 0.55rem; position: absolute; bottom: 4px; opacity: 0.8; font-weight: 900; letter-spacing: -0.5px; }
+
+    /* 설정 모달 */
+    .modal {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(30px);
+      display: none; justify-content: center; align-items: center; padding: 2rem;
+    }
+
+    .modal.show { display: flex; animation: fadeIn 0.3s ease; }
+
+    .settings-content {
+      background: #0a0a0a; width: 100%; max-width: 750px;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 28px;
+      padding: 3.5rem; box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group.full { grid-column: span 2; }
+    .form-group label { display: block; font-size: 0.7rem; opacity: 0.5; margin-bottom: 0.5rem; text-transform: uppercase; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; background: #151515; border: 1px solid #252525;
+      border-radius: 12px; color: #fff; padding: 1rem;
+    }
+    .form-group textarea { height: 160px; resize: none; font-size: 0.9rem; }
+
+    .primary-btn { background: var(--accent); color: #000; border: none; padding: 1.2rem; border-radius: 12px; font-weight: 900; cursor: pointer; width: 100%; margin-top: 1rem; }
+
+    #msgBox {
+      position: fixed; bottom: 3rem; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #000; padding: 1rem 3.5rem; border-radius: 50px;
+      font-weight: 900; z-index: 2000; display: none;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <div class="video-background">
+    <iframe id="ytPlayer" 
+      src="https://www.youtube.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&modestbranding=1&rel=0&enablejsapi=1" 
+      allow="autoplay; encrypted-media">
+    </iframe>
+  </div>
+
+  <div class="overlay"></div>
+
+  <div class="text-stage">
+    <div id="textContainer" class="text-container"></div>
+  </div>
+
+  <div id="msgBox">SYSTEM NOTIFIED</div>
+
+  <div class="floating-ui">
+    <div class="icon-btn" id="homeBtn" title="Homepage"><span>🏠</span><label>HOME</label></div>
+    <div class="icon-btn" id="youtubeBtn" title="YouTube Channel"><span>📺</span><label>YOUTUBE</label></div>
+    <div class="icon-btn" id="soundBtn"><span>🔈</span><label>SOUND</label></div>
+    <div class="icon-btn" id="playPauseBtn"><span>⏸</span><label>PLAY</label></div>
+    <div class="icon-btn" id="pasteBtn"><span>📋</span><label>PASTE</label></div>
+    <div class="icon-btn" id="settingsBtn"><span>⚙</span><label>SET</label></div>
+  </div>
+
+  <div id="settingsModal" class="modal">
+    <div class="settings-content">
+      <h2 style="color:var(--accent); margin-bottom:2rem; letter-spacing:4px;">OVERLAY CONFIG</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>YouTube ID</label><input type="text" id="ytIdInput" value="kFnxuOnbHU0" /></div>
+        <div class="form-group"><label>Font</label>
+          <select id="fontFamilyInput">
+            <option value="'Pretendard', sans-serif">Modern</option>
+            <option value="'Nanum Myeongjo', serif">Classic</option>
+            <option value="'Courier New', monospace">Terminal</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Text Color</label><input type="color" id="textColorInput" value="#ffffff" /></div>
+        <div class="form-group"><label>Size (px)</label><input type="number" id="fontSizeInput" value="42" /></div>
+        <div class="form-group full"><label>Script</label><textarea id="scriptInput">극로덕옥서세가(克魯德沃書世家)
+
+조선 말엽,
+세상이 점차 글로 움직이기 시작하던 무렵이었다.
+
+장부가 곡식을 대신하고,
+문서가 인심을 대신하던 시대에
+한양 장터에 낯선 족보 하나가 떠돌았다.
+
+두툼한 장지 위에 붉은 인장이 찍혀 있었고
+그 위에는 이렇게 쓰여 있었다.
+
+“극로덕옥서세가라.
+이 족보를 드는 자,
+밤낮으로 붓을 놓지 아니하는 서동 셋을 거느리리라.”
+
+사람들은 술렁였다.
+
+“밤낮으로 글을 짓는다 하니,
+잠을 자도 집안이 굴러가겠구나.”
+
+“이제는 붓이 하인이 되는 세상이라더라.”
+
+그리하여 부유한 상인 몇이
+그 족보를 사들였다.
+
+족보를 산 집은
+대문에 방을 붙였다.
+
+“본 가문은 극로덕옥서세가요,
+서동 셋이 밤낮으로 장부를 다스리노라.”
+
+집 안은 늘 밝았다.
+
+서동 셋이 번갈아 붓을 잡고
+장부를 고치고
+새 계책을 적어내고
+밤새 문서를 쌓았다.
+
+고을 사람들은 감탄하였다.
+
+“참으로 시대를 아는 집이로다.”
+“하인이 쉬지 않으니, 이 집은 멈출 일이 없겠지.”
+
+그러나 성 안의 기와집들은
+여전히 조용하였다.
+
+그 집들에는 족보를 사는 소문도,
+서동 숫자를 말하는 소리도 없었다.
+
+다만 이런 것이 있었다.
+
+논마다 물길이 이미 나 있었고
+
+밭에는 계절에 맞는 씨앗이 뿌려졌으며
+
+창고에는 묵은 곡식이 쌓여 있었다.
+
+그 집의 노인은
+하인이 몇이냐 묻는 이에게
+이리 답하였다.
+
+“붓은 논을 대신하지 못하오.”
+
+강이 마르고
+논이 갈라졌다.
+
+《극로덕옥서세가》의 서동들은
+더욱 분주하였다.
+
+새로운 장부를 만들고
+계책을 다시 쓰고
+밤새 붓을 달렸다.
+
+그러나 논에는 물길이 없었다.
+
+서동은 셋이었으되
+곡식은 나지 않았다.
+
+성 안의 집은
+예전부터 파 둔 수로 덕에
+논이 마르지 않았다.
+
+서동은 많지 않았으나
+수확은 이어졌다.
+
+“어느 집이 참된 양반이옵니까?”
+
+노인은 웃으며 말하였다.
+
+“족보는 이름을 높여주되,
+논은 집안을 살리느니라.”
+
+“그럼 서동은요?”
+
+“서동은 논이 있을 때 힘이 되느니라.
+논이 없으면 그저 붓놀림일 뿐이니라.”
+
+족보를 산 집은
+더는 방을 붙이지 않았다.
+
+주인은 서동에게 이르렀다.
+
+“붓을 잠시 놓고,
+먼저 물길을 찾자.”
+
+그날 이후 고을에는 이런 말이 돌았다.
+
+족보는 가문을 꾸미고,
+논은 가문을 지킨다.
+
+서동이 많다 하여 양반은 아니요,
+가뭄에 흔들리지 않는 집이 양반이라.
+
+세월이 흐르자
+《극로덕옥서세가》의 붉은 인장은
+여전히 선명하였으나,
+
+사람들은 족보를 펼치기 전에
+먼저 논을 살폈다.
+
+양반은 종이에서 나지 않고
+물길에서 난다는 것을
+그제야 깨달았기 때문이다.</textarea></div>
+      </div>
+      <button class="primary-btn" id="applyBtn">APPLY & RESTART</button>
+      <button onclick="document.getElementById('settingsModal').classList.remove('show')" style="background:none; border:none; color:#555; width:100%; margin-top:1rem; cursor:pointer;">CLOSE</button>
+    </div>
+  </div>
+
+  <script>
+    class TypingOverlay {
+      constructor() {
+        this.container = document.getElementById('textContainer');
+        this.stage = document.querySelector('.text-stage');
+        this.player = document.getElementById('ytPlayer');
+        this.msgBox = document.getElementById('msgBox');
+        
+        this.isPaused = false;
+        this.isTabHidden = false; 
+        this.isMuted = true;
+        this.currentSessionId = 0; 
+        
+        this.speed = 60;
+        this.delay = 1500;
+        this.commaDelay = 1000;
+        this.restartDelaySeconds = 7;
+        this.audioCtx = null;
+
+        this.initEvents();
+        this.start();
+      }
+
+      initEvents() {
+        document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('show');
+        document.getElementById('playPauseBtn').onclick = () => this.togglePause();
+        document.getElementById('pasteBtn').onclick = () => this.handlePaste();
+        document.getElementById('soundBtn').onclick = () => this.toggleSound();
+        document.getElementById('applyBtn').onclick = () => this.applySettings();
+
+        // 새롭게 추가된 링크 버튼 이벤트
+        document.getElementById('homeBtn').onclick = () => window.open('https://kitscript.com/game/pickme/', '_blank');
+        document.getElementById('youtubeBtn').onclick = () => window.open('https://youtube.com/@textcube', '_blank');
+
+        document.addEventListener('visibilitychange', () => { this.isTabHidden = document.hidden; });
+        window.addEventListener('paste', (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+          const text = e.clipboardData.getData('text');
+          if (text) { document.getElementById('scriptInput').value = text; this.showMsg("CLIPBOARD SYNCED"); this.start(); }
+        });
+      }
+
+      playTypeSound() {
+        if (this.isMuted || this.isPaused || this.isTabHidden) return;
+        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140 + Math.random() * 40, this.audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
+        osc.connect(gain); gain.connect(this.audioCtx.destination);
+        osc.start(); osc.stop(this.audioCtx.currentTime + 0.04);
+      }
+
+      toggleSound() {
+        this.isMuted = !this.isMuted;
+        document.getElementById('soundBtn').querySelector('span').innerText = this.isMuted ? '🔈' : '🔊';
+        this.player.contentWindow.postMessage(JSON.stringify({ event: 'command', func: this.isMuted ? 'mute' : 'unMute', args: '' }), '*');
+        if (!this.isMuted && this.audioCtx?.state === 'suspended') this.audioCtx.resume();
+        this.showMsg(this.isMuted ? "MUTED" : "SOUND ON");
+      }
+
+      showMsg(text) {
+        this.msgBox.textContent = text; this.msgBox.style.display = 'block';
+        setTimeout(() => { this.msgBox.style.display = 'none'; }, 2000);
+      }
+
+      async handlePaste() {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text) { document.getElementById('scriptInput').value = text; this.showMsg("CLIPBOARD SYNCED"); this.start(); }
+        } catch (err) { this.showMsg("USE CTRL+V TO PASTE"); }
+      }
+
+      async sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+      async checkPause() { while (this.isPaused || this.isTabHidden) await this.sleep(100); }
+
+      togglePause() {
+        this.isPaused = !this.isPaused;
+        document.getElementById('playPauseBtn').querySelector('span').innerText = this.isPaused ? '▶' : '⏸';
+      }
+
+      applySettings() {
+        const root = document.documentElement;
+        root.style.setProperty('--text-color', document.getElementById('textColorInput').value);
+        root.style.setProperty('--font-size', document.getElementById('fontSizeInput').value + 'px');
+        root.style.setProperty('--font-family', document.getElementById('fontFamilyInput').value);
+        
+        const ytId = document.getElementById('ytIdInput').value.trim();
+        if (ytId) this.player.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${this.isMuted?1:0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&enablejsapi=1`;
+        
+        document.getElementById('settingsModal').classList.remove('show');
+        this.start();
+      }
+
+      async start() {
+        this.currentSessionId++;
+        const mySessionId = this.currentSessionId;
+        this.container.innerHTML = '';
+        this.container.style.transform = 'translateY(0)';
+        this.isPaused = false;
+        
+        const rawLines = document.getElementById('scriptInput').value.split('\n');
+        const lines = rawLines.map(l => l.trim()).filter(l => l.length > 0);
+
+        let idx = 0;
+        while (idx < lines.length && mySessionId === this.currentSessionId) {
+          await this.checkPause();
+          const lineEl = document.createElement('div');
+          lineEl.className = 'line current';
+          this.container.appendChild(lineEl);
+          
+          for (let char of lines[idx]) {
+            if (mySessionId !== this.currentSessionId) return;
+            await this.checkPause();
+            lineEl.textContent += char;
+            this.playTypeSound();
+            this.autoScroll(); 
+            await this.sleep(char === ',' ? this.commaDelay : this.speed);
+          }
+          lineEl.classList.remove('current');
+          idx++;
+          await this.sleep(this.delay);
+          this.autoScroll();
+        }
+
+        if (mySessionId === this.currentSessionId) await this.handleRestart(mySessionId);
+      }
+
+      async handleRestart(sessionId) {
+        const cd = document.createElement('div');
+        cd.className = 'line current';
+        cd.style.color = 'var(--accent)';
+        this.container.appendChild(cd);
+        for (let i = this.restartDelaySeconds; i > 0; i--) {
+          if (sessionId !== this.currentSessionId) return;
+          await this.checkPause();
+          cd.textContent = `RESTARTING IN ${i}...`;
+          this.autoScroll();
+          await this.sleep(1000);
+        }
+        if (sessionId === this.currentSessionId) this.start();
+      }
+
+      autoScroll() {
+        const lastLine = this.container.lastElementChild;
+        if (!lastLine) return;
+        const stageH = this.stage.clientHeight;
+        const lastLineBottom = lastLine.offsetTop + lastLine.offsetHeight;
+        const offset = Math.max(0, lastLineBottom);
+        this.container.style.transform = `translateY(-${offset}px)`;
+      }
+    }
+
+    window.onload = () => { new TypingOverlay(); };
+  </script>
+</body>
+</html>
