@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PICK ME - RETRO STAGE SELECT (MANUAL OVERRIDE)</title>
+  <style>
+    :root {
+      --bg: #080808;
+      --panel-bg: #1a1a1a;
+      --accent: #00ff00;
+      --text: #ffffff;
+      --shadow: #000000;
+      --crt-line: rgba(18, 16, 16, 0.15);
+      --cols: 3;
+      --card-h: 140px;
+    }
+
+    body.theme-city { --accent: #ff00ff; }
+    body.theme-space { --accent: #00ffff; }
+    body.theme-tool { --accent: #ffff00; }
+    body.theme-default { --accent: #00ff00; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      position: relative;
+      padding: 1.25rem 1rem 1.5rem;
+    }
+
+    /* CRT Scanline Effect */
+    body::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(var(--crt-line) 50%, rgba(0, 0, 0, 0) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+      z-index: 100;
+      background-size: 100% 2px, 3px 100%;
+      pointer-events: none;
+    }
+
+    #status-container {
+      margin-bottom: 1rem;
+      text-align: center;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .main-label {
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 0.3rem;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      animation: blink 0.8s infinite steps(2);
+    }
+
+    .status-text {
+      font-size: 2.2rem;
+      font-weight: 900;
+      letter-spacing: -2px;
+      text-transform: uppercase;
+      border: 4px solid var(--accent);
+      padding: 0.5rem 1.5rem;
+      background: var(--bg);
+      box-shadow: 6px 6px 0px var(--shadow);
+      min-width: 320px;
+    }
+
+    #pick-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      gap: 0.8rem;
+      width: min(95vw, 1100px);
+      z-index: 10;
+      align-content: start;
+      padding-bottom: 0.5rem;
+    }
+
+    .pick-card {
+      min-height: var(--card-h);
+      height: var(--card-h);
+      background: var(--panel-bg);
+      border: 3px solid #333;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      box-shadow: 4px 4px 0px var(--shadow);
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+      transition: opacity 0.4s ease, border-color 0.1s, transform 0.2s;
+      cursor: pointer;
+    }
+
+    .pick-card::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 1;
+      transition: background 0.2s;
+    }
+
+    .pick-card:hover {
+      transform: translateY(-2px);
+      border-color: #666;
+    }
+
+    .pick-card.active {
+      border-color: #fff;
+      transform: scale(1.05);
+      z-index: 5;
+    }
+    
+    .pick-card.active::after {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .pick-card.winner {
+      background-color: var(--accent) !important;
+      border-color: #ffffff !important;
+      transform: scale(1.1) !important;
+      z-index: 10;
+      animation: flash 0.1s infinite;
+      opacity: 1 !important;
+    }
+
+    .pick-card.winner::after { display: none; }
+
+    .pick-card.winner span {
+      color: #000 !important;
+      text-shadow: none !important;
+    }
+
+    #pick-grid.finalized .pick-card:not(.winner) {
+      opacity: 0.15;
+      filter: grayscale(1);
+      cursor: default;
+    }
+
+    .pick-card span {
+      font-size: clamp(0.7rem, 2.2vw, 1.1rem);
+      text-align: center;
+      padding: 0.5rem;
+      word-break: keep-all;
+      text-transform: uppercase;
+      line-height: 1.2;
+      z-index: 2;
+      font-weight: 900;
+      text-shadow: 2px 2px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+      pointer-events: none; /* 텍스트가 클릭을 방해하지 않도록 */
+    }
+
+    .pick-card .weight-indicator {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 0.6rem;
+      color: var(--accent);
+      opacity: 0.9;
+      z-index: 3;
+    }
+
+    @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes flash { 0% { filter: invert(0); } 100% { filter: invert(1); } }
+
+    @media (max-width: 600px) {
+      .status-text { font-size: 1.4rem; min-width: 240px; }
+      #pick-grid { gap: 0.5rem; }
+      body { padding: 0.8rem 0.7rem 1rem; }
+    }
+  </style>
+</head>
+<body class="theme-default">
+
+  <div id="status-container">
+    <p class="main-label">> STAGE SELECT <</p>
+    <h1 id="status" class="status-text">READY</h1>
+  </div>
+
+  <div id="pick-grid"></div>
+
+  <script>
+    const ROUTES = [
+      { url: "https://kitscript.com/game/city/", weight: 3, theme: "city", label: "NEO-CITY", image: "https://kitscript.com/game/quiz/images/retrogames/street-fighter-ii/street-fighter-ii_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/star/", weight: 2, theme: "space", label: "STAR-SHIP", image: "https://kitscript.com/game/quiz/images/retrogames/pong/pong_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/hack/", weight: 1, theme: "tool", label: "HACKING-DRONE", image: "https://kitscript.com/game/quiz/images/retrogames/robotron-2084/robotron-2084_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/", weight: 2, theme: "default", label: "GAME HUB", image: "https://kitscript.com/game/quiz/images/retrogames/boulder-dash/boulder-dash_action_01.png", enabled: true },
+      { url: "https://kitscript.com/tool/", weight: 1, theme: "default", label: "TOOL HUB", image: "https://kitscript.com/game/quiz/images/retrogames/micro-machines/micro-machines_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/rogue/", weight: 1, theme: "city", label: "ROGUELIKE", image: "https://kitscript.com/game/quiz/images/retrogames/ristar/ristar_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/solomade/", weight: 1, theme: "city", label: "SOLOMADE", image: "https://kitscript.com/game/quiz/images/retrogames/mario-kart-64/mario-kart-64_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/pizza/", weight: 2, theme: "tool", label: "RESTAURANT", image: "https://kitscript.com/game/quiz/images/retrogames/yoshi-s-island/yoshi-s-island_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/tank/", weight: 1, theme: "tool", label: "TANK DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/shining-force-ii/shining-force-ii_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/avatar/", weight: 3, theme: "city", label: "AVATAR FACTORY", image: "https://kitscript.com/game/quiz/images/retrogames/resident-evil-2/resident-evil-2_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/bird/", weight: 2, theme: "space", label: "BIRD JUMPER", image: "https://kitscript.com/game/quiz/images/retrogames/pilotwings/pilotwings_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/bizcard/", weight: 1, theme: "tool", label: "BIZ-CARD", image: "https://kitscript.com/game/quiz/images/retrogames/braid/braid_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/bomb/", weight: 2, theme: "default", label: "BOMB DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/star-fox/star-fox_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/cable/", weight: 1, theme: "default", label: "CABLE-CAR DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/parasol-stars/parasol-stars_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/clip/", weight: 1, theme: "city", label: "CLIPBOARD PRO", image: "https://kitscript.com/game/quiz/images/retrogames/cave-story/cave-story_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/clipcut/", weight: 1, theme: "city", label: "CLIP-CUT", image: "https://kitscript.com/game/quiz/images/retrogames/crystalis/crystalis_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/clock/", weight: 2, theme: "tool", label: "CLOCK DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/bomberman-94/bomberman-94_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/cowboy/", weight: 1, theme: "tool", label: "COWBOY DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/mother/mother_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/drone/", weight: 3, theme: "city", label: "DRONE DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/gran-turismo/gran-turismo_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/space/", weight: 1, theme: "tool", label: "SPACE HUNTER", image: "https://kitscript.com/game/quiz/images/retrogames/space-invaders/space-invaders_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/wave/", weight: 1, theme: "tool", label: "WAVE", image: "https://kitscript.com/game/quiz/images/retrogames/pac-man/pac-man_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/model/", weight: 2, theme: "default", label: "MODEL2SPRITE", image: "https://kitscript.com/game/quiz/images/retrogames/frogger/frogger_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/motion/", weight: 1, theme: "default", label: "MOTION FACTORY", image: "https://kitscript.com/game/quiz/images/retrogames/dig-dug/dig-dug_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/ocean/", weight: 1, theme: "city", label: "OCEAN DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/1942/1942_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/one/", weight: 1, theme: "city", label: "ONE PAGE PROGRAM", image: "https://kitscript.com/game/quiz/images/retrogames/ghosts-n-goblins/ghosts-n-goblins_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/pandemic/", weight: 2, theme: "tool", label: "PANDEMIC", image: "https://kitscript.com/game/quiz/images/retrogames/bomberman/bomberman_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/pilot/", weight: 1, theme: "tool", label: "DAWN OF STRIKE BACK", image: "https://kitscript.com/game/quiz/images/retrogames/xevious/xevious_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/puzzle/", weight: 3, theme: "city", label: "PUZZLE DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/r-type/r-type_action_01.png", enabled: true },
+      { url: "https://kitscript.com/game/terminal/", weight: 2, theme: "space", label: "TERMINAL", image: "https://kitscript.com/game/quiz/images/retrogames/star-wars-arcade/star-wars-arcade_action_01.png", enabled: true },
+      { url: "https://kitscript.com/webgl/StartUpRPG/", weight: 3, theme: "city", label: "UNITY RPG", image: "https://kitscript.com/game/quiz/images/retrogames/actraiser/actraiser_action_01.png", enabled: true },
+      { url: "https://kitscript.com/webgl/StartUpSkill/", weight: 2, theme: "space", label: "VFX SANDBOX", image: "https://kitscript.com/game/quiz/images/retrogames/metal-warriors/metal-warriors_action_01.png", enabled: true }
+    ];
+
+    const ROOT_STAGE_DIRS = [
+    ];
+
+    const THEME_IMAGES = {
+      city: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&q=80",
+      space: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&q=80",
+      tool: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80",
+      default: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400&q=80"
+    };
+
+    const CURATED_LABELS = {
+      city: "NEO-CITY",
+      star: "STAR-SHIP",
+      hack: "HACKING-DRONE",
+      rogue: "ROGUELIKE",
+      solomade: "SOLOMADE",
+      pizza: "RESTAURANT",
+      tank: "TANK",
+      tool: "TOOL HUB"
+    };
+
+    const SPACE_DIRS = new Set(["avatar", "bird", "drone", "invasion", "ocean", "pilot", "space", "star"]);
+    const CITY_DIRS = new Set(["city", "cowboy", "pandemic", "pizza", "rogue", "shop", "solomade", "world", "zone"]);
+    const TOOL_DIRS = new Set(["bizcard", "bomb", "cable", "clip", "clipcut", "clock", "hack", "model", "motion", "one", "puzzle", "quiz", "tank", "terminal", "tool"]);
+
+    const ROUTE_POOL = mergeRoutes(ROUTES, buildAutoRoutes(ROOT_STAGE_DIRS));
+
+    const STORAGE_KEY = "pickme_last_url";
+    const statusEl = document.getElementById('status');
+    const gridEl = document.getElementById('pick-grid');
+
+    let isFinalized = false;
+    let shuffleTimeout = null;
+    let currentRouteList = [];
+
+    function buildAutoRoutes(dirNames) {
+      return dirNames.map((dir) => {
+        const theme = inferTheme(dir);
+        return {
+          url: buildRouteUrl(dir),
+          weight: inferWeight(dir),
+          theme,
+          label: CURATED_LABELS[dir] || slugToLabel(dir),
+          image: THEME_IMAGES[theme] || THEME_IMAGES.default,
+          enabled: true
+        };
+      });
+    }
+
+    function mergeRoutes(curated, generated) {
+      const map = new Map();
+      [...curated, ...generated].forEach((route) => {
+        const key = route.url;
+        if (!map.has(key)) map.set(key, route);
+      });
+      return Array.from(map.values());
+    }
+
+    function buildRouteUrl(dir) {
+      if (dir === "tool") return "https://kitscript.com/tool/";
+      return `https://kitscript.com/game/${dir}/`;
+    }
+
+    function inferTheme(dir) {
+      if (SPACE_DIRS.has(dir)) return "space";
+      if (CITY_DIRS.has(dir)) return "city";
+      if (TOOL_DIRS.has(dir)) return "tool";
+      return "default";
+    }
+
+    function inferWeight(dir) {
+      if (["city", "star", "space", "pizza"].includes(dir)) return 2;
+      return 1;
+    }
+
+    function slugToLabel(dir) {
+      return dir.replace(/[-_]+/g, " ").toUpperCase();
+    }
+
+    function resolveSafeUrl(path) {
+      if (!path || path.trim() === "") return "/";
+      if (path.startsWith('http')) return path;
+      let base = "";
+      try {
+        if (window.location.origin && window.location.origin !== 'null') base = window.location.origin;
+        else {
+          const parts = window.location.href.split('/');
+          if (parts.length >= 3) base = parts[0] + "//" + parts[2];
+        }
+      } catch (e) {}
+      if (base.startsWith('blob:')) base = base.replace('blob:', '');
+      return base + (path.startsWith('/') ? path : '/' + path);
+    }
+
+    function init() {
+      currentRouteList = filterRoutes();
+      if (currentRouteList.length === 0) {
+        window.location.replace(resolveSafeUrl("/"));
+        return;
+      }
+      setupTheme();
+      renderCards(currentRouteList);
+      updateGridMetrics(currentRouteList.length);
+      
+      const selected = pickOne(currentRouteList);
+
+      // 개별 카드 클릭 이벤트 위임
+      gridEl.addEventListener('click', (e) => {
+        if (isFinalized) return;
+        
+        const card = e.target.closest('.pick-card');
+        if (!card) return;
+
+        // 랜덤 루프 중단
+        if (shuffleTimeout) clearTimeout(shuffleTimeout);
+        
+        const manualUrl = card.dataset.url;
+        statusEl.innerText = "MANUAL SELECT";
+        finalize(card, manualUrl);
+      });
+
+      window.addEventListener('resize', () => updateGridMetrics(currentRouteList.length));
+
+      setTimeout(() => startSequence(selected), 600);
+    }
+
+    function filterRoutes() {
+      const params = new URLSearchParams(window.location.search);
+      const targetTheme = params.get('theme');
+      let list = ROUTE_POOL.filter(r => r.enabled && r.url);
+      if (targetTheme) list = list.filter(r => r.theme === targetTheme);
+      if (list.length === 0) return [];
+      const lastUrl = localStorage.getItem(STORAGE_KEY);
+      const filteredList = list.filter(r => r.url !== lastUrl);
+      return filteredList.length > 0 ? filteredList : list;
+    }
+
+    function setupTheme() {
+      const params = new URLSearchParams(window.location.search);
+      const theme = params.get('theme') || 'default';
+      document.body.className = `theme-${theme}`;
+    }
+
+    function renderCards(list) {
+      gridEl.innerHTML = "";
+      list.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'pick-card';
+        if (item.image) card.style.backgroundImage = `url('${item.image}')`;
+        card.innerHTML = `<div class="weight-indicator">LV.${item.weight}</div><span>${item.label}</span>`;
+        card.dataset.url = item.url;
+        gridEl.appendChild(card);
+      });
+    }
+
+    function updateGridMetrics(count) {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const compact = viewportWidth < 760;
+      let cols = 3;
+
+      if (count <= 4) cols = compact ? 2 : 2;
+      else if (count <= 9) cols = compact ? 2 : 3;
+      else if (count <= 16) cols = compact ? 3 : 4;
+      else if (count <= 25) cols = compact ? 3 : 5;
+      else cols = compact ? 4 : 6;
+
+      const statusHeight = document.getElementById('status-container').offsetHeight || 110;
+      const gap = viewportWidth < 600 ? 8 : 13;
+      const rows = Math.max(1, Math.ceil(count / cols));
+      const verticalPadding = viewportWidth < 600 ? 42 : 64;
+      const availableHeight = Math.max(220, viewportHeight - statusHeight - verticalPadding);
+      const cardHeight = Math.max(72, Math.min(150, Math.floor((availableHeight - gap * (rows - 1)) / rows)));
+
+      gridEl.style.setProperty('--cols', cols);
+      gridEl.style.setProperty('--card-h', `${cardHeight}px`);
+    }
+
+    function pickOne(list) {
+      const totalWeight = list.reduce((sum, item) => sum + item.weight, 0);
+      let random = Math.random() * totalWeight;
+      for (const item of list) {
+        if (random < item.weight) return item;
+        random -= item.weight;
+      }
+      return list[0];
+    }
+
+    function startSequence(selected) {
+      const cards = document.querySelectorAll('.pick-card');
+      const totalSteps = 22 + Math.floor(Math.random() * 8);
+      let currentStep = 0;
+      let currentIndex = -1;
+
+      // 자동 추천될 위너 미리 파악
+      const winnerCards = Array.from(cards).filter(c => c.dataset.url === selected.url);
+      const winnerCard = winnerCards[Math.floor(Math.random() * winnerCards.length)];
+
+      statusEl.innerText = "SELECTING";
+
+      function shuffle() {
+        if (isFinalized) return; // 이미 수동 클릭으로 종료됨
+
+        if (currentStep >= totalSteps) {
+          finalize(winnerCard, selected.url);
+          return;
+        }
+
+        cards.forEach(c => c.classList.remove('active'));
+        
+        let nextIndex;
+        if (currentStep === totalSteps - 1) {
+          winnerCard.classList.add('active');
+        } else {
+          do { nextIndex = Math.floor(Math.random() * cards.length); } 
+          while (nextIndex === currentIndex && cards.length > 1);
+          currentIndex = nextIndex;
+          cards[currentIndex].classList.add('active');
+        }
+
+        currentStep++;
+        const progress = currentStep / totalSteps;
+        const delay = 40 + Math.pow(progress, 5) * 800;
+        shuffleTimeout = setTimeout(shuffle, delay);
+      }
+      shuffle();
+    }
+
+    function finalize(winnerCard, targetUrl) {
+      if (isFinalized) return;
+      isFinalized = true;
+
+      gridEl.classList.add('finalized');
+      
+      const cards = document.querySelectorAll('.pick-card');
+      cards.forEach(c => c.classList.remove('active'));
+
+      winnerCard.classList.add('winner');
+      statusEl.innerText = "STAGE START";
+      
+      localStorage.setItem(STORAGE_KEY, targetUrl);
+
+      setTimeout(() => {
+        window.location.replace(resolveSafeUrl(targetUrl));
+      }, 1200);
+    }
+
+    init();
+  </script>
+</body>
+</html>
