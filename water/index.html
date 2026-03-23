@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuntOcean | Cinematic Water World</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <style>
+        :root {
+            --accent: #78f3ff;
+            --accent-2: #12b9db;
+            --bg: #020913;
+            --danger: #ff8d4d;
+            --panel: rgba(4, 18, 30, 0.72);
+            --line: rgba(130, 229, 255, 0.22);
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 18%, rgba(39, 119, 148, 0.22), transparent 28%),
+                linear-gradient(180deg, #04111d 0%, #061a2a 35%, #052033 62%, #03131f 100%);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            color: white;
+        }
+
+        #main-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: block; z-index: 1;
+        }
+
+        /* HUD 디자인 개선 */
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;
+            padding: 2.2rem 2.2rem 0; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10;
+            box-sizing: border-box; gap: 1rem;
+        }
+
+        .brand-zone { pointer-events: auto; }
+        .brand-name {
+            font-size: clamp(2.2rem, 4vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: 0.32rem;
+            color: #d3fcff;
+            margin-bottom: 0.65rem;
+            text-shadow: 0 0 30px rgba(120, 243, 255, 0.26);
+        }
+        .location-info { font-size: 1rem; color: #81b3c4; text-transform: uppercase; letter-spacing: 0.32rem; font-weight: 700; }
+
+        .hud-button {
+            pointer-events: auto;
+            background: linear-gradient(180deg, rgba(14, 35, 47, 0.9), rgba(6, 16, 26, 0.9));
+            border: 1px solid rgba(120, 243, 255, 0.55);
+            color: #d8fbff;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border-radius: 999px;
+            font-size: 0.92rem;
+            font-weight: 900;
+            letter-spacing: 0.22rem;
+            transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255,255,255,0.04);
+            white-space: nowrap;
+        }
+        .hud-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 50px rgba(10, 184, 216, 0.22), inset 0 0 22px rgba(120, 243, 255, 0.12);
+            border-color: rgba(120, 243, 255, 0.9);
+        }
+
+        .guide-box {
+            position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(5, 20, 32, 0.88), rgba(3, 13, 22, 0.92)); padding: 1rem 1.8rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            font-size: 0.92rem; display: flex; gap: 2rem; pointer-events: none; letter-spacing: 0.16rem;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255,255,255,0.02); white-space: nowrap; z-index: 20;
+            backdrop-filter: blur(18px);
+        }
+
+        #modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(1, 7, 14, 0.92); display: none; justify-content: center; align-items: center;
+            z-index: 100; backdrop-filter: blur(40px);
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, rgba(5, 21, 31, 0.98), rgba(2, 10, 17, 0.98)); width: 92%; max-width: 1020px; border: 1px solid rgba(120, 243, 255, 0.18);
+            border-radius: 28px;
+            padding: 3.5rem; position: relative;
+            box-shadow: 0 40px 120px rgba(0, 0, 0, 0.65), 0 0 160px rgba(10, 184, 216, 0.08);
+            animation: terminalIn 0.5s ease-out;
+        }
+
+        @keyframes terminalIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+
+        .close-btn {
+            position: absolute; top: 1rem; right: 1.6rem; font-size: 4rem; cursor: pointer;
+            color: #2a5761; transition: 0.3s; z-index: 130; line-height: 1; border: none; background: none;
+        }
+        .close-btn:hover { color: var(--accent); transform: rotate(90deg); }
+
+        .modal-media {
+            width: 100%; aspect-ratio: 21/9; background: #000;
+            margin-bottom: 2.5rem; overflow: hidden; border: 1px solid rgba(120, 243, 255, 0.16);
+            border-radius: 18px;
+            box-shadow: 0 30px 70px rgba(0,0,0,0.8);
+        }
+        .modal-media iframe, .modal-media img { width: 100%; height: 100%; border: none; display: block; object-fit: cover; }
+        
+        .modal-title { font-size: clamp(2.4rem, 5vw, 4rem); margin-bottom: 1rem; color: #d2fbff; font-weight: 900; letter-spacing: -2px; }
+        .modal-desc { color: #82aebb; line-height: 1.9; margin-bottom: 2.2rem; font-size: 1.1rem; max-width: 760px; }
+        .modal-link {
+            display: inline-block; background: linear-gradient(135deg, #78f3ff, #12b9db); color: #031016;
+            padding: 1.2rem 2.4rem; text-decoration: none; font-weight: 900;
+            transition: 0.4s; font-size: 1rem; letter-spacing: 0.22rem; border-radius: 999px;
+        }
+        .modal-link:hover { transform: translateY(-2px); filter: brightness(1.08); }
+
+        #loading { position: fixed; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(14, 57, 74, 0.3), rgba(1, 6, 10, 1)); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .loading-text { margin-top: 2rem; letter-spacing: 0.5rem; font-size: 1rem; color: var(--accent); font-weight: 900; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 860px) {
+            #hud { padding: 1.2rem 1.2rem 0; }
+            .location-info { font-size: 0.82rem; letter-spacing: 0.2rem; }
+            .guide-box { gap: 1rem; padding: 0.85rem 1.1rem; font-size: 0.76rem; letter-spacing: 0.08rem; }
+            .modal-content { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div style="width: 120px; height: 120px; border: 2px solid var(--accent); animation: spin 4s linear infinite; border-style: dashed;"></div>
+        <p class="loading-text">RECONSTRUCTING WORLD...</p>
+    </div>
+
+    <canvas id="main-canvas"></canvas>
+
+    <div id="hud">
+        <div class="brand-zone">
+            <div class="brand-name">BUNT OCEAN</div>
+            <div class="location-info">The Last Archive / <span id="current-node" style="color: #fff;">Sector 01</span></div>
+        </div>
+        <div class="brand-zone">
+            <button onclick="resetPosition()" class="hud-button">RESET CORE</button>
+        </div>
+    </div>
+
+    <div class="guide-box">
+        <span>📽 BILLBOARD SCAN</span>
+        <span>🚢 CRUISE CONTROL</span>
+        <span>🔭 SENSORS ADJ.</span>
+    </div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div class="modal-media" id="modal-media"></div>
+            <h2 class="modal-title" id="modal-title">Project Title</h2>
+            <p class="modal-desc" id="modal-desc">Description</p>
+            <a href="#" target="_blank" class="modal-link" id="modal-link">ENTER MODULE</a>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 1. 전역 데이터 및 상태
+         */
+        const WORLD_DATA = {
+            nodes: [
+                { id: "n0", pos: [8, 0, 40], label: "Outer Harbor" },
+                { id: "n1", pos: [8, 0, 15], label: "Main Atoll" },
+                { id: "n2", pos: [8, 0, -10], label: "Rust Strait" },
+                { id: "n3", pos: [8, 0, -35], label: "Sunken Hub" },
+                { id: "n4", pos: [8, 0, -60], label: "Deep Abyss" }
+            ],
+            forts: [
+                { id: "f1", pos: [-25, 0, 15], color: 0x00f2ff, content: { title: "Unity Mega Pack", desc: "해상 문명 재건을 위한 최상위 최적화 에셋 팩입니다. 25년 베테랑의 정수가 담긴 고성능 쉐이더와 시스템 아키텍처를 포함합니다.", media: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=1200", youtubeId: "OgupBsqNHWw", link: "https://shop.buntgames.com/" } },
+                { id: "f2", pos: [-25, 0, -10], color: 0xff4400, content: { title: "Dev Master Class", desc: "포스트 아포칼립스 같은 개발 현장에서 살아남는 법. 56만 유튜버 번트의 실전 코딩과 프로젝트 매니지먼트의 모든 것.", media: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200", youtubeId: "XkWdnyq87Ww", link: "https://www.youtube.com/@textcube" } },
+                { id: "f3", pos: [-25, 0, -35], color: 0x44ff00, content: { title: "Action Framework v2", desc: "거친 파도 위에서도 흔들리지 않는 조작감. 2D/3D 액션 게임 제작을 위한 가장 견고한 프레임워크 베이스.", media: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=1200", link: "https://buntgames.itch.io/" } },
+                { id: "f4", pos: [-25, 0, -60], color: 0xffaa00, content: { title: "Star Membership", desc: "번트 오션의 최정예 탐사대원을 위한 특별 보급망입니다. 매달 업데이트되는 상용 에셋과 독점 코칭 세션.", media: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200", link: "https://patreon.com/BuntGames" } }
+            ]
+        };
+
+        let scene, camera, renderer, raycaster;
+        let yachtGroup = new THREE.Group();
+        let interactiveObjects = [];
+        let currentNodeId = "n1"; 
+        let isMoving = false, isInspecting = false;
+        const animators = [];
+        const mouse = new THREE.Vector2();
+        const originalCamState = { pos: new THREE.Vector3(), rot: new THREE.Euler(), fov: 40 };
+        
+        const CAM_OFFSET = new THREE.Vector3(18, 12, 25); 
+        const YACHT_FLOAT_BASE = 2.6;
+        let targetFOV = 40, lastClickTime = 0;
+
+        /**
+         * 2. 엔진 초기화
+         */
+        function boot() {
+            const canvas = document.getElementById('main-canvas');
+            const guideItems = document.querySelectorAll('.guide-box span');
+            if (guideItems.length >= 3) {
+                guideItems[0].textContent = '🚀 CLICK LANE TO WARP';
+                guideItems[1].textContent = '☄️ DBL-CLICK PLANET TO SCAN';
+                guideItems[2].textContent = '🤖 ZOOM WHEEL';
+            }
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputEncoding = THREE.sRGBEncoding;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x05111c);
+            // 안개 설정을 조절하여 원경의 가시성을 확보
+            scene.fog = new THREE.Fog(0x0a2130, 120, 4200);
+
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 50000);
+            raycaster = new THREE.Raycaster();
+
+            // Lighting: 시네마틱 밤바다
+            const moon = new THREE.DirectionalLight(0xbdefff, 1.65);
+            moon.position.set(-120, 220, -60);
+            scene.add(moon);
+            
+            const fill = new THREE.AmbientLight(0x163142, 1.15);
+            scene.add(fill);
+
+            const horizonGlow = new THREE.PointLight(0x34c8ff, 1.8, 1200);
+            horizonGlow.position.set(-120, 80, 180);
+            scene.add(horizonGlow);
+
+            // 월드 생성
+            createOcean();
+            createSpaceStars(); // 밀도와 크기가 조절된 별무리
+            createScrapAtolls(); // 고철 기지형 원경 섬
+            createDetailedYacht(); 
+            createFortressBillboards(); 
+            createMarkerBuoys(); 
+
+            const start = WORLD_DATA.nodes.find(n => n.id === currentNodeId);
+            yachtGroup.position.set(0, YACHT_FLOAT_BASE, start.pos[2]); 
+            camera.position.copy(yachtGroup.position).add(CAM_OFFSET);
+            camera.lookAt(yachtGroup.position.clone().add(new THREE.Vector3(-12, 0, -20)));
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('wheel', onWheel, { passive: false });
+            window.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('keydown', onKey);
+
+            document.getElementById('loading').style.display = 'none';
+            animate(0);
+        }
+
+        /**
+         * 3. 오브젝트 생성 함수
+         */
+
+        function createOcean() {
+            const geo = new THREE.PlaneGeometry(20000, 20000, 128, 128);
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x08314a,
+                roughness: 0.18,
+                metalness: 0.42,
+                transparent: true,
+                opacity: 0.96
+            });
+            const sea = new THREE.Mesh(geo, mat);
+            sea.rotation.x = -Math.PI / 2;
+            sea.userData = { isSea: true };
+            scene.add(sea);
+            interactiveObjects.push(sea);
+
+            const sheen = new THREE.Mesh(
+                new THREE.PlaneGeometry(20000, 20000, 1, 1),
+                new THREE.MeshBasicMaterial({
+                    color: 0x6ef2ff,
+                    transparent: true,
+                    opacity: 0.06
+                })
+            );
+            sheen.rotation.x = -Math.PI / 2;
+            sheen.position.y = 0.25;
+            scene.add(sheen);
+
+            const pos = geo.attributes.position;
+            animators.push((time) => {
+                for (let i = 0; i < pos.count; i++) {
+                    const x = pos.getX(i);
+                    const y = pos.getY(i);
+                    const z = Math.sin(x * 0.018 + time * 0.00055) * 1.9 +
+                              Math.cos(y * 0.022 + time * 0.00042) * 1.1 +
+                              Math.sin((x + y) * 0.008 + time * 0.00085) * 1.4;
+                    pos.setZ(i, z);
+                }
+                pos.needsUpdate = true;
+                sheen.material.opacity = 0.04 + Math.sin(time * 0.0006) * 0.015;
+            });
+        }
+
+        function createSpaceStars() {
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = [];
+            const starColors = [];
+            // 밀도를 대폭 축소 (30,000 -> 3,000)
+            const starCount = 1600; 
+            for (let i = 0; i < starCount; i++) {
+                const r = 10000 + Math.random() * 5000;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = Math.abs(r * Math.sin(phi) * Math.sin(theta)); 
+                const z = r * Math.cos(phi);
+                
+                starPos.push(x, y, z);
+                
+                const c = 0.8 + Math.random() * 0.2;
+                starColors.push(c, c, 1.0);
+            }
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            starGeo.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+            
+            // 크기를 줄여(4.5 -> 2.0) 더 자연스러운 원경 표현
+            const starMat = new THREE.PointsMaterial({
+                size: 2.0, 
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                depthWrite: false,
+                fog: false, 
+                sizeAttenuation: true
+            });
+            scene.add(new THREE.Points(starGeo, starMat));
+
+            const moon = new THREE.Mesh(
+                new THREE.CircleGeometry(120, 48),
+                new THREE.MeshBasicMaterial({ color: 0xe3fbff, transparent: true, opacity: 0.9, fog: false })
+            );
+            moon.position.set(-900, 820, -2100);
+            scene.add(moon);
+
+            const moonHalo = new THREE.Mesh(
+                new THREE.CircleGeometry(220, 48),
+                new THREE.MeshBasicMaterial({ color: 0x63dfff, transparent: true, opacity: 0.08, fog: false })
+            );
+            moonHalo.position.set(-900, 820, -2110);
+            scene.add(moonHalo);
+
+            animators.push((time) => {
+                starMat.opacity = 0.58 + Math.sin(time * 0.001) * 0.18;
+            });
+        }
+
+        function createScrapAtolls() {
+            const reefMat = new THREE.MeshStandardMaterial({ color: 0x20383f, roughness: 1, metalness: 0.08 });
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0x74eaff });
+
+            for (let i = 0; i < 20; i++) {
+                const dist = 3000 + Math.random() * 5000;
+                const angle = Math.random() * Math.PI * 2;
+                
+                const group = new THREE.Group();
+                group.position.set(Math.cos(angle) * dist, -14, Math.sin(angle) * dist);
+
+                const towers = 1 + Math.floor(Math.random() * 3);
+                for(let t=0; t<towers; t++) {
+                    const h = 50 + Math.random() * 100;
+                    const w = 20 + Math.random() * 40;
+                    const tower = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.35, w * 0.55, h, 6), reefMat);
+                    tower.position.set((Math.random()-0.5)*50, h/2, (Math.random()-0.5)*50);
+                    tower.rotation.y = Math.random() * Math.PI;
+                    group.add(tower);
+
+                    const l = new THREE.Mesh(new THREE.SphereGeometry(3), lightMat);
+                    l.position.set(tower.position.x, h + 5, tower.position.z);
+                    group.add(l);
+                }
+                scene.add(group);
+                animators.push((time) => { group.position.y = -14 + Math.sin(time * 0.0003 + i) * 2.2; });
+            }
+        }
+
+        function createDetailedYacht() {
+            const hullMat = new THREE.MeshStandardMaterial({ color: 0xf7fbff, metalness: 0.42, roughness: 0.2 });
+            const lowerHullMat = new THREE.MeshStandardMaterial({ color: 0x163746, metalness: 0.35, roughness: 0.42 });
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0x5defff, emissive: 0x1fc9dd, emissiveIntensity: 0.45, metalness: 0.2, roughness: 0.22 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x94f8ff, transparent: true, opacity: 0.4, metalness: 0.08, roughness: 0.03 });
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0x74f4ff });
+            const shadowMat = new THREE.MeshBasicMaterial({ color: 0x03131f, transparent: true, opacity: 0.26 });
+
+            const group = new THREE.Group();
+
+            const shadow = new THREE.Mesh(new THREE.CircleGeometry(3.7, 48), shadowMat);
+            shadow.rotation.x = -Math.PI / 2;
+            shadow.position.y = -0.02;
+            group.add(shadow);
+
+            const centerHull = new THREE.Mesh(new THREE.BoxGeometry(2.9, 1.2, 8.8), hullMat);
+            centerHull.position.y = 1.05;
+            group.add(centerHull);
+
+            const lowerHull = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.8, 8.4), lowerHullMat);
+            lowerHull.position.y = 0.52;
+            group.add(lowerHull);
+
+            const sideHullLeft = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 7.1), hullMat);
+            sideHullLeft.position.set(-2.15, 0.68, 0.55);
+            group.add(sideHullLeft);
+
+            const sideHullRight = sideHullLeft.clone();
+            sideHullRight.position.x = 2.15;
+            group.add(sideHullRight);
+
+            const bridgeBase = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.45, 3.6), lowerHullMat);
+            bridgeBase.position.set(0, 1.95, -0.15);
+            group.add(bridgeBase);
+
+            const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.95, 1.45, 2.7), glassMat);
+            canopy.position.set(0, 2.28, -0.7);
+            group.add(canopy);
+
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.16, 3.15), hullMat);
+            roof.position.set(0, 3.02, -0.2);
+            group.add(roof);
+
+            const deckLine = new THREE.Mesh(new THREE.BoxGeometry(2.78, 0.08, 7.8), trimMat);
+            deckLine.position.set(0, 1.68, 0.18);
+            group.add(deckLine);
+
+            const sideTrimLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 8.2), trimMat);
+            sideTrimLeft.position.set(-1.48, 1.12, 0.08);
+            group.add(sideTrimLeft);
+
+            const sideTrimRight = sideTrimLeft.clone();
+            sideTrimRight.position.x = 1.48;
+            group.add(sideTrimRight);
+
+            const radar = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.35, 0.1), lowerHullMat);
+            radar.position.set(0, 3.55, -0.25);
+            group.add(radar);
+
+            const radarWing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.12), lowerHullMat);
+            radarWing.position.set(0, 4.12, -0.25);
+            group.add(radarWing);
+
+            const sternArchLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.12), lowerHullMat);
+            sternArchLeft.position.set(-1.0, 2.1, 3.0);
+            group.add(sternArchLeft);
+
+            const sternArchRight = sternArchLeft.clone();
+            sternArchRight.position.x = 1.0;
+            group.add(sternArchRight);
+
+            const sternBeam = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.12), lowerHullMat);
+            sternBeam.position.set(0, 2.58, 3.0);
+            group.add(sternBeam);
+
+            const bowLightLeft = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 10), glowMat);
+            bowLightLeft.position.set(-0.65, 1.25, -4.6);
+            group.add(bowLightLeft);
+
+            const bowLightRight = bowLightLeft.clone();
+            bowLightRight.position.x = 0.65;
+            group.add(bowLightRight);
+
+            const sideMarker = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.55), trimMat);
+            sideMarker.position.set(1.54, 1.15, -2.2);
+            group.add(sideMarker);
+
+            const sternGlow = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 0.18), trimMat);
+            sternGlow.position.set(0, 1.05, 4.24);
+            group.add(sternGlow);
+
+            const wakeRing = new THREE.Mesh(
+                new THREE.TorusGeometry(3.75, 0.14, 16, 72),
+                new THREE.MeshBasicMaterial({ color: 0x61f1ff, transparent: true, opacity: 0.42 })
+            );
+            wakeRing.rotation.x = Math.PI / 2;
+            wakeRing.position.y = 0.08;
+            group.add(wakeRing);
+
+            yachtGroup.add(group);
+            scene.add(yachtGroup);
+
+            animators.push((time) => {
+                if (!isMoving) {
+                    yachtGroup.rotation.x = Math.sin(time * 0.0007) * 0.05;
+                    yachtGroup.rotation.z = Math.cos(time * 0.0009) * 0.06;
+                    yachtGroup.position.y = YACHT_FLOAT_BASE + Math.sin(time * 0.0012) * 0.35;
+                    wakeRing.scale.x = 1 + Math.sin(time * 0.0015) * 0.04;
+                    wakeRing.scale.z = 1 + Math.cos(time * 0.0015) * 0.05;
+                    shadow.scale.x = 1 + Math.sin(time * 0.0012) * 0.03;
+                    shadow.scale.y = 1 + Math.cos(time * 0.0012) * 0.03;
+                }
+            });
+        }
+
+        function createFortressBillboards() {
+            const loader = new THREE.TextureLoader();
+            loader.setCrossOrigin('anonymous');
+
+            WORLD_DATA.forts.forEach(f => {
+                const group = new THREE.Group();
+                group.position.set(f.pos[0], 0, f.pos[2]);
+                group.rotation.y = Math.PI / 2;
+
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x244958, metalness: 0.32, roughness: 0.72 });
+                
+                const hull = new THREE.Mesh(new THREE.BoxGeometry(18, 1.6, 10), baseMat);
+                hull.position.y = 0.8;
+                group.add(hull);
+
+                const p1 = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 2.5), baseMat);
+                p1.position.set(0, 0.45, 6.2);
+                group.add(p1);
+                const p2 = new THREE.Mesh(new THREE.BoxGeometry(20, 0.8, 2.5), baseMat);
+                p2.position.set(0, 0.45, -6.2);
+                group.add(p2);
+
+                const frame1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 13, 0.6), baseMat);
+                frame1.position.set(-8, 6.5, 0);
+                group.add(frame1);
+                const frame2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 13, 0.6), baseMat);
+                frame2.position.set(8, 6.5, 0);
+                group.add(frame2);
+
+                const screenGeo = new THREE.PlaneGeometry(16, 9);
+                const screenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true });
+                const screen = new THREE.Mesh(screenGeo, screenMat);
+                screen.position.set(0, 8.8, 0.55);
+                
+                loader.load(f.content.media, (tex) => {
+                    tex.encoding = THREE.sRGBEncoding;
+                    screenMat.map = tex;
+                    screenMat.needsUpdate = true;
+                }, undefined, (err) => { screenMat.color.setHex(0x111111); });
+
+                screen.userData = { isContent: true, data: f.content };
+                interactiveObjects.push(screen);
+                group.add(screen);
+
+                const neon = new THREE.Mesh(
+                    new THREE.TorusGeometry(8.7, 0.1, 16, 4),
+                    new THREE.MeshBasicMaterial({ color: f.color, transparent: true, opacity: 0.9 })
+                );
+                neon.position.set(0, 8.8, 0.45);
+                neon.rotation.z = Math.PI / 4;
+                neon.scale.set(1, 0.56, 1);
+                group.add(neon);
+
+                const glowDeck = new THREE.Mesh(
+                    new THREE.CircleGeometry(4.5, 32),
+                    new THREE.MeshBasicMaterial({ color: f.color, transparent: true, opacity: 0.12 })
+                );
+                glowDeck.rotation.x = -Math.PI / 2;
+                glowDeck.position.set(0, 0.2, 0);
+                group.add(glowDeck);
+
+                scene.add(group);
+                animators.push((time) => {
+                    group.position.y = Math.sin(time * 0.0004 + f.pos[2]) * 0.5;
+                    group.rotation.x = Math.sin(time * 0.0003 + f.pos[0]) * 0.05;
+                });
+            });
+        }
+
+        function createMarkerBuoys() {
+            WORLD_DATA.nodes.forEach(n => {
+                const group = new THREE.Group();
+                group.position.set(n.pos[0], 0, n.pos[2]);
+
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 4.2, 8), new THREE.MeshStandardMaterial({ color: 0x204d60, metalness: 0.3, roughness: 0.4 }));
+                body.position.y = 2.1;
+                group.add(body);
+
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 10), new THREE.MeshBasicMaterial({ color: 0x78f3ff, transparent: true, opacity: 0.95 }));
+                bulb.position.y = 5.2;
+                group.add(bulb);
+
+                const halo = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 12), new THREE.MeshBasicMaterial({ color: 0x78f3ff, transparent: true, opacity: 0.08 }));
+                halo.position.y = 5.2;
+                group.add(halo);
+
+                const glow = new THREE.PointLight(0x78f3ff, 4, 45);
+                glow.position.y = 5.2;
+                group.add(glow);
+
+                const hitbox = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 12), new THREE.MeshBasicMaterial({ visible: false }));
+                hitbox.userData = { isNode: true, id: n.id, label: n.label };
+                interactiveObjects.push(hitbox);
+                group.add(hitbox);
+
+                scene.add(group);
+                animators.push((time) => {
+                    group.position.y = Math.sin(time * 0.001 + n.pos[2]) * 0.65;
+                    group.rotation.z = Math.cos(time * 0.0007) * 0.08;
+                    bulb.material.opacity = 0.3 + Math.sin(time * 0.01) * 0.7;
+                    glow.intensity = 2 + Math.sin(time * 0.01) * 4;
+                    halo.scale.setScalar(1 + Math.sin(time * 0.003 + n.pos[2]) * 0.08);
+                });
+            });
+        }
+
+        /**
+         * 4. 항해 및 인터랙션 로직
+         */
+
+        async function navigateTo(targetId) {
+            if (isMoving || isInspecting || currentNodeId === targetId) return;
+            isMoving = true;
+            
+            const startIdx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+            const endIdx = WORLD_DATA.nodes.findIndex(n => n.id === targetId);
+            const dir = endIdx > startIdx ? 1 : -1;
+
+            for (let i = startIdx + dir; dir > 0 ? i <= endIdx : i >= endIdx; i += dir) {
+                const node = WORLD_DATA.nodes[i];
+                const targetX = 0; 
+                const targetZ = node.pos[2];
+                const angle = Math.atan2(yachtGroup.position.x - targetX, yachtGroup.position.z - targetZ);
+                
+                new TWEEN.Tween(yachtGroup.rotation).to({ y: angle }, 800).easing(TWEEN.Easing.Quadratic.Out).start();
+
+                await new Promise(res => {
+                    new TWEEN.Tween(yachtGroup.position)
+                        .to({ x: targetX, y: YACHT_FLOAT_BASE, z: targetZ }, 2500)
+                        .easing(TWEEN.Easing.Cubic.InOut)
+                        .onUpdate(() => { yachtGroup.rotation.x = Math.sin(Date.now() * 0.015) * 0.1; })
+                        .onComplete(res).start();
+                });
+                currentNodeId = node.id;
+                document.getElementById('current-node').innerText = node.label;
+            }
+            isMoving = false;
+        }
+
+        function onPointerDown(e) {
+            if (isMoving || isInspecting) return;
+            const now = Date.now();
+            const diff = now - lastClickTime;
+            lastClickTime = now;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(interactiveObjects, true);
+            
+            if (hits.length > 0) {
+                const obj = hits[0].object;
+                if (diff < 350 && (obj.userData.isContent || obj.parent.userData?.isContent)) {
+                    focusOnBillboard(obj.userData.isContent ? obj : obj.parent);
+                } else if (obj.userData.isNode) {
+                    navigateTo(obj.userData.id);
+                } else if (obj.userData.isSea) {
+                    const pt = hits[0].point;
+                    const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+                    if (pt.z < yachtGroup.position.z - 8 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+                    else if (pt.z > yachtGroup.position.z + 8 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
+                }
+            }
+        }
+
+        function focusOnBillboard(obj) {
+            isInspecting = true;
+            originalCamState.pos.copy(camera.position);
+            originalCamState.rot.copy(camera.rotation);
+            originalCamState.fov = camera.fov;
+
+            const data = obj.userData.data;
+            primeModalMedia(data);
+
+            const worldPos = new THREE.Vector3();
+            obj.getWorldPosition(worldPos);
+
+            new TWEEN.Tween(camera.position).to({ x: worldPos.x + 22, y: worldPos.y, z: worldPos.z }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
+            new TWEEN.Tween(camera.rotation).to({ y: Math.PI / 2, x: 0, z: 0 }, 1800).easing(TWEEN.Easing.Cubic.Out).onComplete(() => {
+                document.getElementById('modal').style.display = 'flex';
+            }).start();
+        }
+
+        function primeModalMedia(data) {
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-desc').innerText = data.desc;
+            document.getElementById('modal-link').href = data.link;
+
+            const mediaBox = document.getElementById('modal-media');
+            if (data.youtubeId) {
+                mediaBox.innerHTML = `<iframe src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+            } else {
+                mediaBox.innerHTML = `<img src="${data.media}">`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('modal-media').innerHTML = ""; 
+            new TWEEN.Tween(camera.position).to({ x: originalCamState.pos.x, y: originalCamState.pos.y, z: originalCamState.pos.z }, 1200).easing(TWEEN.Easing.Cubic.InOut).start();
+            new TWEEN.Tween(camera.rotation).to({ x: originalCamState.rot.x, y: originalCamState.rot.y, z: originalCamState.rot.z }, 1200).easing(TWEEN.Easing.Cubic.InOut).onComplete(() => { isInspecting = false; }).start();
+        }
+
+        function updatePointer(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        function onMouseMove(e) {
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(interactiveObjects, true);
+            document.body.style.cursor = (hits.length > 0) ? 'pointer' : 'default';
+        }
+
+        function onResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        function onWheel(e) { if (e.cancelable) e.preventDefault(); targetFOV = Math.max(15, Math.min(100, targetFOV + e.deltaY * 0.08)); }
+        function onKey(e) {
+            if (isMoving || isInspecting) return;
+            const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+            if ((e.key === 'w' || e.key === 'ArrowUp') && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+            if ((e.key === 's' || e.key === 'ArrowDown') && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
+        }
+
+        function resetPosition() { targetFOV = 40; navigateTo("n1"); }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update(time);
+            animators.forEach(fn => fn(time));
+
+            if (!isInspecting && yachtGroup) {
+                const desired = yachtGroup.position.clone().add(CAM_OFFSET);
+                camera.position.lerp(desired, 0.07);
+                camera.lookAt(yachtGroup.position.clone().add(new THREE.Vector3(-12, 1.5, -18)));
+            }
+
+            if (Math.abs(camera.fov - targetFOV) > 0.01) {
+                camera.fov += (targetFOV - camera.fov) * 0.1;
+                camera.updateProjectionMatrix();
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.onload = boot;
+    </script>
+</body>
+</html>
