@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BuntStream Pro | Cinematic Typing Overlay</title>
+  <title>BuntStream Pro | Cinematic Typing Overlay (Local Storage)</title>
   <style>
     :root {
       --accent: #00f2ff;
@@ -130,7 +130,7 @@
     #msgBox {
       position: fixed; bottom: 3rem; left: 50%; transform: translateX(-50%);
       background: var(--accent); color: #000; padding: 1rem 3.5rem; border-radius: 50px;
-      font-weight: 900; z-index: 2000; display: none;
+      font-weight: 900; z-index: 2000; display: none; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -164,7 +164,7 @@
 
   <div id="settingsModal" class="modal">
     <div class="settings-content">
-      <h2 style="color:var(--accent); margin-bottom:2rem; letter-spacing:4px;">OVERLAY CONFIG</h2>
+      <h2 style="color:var(--accent); margin-bottom:2rem; letter-spacing:4px; font-weight:900;">SYSTEM CONFIG</h2>
       <div class="form-grid">
         <div class="form-group"><label>YouTube ID</label><input type="text" id="ytIdInput" value="kFnxuOnbHU0" /></div>
         <div class="form-group"><label>Font</label>
@@ -176,6 +176,8 @@
         </div>
         <div class="form-group"><label>Text Color</label><input type="color" id="textColorInput" value="#ffffff" /></div>
         <div class="form-group"><label>Size (px)</label><input type="number" id="fontSizeInput" value="42" /></div>
+        <div class="form-group"><label>Accent Color</label><input type="color" id="accentColorInput" value="#00f2ff" /></div>
+        <div class="form-group"><label>Dimming (%)</label><input type="number" id="dimmingInput" value="40" min="0" max="100" /></div>
         <div class="form-group full"><label>Script</label><textarea id="scriptInput">극로덕옥서세가(克魯德沃書世家)
 
 조선 말엽,
@@ -300,9 +302,11 @@
 양반은 종이에서 나지 않고
 물길에서 난다는 것을
 그제야 깨달았기 때문이다.</textarea></div>
+        <div class="form-group"><label>Typing Speed (ms)</label><input type="number" id="speedInput" value="60" /></div>
+        <div class="form-group"><label>Line Delay (ms)</label><input type="number" id="delayInput" value="1500" /></div>
       </div>
-      <button class="primary-btn" id="applyBtn">APPLY & RESTART</button>
-      <button onclick="document.getElementById('settingsModal').classList.remove('show')" style="background:none; border:none; color:#555; width:100%; margin-top:1rem; cursor:pointer;">CLOSE</button>
+      <button class="primary-btn" id="applyBtn">APPLY & SAVE LOCALLY</button>
+      <button onclick="document.getElementById('settingsModal').classList.remove('show')" style="background:none; border:none; color:#555; width:100%; margin-top:1.2rem; cursor:pointer; font-weight:700;">CLOSE</button>
     </div>
   </div>
 
@@ -314,6 +318,7 @@
         this.player = document.getElementById('ytPlayer');
         this.msgBox = document.getElementById('msgBox');
         
+        this.STORAGE_KEY = 'buntstream_settings';
         this.isPaused = false;
         this.isTabHidden = false; 
         this.isMuted = true;
@@ -326,6 +331,82 @@
         this.audioCtx = null;
 
         this.initEvents();
+        this.loadSettings();
+      }
+
+      /**
+       * 로컬 저장소에서 설정 불러오기
+       */
+      loadSettings() {
+        const savedData = localStorage.getItem(this.STORAGE_KEY);
+        if (savedData) {
+          try {
+            const data = JSON.parse(savedData);
+            this.populateUI(data);
+            this.applyToEngine(data);
+            this.showMsg("SETTINGS LOADED FROM CACHE");
+          } catch (e) {
+            console.error("Failed to parse settings", e);
+            this.start();
+          }
+        } else {
+          this.start();
+        }
+      }
+
+      /**
+       * 로컬 저장소에 설정 저장
+       */
+      saveSettings() {
+        const data = {
+          ytId: document.getElementById('ytIdInput').value.trim(),
+          fontFamily: document.getElementById('fontFamilyInput').value,
+          textColor: document.getElementById('textColorInput').value,
+          fontSize: parseInt(document.getElementById('fontSizeInput').value),
+          accentColor: document.getElementById('accentColorInput').value,
+          dimming: parseInt(document.getElementById('dimmingInput').value),
+          script: document.getElementById('scriptInput').value,
+          speed: parseInt(document.getElementById('speedInput').value),
+          delay: parseInt(document.getElementById('delayInput').value)
+        };
+
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        this.applyToEngine(data);
+        this.showMsg("SETTINGS SAVED LOCALLY");
+        document.getElementById('settingsModal').classList.remove('show');
+      }
+
+      populateUI(data) {
+        if (data.ytId) document.getElementById('ytIdInput').value = data.ytId;
+        if (data.fontFamily) document.getElementById('fontFamilyInput').value = data.fontFamily;
+        if (data.textColor) document.getElementById('textColorInput').value = data.textColor;
+        if (data.fontSize) document.getElementById('fontSizeInput').value = data.fontSize;
+        if (data.accentColor) document.getElementById('accentColorInput').value = data.accentColor;
+        if (data.dimming) document.getElementById('dimmingInput').value = data.dimming;
+        if (data.script) document.getElementById('scriptInput').value = data.script;
+        if (data.speed) document.getElementById('speedInput').value = data.speed;
+        if (data.delay) document.getElementById('delayInput').value = data.delay;
+      }
+
+      applyToEngine(data) {
+        const root = document.documentElement;
+        if (data.textColor) root.style.setProperty('--text-color', data.textColor);
+        if (data.accentColor) root.style.setProperty('--accent', data.accentColor);
+        if (data.fontSize) root.style.setProperty('--font-size', data.fontSize + 'px');
+        if (data.fontFamily) root.style.setProperty('--font-family', data.fontFamily);
+        if (data.dimming) root.style.setProperty('--dimming', data.dimming / 100);
+
+        if (data.ytId) {
+          const currentSrc = this.player.src;
+          const newSrc = `https://www.youtube.com/embed/${data.ytId}?autoplay=1&mute=${this.isMuted?1:0}&controls=0&loop=1&playlist=${data.ytId}&modestbranding=1&rel=0&enablejsapi=1`;
+          if (!currentSrc.includes(data.ytId)) {
+            this.player.src = newSrc;
+          }
+        }
+        
+        this.speed = parseInt(data.speed) || 60;
+        this.delay = parseInt(data.delay) || 1500;
+
         this.start();
       }
 
@@ -334,9 +415,8 @@
         document.getElementById('playPauseBtn').onclick = () => this.togglePause();
         document.getElementById('pasteBtn').onclick = () => this.handlePaste();
         document.getElementById('soundBtn').onclick = () => this.toggleSound();
-        document.getElementById('applyBtn').onclick = () => this.applySettings();
+        document.getElementById('applyBtn').onclick = () => this.saveSettings();
 
-        // 새롭게 추가된 링크 버튼 이벤트
         document.getElementById('homeBtn').onclick = () => window.open('https://kitscript.com/game/pickme/', '_blank');
         document.getElementById('youtubeBtn').onclick = () => window.open('https://youtube.com/@textcube', '_blank');
 
@@ -344,7 +424,11 @@
         window.addEventListener('paste', (e) => {
           if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
           const text = e.clipboardData.getData('text');
-          if (text) { document.getElementById('scriptInput').value = text; this.showMsg("CLIPBOARD SYNCED"); this.start(); }
+          if (text) { 
+            document.getElementById('scriptInput').value = text; 
+            this.showMsg("SYNCED & SAVING...");
+            this.saveSettings(); 
+          }
         });
       }
 
@@ -377,7 +461,11 @@
       async handlePaste() {
         try {
           const text = await navigator.clipboard.readText();
-          if (text) { document.getElementById('scriptInput').value = text; this.showMsg("CLIPBOARD SYNCED"); this.start(); }
+          if (text) { 
+            document.getElementById('scriptInput').value = text; 
+            this.showMsg("SYNCED & SAVING...");
+            this.saveSettings();
+          }
         } catch (err) { this.showMsg("USE CTRL+V TO PASTE"); }
       }
 
@@ -389,19 +477,6 @@
         document.getElementById('playPauseBtn').querySelector('span').innerText = this.isPaused ? '▶' : '⏸';
       }
 
-      applySettings() {
-        const root = document.documentElement;
-        root.style.setProperty('--text-color', document.getElementById('textColorInput').value);
-        root.style.setProperty('--font-size', document.getElementById('fontSizeInput').value + 'px');
-        root.style.setProperty('--font-family', document.getElementById('fontFamilyInput').value);
-        
-        const ytId = document.getElementById('ytIdInput').value.trim();
-        if (ytId) this.player.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${this.isMuted?1:0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&enablejsapi=1`;
-        
-        document.getElementById('settingsModal').classList.remove('show');
-        this.start();
-      }
-
       async start() {
         this.currentSessionId++;
         const mySessionId = this.currentSessionId;
@@ -409,8 +484,8 @@
         this.container.style.transform = 'translateY(0)';
         this.isPaused = false;
         
-        const rawLines = document.getElementById('scriptInput').value.split('\n');
-        const lines = rawLines.map(l => l.trim()).filter(l => l.length > 0);
+        const scriptRaw = document.getElementById('scriptInput').value;
+        const lines = scriptRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
         let idx = 0;
         while (idx < lines.length && mySessionId === this.currentSessionId) {
@@ -461,7 +536,7 @@
       }
     }
 
-    window.onload = () => { new TypingOverlay(); };
+    window.onload = () => { window.app = new TypingOverlay(); };
   </script>
 </body>
 </html>
