@@ -371,6 +371,26 @@
             event.target.playVideo();
         }
 
+        // --- Global Functions (Accessible from HTML onclick) ---
+
+        function setBgMode(mode) {
+            config.bgMode = mode;
+            document.querySelectorAll('.select-btn').forEach(btn => btn.classList.remove('active'));
+            
+            const btns = Array.from(document.querySelectorAll('.select-btn'));
+            if (mode === 'youtube') {
+                const ytBtn = btns.find(b => b.innerText.includes('YOUTUBE'));
+                if (ytBtn) ytBtn.classList.add('active');
+                ytContainer.style.display = 'block';
+                document.getElementById('yt-controls').style.display = 'block';
+            } else {
+                const genBtn = btns.find(b => b.innerText.includes('GEN'));
+                if (genBtn) genBtn.classList.add('active');
+                ytContainer.style.display = 'none';
+                document.getElementById('yt-controls').style.display = 'none';
+            }
+        }
+
         function toggleSound() {
             if (!player || typeof player.mute !== 'function') return;
 
