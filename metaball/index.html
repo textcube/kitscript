@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metaball Masking - YouTube & Generative Geometry</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --panel-bg: rgba(10, 10, 15, 0.95);
+            --accent-color: #00ffaa;
+            --text-color: #ffffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        /* 배경 레이어 (유튜브) */
+        #video-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+            display: block;
+        }
+
+        /* YouTube API가 생성하는 iframe 스타일 */
+        #yt-player {
+            width: 100vw;
+            height: 56.25vw;
+            min-height: 100vh;
+            min-width: 177.77vh;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 메인 캔버스 */
+        #canvas {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 10;
+        }
+
+        /* 제어판 */
+        #control-panel {
+            position: absolute;
+            top: 20px; right: 20px;
+            width: 280px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            color: var(--text-color);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+        }
+
+        .panel-header {
+            font-weight: 900;
+            font-size: 14px;
+            margin-bottom: 25px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group { margin-bottom: 20px; }
+
+        .control-label {
+            font-size: 11px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.6;
+            text-transform: uppercase;
+        }
+
+        .control-label span:last-child { color: var(--accent-color); opacity: 1; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%; height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px; height: 16px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .select-group {
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.5);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .select-btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 11px;
+            border: none;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        .select-btn.active {
+            background: var(--accent-color);
+            color: black;
+            font-weight: bold;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px;
+            color: white;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .apply-btn {
+            background: rgba(0, 255, 170, 0.2);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .apply-btn:hover {
+            background: var(--accent-color);
+            color: black;
+        }
+
+        /* 소셜 링크 도크 */
+        .social-dock {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .social-btn {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .social-btn:hover {
+            background: rgba(0, 255, 170, 0.15);
+            color: var(--accent-color);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 255, 170, 0.2);
+            border-color: var(--accent-color);
+        }
+
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* 사운드 버튼 전용 스타일 */
+        .social-btn.sound-on {
+            color: var(--accent-color);
+            background: rgba(0, 255, 170, 0.1);
+            border-color: rgba(0, 255, 170, 0.4);
+        }
+
+        #ui-hint {
+            position: absolute;
+            bottom: 25px; left: 25px;
+            font-size: 11px;
+            color: white;
+            opacity: 0.3;
+            z-index: 100;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <div id="yt-player"></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="control-panel">
+        <div class="panel-header">
+            System Control
+            <small style="font-size: 8px; opacity: 0.5;">v2.7 PRO</small>
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">Background Source</div>
+            <div class="select-group">
+                <button class="select-btn" onclick="setBgMode('generative')">GEN</button>
+                <button class="select-btn active" onclick="setBgMode('youtube')">YOUTUBE</button>
+            </div>
+        </div>
+
+        <div id="yt-controls" class="control-group" style="display:block;">
+            <div class="control-label">Video ID</div>
+            <div class="input-group">
+                <input type="text" id="input-ytid" value="ahizOQx1Ovw" placeholder="Enter ID">
+                <button class="apply-btn" id="btn-update-yt">SET</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Metaballs <span id="val-count">12</span></div>
+            <input type="range" id="input-count" min="2" max="40" value="12">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Liquid Mass <span id="val-radius">90</span></div>
+            <input type="range" id="input-radius" min="30" max="250" value="90">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Geometric Nodes <span id="val-nodes">60</span></div>
+            <input type="range" id="input-nodes" min="20" max="150" value="60">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Grid Precision <span id="val-grid">16</span></div>
+            <input type="range" id="input-grid" min="10" max="40" value="16">
+        </div>
+
+        <div class="control-group">
+            <div class="control-label">Opacity <span id="val-opacity">1.0</span></div>
+            <input type="range" id="input-opacity" min="0" max="1" step="0.01" value="1">
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">Threshold <span id="val-threshold">1.0</span></div>
+            <input type="range" id="input-threshold" min="0.4" max="2.5" step="0.1" value="1">
+        </div>
+
+        <div class="social-dock">
+            <!-- 사운드 토글 버튼 (기본 OFF) -->
+            <button id="btn-sound" class="social-btn" onclick="toggleSound()" title="Sound On/Off">
+                <svg id="icon-sound-off" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                <svg id="icon-sound-on" viewBox="0 0 24 24" style="display:none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>
+            
+            <a href="https://kitscript.com/pickme" target="_blank" class="social-btn" title="Home">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
+            <a href="https://youtube.com/@textcube" target="_blank" class="social-btn" title="YouTube">
+                <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 4-8 4z"/></svg>
+            </a>
+            <!-- 정교하게 다듬어진 깃허브 아이콘 벡터 패스 적용 -->
+            <a href="https://github.com/textcube" target="_blank" class="social-btn" title="GitHub">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.167 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <div id="ui-hint">COMMANDS: [H] TOGGLE UI | [R] RESET NODES</div>
+
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        const ytContainer = document.getElementById('video-container');
+        const panel = document.getElementById('control-panel');
+
+        // Off-screen canvas for masking logic
+        const offCanvas = document.createElement('canvas');
+        const octx = offCanvas.getContext('2d');
+
+        const config = {
+            bgMode: 'youtube', 
+            numBalls: 12,
+            baseRadius: 90,
+            threshold: 1.0,
+            cellSize: 16, // 기본 셀 크기를 16으로 상향하여 대화면 부하 감소
+            opacity: 1.0,
+            speed: 1.2,
+            numNodes: 60,
+            nodeConnectDist: 150,
+            isMuted: true,
+            ytId: 'ahizOQx1Ovw' 
+        };
+
+        let width, height, rows, cols;
+        let balls = [];
+        let nodes = [];
+        let grid = [];
+        let player; 
+
+        // --- YouTube API ---
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-player', {
+                height: '100%',
+                width: '100%',
+                videoId: config.ytId,
+                playerVars: {
+                    autoplay: 1,
+                    mute: 1,
+                    controls: 0,
+                    loop: 1,
+                    playlist: config.ytId,
+                    rel: 0,
+                    showinfo: 0,
+                    modestbranding: 1,
+                    iv_load_policy: 3
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            event.target.playVideo();
+        }
+
+        function toggleSound() {
+            if (!player || typeof player.mute !== 'function') return;
+
+            const btn = document.getElementById('btn-sound');
+            const iconOn = document.getElementById('icon-sound-on');
+            const iconOff = document.getElementById('icon-sound-off');
+
+            if (config.isMuted) {
+                player.unMute();
+                config.isMuted = false;
+                iconOn.style.display = 'block';
+                iconOff.style.display = 'none';
+                btn.classList.add('sound-on');
+            } else {
+                player.mute();
+                config.isMuted = true;
+                iconOn.style.display = 'none';
+                iconOff.style.display = 'block';
+                btn.classList.remove('sound-on');
+            }
+        }
+
+        function updateYouTubeVideo() {
+            const idInput = document.getElementById('input-ytid');
+            const id = idInput.value.trim();
+            if (id && player) {
+                config.ytId = id;
+                player.loadVideoById(id);
+            }
+        }
+
+        // --- Core Classes ---
+
+        class Ball {
+            constructor() { this.init(); }
+            init() {
+                this.r = (0.7 + Math.random() * 0.7) * config.baseRadius;
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = (Math.random() - 0.5) * 5;
+            }
+            update() {
+                this.x += this.vx * config.speed;
+                this.y += this.vy * config.speed;
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+            }
+        }
+
+        class GeoNode {
+            constructor() { this.init(); }
+            init() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+        }
+
+        // --- System Logic ---
+
+        function init() {
+            width = window.innerWidth || 1;
+            height = window.innerHeight || 1;
+            canvas.width = width;
+            canvas.height = height;
+            offCanvas.width = width;
+            offCanvas.height = height;
+            
+            cols = Math.ceil(width / config.cellSize) + 1;
+            rows = Math.ceil(height / config.cellSize) + 1;
+            
+            syncBalls();
+            syncNodes();
+        }
+
+        function syncBalls() {
+            if (balls.length < config.numBalls) {
+                while(balls.length < config.numBalls) balls.push(new Ball());
+            } else balls.length = config.numBalls;
+        }
+
+        function syncNodes() {
+            if (nodes.length < config.numNodes) {
+                while(nodes.length < config.numNodes) nodes.push(new GeoNode());
+            } else nodes.length = config.numNodes;
+        }
+
+        function getField(x, y) {
+            let sum = 0;
+            for (let i = 0; i < balls.length; i++) {
+                const b = balls[i];
+                const dx = x - b.x;
+                const dy = y - b.y;
+                sum += (b.r * b.r) / (dx * dx + dy * dy + 1);
+            }
+            return sum;
+        }
+
+        function lerp(x1, y1, x2, y2, v1, v2) {
+            const t = (config.threshold - v1) / (v2 - v1);
+            return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
+        }
+
+        function fillPolyO(targetCtx, pts) {
+            if (pts.length < 3) return;
+            targetCtx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y);
+            targetCtx.closePath();
+        }
+
+        function drawGenerativeBG() {
+            ctx.strokeStyle = 'rgba(0, 255, 170, 0.4)';
+            ctx.fillStyle = 'rgba(0, 255, 170, 0.8)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < nodes.length; i++) {
+                const n1 = nodes[i]; n1.update();
+                ctx.beginPath(); ctx.arc(n1.x, n1.y, 1.5, 0, Math.PI * 2); ctx.fill();
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const n2 = nodes[j];
+                    const dx = n1.x - n2.x; const dy = n1.y - n2.y;
+                    const d2 = dx * dx + dy * dy;
+                    if (d2 < config.nodeConnectDist * config.nodeConnectDist) {
+                        const alpha = 1 - (Math.sqrt(d2) / config.nodeConnectDist);
+                        ctx.beginPath(); ctx.strokeStyle = `rgba(0, 255, 170, ${alpha * 0.5})`;
+                        ctx.moveTo(n1.x, n1.y); ctx.lineTo(n2.x, n2.y); ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            if (width <= 0 || height <= 0) { requestAnimationFrame(draw); return; }
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.clearRect(0, 0, width, height);
+            
+            if (config.bgMode === 'generative') drawGenerativeBG();
+
+            for (const b of balls) b.update();
+            
+            grid = [];
+            for (let i = 0; i < cols; i++) {
+                grid[i] = [];
+                for (let j = 0; j < rows; j++) {
+                    grid[i][j] = getField(i * config.cellSize, j * config.cellSize);
+                }
+            }
+
+            octx.globalCompositeOperation = 'source-over';
+            octx.fillStyle = `rgba(0, 0, 0, ${config.opacity})`;
+            octx.fillRect(0, 0, width, height);
+            octx.globalCompositeOperation = 'destination-out';
+            octx.beginPath();
+
+            for (let i = 0; i < cols - 1; i++) {
+                for (let j = 0; j < rows - 1; j++) {
+                    const x = i * config.cellSize, y = j * config.cellSize, s = config.cellSize;
+                    const v0 = grid[i][j], v1 = grid[i+1][j], v2 = grid[i+1][j+1], v3 = grid[i][j+1];
+                    let state = 0;
+                    if (v0 >= config.threshold) state |= 8;
+                    if (v1 >= config.threshold) state |= 4;
+                    if (v2 >= config.threshold) state |= 2;
+                    if (v3 >= config.threshold) state |= 1;
+                    if (state === 0) continue;
+
+                    const t = lerp(x, y, x + s, y, v0, v1), r = lerp(x + s, y, x + s, y + s, v1, v2);
+                    const b = lerp(x, y + s, x + s, y + s, v3, v2), l = lerp(x, y, x, y + s, v0, v3);
+                    const pTL = {x, y}, pTR = {x:x+s, y}, pBR = {x:x+s, y:y+s}, pBL = {x, y:y+s};
+
+                    switch (state) {
+                        case 1:  fillPolyO(octx, [l, b, pBL]); break;
+                        case 2:  fillPolyO(octx, [r, b, pBR]); break;
+                        case 3:  fillPolyO(octx, [l, r, pBR, pBL]); break;
+                        case 4:  fillPolyO(octx, [t, r, pTR]); break;
+                        case 5:  fillPolyO(octx, [t, r, pTR, b, l, pBL]); break;
+                        case 6:  fillPolyO(octx, [t, b, pBR, pTR]); break;
+                        case 7:  fillPolyO(octx, [t, l, pBL, pBR, pTR]); break;
+                        case 8:  fillPolyO(octx, [t, l, pTL]); break;
+                        case 9:  fillPolyO(octx, [t, b, pBL, pTL]); break;
+                        case 10: fillPolyO(octx, [t, l, pTL, b, r, pBR]); break;
+                        case 11: fillPolyO(octx, [t, r, pBR, pBL, pTL]); break;
+                        case 12: fillPolyO(octx, [r, l, pTL, pTR]); break;
+                        case 13: fillPolyO(octx, [r, b, pBL, pTL, pTR]); break;
+                        case 14: fillPolyO(octx, [l, b, pBR, pTR, pTL]); break;
+                        case 15: fillPolyO(octx, [pTL, pTR, pBR, pBL]); break;
+                    }
+                }
+            }
+            octx.fill();
+            ctx.drawImage(offCanvas, 0, 0);
+            requestAnimationFrame(draw);
+        }
+
+        function setupUI() {
+            const controls = [
+                { id: 'input-opacity', key: 'opacity', disp: 'val-opacity' },
+                { id: 'input-count', key: 'numBalls', disp: 'val-count' },
+                { id: 'input-radius', key: 'baseRadius', disp: 'val-radius' },
+                { id: 'input-threshold', key: 'threshold', disp: 'val-threshold' },
+                { id: 'input-nodes', key: 'numNodes', disp: 'val-nodes' },
+                { id: 'input-grid', key: 'cellSize', disp: 'val-grid' }
+            ];
+
+            controls.forEach(c => {
+                const el = document.getElementById(c.id);
+                el.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    config[c.key] = val;
+                    document.getElementById(c.disp).innerText = val;
+                    if (c.key === 'numBalls') syncBalls();
+                    if (c.key === 'numNodes') syncNodes();
+                    if (c.key === 'cellSize') init(); 
+                });
+            });
+
+            document.getElementById('btn-update-yt').addEventListener('click', updateYouTubeVideo);
+            document.getElementById('input-ytid').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') updateYouTubeVideo();
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'h') {
+                    const isHidden = panel.style.transform.includes('translateX(400px)');
+                    panel.style.transform = isHidden ? 'translateX(0)' : 'translateX(400px)';
+                    panel.style.opacity = isHidden ? '1' : '0';
+                }
+                if (e.key.toLowerCase() === 'r') nodes.forEach(n => n.init());
+            });
+        }
+
+        window.addEventListener('resize', init);
+        setupUI();
+        init();
+        draw();
+    </script>
+</body>
+</html>
