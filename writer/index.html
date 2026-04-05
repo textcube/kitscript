@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Writer - BuntGames</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border: #334155;
+            --suggestion-bg: #334155;
+            --keyword-tag: #0369a1;
+            --phrase-tag: #1e40af;
+            --sentence-tag: #3730a3;
+            --selected-highlight: #fde047;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top Navigation Header */
+        .top-nav {
+            background-color: #020617;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .brand-group {
+            display: flex;
+            flex-direction: column; /* Stacked layout */
+            gap: 2px;
+        }
+
+        .brand-name {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            line-height: 1;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .icon-links {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            color: var(--text-secondary);
+            transition: color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .icon-btn:hover {
+            color: var(--text-primary);
+            transform: scale(1.1);
+        }
+
+        .icon-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        /* Suggestions Area */
+        .suggestions-container {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; 
+            height: 160px; 
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .suggestions-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .suggestions-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .suggestion-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap-reverse; 
+            justify-content: flex-start;
+            align-content: flex-end; 
+        }
+
+        .chip {
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap; 
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.1s ease-out;
+            user-select: none;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.2;
+            opacity: 0.85;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 0.85; transform: translateY(0); }
+        }
+
+        .chip:hover {
+            filter: brightness(1.2);
+            opacity: 1;
+            border-color: var(--accent);
+        }
+
+        .chip.selected {
+            border-color: var(--selected-highlight);
+            box-shadow: 0 0 12px rgba(253, 224, 71, 0.4);
+            opacity: 1;
+            z-index: 10;
+            background-color: var(--suggestion-bg);
+        }
+
+        .chip.keyword { background-color: var(--keyword-tag); }
+        .chip.phrase { background-color: var(--phrase-tag); }
+        .chip.sentence { 
+            background-color: var(--sentence-tag); 
+            max-width: 500px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chip-type {
+            font-size: 9px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            font-weight: 800;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        /* Workspace Area */
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-side {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            background-color: var(--bg-color);
+            padding: 20px;
+        }
+
+        #writing-area {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 18px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        .doc-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--panel-bg);
+            padding: 20px;
+            gap: 15px;
+        }
+
+        .side-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .side-header h3 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #base-doc {
+            flex: 1;
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+        }
+
+        .btn-apply {
+            background-color: var(--accent);
+            color: var(--bg-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-apply:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .info-panel {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-val {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .empty-suggestions {
+            color: var(--border);
+            font-style: italic;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .bread-crumbs {
+            display: flex;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--accent);
+            margin-bottom: 6px;
+            font-weight: bold;
+            min-height: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header Navigation -->
+    <header class="top-nav">
+        <div class="brand-group">
+            <span class="brand-name">BuntGames</span>
+            <h1 class="app-title">Semantic Writer</h1>
+        </div>
+        <div class="icon-links">
+            <a href="https://kitscript.com/pickme/" target="_blank" class="icon-btn" title="Home">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </a>
+            <a href="https://youtube.com/@textcube" target="_blank" class="icon-btn" title="YouTube">
+                <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+            </a>
+        </div>
+    </header>
+
+    <!-- Suggestions Area -->
+    <div class="suggestions-container" id="suggestions-container">
+        <div class="bread-crumbs" id="bread-crumbs"></div>
+        <div class="suggestion-bar" id="suggestion-bar">
+            <div class="empty-suggestions">Suggestions will appear here based on your domain context...</div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-workspace">
+        <!-- Writing Area -->
+        <section class="editor-side">
+            <textarea id="writing-area" placeholder="Start typing here... (Tab: Cycle, Click/Enter: Select)"></textarea>
+        </section>
+
+        <!-- Domain Reference Area -->
+        <aside class="doc-side">
+            <div class="side-header">
+                <h3>Base Document</h3>
+                <div class="info-panel" id="stats">
+                    <div class="stat-item">Keywords: <span class="stat-val" id="stat-keywords">0</span></div>
+                    <div class="stat-item">Sentences: <span class="stat-val" id="stat-sentences">0</span></div>
+                </div>
+            </div>
+            <textarea id="base-doc" placeholder="Paste your domain-specific reference text here.">AI agents can autonomously plan and execute tasks across workflows.
+Agentic systems shift software from tools to digital coworkers.
+Context is more important than prompts in modern AI systems.
+Domain-specific models outperform general models in specialized tasks.
+Knowledge graphs enable structured reasoning across large datasets.
+Semantic layers connect data, meaning, and relationships.
+Vector search improves semantic retrieval and contextual understanding.
+Retrieval-Augmented Generation reduces hallucinations in AI systems.
+AI systems are moving from generation to reasoning and execution.
+Small AI agents collaborate to complete complex multi-step tasks.
+
+Developers are shifting from writing code to orchestrating systems.
+Modern development focuses on system design rather than syntax.
+AI-native development platforms enable faster prototyping and iteration.
+Tiny teams can build large-scale systems using AI tools.
+Automation is replacing repetitive engineering workflows.
+Software is evolving from static tools to adaptive systems.
+Interfaces are becoming dynamic and context-aware.
+Users interact with systems through intent rather than commands.
+Multi-agent systems distribute tasks across specialized components.
+
+Knowledge management is shifting toward conversational interfaces.
+Users expect direct answers instead of searching documents.
+Data fragmentation reduces the effectiveness of AI systems.
+Unified data layers improve context awareness and decision making.
+Semantic search replaces keyword-based search in many applications.
+Information architecture is becoming a core part of system design.
+Context engineering is critical for reliable AI outputs.
+
+AI tools are evolving from assistants to autonomous systems.
+Reasoning models prioritize thinking over speed.
+AI systems are judged by outcomes, not capabilities.
+Workflow automation is becoming the primary use case of AI.
+Personal AI agents act as knowledge hubs for users.
+AI is integrated into everyday productivity tools.
+
+Human-computer interaction is shifting toward intent-based input.
+Typing is evolving from precise input to approximate expression.
+Systems interpret meaning rather than exact syntax.
+Users rely on systems to correct errors and complete thoughts.
+Interfaces are designed to reduce cognitive load.
+
+Creative workflows are becoming AI-assisted and iterative.
+Content creation is guided by suggestions and refinements.
+Users explore ideas rather than constructing them linearly.
+Writing is becoming a process of selection, not composition.</textarea>
+            <button class="btn-apply" id="apply-doc">Apply Document</button>
+            <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4; margin-top: 5px;">
+                * <b>Priority Sort</b>: Relevant suggestions appear at the bottom row.<br>
+                * <b>In-word Matching</b>: Suggestions include matches within keywords.<br>
+                * <b>Interaction</b>: Click or press <b>Enter</b> during Tab-cycle to select.
+            </p>
+        </aside>
+    </div>
+</div>
+
+<script>
+    /**
+     * DOMAIN-AWARE WRITING INTERFACE LOGIC
+     */
+    const STOP_WORDS = new Set(['the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'else', 'to', 'for', 'with', 'in', 'of', 'by', 'as', 'has', 'have', 'had', 'be', 'been', 'being']);
+
+    const state = {
+        sentences: [],
+        keywords: new Map(), 
+        cooccurrence: new Map(), 
+        currentNavPath: [], 
+        activeSuggestions: [],
+        selectedIndex: -1, 
+        isCycling: false,  
+        lastInsertedLength: 0 
+    };
+
+    const writingArea = document.getElementById('writing-area');
+    const baseDocInput = document.getElementById('base-doc');
+    const applyBtn = document.getElementById('apply-doc');
+    const suggestionBar = document.getElementById('suggestion-bar');
+    const breadCrumbs = document.getElementById('bread-crumbs');
+    const statKeywords = document.getElementById('stat-keywords');
+    const statSentences = document.getElementById('stat-sentences');
+
+    function processDocument() {
+        const text = baseDocInput.value;
+        if (!text.trim()) return;
+
+        state.sentences = text.split(/[.!?]\s+/).filter(s => s.trim().length > 0);
+        state.keywords.clear();
+        state.cooccurrence.clear();
+
+        state.sentences.forEach((sentence, idx) => {
+            const words = cleanWords(sentence);
+            words.forEach((word, i) => {
+                if (!state.keywords.has(word)) {
+                    state.keywords.set(word, { count: 0, sentences: [], related: new Set() });
+                }
+                const entry = state.keywords.get(word);
+                entry.count++;
+                entry.sentences.push(idx);
+
+                const neighbors = [words[i-1], words[i+1]].filter(Boolean);
+                neighbors.forEach(n => {
+                    entry.related.add(n);
+                    if (!state.cooccurrence.has(word)) state.cooccurrence.set(word, new Map());
+                    const coMap = state.cooccurrence.get(word);
+                    coMap.set(n, (coMap.get(n) || 0) + 1);
+                });
+            });
+        });
+
+        statKeywords.innerText = state.keywords.size;
+        statSentences.innerText = state.sentences.length;
+        renderSuggestions();
+    }
+
+    function cleanWords(text) {
+        return text.toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+            .split(/\s+/)
+            .filter(w => w.length > 1 && !STOP_WORDS.has(w));
+    }
+
+    function getSuggestions() {
+        const content = writingArea.value;
+        const cursorPos = writingArea.selectionStart;
+        
+        const effectiveContent = state.isCycling 
+            ? content.slice(0, cursorPos - state.lastInsertedLength)
+            : content.slice(0, cursorPos);
+
+        const words = effectiveContent.trim().split(/\s+/);
+        const lastWord = words[words.length - 1]?.toLowerCase() || "";
+
+        if (!lastWord && state.currentNavPath.length === 0) return [];
+
+        let suggestions = [];
+        const targetWord = state.currentNavPath.length > 0 
+            ? state.currentNavPath[state.currentNavPath.length - 1] 
+            : lastWord;
+
+        const allKeywords = Array.from(state.keywords.keys());
+        const matches = allKeywords.filter(k => k.includes(targetWord));
+
+        matches.forEach(match => {
+            const info = state.keywords.get(match);
+            
+            let matchScoreMultiplier = 2; 
+            if (match.startsWith(targetWord)) {
+                matchScoreMultiplier = 10; 
+            } else if (match === targetWord) {
+                matchScoreMultiplier = 20; 
+            }
+
+            suggestions.push({ type: 'keyword', text: match, score: info.count * matchScoreMultiplier });
+
+            const coMap = state.cooccurrence.get(match);
+            if (coMap) {
+                coMap.forEach((count, related) => {
+                    suggestions.push({ type: 'phrase', text: `${match} ${related}`, score: count * (matchScoreMultiplier / 2) });
+                });
+            }
+
+            info.sentences.forEach(sIdx => {
+                suggestions.push({ type: 'sentence', text: state.sentences[sIdx], score: 1 });
+            });
+        });
+
+        const seen = new Set();
+        return suggestions
+            .filter(s => {
+                if (seen.has(s.text)) return false;
+                seen.add(s.text);
+                return true;
+            })
+            .sort((a, b) => b.score - a.score) 
+            .slice(0, 40); 
+    }
+
+    function renderSuggestions() {
+        const list = getSuggestions();
+        state.activeSuggestions = list;
+
+        if (list.length === 0) {
+            suggestionBar.innerHTML = `<div class="empty-suggestions">Start typing to see suggestions...</div>`;
+            breadCrumbs.innerHTML = '';
+            return;
+        }
+
+        breadCrumbs.innerHTML = state.currentNavPath.map((p, i) => `<span style="cursor:pointer" onclick="navigateBack(${i})">${p}</span>`).join(' ❯ ');
+
+        suggestionBar.innerHTML = '';
+        list.forEach((s, idx) => {
+            const el = document.createElement('div');
+            el.className = `chip ${s.type} ${idx === state.selectedIndex ? 'selected' : ''}`;
+            el.innerHTML = `<span class="chip-type">${s.type}</span> ${s.text}`;
+            
+            el.onmousedown = (e) => {
+                e.preventDefault(); 
+                handleSuggestionClick(s, idx);
+            };
+            
+            suggestionBar.appendChild(el);
+
+            if (idx === state.selectedIndex) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    }
+
+    /**
+     * Logic to confirm a selection (either via click or Enter)
+     */
+    function handleSuggestionClick(suggestion, idx) {
+        state.selectedIndex = idx;
+        replaceWithSuggestion(suggestion.text);
+        
+        if (suggestion.type === 'keyword') {
+            state.currentNavPath.push(suggestion.text);
+        } else {
+            state.currentNavPath = [];
+        }
+
+        state.isCycling = false;
+        state.selectedIndex = -1;
+        state.lastInsertedLength = 0;
+        
+        writingArea.focus();
+        renderSuggestions();
+    }
+
+    function cycleSuggestion(direction = 1) {
+        if (state.activeSuggestions.length === 0) return;
+
+        if (!state.isCycling) {
+            state.isCycling = true;
+            state.selectedIndex = 0;
+        } else {
+            state.selectedIndex = (state.selectedIndex + direction + state.activeSuggestions.length) % state.activeSuggestions.length;
+        }
+
+        const suggestion = state.activeSuggestions[state.selectedIndex];
+        replaceWithSuggestion(suggestion.text);
+        renderSuggestions();
+    }
+
+    function replaceWithSuggestion(text) {
+        const content = writingArea.value;
+        const start = writingArea.selectionStart;
+        
+        const baseContent = content.slice(0, start - state.lastInsertedLength);
+        const afterContent = content.slice(start);
+        
+        const words = baseContent.trim().split(/\s+/);
+        const lastInputWord = words[words.length - 1] || "";
+
+        let newBefore;
+        if (lastInputWord && text.toLowerCase().includes(lastInputWord.toLowerCase())) {
+            words[words.length - 1] = text;
+            newBefore = words.join(' ');
+        } else {
+            newBefore = baseContent + (baseContent.endsWith(' ') || baseContent === "" ? "" : " ") + text;
+        }
+
+        const insertedText = newBefore.slice(baseContent.length);
+        writingArea.value = newBefore + ' ' + afterContent;
+        
+        state.lastInsertedLength = insertedText.length + 1; 
+        const newPos = newBefore.length + 1;
+        writingArea.setSelectionRange(newPos, newPos);
+    }
+
+    function navigateBack(index) {
+        state.currentNavPath = state.currentNavPath.slice(0, index + 1);
+        state.selectedIndex = -1;
+        state.isCycling = false;
+        renderSuggestions();
+    }
+
+    writingArea.addEventListener('input', (e) => {
+        if (!state.isCycling) {
+            state.selectedIndex = -1;
+            state.lastInsertedLength = 0;
+            state.currentNavPath = []; 
+            renderSuggestions();
+        }
+    });
+
+    writingArea.addEventListener('keydown', (e) => {
+        // Tab Key: Cycle through suggestions
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            cycleSuggestion(e.shiftKey ? -1 : 1);
+        }
+        
+        // Enter Key: Select current highlighted suggestion
+        if (e.key === 'Enter' && state.isCycling) {
+            e.preventDefault(); // Prevent newline
+            const suggestion = state.activeSuggestions[state.selectedIndex];
+            if (suggestion) {
+                handleSuggestionClick(suggestion, state.selectedIndex);
+            }
+        }
+
+        // Space Key: Confirm without drill-down (standard end of word)
+        if (e.key === ' ' && state.isCycling) {
+            state.isCycling = false;
+            state.selectedIndex = -1;
+            state.lastInsertedLength = 0;
+            renderSuggestions();
+        }
+
+        // Escape: Cancel cycling and revert to base content
+        if (e.key === 'Escape' && state.isCycling) {
+            e.preventDefault();
+            const content = writingArea.value;
+            const start = writingArea.selectionStart;
+            const baseContent = content.slice(0, start - state.lastInsertedLength);
+            writingArea.value = baseContent + content.slice(start);
+            state.isCycling = false;
+            state.selectedIndex = -1;
+            state.lastInsertedLength = 0;
+            renderSuggestions();
+        }
+    });
+
+    applyBtn.addEventListener('click', () => {
+        processDocument();
+        const btn = applyBtn;
+        btn.innerText = "Applied!";
+        btn.style.backgroundColor = "#22c55e";
+        setTimeout(() => {
+            btn.innerText = "Apply Document";
+            btn.style.backgroundColor = "var(--accent)";
+        }, 1500);
+    });
+
+    window.onload = processDocument;
+</script>
+</body>
+</html>
