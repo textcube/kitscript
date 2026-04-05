@@ -641,6 +641,29 @@ QUANTUM - NEXT GEN TECH</textarea>
             return bestWindow;
         }
 
+        function getSafestIdleFireY(player) {
+            const baseY = canvas.height * 0.5;
+            const candidates = [
+                baseY,
+                baseY - 48,
+                baseY + 48,
+                baseY - 92,
+                baseY + 92
+            ].map(y => clamp(y, player.r, canvas.height - player.r));
+
+            let best = { y: baseY, risk: Infinity, distance: Infinity };
+            candidates.forEach(centerY => {
+                const upperRisk = getShotLineRisk(player.x, centerY, player.x + CONFIG.ATTACK_RANGE, centerY - 6);
+                const lowerRisk = getShotLineRisk(player.x, centerY, player.x + CONFIG.ATTACK_RANGE, centerY + 6);
+                const risk = upperRisk + lowerRisk;
+                const distance = Math.abs(centerY - player.y);
+                if (risk < best.risk || (risk === best.risk && distance < best.distance)) {
+                    best = { y: centerY, risk, distance };
+                }
+            });
+            return best.y;
+        }
+
         function chooseAutoTarget(player) {
             const detectionRange = CONFIG.AI_DETECTION_RANGE;
             const maxX = 220;
@@ -705,14 +728,10 @@ QUANTUM - NEXT GEN TECH</textarea>
             const maxX = 240;
             const pathLookahead = 90;
             const avoidRadius = 90;
-
-            if (!plan) {
-                const homeX = 88;
-                const homeY = canvas.height * 0.5;
-                p.x += (homeX - p.x) * 0.08 * deltaScale;
-                p.y += (homeY - p.y) * 0.08 * deltaScale;
-                return 0;
-            }
+            const frontalLookahead = 78;
+            const frontalCorridor = p.r + 26;
+            const fallbackTarget = { targetX: 88, targetY: getSafestIdleFireY(p), mode: 'hold' };
+            const activePlan = plan || fallbackTarget;
 
             let avoidX = 0;
             let avoidY = 0;
@@ -723,6 +742,12 @@ QUANTUM - NEXT GEN TECH</textarea>
                 l.x < p.x + pathLookahead &&
                 Math.abs(l.y - p.y) < avoidRadius
             );
+            const frontalBlockers = nearbyCivilians.filter(c => {
+                const projectedX = c.x - c.vx * 10;
+                return projectedX > p.x - 8 &&
+                    projectedX < p.x + frontalLookahead &&
+                    Math.abs(c.y - p.y) < frontalCorridor;
+            });
 
             nearbyCivilians.forEach(c => {
                 const projectedX = c.x - c.vx * 16;
@@ -735,10 +760,37 @@ QUANTUM - NEXT GEN TECH</textarea>
                 avoidY += (dy / dist) * force * 42;
             });
 
-            const desiredX = clamp(plan.targetX + avoidX, p.r, Math.min(canvas.width - p.r, maxX));
-            const desiredY = clamp(plan.targetY + avoidY, p.r, canvas.height - p.r);
-            const easingX = plan.mode === 'collide' ? 0.16 : 0.12;
-            const easingY = plan.mode === 'collide' ? 0.18 : 0.14;
+            let desiredX = activePlan.targetX + avoidX;
+            let desiredY = activePlan.targetY + avoidY;
+
+            if (frontalBlockers.length) {
+                const strongestBlocker = frontalBlockers.reduce((best, current) => {
+                    const bestDx = (best.x - best.vx * 10) - p.x;
+                    const currentDx = (current.x - current.vx * 10) - p.x;
+                    return currentDx < bestDx ? current : best;
+                });
+                const blockerY = strongestBlocker.y;
+                const topClearance = blockerY - p.r;
+                const bottomClearance = canvas.height - blockerY - p.r;
+                const dodgeDirection = topClearance > bottomClearance ? -1 : 1;
+                const edgePadding = p.r + 14;
+                const dodgeTargetY = dodgeDirection < 0
+                    ? Math.max(edgePadding, blockerY - frontalCorridor - 18)
+                    : Math.min(canvas.height - edgePadding, blockerY + frontalCorridor + 18);
+                const blockerPressure = frontalBlockers.reduce((sum, c) => {
+                    const projectedX = c.x - c.vx * 10;
+                    const xForce = 1 - clamp((projectedX - p.x) / frontalLookahead, 0, 1);
+                    const yForce = 1 - clamp(Math.abs(c.y - p.y) / frontalCorridor, 0, 1);
+                    return sum + xForce * yForce;
+                }, 0);
+                desiredX = Math.min(desiredX, p.x + Math.max(-24, 12 - blockerPressure * 20));
+                desiredY = dodgeTargetY + avoidY * 0.35;
+            }
+
+            desiredX = clamp(desiredX, p.r, Math.min(canvas.width - p.r, maxX));
+            desiredY = clamp(desiredY, p.r, canvas.height - p.r);
+            const easingX = frontalBlockers.length ? 0.05 : (activePlan.mode === 'collide' ? 0.16 : 0.12);
+            const easingY = frontalBlockers.length ? 0.24 : (activePlan.mode === 'collide' ? 0.18 : 0.14);
             p.x += (desiredX - p.x) * easingX * deltaScale;
             p.y += (desiredY - p.y) * easingY * deltaScale;
 
