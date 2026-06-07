@@ -606,6 +606,59 @@
       max-width: min(92vw, 680px);
     }
 
+    .urgent-composer {
+      position: fixed;
+      left: 50%;
+      bottom: 5.4rem;
+      z-index: 120;
+      width: min(720px, calc(100vw - 2rem));
+      transform: translate(-50%, 18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .urgent-composer.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, 0);
+    }
+
+    .urgent-composer-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.55rem;
+      align-items: end;
+      padding: 0.55rem;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(5, 8, 10, 0.72);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    #urgentInput {
+      min-height: 46px;
+      max-height: 140px;
+      resize: none;
+      overflow-y: auto;
+      border-color: rgba(255, 71, 111, 0.34);
+      background: rgba(255, 255, 255, 0.055);
+      line-height: 1.45;
+    }
+
+    #urgentInput:focus {
+      border-color: var(--urgent);
+    }
+
+    #sendUrgentBtn {
+      min-width: 58px;
+      height: 46px;
+      padding: 0 0.9rem;
+      border-color: rgba(255, 71, 111, 0.5);
+      background: rgba(255, 71, 111, 0.2);
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -636,6 +689,10 @@
 
       .metrics {
         justify-content: stretch;
+      }
+
+      .urgent-composer {
+        bottom: 8.2rem;
       }
 
       .metric {
@@ -699,6 +756,13 @@
       <div class="metric"><span>Store</span><strong id="storeMetric">0</strong></div>
     </div>
   </footer>
+
+  <div id="urgentComposer" class="urgent-composer" aria-label="긴급 메시지 입력">
+    <div class="urgent-composer-inner">
+      <textarea id="urgentInput" rows="1" placeholder="긴급 메시지 입력"></textarea>
+      <button class="text-btn" id="sendUrgentBtn" title="긴급 큐에 추가">!</button>
+    </div>
+  </div>
 
   <div id="msgBox">SYSTEM NOTIFIED</div>
 
@@ -980,7 +1044,8 @@ Urgent Queue에 즉시 올라가고,
 
         this.playQueue = [];
         this.urgentQueue = [];
-        this.storeCursor = 0;
+        this.queueIndex = 0;
+        this.resumeItem = null;
         this.state = {
           currentDocId: null,
           currentBlockIndex: 0,
@@ -994,20 +1059,14 @@ Urgent Queue에 즉시 올라가고,
 
       buildQueueFromStore() {
         const docs = this.getBroadcastDocuments();
-        if (!docs.length) {
-          this.playQueue = [];
-          this.storeCursor = 0;
-          this.emit();
-          return;
-        }
-
-        if (this.state.currentDocId) {
-          const currentIndex = docs.findIndex((doc) => doc.id === this.state.currentDocId);
-          this.storeCursor = currentIndex >= 0 ? (currentIndex + 1) % docs.length : 0;
-        } else if (this.storeCursor >= docs.length) {
-          this.storeCursor = 0;
-        }
+        this.playQueue = docs.map((doc) => ({ docId: doc.id, blockIndex: 0, priority: 0 }));
+        this.queueIndex = 0;
         this.emit();
+      }
+
+      ensureBroadcastQueue() {
+        if (!this.playQueue.length || this.queueIndex >= this.playQueue.length) this.buildQueueFromStore();
+        return this.playQueue.length > 0 && this.queueIndex < this.playQueue.length;
       }
 
       queueDocument(docId, blockIndex = 0, priority = 0) {
@@ -1034,7 +1093,7 @@ Urgent Queue에 즉시 올라가고,
 
       nextDocument() {
         this.session++;
-        this.playQueue = [];
+        this.resumeItem = null;
         this.state.interruptedDocId = null;
         this.state.interruptedBlockIndex = 0;
         this.state.currentDocId = null;
@@ -1060,10 +1119,11 @@ Urgent Queue에 즉시 올라가고,
 
           const doc = this.findDoc(item.docId);
           if (!doc || !doc.blocks.length) continue;
+          if (item.priority < 100 && (doc.enabled === false || doc.transientUrgent)) continue;
 
           this.state.currentDocId = doc.id;
           this.state.currentBlockIndex = Math.min(item.blockIndex || 0, doc.blocks.length - 1);
-          if (this.state.mode !== 'urgent') this.state.mode = doc.category === 'urgent' ? 'urgent' : 'normal';
+          this.state.mode = item.priority >= 100 ? 'urgent' : 'normal';
           this.markPlayed(doc);
           this.emit();
 
@@ -1079,31 +1139,20 @@ Urgent Queue에 즉시 올라가고,
           return this.urgentQueue.shift();
         }
 
-        if (!this.playQueue.length) return this.nextStoreItem();
-        this.state.mode = 'normal';
-        return this.playQueue.shift() || null;
-      }
+        if (this.resumeItem) {
+          const item = this.resumeItem;
+          this.resumeItem = null;
+          this.state.mode = 'normal';
+          return item;
+        }
 
-      nextStoreItem() {
-        const docs = this.getBroadcastDocuments();
-        if (!docs.length) return null;
-        if (this.storeCursor >= docs.length) this.storeCursor = 0;
-
-        const doc = docs[this.storeCursor];
-        this.storeCursor = (this.storeCursor + 1) % docs.length;
+        if (!this.ensureBroadcastQueue()) return null;
         this.state.mode = 'normal';
-        return { docId: doc.id, blockIndex: 0, priority: 0 };
+        return this.playQueue[this.queueIndex++] || null;
       }
 
       getBroadcastDocuments() {
-        return this.getDocuments().filter((doc) => doc.enabled && doc.category !== 'urgent' && doc.blocks.length);
-      }
-
-      getRemainingBroadcastCount() {
-        const docs = this.getBroadcastDocuments();
-        if (!docs.length) return 0;
-        if (!this.state.currentDocId) return docs.length;
-        return this.storeCursor === 0 ? 0 : docs.length - this.storeCursor;
+        return this.getDocuments().filter((doc) => doc.enabled !== false && !doc.transientUrgent && doc.blocks.length);
       }
 
       async playDocument(doc, player, runId) {
@@ -1136,7 +1185,7 @@ Urgent Queue에 즉시 올라가고,
           this.state.currentBlockIndex = interruptedBlockIndex;
           this.state.interruptedDocId = null;
           this.state.interruptedBlockIndex = 0;
-          this.playQueue.unshift({ docId: interruptedDocId, blockIndex: interruptedBlockIndex, priority: 50 });
+          this.resumeItem = { docId: interruptedDocId, blockIndex: interruptedBlockIndex, priority: 50 };
           this.onMessage?.('[방송 재개]');
         }
         this.emit();
@@ -1156,10 +1205,16 @@ Urgent Queue에 즉시 올라가고,
       emit() {
         this.onStateChange?.({
           ...this.state,
-          queueCount: this.playQueue.length + this.getRemainingBroadcastCount(),
+          queueCount: this.getVisibleQueueCount(),
           urgentCount: this.urgentQueue.length,
           isPaused: this.isPaused
         });
+      }
+
+      getVisibleQueueCount() {
+        const currentNormal = this.state.mode === 'normal' && this.state.currentDocId ? 1 : 0;
+        const pendingNormal = Math.max(0, this.playQueue.length - this.queueIndex);
+        return currentNormal + pendingNormal + (this.resumeItem ? 1 : 0);
       }
     }
 
@@ -1413,6 +1468,9 @@ Urgent Queue에 즉시 올라가고,
         document.getElementById('nextBtn').addEventListener('click', () => this.nextDocument());
         document.getElementById('pasteBtn').addEventListener('click', () => this.handleClipboardUrgent());
         document.getElementById('soundBtn').addEventListener('click', () => this.toggleSound());
+        document.getElementById('sendUrgentBtn').addEventListener('click', () => this.submitUrgentComposer());
+        document.getElementById('urgentInput').addEventListener('keydown', (event) => this.handleUrgentInputKeydown(event));
+        document.getElementById('urgentInput').addEventListener('input', () => this.resizeUrgentInput());
         document.getElementById('newDocBtn').addEventListener('click', () => this.newDocument());
         document.getElementById('saveDocBtn').addEventListener('click', () => this.saveEditorDocument());
         document.getElementById('queueDocBtn').addEventListener('click', () => this.queueSelectedDocument());
@@ -1429,6 +1487,8 @@ Urgent Queue에 즉시 올라가고,
           const text = event.clipboardData?.getData('text');
           if (text?.trim()) this.addUrgentFromText(text);
         });
+
+        window.addEventListener('keydown', (event) => this.handleGlobalKeydown(event));
 
         document.addEventListener('visibilitychange', () => this.engine.emit());
       }
@@ -1466,6 +1526,70 @@ Urgent Queue에 즉시 올라가고,
         }
       }
 
+      handleGlobalKeydown(event) {
+        const target = event.target;
+        const isEditable = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable;
+        if (isEditable) return;
+        if (document.getElementById('settingsModal').classList.contains('show')) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key === 'Escape') {
+          this.hideUrgentComposer();
+          return;
+        }
+        if (event.key.length !== 1) return;
+
+        event.preventDefault();
+        this.showUrgentComposer(event.key);
+      }
+
+      handleUrgentInputKeydown(event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.hideUrgentComposer();
+          return;
+        }
+
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          this.submitUrgentComposer();
+        }
+      }
+
+      showUrgentComposer(initialText = '') {
+        const composer = document.getElementById('urgentComposer');
+        const input = document.getElementById('urgentInput');
+        composer.classList.add('show');
+        if (initialText) input.value += initialText;
+        input.focus();
+        input.selectionStart = input.selectionEnd = input.value.length;
+        this.resizeUrgentInput();
+      }
+
+      hideUrgentComposer() {
+        const composer = document.getElementById('urgentComposer');
+        const input = document.getElementById('urgentInput');
+        composer.classList.remove('show');
+        input.value = '';
+        this.resizeUrgentInput();
+      }
+
+      submitUrgentComposer() {
+        const input = document.getElementById('urgentInput');
+        const text = input.value.trim();
+        if (!text) {
+          this.hideUrgentComposer();
+          return;
+        }
+        this.addUrgentFromText(text);
+        this.hideUrgentComposer();
+      }
+
+      resizeUrgentInput() {
+        const input = document.getElementById('urgentInput');
+        input.style.height = 'auto';
+        input.style.height = `${Math.min(140, Math.max(46, input.scrollHeight))}px`;
+      }
+
       addUrgentFromText(text) {
         const doc = createDocument({
           title: `긴급 ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`,
@@ -1473,6 +1597,7 @@ Urgent Queue에 즉시 올라가고,
           category: 'urgent',
           enabled: true
         });
+        doc.transientUrgent = true;
         this.documents.unshift(doc);
         this.selectedDocId = doc.id;
         this.persistDocuments();
@@ -1495,6 +1620,7 @@ Urgent Queue에 즉시 올라가고,
         this.persistDocuments();
         this.renderDocumentList();
         this.loadEditor(doc.id);
+        this.engine.ensureBroadcastQueue();
       }
 
       saveEditorDocument() {
@@ -1509,7 +1635,7 @@ Urgent Queue에 즉시 올라가고,
           blocks: splitIntoBlocks(text),
           updatedAt: nowIso()
         });
-        this.engine.buildQueueFromStore();
+        this.engine.ensureBroadcastQueue();
         this.showMessage('문서를 저장했습니다.');
       }
 
@@ -1553,7 +1679,9 @@ Urgent Queue에 즉시 올라가고,
         this.documents = this.documents.filter((item) => item.id !== doc.id);
         this.selectedDocId = this.documents[0]?.id || null;
         this.persistDocuments();
-        this.engine.buildQueueFromStore();
+        this.engine.playQueue = this.engine.playQueue.filter((item) => item.docId !== doc.id);
+        this.engine.queueIndex = Math.min(this.engine.queueIndex, this.engine.playQueue.length);
+        this.engine.ensureBroadcastQueue();
         this.renderDocumentList();
         this.loadEditor(this.selectedDocId);
         this.showMessage('문서를 삭제했습니다.');
