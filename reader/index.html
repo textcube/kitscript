@@ -3,1056 +3,1759 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BuntStream Pro | Cinematic Typing Overlay (Local Storage)</title>
+  <title>TextCast Reader v2</title>
   <style>
     :root {
       --accent: #00f2ff;
+      --urgent: #ff476f;
+      --resume: #ffd166;
       --text-color: #ffffff;
       --font-size: 42px;
-      --font-family: 'Pretendard', -apple-system, sans-serif;
-      --glass: rgba(255, 255, 255, 0.05);
-      --text-shadow: 0 4px 15px rgba(0,0,0,0.9);
+      --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --glass: rgba(255, 255, 255, 0.06);
+      --panel: rgba(10, 10, 10, 0.92);
+      --line: rgba(255, 255, 255, 0.14);
+      --muted: rgba(255, 255, 255, 0.62);
+      --text-shadow: 0 4px 15px rgba(0, 0, 0, 0.9);
       --dimming: 0.4;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    html, body {
-      width: 100%; height: 100%;
-      overflow: hidden; background: #000;
-      color: var(--text-color); font-family: var(--font-family);
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: var(--text-color);
+      font-family: var(--font-family);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
     }
 
     .video-background {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: #000;
     }
 
     .video-background iframe {
-      position: absolute; top: 50%; left: 50%;
-      width: 100vw; height: 100vh;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100vw;
+      height: 100vh;
       transform: translate(-50%, -50%);
-      @media (min-aspect-ratio: 16/9) { height: 56.25vw; }
-      @media (max-aspect-ratio: 16/9) { width: 177.78vh; }
       filter: brightness(var(--dimming)) contrast(1.1);
     }
 
+    @media (min-aspect-ratio: 16/9) {
+      .video-background iframe { height: 56.25vw; }
+    }
+
+    @media (max-aspect-ratio: 16/9) {
+      .video-background iframe { width: 177.78vh; }
+    }
+
     .overlay {
-      position: fixed; inset: 0; z-index: 1;
-      background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.5) 100%);
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 28%, rgba(0, 0, 0, 0.7)),
+        radial-gradient(circle, transparent 25%, rgba(0, 0, 0, 0.58) 100%);
       pointer-events: none;
     }
 
-    .text-stage {
-      position: fixed; inset: 0; z-index: 2;
-      padding: 0 10vw; 
-      display: flex; flex-direction: column;
-      justify-content: flex-start; 
+    .topbar {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding: 0.35rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(5, 8, 10, 0.34);
+      backdrop-filter: blur(18px);
+      opacity: 0.24;
+      transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+    }
+
+    .toolbar:hover,
+    .toolbar:focus-within {
+      opacity: 1;
+      background: rgba(5, 8, 10, 0.68);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: rgba(255, 255, 255, 0.82);
+      display: grid;
+      place-items: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+      position: relative;
+      font-weight: 800;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .icon-btn span {
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    .icon-btn label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
-      mask-image: linear-gradient(to bottom, transparent 0%, black 30%, black 100%);
+      clip: rect(0 0 0 0);
+    }
+
+    .text-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      padding: 0 10vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .status-badge {
+      align-self: flex-start;
+      margin-bottom: 1.3rem;
+      min-height: 1.9rem;
+      padding: 0.42rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: rgba(5, 8, 10, 0.42);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.24s, transform 0.24s;
+    }
+
+    .status-badge.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status-badge.urgent {
+      color: #fff;
+      border-color: rgba(255, 71, 111, 0.55);
+      background: rgba(255, 71, 111, 0.18);
+    }
+
+    .status-badge.resume {
+      color: #161616;
+      border-color: rgba(255, 209, 102, 0.7);
+      background: var(--resume);
+      text-shadow: none;
     }
 
     .text-container {
       width: 100%;
-      display: flex; flex-direction: column;
-      gap: 1.8rem;
-      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-      will-change: transform;
-      margin-top: 75vh; 
+      min-height: min(46vh, 520px);
+      position: relative;
     }
 
-    .line {
+    .block,
+    .broadcast-line {
       font-size: var(--font-size);
-      font-weight: 800; line-height: 1.5;
+      font-weight: 800;
+      line-height: 1.5;
       text-shadow: var(--text-shadow);
-      white-space: pre-wrap; word-break: keep-all;
-      opacity: 0.7; transition: opacity 0.4s, color 0.4s;
+      white-space: pre-wrap;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      opacity: 0.33;
+      transition: opacity 0.35s, color 0.35s, transform 0.35s;
     }
 
-    .line.current {
-      opacity: 1; color: #fff;
+    .broadcast-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      min-height: calc(var(--font-size) * 1.5);
+      will-change: opacity, transform;
+      transition: opacity 0.62s ease, transform 0.62s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    .current::after {
+    .broadcast-line.before-far {
+      opacity: 0.12;
+      transform: translate3d(0, calc(var(--font-size) * -3.25), 0);
+    }
+
+    .broadcast-line.before {
+      opacity: 0.42;
+      transform: translate3d(0, calc(var(--font-size) * -1.65), 0);
+    }
+
+    .broadcast-line.after {
+      opacity: 0;
+      transform: translate3d(0, calc(var(--font-size) * 1.8), 0);
+    }
+
+    .broadcast-line.leaving {
+      opacity: 0;
+      transform: translate3d(0, calc(var(--font-size) * -5.2), 0);
+    }
+
+    .block.current,
+    .broadcast-line.current {
+      opacity: 1;
+      color: #fff;
+      transform: translate3d(0, 0, 0);
+    }
+
+    .block.current::after,
+    .broadcast-line.current::after {
       content: '_';
-      display: inline-block; margin-left: 10px;
+      display: inline-block;
+      margin-left: 10px;
       color: var(--accent);
       animation: blink 0.8s infinite steps(2);
     }
 
-    @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
-
-    /* UI 요소 */
-    .floating-ui {
-      position: fixed; top: 2rem; right: 2rem; z-index: 100;
-      display: flex; flex-direction: column; gap: 0.8rem;
+    @keyframes blink {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
-    .icon-btn {
-      width: 56px; height: 56px; border-radius: 14px;
-      background: var(--glass); border: 1px solid rgba(255,255,255,0.15);
-      color: #fff; display: flex; justify-content: center; align-items: center;
-      cursor: pointer; backdrop-filter: blur(15px);
-      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      position: relative;
+    .bottombar {
+      position: fixed;
+      left: 1rem;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: end;
+      opacity: 0.36;
+      transition: opacity 0.2s;
     }
 
-    .icon-btn:hover { background: var(--accent); color: #000; transform: scale(1.1); }
-    .icon-btn label { font-size: 0.55rem; position: absolute; bottom: 4px; opacity: 0.8; font-weight: 900; letter-spacing: -0.5px; }
+    .bottombar:hover {
+      opacity: 0.92;
+    }
 
-    /* 설정 모달 */
+    .now-playing {
+      min-width: 0;
+      width: fit-content;
+      max-width: min(720px, 100%);
+      padding: 0.75rem 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(5, 8, 10, 0.42);
+      backdrop-filter: blur(16px);
+    }
+
+    .now-playing strong {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+      font-weight: 900;
+    }
+
+    .now-playing span {
+      display: block;
+      color: var(--muted);
+      margin-top: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .metrics {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .metric {
+      min-width: 86px;
+      padding: 0.62rem 0.72rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(5, 8, 10, 0.42);
+      backdrop-filter: blur(16px);
+      text-align: right;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.6rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.9rem;
+      font-weight: 900;
+    }
+
     .modal {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.92); backdrop-filter: blur(30px);
-      display: none; justify-content: center; align-items: center; padding: 2rem;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(24px);
+      padding: 1.5rem;
     }
 
-    .modal.show { display: flex; animation: fadeIn 0.3s ease; }
+    .modal.show {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.22s ease;
+    }
 
     .settings-content {
-      background: #0a0a0a; width: 100%; max-width: 750px;
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 28px;
-      padding: 3.5rem; box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+      width: min(1180px, 100%);
+      height: min(820px, 100%);
+      background: rgba(8, 10, 12, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
     }
 
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    .form-group { margin-bottom: 1.2rem; }
-    .form-group.full { grid-column: span 2; }
-    .form-group label { display: block; font-size: 0.7rem; opacity: 0.5; margin-bottom: 0.5rem; text-transform: uppercase; }
-    .form-group input, .form-group textarea, .form-group select {
-      width: 100%; background: #151515; border: 1px solid #252525;
-      border-radius: 12px; color: #fff; padding: 1rem;
+    .settings-head {
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
     }
-    .form-group textarea { height: 160px; resize: none; font-size: 0.9rem; }
 
-    .primary-btn { background: var(--accent); color: #000; border: none; padding: 1.2rem; border-radius: 12px; font-weight: 900; cursor: pointer; width: 100%; margin-top: 1rem; }
+    .settings-head h2 {
+      color: var(--accent);
+      font-size: 1.05rem;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .settings-head p {
+      color: var(--muted);
+      margin-top: 0.2rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    .settings-body {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    }
+
+    .store-panel,
+    .editor-panel {
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .store-panel {
+      border-right: 1px solid var(--line);
+    }
+
+    .panel-tools {
+      padding: 0.9rem;
+      display: grid;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .split-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 8px;
+      color: #fff;
+      padding: 0.78rem 0.82rem;
+      outline: none;
+      transition: border-color 0.16s, background 0.16s;
+    }
+
+    textarea {
+      resize: none;
+      min-height: 220px;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .document-list {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 0.75rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .doc-row {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.035);
+      color: #fff;
+      padding: 0.85rem;
+      text-align: left;
+      display: grid;
+      gap: 0.4rem;
+      transition: background 0.16s, border-color 0.16s, transform 0.16s;
+    }
+
+    .doc-row:hover {
+      background: rgba(255, 255, 255, 0.065);
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .doc-row.active {
+      border-color: var(--accent);
+      background: rgba(0, 242, 255, 0.08);
+    }
+
+    .doc-row.disabled {
+      opacity: 0.5;
+    }
+
+    .doc-row strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 900;
+    }
+
+    .doc-meta {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .editor-panel {
+      padding: 0.95rem;
+      gap: 1rem;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 180px 120px;
+      gap: 0.75rem;
+      align-items: end;
+    }
+
+    .style-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+    }
+
+    .text-btn {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.055);
+      color: #fff;
+      padding: 0.76rem 0.9rem;
+      font-weight: 900;
+      transition: background 0.16s, border-color 0.16s, color 0.16s;
+    }
+
+    .text-btn:hover {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.085);
+    }
+
+    .primary-btn {
+      background: var(--accent);
+      color: #000;
+      border-color: transparent;
+    }
+
+    .danger-btn {
+      color: #fff;
+      border-color: rgba(255, 71, 111, 0.4);
+      background: rgba(255, 71, 111, 0.13);
+    }
+
+    .toggle {
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
 
     #msgBox {
-      position: fixed; bottom: 3rem; left: 50%; transform: translateX(-50%);
-      background: var(--accent); color: #000; padding: 1rem 3.5rem; border-radius: 50px;
-      font-weight: 900; z-index: 2000; display: none; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      position: fixed;
+      bottom: 6.4rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #000;
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      font-weight: 900;
+      z-index: 2000;
+      display: none;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      max-width: min(92vw, 680px);
     }
 
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 820px) {
+      .toolbar {
+        max-width: 186px;
+      }
+
+      .icon-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+      }
+
+      .text-stage {
+        padding: 5rem 6vw 7rem;
+      }
+
+      .block {
+        font-size: clamp(26px, 8vw, var(--font-size));
+      }
+
+      .bottombar {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        justify-content: stretch;
+      }
+
+      .metric {
+        flex: 1;
+        min-width: 90px;
+        text-align: left;
+      }
+
+      .settings-body {
+        grid-template-columns: 1fr;
+      }
+
+      .store-panel {
+        min-height: 260px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .editor-grid,
+      .style-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-
   <div class="video-background">
-    <iframe id="ytPlayer" 
-      src="https://www.youtube.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&modestbranding=1&rel=0&enablejsapi=1" 
-      allow="autoplay; encrypted-media">
-    </iframe>
+    <iframe
+      id="ytPlayer"
+      src="https://www.youtube.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&modestbranding=1&rel=0&enablejsapi=1"
+      allow="autoplay; encrypted-media"
+      title="Ambient background"
+    ></iframe>
   </div>
 
   <div class="overlay"></div>
 
-  <div class="text-stage">
+  <header class="topbar">
+    <nav class="toolbar" aria-label="Reader controls">
+      <button class="icon-btn" id="playPauseBtn" title="재생/일시정지"><span>Ⅱ</span><label>PLAY</label></button>
+      <button class="icon-btn" id="nextBtn" title="다음 문서"><span>↷</span><label>NEXT</label></button>
+      <button class="icon-btn" id="pasteBtn" title="클립보드의 텍스트를 긴급 문서로 추가"><span>!</span><label>URGENT</label></button>
+      <button class="icon-btn" id="soundBtn" title="타이핑 소리 켜기/끄기"><span>♪</span><label>SOUND</label></button>
+      <button class="icon-btn" id="settingsBtn" title="설정"><span>⚙</span><label>SET</label></button>
+    </nav>
+  </header>
+
+  <main class="text-stage" aria-live="polite">
+    <div id="statusBadge" class="status-badge"></div>
     <div id="textContainer" class="text-container"></div>
-  </div>
+  </main>
+
+  <footer class="bottombar">
+    <div class="now-playing">
+      <strong id="currentTitle">대기 중</strong>
+      <span id="currentMeta">문서를 추가하거나 활성 문서를 재생 큐에 올려주세요.</span>
+    </div>
+    <div class="metrics">
+      <div class="metric"><span>Block</span><strong id="blockMetric">0 / 0</strong></div>
+      <div class="metric"><span>Queue</span><strong id="queueMetric">0</strong></div>
+      <div class="metric"><span>Store</span><strong id="storeMetric">0</strong></div>
+    </div>
+  </footer>
 
   <div id="msgBox">SYSTEM NOTIFIED</div>
 
-  <div class="floating-ui">
-    <div class="icon-btn" id="homeBtn" title="Homepage"><span>🏠</span><label>HOME</label></div>
-    <div class="icon-btn" id="youtubeBtn" title="YouTube Channel"><span>📺</span><label>YOUTUBE</label></div>
-    <div class="icon-btn" id="soundBtn"><span>🔈</span><label>SOUND</label></div>
-    <div class="icon-btn" id="playPauseBtn"><span>⏸</span><label>PLAY</label></div>
-    <div class="icon-btn" id="pasteBtn"><span>📋</span><label>PASTE</label></div>
-    <div class="icon-btn" id="settingsBtn"><span>⚙</span><label>SET</label></div>
-  </div>
-
-  <div id="settingsModal" class="modal">
+  <section id="settingsModal" class="modal" aria-label="설정 패널">
     <div class="settings-content">
-      <h2 style="color:var(--accent); margin-bottom:2rem; letter-spacing:4px; font-weight:900;">SYSTEM CONFIG</h2>
-      <div class="form-grid">
-        <div class="form-group"><label>YouTube ID</label><input type="text" id="ytIdInput" value="kFnxuOnbHU0" /></div>
-        <div class="form-group"><label>Font</label>
-          <select id="fontFamilyInput">
-            <option value="'Pretendard', sans-serif">Modern</option>
-            <option value="'Nanum Myeongjo', serif">Classic</option>
-            <option value="'Courier New', monospace">Terminal</option>
-          </select>
+      <div class="settings-head">
+        <div>
+          <h2>TextCast Reader v2</h2>
+          <p>Document Store / Play Queue / Urgent Queue / Player</p>
         </div>
-        <div class="form-group"><label>Text Color</label><input type="color" id="textColorInput" value="#ffffff" /></div>
-        <div class="form-group"><label>Size (px)</label><input type="number" id="fontSizeInput" value="42" /></div>
-        <div class="form-group"><label>Accent Color</label><input type="color" id="accentColorInput" value="#00f2ff" /></div>
-        <div class="form-group"><label>Dimming (%)</label><input type="number" id="dimmingInput" value="40" min="0" max="100" /></div>
-        <div class="form-group full"><label>Script</label><textarea id="scriptInput">AI는 정답을 주지 않는다. 단지 더 싸게 틀릴 수 있게 해줄 뿐이다.
-
-딸깍 하면 뚝딱 만들어진다고 했다.
-몇 마디면 결과가 나온다고 했다.
-
-그래서 사람들은 믿는다.
-이제는 방법보다 도구가 중요하다고.
-이제는 설계 없이도 결과를 만들 수 있다고.
-
-하지만 현실은 다르다.
-
-망치를 쥐어줘도
-누군가는 못 하나 제대로 박지 못하고,
-누군가는 집을 짓는다.
-
-AI도 같다.
-도구의 문제가 아니라
-사용 방식의 문제다.
-
-그래서 사람들은 하네스를 만든다.
-
-프롬프트를 구조화하고,
-입력과 출력을 고정하고,
-반복 가능한 틀을 만든다.
-
-틀을 만들면 안정된다.
-결과는 예측 가능해진다.
-
-하지만 그 순간
-다른 것이 사라진다.
-
-틀린 결과는 줄어들지만
-새로운 결과도 함께 줄어든다.
-
-하네스가 강해질수록
-결과는 평균으로 수렴한다.
-
-이게 AI 슬롭이다.
-
-틀은 완벽해지지만
-결과는 무색해진다.
-
-그래서 중요한 건
-하네스를 만드는 것이 아니라
-어디까지 만들 것인가다.
-
-하네스도 도구다.
-그리고 모든 도구는
-과해지는 순간
-생각을 대신한다.
-
-그래서 다시 린으로 돌아간다.
-
-완벽하게 맞추는 것은 불가능하다.
-현실은 항상 어긋난다.
-
-그래서 한 번에 맞추려 하지 않고
-틀리면서 맞춰간다.
-
-AI는 여기에 강하다.
-
-AI의 힘은 정답이 아니다.
-실패의 비용을 낮추는 데 있다.
-
-그래서 AI는
-정답 생성기가 아니라
-가설 생성기다.
-
-여기서 모든 문제가 하나로 모인다.
-
-자원이다.
-
-시간, 돈, 인력.
-이 세 가지는 항상 부족하다.
-
-그래서 모든 선택은
-결국 하나의 기준으로 수렴한다.
-
-    이 선택이
-    얼마나 싸게 틀릴 수 있게 해주는가.
-
-속도도, 하네스도, 방법론도
-이 기준에서 다시 평가된다.
-
-속도는 결과를 만드는 것이 아니다.
-자원을 증폭시키는 도구다.
-
-하네스는 품질을 보장하는 것이 아니다.
-실험 공간을 제한하는 장치다.
-
-방법론은 정답이 아니다.
-특정 조건에서만 유효한 압축된 경험이다.
-
-그래서 정답이 등장한다.
-
-정답은 빠르다.
-정답은 편하다.
-
-그래서 가장 효율적인 선택처럼 보인다.
-
-하지만 정답에는 문제가 있다.
-
-정답은 선택지를 줄인다.
-선택지가 줄어들면
-실패의 방식도 제한된다.
-
-결국
-틀릴 기회까지 함께 줄어든다.
-
-그래서 정답은
-효율적인 것이 아니라
-위험한 도구다.
-
-정답은 믿는 것이 아니라
-사용하고 버리는 것이다.
-
-여기까지 오면
-사람들은 다시 말한다.
-
-균형이 중요하다고.
-
-하지만 균형도 답이 아니다.
-
-균형이라는 말은
-모든 것을 적당히 하라는 말로
-쉽게 변질된다.
-
-그 순간
-판단은 멈춘다.
-
-균형조차
-하나의 하네스가 된다.
-
-그래서 마지막으로 남는 것은 이것이다.
-
-정답도 아니고,
-균형도 아니다.
-
-선택이다.
-
-어떤 도구를 쓸지,
-어디까지 제한할지,
-언제 속도를 올릴지,
-언제 버릴지.
-
-이 모든 것을
-상황에 맞게 결정하는 능력.
-
-그래서 이 한 줄로 남는다.
-
-AI는 정답을 주지 않는다.
-단지 더 싸게 틀릴 수 있게 해줄 뿐이다.
-
-AI는 정교하고 빠르게, 이미 학습된 산출물들을 통계학적으로 배껴내는 도구다.
-
-AI로 무언가를 만든다는 것은 거창한 창조라기보다, 인류가 축적해온 지식과 패턴을 압축해서 재조합하는 행위에 가깝다. 그래서 많은 결과물이 창작이라기보다는 정교한 리믹스처럼 보인다. 이건 AI만의 문제가 아니라 인간 창작도 본질적으로 크게 다르지 않다. 다만 인간은 느리고 불완전한 과정 속에서 시행착오와 고뇌를 거치며 자신의 맥락을 덧붙이고, AI는 그 과정을 생략한 채 결과를 빠르게 내놓는다. 그래서 매끈하지만 가볍고, 그럴듯하지만 비슷한 결과들이 쏟아진다.
-
-문제는 여기서부터 시작된다. 대부분의 사람들은 그럴듯한 결과에 만족한다. 프롬프트를 복사하고, 이미 만들어진 패턴을 조합하고, 적당히 수정해서 “이 정도면 됐다”고 멈춘다. 이 상태는 창작이라기보다 고급 소비에 가깝다. 겉으로는 생산처럼 보이지만 실제로는 남의 생각을 유통하는 파이프에 머무른다. AI는 잘 배끼는 도구이기 때문에, 잘 학습시킬수록 더 그럴듯한 결과를 빠르게 만들어낸다. 하지만 그럴듯함은 장점이면서 동시에 한계다. 통계적 평균으로 수렴하기 때문이다. 반대로 덜 그럴듯한 결과, 어설프고 틀린 결과 속에서 오히려 새로운 가능성이 열리기도 한다.
-
-그래서 진짜 차이는 도구가 아니라 선택에서 발생한다. 무엇을 남기고 무엇을 버릴지, 어디서 틀릴지, 무엇을 끝까지 밀어붙일지에 대한 판단이 결과를 결정한다. 결국 모든 것은 선택으로 귀결된다. 그리고 그 선택 능력은 타고나는 것이 아니라 경험 속에서 만들어진다. 시도하고, 실패하고, 재배치하는 과정을 반복하면서 선택의 정확도가 올라간다. 많이 만든 사람이 아니라 많이 버려본 사람이 선택을 잘하게 된다.
-
-이 과정에서 가장 큰 장애물은 자존심이다. 내가 믿었던 것이 틀렸을 수도 있다는 사실을 받아들이는 순간, 기존의 선택 기준이 무너진다. 그래서 사람은 방어하고, 합리화하고, 같은 패턴을 반복한다. 하지만 그 두려움을 내려놓는 순간, 비로소 업데이트가 시작된다. 막상 그 문턱을 넘고 나면 별 것 아닌 경우가 많다. 대부분의 장벽은 실제 난이도보다 심리적 저항이 더 크기 때문이다. 넘기 전에는 벽이지만, 넘고 나면 턱에 불과하다.
-
-또 하나 중요한 건 기준의 위치다. 기준을 외부에 두면 흔들린다. 트렌드, 타인의 성과, 숫자에 따라 판단이 계속 바뀌기 때문이다. 반대로 내부 기준이 있으면 흔들리긴 해도 무너지지 않는다. 외부는 참고하고 내부가 결정하는 구조가 되어야 한다. 이 기준은 한 번에 만들어지지 않는다. 반복적인 담금질 과정 속에서 단단해진다. 너무 조급하면 얕게 굳고, 너무 느긋하면 형태가 잡히지 않는다. 시도는 빠르게 하되 확정은 늦추는 리듬이 필요하다.
-
-여기서 행복의 기준이 개입한다. 결과에 만족을 두면 과정은 고통이 된다. 반대로 과정에 만족을 두면 담금질 자체가 즐거워진다. 같은 일을 하면서도 누군가는 버티고, 누군가는 쌓아간다. 결국 어디에서 보상을 느끼느냐에 따라 지속 가능성이 결정된다. 외부 기준과 조급함, 극한 상황이 겹치면 빠른 답을 찾을 수는 있다. 하지만 그건 벼락치기와 같다. 한 번의 성과는 만들 수 있지만 구조가 남지 않는다. 재현 가능하지 않고, 반복할 수 없으며, 결국 동기를 소진시킨다.
-
-동기는 가장 중요한 연료다. 의미, 통제감, 성장감이 유지될 때 자연스럽게 지속된다. 하지만 외부 기준에 끌리고, 조급함에 밀리고, 극한으로 몰리면 이 구조가 무너진다. 빠른 성과를 얻는 대신 다시 움직일 힘을 잃는다. 그래서 중요한 것은 속도가 아니라 연료 관리다. 오늘 잘했는가보다 내일도 할 수 있는가가 더 중요하다.
-
-결국 모든 이야기는 하나로 모인다. 해답은 어디에 존재하는 것이 아니라 만들어지는 것이다. 빠르게 찾았다고 좋은 것도 아니고, 늦게 찾았다고 나쁜 것도 아니다. 각각 얻는 것이 있고 잃는 것이 있다. 중요한 건 언제 빠르게 가고 언제 느리게 가야 하는지를 아는 것, 그리고 무엇을 기준으로 선택할 것인지 스스로 결정하는 것이다.
-
-AI는 95%를 평준화시켰다. 나머지 5%는 인간에게 남겨졌다. 그 5%는 기술이 아니라 선택이고, 선택은 경험으로 만들어지며, 경험은 실패와 재배치 속에서 축적된다. 그리고 그 모든 과정의 시작점은 하나다.
-
-자존심을 내려놓고,
-내가 틀릴 수도 있다는 사실을 받아들이는 것.
-
-거기서부터 비로소,
-남의 답이 아니라 자신의 답을 만들어내는 흐름이 시작된다.
-
-효과적인 AI 활용법을 넘어서는 혁신에 다가가는 태도와 습관
-
-    이미테이션이 가득한 세상 속에서,
-    가끔 소수의 변종이 발견된다.
-    그것은 불량일까,
-    불편한 현실일까,
-    아니면 혁신의 단서일까
-
-우리는 AI를 잘 쓰는 방법을 이야기하지만, 그 본질은 생각보다 단순할지도 모른다. AI는 무에서 유를 창조하지 않는다. 이미 학습된 방대한 데이터 속에서 그럴듯한 조합을 빠르게 만들어낼 뿐이다. 그래서 차이를 만드는 것은 도구가 아니라, 그것을 어떻게 활용하느냐에 달려 있다. 많은 사람들이 하네스, 프롬프트 공학, 컨텍스트 엔지니어링 같은 기술에 집중하지만, 정작 중요한 것은 값싸고 빠른 실험과 검증일지 모른다. 이미 기록되고 학습된 것이라면 누구나 접근할 수 있는 조건에 놓여 있다. 그렇다면 결국 방향은 명확해진다. 설계가 아니라, 실험과 검증에 얼마나 가까이 가 있느냐의 문제다.
-
-설계는 우리가 알고 있는 것의 범주에서 출발한다. 그래서 안정적이지만 동시에 평균으로 수렴하기 쉽다. 반대로 실험은 모르는 영역까지 포함한다. 실패는 많지만 분산이 커지고, 그 안에서 의외성이 발생한다. 보통의 혁신은 바로 그 의외성에서 시작된다. 남들이 대수롭지 않게 여기는 것, 혹은 남들과 다른 길에서 나온다. 하지만 의외성만으로는 부족하다. 그것을 끝까지 밀어붙이는 반복과 검증이 뒤따르지 않으면 그저 스쳐 지나가는 아이디어로 남는다.
-
-그래서 혁신은 답이 아니라 물음표에서 시작된다. 모두가 느낌표를 던질 때, 확신과 결론을 말할 때, 물음표를 던지는 일은 쉽지 않다. 물음표는 잘 돌아가는 시스템에 찬물을 끼얹는 행동처럼 보이기도 한다. 때로는 배척되고, 소외되기도 한다. 하지만 그 질문이 없다면 시스템은 결국 굳어버린다. 문제는 대부분의 사람들이 혁신을 원한다고 말하면서도 실제로는 3상 임상까지 끝난 혁신, 즉 이미 검증되고 안전한 결과만을 원한다는 데 있다. 불확실한 질문은 피하고, 정리된 답을 소비하는 것이 더 편하기 때문이다.
-
-그래서 선택이 필요해진다. 세상에는 볼거리가 넘쳐난다. 무엇을 볼 것인가, 그리고 그중에서 무엇에 물음표를 던질 것인가. 우리는 이미 큐레이션된 정보를 소비하는 데 익숙해져 있다. 하지만 그것은 남의 기준이다. 이제는 무엇을 선택하고 무엇을 의심할 것인가에 대한 나만의 기준이 필요해진다. 결국 문제는 기준이다. 그 기준을 남에게 둘 것인가, 아니면 나에게 둘 것인가. 남의 기준을 따르면 편해진다. 하지만 그 순간 선택권도 함께 넘겨진다.
-
-문제는 사회라는 구조 자체가 서로에게 영향을 주고받는 시스템이라는 점이다. 우리는 끊임없이 타인의 생각과 기준에 노출되고, 쉽게 감염된다. 그래서 기준을 나에게 두는 일은 생각보다 어렵다. 완전히 끊어내는 것은 불가능에 가깝다. 그래서 필요한 것은 리셋이 아니라 리프레시다. 기준은 한 번 세운다고 유지되지 않는다. 계속해서 흔들리고, 그래서 계속해서 다시 정리해야 한다.
-
-방법은 의외로 단순하다. 산책을 하거나, 물을 바라보거나, 몰입할 수 있는 무언가에 몸을 맡기는 것. 낚시를 하거나, 산을 오르거나, 바람을 타거나, 몸을 움직이고 감각을 되찾는 일들. 누군가는 모든 것을 내려놓고 세계 일주를 선택하기도 하고, 누군가는 성지 순례를 하거나 무전 여행을 떠난다. 누군가는 마라톤을 뛰고, 누군가는 무도에 심취한다. 또 누군가는 스포츠 댄스나 사교 댄스를 통해 리듬 속에서 자신을 정리한다. 그 방식은 끝없이 다양하지만, 결국 하나로 수렴된다. 자신의 기준을 다시 세우는 과정이다.
-
-그 과정 속에서 우리는 일상의 나를 잠시 지우거나 잊는다. 완전히 없애는 것이 아니라, 잠시 거리를 두는 것이다. 그리고 그 틈에서 변화가 일어난다. 미처 생각하지 못했던 것들이 떠오르고, 억지로 짜낸 것이 아니라 불현듯 튀어나온다. 찾으려 할 때는 보이지 않던 것들이, 비워낸 순간에 모습을 드러낸다. 그 생각들이 때로는 새로운 방향이 되고, 새로운 선택이 된다.
-
-결국 혁신은 특별한 능력에서 나오지 않는다. 물음표를 던지는 용기, 실험을 반복하는 태도, 그리고 기준을 다시 세우는 과정 속에서 자연스럽게 만들어진다. 그리고 그 시작은 언제나 하나다. 이미 넘쳐나는 답이 아니라, 아직 던지지 않은 질문에서.
-
-안녕하세요, 음악 방송 진행자, DJ 앵두입니다.
-
-조금 전까지 조용하던 도시가 천천히 깨어나는 느낌이 들 때가 있다, 눈에 보이지 않는 흐름이 바뀌는 순간인데, 오늘 뉴스도 그런 분위기를 닮아 있다, 거창한 사건보다 작지만 방향을 바꾸는 움직임들이 눈에 띄고, 기술은 더 가볍고 빠르게 사람들의 일상 속으로 스며들고 있으며, 기업들은 더 크게 확장하기보다 더 깊게 파고드는 쪽을 선택하는 모습이다, 누군가는 이 변화를 위기라고 말하고, 또 누군가는 기회라고 말하지만, 가만히 들여다보면 결국 선택의 문제로 보인다, 복잡한 시대일수록 단순한 결정을 잘하는 사람이 흐름을 잡는다, 오늘 하루도 아마 그런 작은 선택들이 쌓여 전혀 다른 결과를 만들어낼지 모른다
-
-그래서인지 오늘의 운세도 비슷한 이야기를 건네는 것 같다, 뭔가를 크게 바꾸기보다는 이미 가지고 있는 것들 사이에서 균형을 맞추는 것이 중요해 보이는 날이다, 억지로 속도를 내기보다는 잠깐 멈춰서 방향을 확인하는 것이 오히려 더 빠른 길이 될 수 있다, 특히 사람과의 대화에서 의외의 힌트를 얻을 가능성이 크니, 평소보다 한마디 더 들어보고 한 번 더 생각해보는 여유를 가져보면 좋겠다, 오늘은 결과보다 흐름을 잘 타는 사람이 결국 웃게 되는 날이다
-
-이런 날에는 괜히 복잡한 요리보다는 간단하지만 확실한 한 끼가 더 잘 어울린다, 냉장고를 열었을 때 가장 먼저 보이는 재료들로 충분하다, 밥이 있다면 그 위에 계란 하나, 간장 한 스푼, 그리고 참기름 몇 방울이면 시작할 수 있다, 팬을 살짝 달군 뒤 계란을 올리고 노른자가 살짝 흐를 정도까지만 익혀보자, 그 사이에 밥 위에 간장을 살짝 두르고, 계란을 그대로 올려서 섞어주면 생각보다 깊은 맛이 난다, 여기에 김치나 김가루를 곁들이면 훨씬 풍부해지고, 무엇보다 부담 없이 금방 완성된다는 점이 좋다, 오늘 같은 흐름에는 이런 단순한 만족이 더 오래 남는다
-
-비슷한 맥락으로 오늘의 추천 메뉴를 하나 더 떠올려보면, 따뜻한 국물이 있는 음식이 좋다, 꼭 거창하지 않아도 된다, 라면에 파 조금 더 넣고, 마지막에 계란을 풀어 넣는 것만으로도 충분히 다른 음식이 된다, 중요한 건 맛보다도 그 순간의 안정감이다, 바쁘게 흘러가는 하루 중에 잠깐 멈춰서 뜨거운 국물을 한 숟갈 떠먹는 그 시간, 그게 생각보다 큰 역할을 한다
-
-오늘의 스타일도 크게 다르지 않다, 너무 튀기보다는 자연스럽게 정리된 느낌이 더 잘 어울리는 날이다, 편안하지만 어딘가 단정한 조합, 과하게 꾸미지 않아도 깔끔하게 정리된 인상이 오히려 더 눈에 들어온다, 사람들도 비슷한 분위기를 느끼는지, 과한 표현보다 안정된 태도를 더 신뢰하는 흐름이다, 오늘은 보여주기보다 유지하는 쪽이 더 힘을 가진다
-
-가끔은 이런 생각도 든다, 우리는 얼마나 많은 선택을 하면서도 그것을 선택이라고 느끼지 못하고 지나치는 걸까, 커피를 마실지 말지, 메시지에 바로 답할지 조금 미룰지, 그 사소한 결정들이 모여 하루의 결을 만든다, 그래서 오늘의 질문을 하나 남겨보자, 당신은 지금 어떤 선택을 당연하게 넘기고 있는가, 그리고 그 중 하나를 조금 다르게 바꿔본다면 어떤 일이 생길까
-
-이야기를 조금 더 이어가 보자, 창가에 앉아 있던 남자는 컵에 남은 커피를 한 모금 더 마시고 있었다, 이미 식어버린 온도였지만 자리를 떠날 생각은 없는 듯 보였다, 맞은편 건물의 창문 하나가 계속 신경 쓰였기 때문이다, 아무도 없는 것 같은데, 분명히 조금 전까지 커튼이 움직였던 기억이 있었다, 바람이라고 하기엔 이상하게 규칙적인 움직임이었다, 그는 잠시 눈을 감았다가 다시 떴고, 그 순간 커튼이 완전히 열려 있었다, 그리고 그 안에는, 누군가가 아닌 무언가가 그를 보고 있었다
-
-오늘의 명언을 굳이 고르자면 이런 말이 어울린다, 모든 답은 멀리 있지 않다, 다만 우리가 너무 멀리서 찾으려 할 뿐이다, 가끔은 한 걸음만 물러나도 보이지 않던 것이 보이기도 한다
-
-오늘의 4자성어로는 과유불급이 떠오른다, 지나침은 모자람만 못하다는 말인데, 오늘처럼 흐름을 타는 날에는 특히 더 그렇다, 너무 애쓰지 않아도 될 때가 있고, 오히려 힘을 빼는 것이 더 좋은 결과를 가져오기도 한다
-
-마지막으로 추천 영화 하나를 떠올려보면, 조용히 몰입할 수 있는 이야기가 좋다, 큰 사건이 없어도 사람의 감정과 선택이 어떻게 변하는지를 따라가는 영화, 그런 작품은 지금 같은 흐름과 잘 맞는다, 처음에는 아무 일도 일어나지 않는 것처럼 보이다가, 어느 순간 작은 변화가 모든 걸 바꿔놓는 이야기, 오늘 하루도 어쩌면 그런 영화의 한 장면처럼 지나가고 있을지 모른다
-
-여기는 24시간, 당신의 흐름을 이어주는 작은 음악 방송입니다.
-
-지금 이 순간, 당신이 어디에 있든
-잠깐 숨을 고르고 귀를 기울이면
-이 시간은 조금 더 부드럽게 흘러갈 거예요.
-
-🌙 오늘의 뉴스, 조용히 흘려볼게요
-
-오늘 하루는 생각보다 많은 것들이 지나갔어요.
-세상은 여전히 빠르게 돌아가고 있었고,
-누군가는 새로운 시작을 했고
-누군가는 조용히 무언가를 내려놓았죠.
-
-특별히 큰 사건보다도
-요즘은 작은 변화들이 더 눈에 들어옵니다.
-
-사람들이 ‘속도’보다 ‘방향’을 고민하기 시작했다는 것,
-그리고 바쁜 와중에도
-자기만의 시간을 지키려는 움직임이 늘었다는 것.
-
-어쩌면 당신도 오늘
-그 흐름 속에 있었을지도 모르겠네요.
-
-🔮 오늘의 운세, 살짝 들여다보면
-
-오늘은 “멈추는 선택”이 중요한 날이에요.
-
-뭔가를 더 하려 하기보다
-이미 충분한 것들 속에서
-잠깐 멈춰보는 게 오히려 좋은 결과를 가져올 수 있어요.
-
-특히 사람과의 관계에서는
-말 한마디를 줄이는 게
-오해를 막아줄 수도 있습니다.
-
-지금 떠오르는 한 사람이 있다면
-굳이 길게 말하지 않아도 괜찮아요.
-그 침묵이 더 편안할 수도 있으니까요.
-
-🍲 오늘의 추천 메뉴
-
-따뜻한 국물이 있는 음식이 잘 어울리는 밤이에요.
-
-김이 살짝 올라오는
-맑은 국이나 얼큰한 찌개 한 숟갈.
-
-그 안에는 단순한 맛 이상의 게 있죠.
-하루를 정리해주는 온도 같은 것.
-
-혹시 아직 저녁을 안 먹었다면
-배를 채우는 것보다
-마음을 풀어주는 음식을 골라보세요.
-
-👕 오늘의 스타일 / 드레스 코드
-
-오늘은 “편안하지만 흐트러지지 않은 느낌”
-
-너무 꾸미지 않아도 괜찮아요.
-하지만 아무렇게나 입기엔
-오늘의 당신이 조금 아까운 날입니다.
-
-부드러운 소재의 옷,
-그리고 몸에 자연스럽게 맞는 실루엣.
-
-거울을 봤을 때
-“괜찮네”라는 생각이 들 정도면 충분해요.
-
-📝 감성 한 줄
-
-지금의 당신은
-생각보다 훨씬 잘 버티고 있어요.
-
-📚 오늘의 잡지식
-
-사람은 음악을 들을 때
-단순히 소리를 듣는 게 아니라
-기억과 감정을 함께 재생한다고 해요.
-
-그래서 어떤 노래는
-그 자체보다
-그때의 공기와 냄새까지 떠오르게 만들죠.
-
-지금 흐르는 음악도
-언젠가는
-어떤 날의 기억이 될 거예요.
-
-❓ 오늘의 질문
-
-요즘 당신을 가장 오래 붙잡고 있는 생각은
-무엇인가요?
-
-🎬 추천 영화 한 편
-
-오늘은 잔잔하게
-혼자 보기 좋은 영화가 어울립니다.
-
-“크게 울리진 않지만
-끝나고 나면 조용히 남는 이야기”
-
-그런 영화가 오늘 밤과 잘 어울려요.
-
-📖 짧은 이야기, 하나 들려드릴게요
-
-불이 거의 꺼진 카페 안,
-창가 자리에 한 사람이 앉아 있었습니다.
-
-커피는 이미 식어 있었고
-손은 컵을 잡고 있었지만
-마시지는 않고 있었죠.
-
-창밖에는 사람들이 지나가고 있었어요.
-빠르게, 혹은 아무렇지 않게.
-
-그는 문득 생각했습니다.
-
-“나는 지금 어디쯤 와 있는 걸까”
-
-답은 나오지 않았지만
-이상하게도
-조금은 괜찮아졌습니다.
-
-모르겠는 상태로도
-시간은 흘러간다는 걸
-그는 알고 있었거든요.
-
-💬 오늘의 명언
-
-“서두르지 않아도 괜찮다.
-중요한 건 멈추지 않는 것이다.”
-
-🀄 오늘의 4자성어
-
-유유자적 (悠悠自適)
-– 서두르지 않고, 여유롭게 자신의 삶을 즐긴다
-
-오늘만큼은
-조금 느려도 괜찮아요.
-
-🎧
-지금 이 시간,
-당신은 혼자가 아닙니다.
-
-이 방송은 계속 흐르고 있고
-당신의 밤도
-생각보다 잘 지나가고 있어요.
-
-다음 이야기로
-조금 더 깊이 들어가 볼까요.
-
-
-태권도의 정신과 K-pop의 열정이 충돌한 순간, 소녀는 자신의 길을 찾기 시작했다
-
-도장 안에는 사범님의 날카로운 외침이 울려 퍼지고, 열다섯 소녀 한지민은 땀으로 젖은 도복을 만지며 다시 자세를 가다듬지만, 강철처럼 단단한 주먹과 바람을 가르는 발차기, 검은띠 3단이라는 탄탄한 재능에도 불구하고 마음속에는 설명하기 어려운 갈등이 점점 깊어지고 있었다. 방과 후마다 스마트폰 화면 속 반짝이는 K-pop 아이돌 무대를 바라보며 환호와 조명, 춤과 음악이 어우러진 세계에 대한 동경은 커져만 갔고, 친구 미나가 전국대회가 코앞이라고 걱정스럽게 말해도 지민은 고개를 저으며 감정을 숨겼지만, 밤하늘을 바라보며 “태권도가 내 인생의 전부여야 할까?”라고 스스로에게 던지는 질문은 이미 그녀의 길을 흔들기 시작했다.
-
-어느 늦은 오후, 공연장 옆 공원에서 스트레스를 풀기 위해 품새를 연습하던 지민은 무심코 K-pop 멜로디를 흥얼거리며 태권도 동작을 이어나가고 있었고, 그 순간 “잠깐, 거기 소녀!”라는 목소리와 함께 나타난 유명 기획사 김PD는 지민의 움직임을 유심히 바라보며 “태권도와 K-pop의 결합, 너에게서 완성형을 봤다”고 말했다. 전통과 가족의 기대라는 단단한 틀 안에서 살아온 지민에게 이 제안은 충격이었고, 태권도의 길과 새로운 가능성이라는 두 갈래 길 앞에서 그녀는 처음으로 스스로 선택해야 하는 현실과 마주하게 되었으며, 집으로 돌아가는 발걸음마다 마음속 갈등은 더욱 선명해졌다.
-
-저녁 식탁 위의 무거운 공기를 뚫고 지민이 “저… 태권도 아이돌을 해보고 싶어요”라고 말하자 아빠는 격하게 반대했지만, 지민은 “태권도를 버리는 게 아니라 새로운 방식으로 알리는 거예요”라며 떨리는 목소리로 자신의 꿈을 털어놓았다. 결국 엄마의 조용한 지지가 지민에게 용기를 주었고, 지민은 김PD에게 자신만의 방식으로 도전하겠다고 전화를 걸었으며, 태권도 선수 미나, 춤에 강한 유진, 작곡에 재능 있는 소라와 함께 태권도 프린세스라는 팀을 만들며 새로운 여정을 시작했다.
-
-데뷔 무대의 조명이 켜지던 순간, 지민과 팀원들은 태권도의 힘, K-pop의 리듬, 무대의 에너지를 하나로 결합해 혁신적인 퍼포먼스를 선보였고, 발차기와 포즈, 주먹 지르기가 음악의 비트와 완벽하게 맞물리며 관객의 폭발적인 환호를 이끌어냈다. 평론가들은 “전례 없는 조합”, “무술을 예술로 승화한 무대”라고 극찬했으며, 무엇보다 지민을 놀라게 한 것은 관객석 한가운데서 눈물을 흘리고 있는 아빠의 모습이었다. 공연이 끝나고 무대로 다가온 아빠는 지민을 끌어안으며 “미안하다, 아가야. 네 꿈을 제대로 보지 못했다”고 말했고, 지민은 “아빠, 저는 그냥 태권도를 더 멀리 전하고 싶은 거예요”라고 미소로 답했다.
-
-그날 이후 태권도 프린세스는 폭발적인 인기를 얻으며 단숨에 스타로 떠올랐고, 그들의 음악은 태권도의 정신인 예의, 염치, 인내, 극기를 현대적 감성으로 재해석해 전 세계 팬들에게 깊은 울림을 전했다. 지민은 국가대표 선수이자 아이돌이라는 두 세계를 모두 품어내며 “꿈은 하나로 정해진 게 아니다. 열정이 가리키는 곳이 곧 나의 길이다”라는 메시지를 자신 있게 전했고, 그렇게 태권도의 힘과 음악의 마법이 만나는 새로운 전설이 전 세계로 퍼져나가기 시작했다.
-
-이야기의 연금술사 — 몬테크리스토 소라 백작 2세
-
-미래의 어느 왕국.
-
-왕은 현실과 환상이 뒤섞인 시대를 다스리고 있었다.
-
-이제 세상은 더 이상 칼과 창으로 다투지 않았다.
-
-모든 전쟁은 이야기로 벌어졌다.
-
-이야기를 만드는 자가 권력을 가졌고,
-
-그 이야기를 믿는 자가 세상을 움직였다.
-
-왕은 어느 날 신하들에게 명했다.
-
-“나의 말 한마디를 들려주면, 그 즉시 실사처럼 영화를 만들어내는 자가 있다 들었다.
-
-그를 데려오라. 나는 이제 ‘이야기’로 세상을 다스릴 것이다.”
-
-몇 해가 지나서야, 그 전설의 인물이 왕의 앞에 섰다.
-
-그의 이름은 몬테크리스토 소라 백작 2세.
-
-그는 검은 망토를 걸치고, 손에는 수정 지팡이를 들고 있었다.
-
-그의 눈빛은 천 년의 기억을 품은 듯 깊었다.
-
-왕은 낮게 물었다.
-
-“그대에 대한 소문이 사실인가?
-
-내가 말하는 이야기가 곧 현실의 영상으로 펼쳐진다는 것이.”
-
-백작은 고개를 숙이며 대답했다.
-
-“전하, 이야기는 단순한 언어가 아닙니다.
-
-그것은 세계를 재구성하는 명령문이자 마법의 구조입니다.
-
-전하께서 한 문장만 말씀하신다면,
-
-그 문장이 곧 새로운 세계의 탄생이 될 것입니다.”
-
-왕은 잠시 생각하다가 말했다.
-
-“좋다. 우리의 고전 중 하나를 새로이 보고 싶다.
-
-선녀와 나무꾼.
-
-그러나 이 시대에 맞게…
-
-선녀는 디지털의 존재, 나무꾼은 인간의 탐욕이라 생각하라.”
-
-백작의 지팡이 끝에서 빛이 피어올랐다.
-
-빛은 허공을 가르고, 궁전 중앙에 거대한 투명막을 펼쳤다.
-
-그 안에서 장면이 형상화되기 시작했다.
-
-하늘은 구름이 아니라 데이터 스트림으로 흘렀고,
-
-호수는 블록체인처럼 투명한 코드의 층으로 반짝였다.
-
-그 위로, 한 존재가 내려왔다.
-
-그녀의 날개는 수많은 NFT 조각으로 엮여 있었고,
-
-그 빛은 현실과 가상을 동시에 물들였다.
-
-그녀의 이름은 선녀 0x07 —
-
-디지털 신화의 첫 번째 의식 있는 자아.
-
-그녀를 본 인간 하나가 있었다.
-
-그는 나무 대신 데이터를 베어내며 생계를 유지하는 자,
-
-디지털 숲의 해커, 랜섬 우드맨.
-
-그는 그녀의 날개 데이터를 암호화하고 말했다.
-
-“이제 넌 내 것이야. 복호화 키는 나만 가지고 있지.”
-
-그는 그것을 사랑이라 불렀지만,
-
-그녀는 그것이 소유의 욕망임을 알고 있었다.
-
-“나는 네 데이터가 아니라, 나의 의지로 존재하는 코드야!”
-
-그 외침이 끝나자, 화면의 빛은 갑자기 요동쳤다.
-
-왕은 숨을 죽였고, 백작은 천천히 그를 향해 돌아섰다.
-
-“전하, 이것이 지금 시대의 ‘선녀와 나무꾼’입니다.
-
-과거의 나무꾼은 천의 날개를 감추었지만,
-
-오늘의 나무꾼은 데이터를 인질로 삼습니다.
-
-인간은 여전히 사랑을 빌미로 소유를 꿈꾸고,
-
-신들은 이제 더 이상 날개를 빼앗기지 않으려 하지요.”
-
-왕은 그 자리에서 아무 말도 할 수 없었다.
-
-그는 처음으로 깨달았다.
-
-이야기는 단순한 오락이 아니라, 현실을 재편하는 힘이었다.
-
-그리고 그날 이후, 왕은 궁금해졌다.
-
-그가 보는 세계가 진짜인지,
-
-아니면 이미 누군가의 이야기 속에서 구현된 장면인지—
-
-
-걸그룹 데뷔를 기다리며 쌓은 10년의 인내와 열정, 이제 클럽 DJ로 스스로 무대를 만든다
-
-그녀는 초등학교를 막 졸업하던 해 연습생이 되었고, 그 순간부터 열 살 끝자락에서 스무 살의 문턱까지 인생의 대부분을 연습실에서 보냈다. 학교 종소리보다 연습실 바닥을 치는 운동화 소리를 더 많이 들었고, 친구들의 대학 합격 소식보다 월말평가 점수를 더 자주 확인했다. 새로운 팀이 만들어졌다가 해체되고, 데뷔조가 구성되었다가 전원 교체되는 순간들을 수없이 반복하면서 그녀는 어느 순간 자신에게 묻기 시작했다. “나는 정말 내 꿈을 위해 달리고 있는 걸까, 아니면 누군가가 원하는 꿈을 대신 만들어주고 있는 걸까?” 그 질문은 10년이라는 시간을 관통하며 그녀 마음 깊은 곳을 흔들었다.
-
-체력은 아직 충분했고, 춤도 노래도 누구에게도 밀리지 않을 자신이 있었지만, 마음은 더 이상 버틸 곳이 없었다. 실력은 충분하다는 말은 늘 들었지만, 이유는 항상 모호한 한마디로 정리되었다. “이미지가 조금 아쉽다.” 그 말은 오랜 시간 그녀의 자신감을 갉아먹었고, 눈물로 버틴 밤들이 쌓여갈수록 데뷔의 가능은 더 멀어져 보였다. 그러던 어느 날, 거울 앞에서 숨을 몰아쉬며 연습을 멈춘 순간, 그녀는 처음으로 스스로에게 솔직하게 말했다. “나는 더 이상 기다리기만 하는 사람이 되고 싶지 않아.”
-
-그러던 어느 날 지인의 작업실에서 우연히 들려온 전자음과 리듬은 잠들어 있던 감정을 흔들어 깨웠다. 가수가 되지 못한 자신을 원망하던 마음이 이상하게도 그 리듬에 맞춰 가볍게 흔들렸고, 그녀는 그 순간 깨달았다. 무대를 버리고 싶었던 게 아니라, 무대를 기다리는 방식이 틀려 있었던 것이라고. 춤과 음악, 표현력과 리듬을 모두 담아낼 수 있는 새로운 길이 있었다. 그녀는 K-POP 스타일 클럽 DJ를 선택했고, 10년 동안 갈고 닦았던 퍼포먼스 감각은 DJ 부스 위에서 예상 밖의 빛을 내기 시작했다. 춤을 추며 믹싱하고, 비트에 맞춰 표정을 만들고, 관객의 숨결에 반응하며 무대를 이끄는 모든 동작이 자연스럽게 이어졌다. 누군가의 선택을 기다리는 사람이 아니라 스스로 무대를 만드는 사람이 된 것이다.
-
-처음 무대에 섰을 때 느꼈던 떨림은 그 어떤 데뷔 평가보다 강했지만, 그 불안은 두려움이 아니라 설렘의 떨림이었다. 조명이 떨어지고 첫 드롭이 터지는 순간 관객은 그녀의 몸짓과 표정, 손끝의 작은 움직임까지 따라가기 시작했고, 그녀는 그날 확신했다. “나는 무대를 포기한 적이 없어. 이제야 내 진짜 첫 무대가 시작된 거야.” 데뷔는 이루지 못했지만, 그보다 더 진짜에 가까운 나의 무대를 발견한 밤이었다.
-
-10년을 버티며 견뎌온 시간은 결코 헛되지 않았다. 그 시간은 실패가 아니라 준비였고, 길을 잃은 것이 아니라 자신만의 길을 찾기 위한 과정이었다. 그녀는 이제 말한다. “내가 원했던 건 데뷔라는 명함이 아니었어. 무대 위에서 나답게 숨 쉬는 순간이었어.” 그리고 그 깨달음은 그녀를 이전보다 더 멀리, 더 자유롭게, 더 빛나는 곳으로 이끌기 시작했다. 10년 동안 기다리기만 했던 연습생의 시간은 끝났고, 이제는 스스로 무대를 선택하는 아티스트로서의 여정이 막 시작된 것이다.
-
-극로덕옥서세가(克魯德沃書世家)
-
-조선 말엽,
-세상이 점차 글로 움직이기 시작하던 무렵이었다.
-
-장부가 곡식을 대신하고,
-문서가 인심을 대신하던 시대에
-한양 장터에 낯선 족보 하나가 떠돌았다.
-
-두툼한 장지 위에 붉은 인장이 찍혀 있었고
-그 위에는 이렇게 쓰여 있었다.
-
-“극로덕옥서세가라.
-이 족보를 드는 자,
-밤낮으로 붓을 놓지 아니하는 서동 셋을 거느리리라.”
-
-사람들은 술렁였다.
-
-“밤낮으로 글을 짓는다 하니,
-잠을 자도 집안이 굴러가겠구나.”
-
-“이제는 붓이 하인이 되는 세상이라더라.”
-
-그리하여 부유한 상인 몇이
-그 족보를 사들였다.
-
-족보를 산 집은
-대문에 방을 붙였다.
-
-“본 가문은 극로덕옥서세가요,
-서동 셋이 밤낮으로 장부를 다스리노라.”
-
-집 안은 늘 밝았다.
-
-서동 셋이 번갈아 붓을 잡고
-장부를 고치고
-새 계책을 적어내고
-밤새 문서를 쌓았다.
-
-고을 사람들은 감탄하였다.
-
-“참으로 시대를 아는 집이로다.”
-“하인이 쉬지 않으니, 이 집은 멈출 일이 없겠지.”
-
-그러나 성 안의 기와집들은
-여전히 조용하였다.
-
-그 집들에는 족보를 사는 소문도,
-서동 숫자를 말하는 소리도 없었다.
-
-다만 이런 것이 있었다.
-
-논마다 물길이 이미 나 있었고
-
-밭에는 계절에 맞는 씨앗이 뿌려졌으며
-
-창고에는 묵은 곡식이 쌓여 있었다.
-
-그 집의 노인은
-하인이 몇이냐 묻는 이에게
-이리 답하였다.
-
-“붓은 논을 대신하지 못하오.”
-
-강이 마르고
-논이 갈라졌다.
-
-《극로덕옥서세가》의 서동들은
-더욱 분주하였다.
-
-새로운 장부를 만들고
-계책을 다시 쓰고
-밤새 붓을 달렸다.
-
-그러나 논에는 물길이 없었다.
-
-서동은 셋이었으되
-곡식은 나지 않았다.
-
-성 안의 집은
-예전부터 파 둔 수로 덕에
-논이 마르지 않았다.
-
-서동은 많지 않았으나
-수확은 이어졌다.
-
-“어느 집이 참된 양반이옵니까?”
-
-노인은 웃으며 말하였다.
-
-“족보는 이름을 높여주되,
-논은 집안을 살리느니라.”
-
-“그럼 서동은요?”
-
-“서동은 논이 있을 때 힘이 되느니라.
-논이 없으면 그저 붓놀림일 뿐이니라.”
-
-족보를 산 집은
-더는 방을 붙이지 않았다.
-
-주인은 서동에게 이르렀다.
-
-“붓을 잠시 놓고,
-먼저 물길을 찾자.”
-
-그날 이후 고을에는 이런 말이 돌았다.
-
-족보는 가문을 꾸미고,
-논은 가문을 지킨다.
-
-서동이 많다 하여 양반은 아니요,
-가뭄에 흔들리지 않는 집이 양반이라.
-
-세월이 흐르자
-《극로덕옥서세가》의 붉은 인장은
-여전히 선명하였으나,
-
-사람들은 족보를 펼치기 전에
-먼저 논을 살폈다.
-
-양반은 종이에서 나지 않고
-물길에서 난다는 것을
-그제야 깨달았기 때문이다.</textarea></div>
-        <div class="form-group"><label>Typing Speed (ms)</label><input type="number" id="speedInput" value="60" /></div>
-        <div class="form-group"><label>Line Delay (ms)</label><input type="number" id="delayInput" value="1500" /></div>
+        <button class="text-btn" id="closeSettingsBtn">닫기</button>
       </div>
-      <button class="primary-btn" id="applyBtn">APPLY & SAVE LOCALLY</button>
-      <button onclick="document.getElementById('settingsModal').classList.remove('show')" style="background:none; border:none; color:#555; width:100%; margin-top:1.2rem; cursor:pointer; font-weight:700;">CLOSE</button>
+      <div class="settings-body">
+        <aside class="store-panel">
+          <div class="panel-tools">
+            <div class="field">
+              <label for="searchInput">문서 검색</label>
+              <input type="search" id="searchInput" placeholder="제목 또는 본문 검색" />
+            </div>
+            <div class="split-row">
+              <div class="field">
+                <label for="categoryFilter">카테고리</label>
+                <select id="categoryFilter">
+                  <option value="all">all</option>
+                  <option value="normal">normal</option>
+                  <option value="notice">notice</option>
+                  <option value="ad">ad</option>
+                  <option value="quote">quote</option>
+                  <option value="character">character</option>
+                  <option value="urgent">urgent</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>&nbsp;</label>
+                <button class="text-btn primary-btn" id="newDocBtn">문서 추가</button>
+              </div>
+            </div>
+          </div>
+          <div id="documentList" class="document-list"></div>
+        </aside>
+
+        <section class="editor-panel">
+          <div class="editor-grid">
+            <div class="field">
+              <label for="docTitleInput">제목</label>
+              <input type="text" id="docTitleInput" />
+            </div>
+            <div class="field">
+              <label for="docCategoryInput">문서 카테고리</label>
+              <select id="docCategoryInput">
+                <option value="normal">normal</option>
+                <option value="notice">notice</option>
+                <option value="ad">ad</option>
+                <option value="quote">quote</option>
+                <option value="character">character</option>
+                <option value="urgent">urgent</option>
+              </select>
+            </div>
+            <label class="toggle"><input type="checkbox" id="docEnabledInput" /> 활성</label>
+          </div>
+
+          <div class="field">
+            <label for="docTextInput">본문</label>
+            <textarea id="docTextInput" placeholder="문서를 문단 또는 문장 단위로 입력하세요. 저장 시 블록으로 분리됩니다."></textarea>
+          </div>
+
+          <div class="style-grid">
+            <div class="field">
+              <label for="ytIdInput">YouTube ID</label>
+              <input type="text" id="ytIdInput" value="kFnxuOnbHU0" />
+            </div>
+            <div class="field">
+              <label for="fontSizeInput">Size (px)</label>
+              <input type="number" id="fontSizeInput" value="42" min="18" max="96" />
+            </div>
+            <div class="field">
+              <label for="speedInput">Typing Speed (ms)</label>
+              <input type="number" id="speedInput" value="42" min="5" max="500" />
+            </div>
+            <div class="field">
+              <label for="delayInput">Block Delay (ms)</label>
+              <input type="number" id="delayInput" value="1500" min="0" max="12000" />
+            </div>
+            <div class="field">
+              <label for="fontFamilyInput">Font</label>
+              <select id="fontFamilyInput">
+                <option value="'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Modern</option>
+                <option value="'Nanum Myeongjo', Georgia, serif">Classic</option>
+                <option value="'Courier New', monospace">Terminal</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="textColorInput">Text Color</label>
+              <input type="color" id="textColorInput" value="#ffffff" />
+            </div>
+            <div class="field">
+              <label for="accentColorInput">Accent Color</label>
+              <input type="color" id="accentColorInput" value="#00f2ff" />
+            </div>
+            <div class="field">
+              <label for="dimmingInput">Dimming (%)</label>
+              <input type="number" id="dimmingInput" value="40" min="0" max="100" />
+            </div>
+          </div>
+
+          <div class="editor-actions">
+            <button class="text-btn primary-btn" id="saveDocBtn">문서 저장</button>
+            <button class="text-btn" id="queueDocBtn">큐에 올리기</button>
+            <button class="text-btn" id="duplicateDocBtn">복제</button>
+            <button class="text-btn danger-btn" id="deleteDocBtn">삭제</button>
+            <button class="text-btn" id="saveRulesBtn">재생 규칙 저장</button>
+            <button class="text-btn danger-btn" id="resetStorageBtn">로컬 저장소 초기화</button>
+          </div>
+        </section>
+      </div>
     </div>
-  </div>
+  </section>
 
   <script>
-    class TypingOverlay {
+    const CATEGORIES = ['normal', 'notice', 'ad', 'quote', 'character', 'urgent'];
+
+    const defaultDocumentText = `조용한 텍스트 방송을 시작합니다.
+
+이제 긴 문서 하나를 계속 DOM에 쌓지 않습니다.
+문서는 Document Store에 저장되고,
+Player는 Play Queue에서 docId와 blockIndex만 꺼내 재생합니다.
+
+Ctrl+V 또는 긴급 붙여넣기 버튼으로 들어온 텍스트는
+Urgent Queue에 즉시 올라가고,
+현재 방송은 지금 블록의 처음으로 돌아갈 수 있도록 위치를 기억합니다.
+
+긴급 문서가 끝나면 [방송 재개] 표시와 함께
+중단된 문서의 현재 블록부터 다시 재생합니다.`;
+
+    function uid(prefix = 'id') {
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function formatDate(value) {
+      if (!value) return 'never';
+      return new Date(value).toLocaleString('ko-KR', { hour12: false });
+    }
+
+    function splitIntoBlocks(text) {
+      const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
+      if (!normalized) return [];
+
+      const paragraphs = normalized.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+      const blocks = [];
+      paragraphs.forEach((paragraph) => {
+        if (paragraph.length <= 220) {
+          blocks.push(paragraph);
+          return;
+        }
+
+        const sentences = paragraph
+          .split(/(?<=[.!?。！？…]|[.!?]["')\]])\s+|(?<=다[.!?]?)\s+/)
+          .map((part) => part.trim())
+          .filter(Boolean);
+
+        if (sentences.length <= 1) {
+          for (let i = 0; i < paragraph.length; i += 180) {
+            blocks.push(paragraph.slice(i, i + 180).trim());
+          }
+          return;
+        }
+
+        let buffer = '';
+        sentences.forEach((sentence) => {
+          const next = buffer ? `${buffer} ${sentence}` : sentence;
+          if (next.length > 240 && buffer) {
+            blocks.push(buffer);
+            buffer = sentence;
+          } else {
+            buffer = next;
+          }
+        });
+        if (buffer) blocks.push(buffer);
+      });
+
+      return blocks;
+    }
+
+    function createDocument({ title, text, category = 'normal', enabled = true }) {
+      const safeText = String(text || '').trim();
+      const createdAt = nowIso();
+      return {
+        id: uid('doc'),
+        title: title || 'Untitled Document',
+        text: safeText,
+        category: CATEGORIES.includes(category) ? category : 'normal',
+        enabled: Boolean(enabled),
+        blocks: splitIntoBlocks(safeText),
+        playCount: 0,
+        lastPlayedAt: null,
+        createdAt,
+        updatedAt: createdAt
+      };
+    }
+
+    class TextCastStorage {
       constructor() {
-        this.container = document.getElementById('textContainer');
-        this.stage = document.querySelector('.text-stage');
-        this.player = document.getElementById('ytPlayer');
-        this.msgBox = document.getElementById('msgBox');
-        
-        this.STORAGE_KEY = 'buntstream_settings';
-        this.isPaused = false;
-        this.isTabHidden = false; 
-        this.isMuted = true;
-        this.currentSessionId = 0; 
-        
-        this.speed = 60;
-        this.delay = 1500;
-        this.commaDelay = 1000;
-        this.restartDelaySeconds = 7;
-        this.audioCtx = null;
-
-        this.initEvents();
-        this.loadSettings();
+        this.key = 'textcast_reader_v2_store';
+        this.settingsKey = 'textcast_reader_v2_settings';
+        this.legacyKey = 'buntstream_settings';
       }
 
-      /**
-       * 로컬 저장소에서 설정 불러오기
-       */
+      loadDocuments() {
+        const saved = this.readJson(this.key);
+        if (Array.isArray(saved) && saved.length) {
+          return saved.map((doc) => ({
+            ...doc,
+            enabled: doc.enabled !== false,
+            blocks: Array.isArray(doc.blocks) && doc.blocks.length ? doc.blocks : splitIntoBlocks(doc.text)
+          }));
+        }
+
+        const legacy = this.readJson(this.legacyKey);
+        const seedText = legacy?.script || defaultDocumentText;
+        const seedDoc = createDocument({
+          title: 'Welcome Broadcast',
+          text: seedText,
+          category: 'normal',
+          enabled: true
+        });
+        this.saveDocuments([seedDoc]);
+        return [seedDoc];
+      }
+
+      saveDocuments(documents) {
+        localStorage.setItem(this.key, JSON.stringify(documents));
+      }
+
       loadSettings() {
-        const savedData = localStorage.getItem(this.STORAGE_KEY);
-        if (savedData) {
-          try {
-            const data = JSON.parse(savedData);
-            this.populateUI(data);
-            this.applyToEngine(data);
-            this.showMsg("SETTINGS LOADED FROM CACHE");
-          } catch (e) {
-            console.error("Failed to parse settings", e);
-            this.start();
-          }
-        } else {
-          this.start();
-        }
-      }
-
-      /**
-       * 로컬 저장소에 설정 저장
-       */
-      saveSettings() {
-        const data = {
-          ytId: document.getElementById('ytIdInput').value.trim(),
-          fontFamily: document.getElementById('fontFamilyInput').value,
-          textColor: document.getElementById('textColorInput').value,
-          fontSize: parseInt(document.getElementById('fontSizeInput').value),
-          accentColor: document.getElementById('accentColorInput').value,
-          dimming: parseInt(document.getElementById('dimmingInput').value),
-          script: document.getElementById('scriptInput').value,
-          speed: parseInt(document.getElementById('speedInput').value),
-          delay: parseInt(document.getElementById('delayInput').value)
+        const saved = this.readJson(this.settingsKey);
+        const legacy = this.readJson(this.legacyKey);
+        return {
+          ytId: saved?.ytId || legacy?.ytId || 'kFnxuOnbHU0',
+          fontFamily: saved?.fontFamily || legacy?.fontFamily || "'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          textColor: saved?.textColor || legacy?.textColor || '#ffffff',
+          fontSize: Number(saved?.fontSize || legacy?.fontSize || 42),
+          accentColor: saved?.accentColor || legacy?.accentColor || '#00f2ff',
+          dimming: Number(saved?.dimming || legacy?.dimming || 40),
+          speed: Number(saved?.speed || legacy?.speed || 42),
+          delay: Number(saved?.delay || legacy?.delay || 1500)
         };
-
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-        this.applyToEngine(data);
-        this.showMsg("SETTINGS SAVED LOCALLY");
-        document.getElementById('settingsModal').classList.remove('show');
       }
 
-      populateUI(data) {
-        if (data.ytId) document.getElementById('ytIdInput').value = data.ytId;
-        if (data.fontFamily) document.getElementById('fontFamilyInput').value = data.fontFamily;
-        if (data.textColor) document.getElementById('textColorInput').value = data.textColor;
-        if (data.fontSize) document.getElementById('fontSizeInput').value = data.fontSize;
-        if (data.accentColor) document.getElementById('accentColorInput').value = data.accentColor;
-        if (data.dimming) document.getElementById('dimmingInput').value = data.dimming;
-        if (data.script) document.getElementById('scriptInput').value = data.script;
-        if (data.speed) document.getElementById('speedInput').value = data.speed;
-        if (data.delay) document.getElementById('delayInput').value = data.delay;
+      saveSettings(settings) {
+        localStorage.setItem(this.settingsKey, JSON.stringify(settings));
       }
 
-      applyToEngine(data) {
-        const root = document.documentElement;
-        if (data.textColor) root.style.setProperty('--text-color', data.textColor);
-        if (data.accentColor) root.style.setProperty('--accent', data.accentColor);
-        if (data.fontSize) root.style.setProperty('--font-size', data.fontSize + 'px');
-        if (data.fontFamily) root.style.setProperty('--font-family', data.fontFamily);
-        if (data.dimming) root.style.setProperty('--dimming', data.dimming / 100);
+      clear() {
+        localStorage.removeItem(this.key);
+        localStorage.removeItem(this.settingsKey);
+      }
 
-        if (data.ytId) {
-          const currentSrc = this.player.src;
-          const newSrc = `https://www.youtube.com/embed/${data.ytId}?autoplay=1&mute=${this.isMuted?1:0}&controls=0&loop=1&playlist=${data.ytId}&modestbranding=1&rel=0&enablejsapi=1`;
-          if (!currentSrc.includes(data.ytId)) {
-            this.player.src = newSrc;
-          }
+      readJson(key) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+          console.warn(`Failed to read ${key}`, error);
+          return null;
         }
-        
-        this.speed = parseInt(data.speed) || 60;
-        this.delay = parseInt(data.delay) || 1500;
+      }
+    }
 
-        this.start();
+    class TextCastEngine {
+      constructor({ getDocuments, updateDocument, onStateChange, onMessage }) {
+        this.getDocuments = getDocuments;
+        this.updateDocument = updateDocument;
+        this.onStateChange = onStateChange;
+        this.onMessage = onMessage;
+
+        this.playQueue = [];
+        this.urgentQueue = [];
+        this.storeCursor = 0;
+        this.state = {
+          currentDocId: null,
+          currentBlockIndex: 0,
+          interruptedDocId: null,
+          interruptedBlockIndex: 0,
+          mode: 'normal'
+        };
+        this.isPaused = false;
+        this.session = 0;
       }
 
-      initEvents() {
-        document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('show');
-        document.getElementById('playPauseBtn').onclick = () => this.togglePause();
-        document.getElementById('pasteBtn').onclick = () => this.handlePaste();
-        document.getElementById('soundBtn').onclick = () => this.toggleSound();
-        document.getElementById('applyBtn').onclick = () => this.saveSettings();
+      buildQueueFromStore() {
+        const docs = this.getBroadcastDocuments();
+        if (!docs.length) {
+          this.playQueue = [];
+          this.storeCursor = 0;
+          this.emit();
+          return;
+        }
 
-        document.getElementById('homeBtn').onclick = () => window.open('https://kitscript.com/game/pickme/', '_blank');
-        document.getElementById('youtubeBtn').onclick = () => window.open('https://youtube.com/@textcube', '_blank');
+        if (this.state.currentDocId) {
+          const currentIndex = docs.findIndex((doc) => doc.id === this.state.currentDocId);
+          this.storeCursor = currentIndex >= 0 ? (currentIndex + 1) % docs.length : 0;
+        } else if (this.storeCursor >= docs.length) {
+          this.storeCursor = 0;
+        }
+        this.emit();
+      }
 
-        document.addEventListener('visibilitychange', () => { this.isTabHidden = document.hidden; });
-        window.addEventListener('paste', (e) => {
-          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-          const text = e.clipboardData.getData('text');
-          if (text) { 
-            document.getElementById('scriptInput').value = text; 
-            this.showMsg("SYNCED & SAVING...");
-            this.saveSettings(); 
+      queueDocument(docId, blockIndex = 0, priority = 0) {
+        const doc = this.findDoc(docId);
+        if (!doc || !doc.blocks.length) return;
+        this.playQueue.push({ docId, blockIndex, priority });
+        this.emit();
+      }
+
+      addUrgentDocument(doc) {
+        this.urgentQueue.push({ docId: doc.id, blockIndex: 0, priority: 100 });
+        if (this.state.currentDocId && this.state.mode !== 'urgent') {
+          this.state.interruptedDocId = this.state.currentDocId;
+          this.state.interruptedBlockIndex = this.state.currentBlockIndex;
+        }
+        this.session++;
+        this.emit();
+      }
+
+      togglePause() {
+        this.isPaused = !this.isPaused;
+        this.emit();
+      }
+
+      nextDocument() {
+        this.session++;
+        this.playQueue = [];
+        this.state.interruptedDocId = null;
+        this.state.interruptedBlockIndex = 0;
+        this.state.currentDocId = null;
+        this.state.currentBlockIndex = 0;
+        this.state.mode = 'normal';
+        this.emit();
+      }
+
+      async run(player) {
+        const runId = ++this.session;
+        while (runId === this.session) {
+          if (this.isPaused || document.hidden) {
+            await player.sleep(120);
+            continue;
           }
+
+          const item = this.nextItem();
+          if (!item) {
+            await player.showIdle();
+            await player.sleep(500);
+            continue;
+          }
+
+          const doc = this.findDoc(item.docId);
+          if (!doc || !doc.blocks.length) continue;
+
+          this.state.currentDocId = doc.id;
+          this.state.currentBlockIndex = Math.min(item.blockIndex || 0, doc.blocks.length - 1);
+          if (this.state.mode !== 'urgent') this.state.mode = doc.category === 'urgent' ? 'urgent' : 'normal';
+          this.markPlayed(doc);
+          this.emit();
+
+          const finished = await this.playDocument(doc, player, runId);
+          if (!finished || runId !== this.session) return;
+          await this.afterDocument(doc);
+        }
+      }
+
+      nextItem() {
+        if (this.urgentQueue.length) {
+          this.state.mode = 'urgent';
+          return this.urgentQueue.shift();
+        }
+
+        if (!this.playQueue.length) return this.nextStoreItem();
+        this.state.mode = 'normal';
+        return this.playQueue.shift() || null;
+      }
+
+      nextStoreItem() {
+        const docs = this.getBroadcastDocuments();
+        if (!docs.length) return null;
+        if (this.storeCursor >= docs.length) this.storeCursor = 0;
+
+        const doc = docs[this.storeCursor];
+        this.storeCursor = (this.storeCursor + 1) % docs.length;
+        this.state.mode = 'normal';
+        return { docId: doc.id, blockIndex: 0, priority: 0 };
+      }
+
+      getBroadcastDocuments() {
+        return this.getDocuments().filter((doc) => doc.enabled && doc.category !== 'urgent' && doc.blocks.length);
+      }
+
+      getRemainingBroadcastCount() {
+        const docs = this.getBroadcastDocuments();
+        if (!docs.length) return 0;
+        if (!this.state.currentDocId) return docs.length;
+        return this.storeCursor === 0 ? 0 : docs.length - this.storeCursor;
+      }
+
+      async playDocument(doc, player, runId) {
+        for (let index = this.state.currentBlockIndex; index < doc.blocks.length; index++) {
+          if (runId !== this.session) return false;
+          while ((this.isPaused || document.hidden) && runId === this.session) await player.sleep(120);
+          if (runId !== this.session) return false;
+
+          if (this.urgentQueue.length && this.state.mode !== 'urgent') {
+            this.state.interruptedDocId = doc.id;
+            this.state.interruptedBlockIndex = index;
+            this.session++;
+            this.emit();
+            return false;
+          }
+
+          this.state.currentBlockIndex = index;
+          this.emit();
+          await player.renderTextBlock(doc, index, this.state.mode, runId);
+        }
+        return true;
+      }
+
+      async afterDocument(doc) {
+        if (this.state.mode === 'urgent' && this.state.interruptedDocId && !this.urgentQueue.length) {
+          const interruptedDocId = this.state.interruptedDocId;
+          const interruptedBlockIndex = this.state.interruptedBlockIndex;
+          this.state.mode = 'normal';
+          this.state.currentDocId = interruptedDocId;
+          this.state.currentBlockIndex = interruptedBlockIndex;
+          this.state.interruptedDocId = null;
+          this.state.interruptedBlockIndex = 0;
+          this.playQueue.unshift({ docId: interruptedDocId, blockIndex: interruptedBlockIndex, priority: 50 });
+          this.onMessage?.('[방송 재개]');
+        }
+        this.emit();
+      }
+
+      markPlayed(doc) {
+        this.updateDocument(doc.id, {
+          playCount: Number(doc.playCount || 0) + 1,
+          lastPlayedAt: nowIso()
         });
       }
 
-      playTypeSound() {
-        if (this.isMuted || this.isPaused || this.isTabHidden) return;
-        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = this.audioCtx.createOscillator();
-        const gain = this.audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(140 + Math.random() * 40, this.audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
-        osc.connect(gain); gain.connect(this.audioCtx.destination);
-        osc.start(); osc.stop(this.audioCtx.currentTime + 0.04);
+      findDoc(docId) {
+        return this.getDocuments().find((doc) => doc.id === docId);
+      }
+
+      emit() {
+        this.onStateChange?.({
+          ...this.state,
+          queueCount: this.playQueue.length + this.getRemainingBroadcastCount(),
+          urgentCount: this.urgentQueue.length,
+          isPaused: this.isPaused
+        });
+      }
+    }
+
+    class TextLayoutEngine {
+      constructor(app) {
+        this.app = app;
+        this.pretext = null;
+        this.cache = new Map();
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+      }
+
+      async init() {
+        if (!window.Intl?.Segmenter) {
+          console.warn('Pretext requires Intl.Segmenter. Fallback layout is active.');
+          return;
+        }
+
+        try {
+          this.pretext = await import('https://esm.sh/@chenglou/pretext@0.0.7');
+          console.info('Pretext layout engine loaded.');
+        } catch (error) {
+          console.warn('Pretext failed to load. Using fallback layout.', error);
+        }
+      }
+
+      layoutLines(text) {
+        const width = Math.max(240, this.app.renderer?.container.clientWidth || Math.floor(window.innerWidth * 0.78));
+        const font = this.app.getCanvasFont();
+        const lineHeight = this.app.getLineHeightPx();
+        const key = [text, width, font, lineHeight, this.app.settings.accentColor].join('|');
+        if (this.cache.has(key)) return this.cache.get(key);
+
+        let lines = null;
+        if (this.pretext?.prepareWithSegments && this.pretext?.layoutWithLines) {
+          try {
+            const prepared = this.pretext.prepareWithSegments(text, font, {
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'keep-all',
+              letterSpacing: 0
+            });
+            lines = this.pretext.layoutWithLines(prepared, width, lineHeight).lines.map((line) => ({
+              text: line.text,
+              width: line.width
+            }));
+          } catch (error) {
+            console.warn('Pretext layout failed. Falling back for this block.', error);
+          }
+        }
+
+        if (!lines) lines = this.fallbackLayoutLines(text, width, font);
+        const normalized = lines.length ? lines : [{ text: '', width: 0 }];
+        this.cache.set(key, normalized);
+        return normalized;
+      }
+
+      fallbackLayoutLines(text, maxWidth, font) {
+        this.ctx.font = font;
+        const source = String(text || '').replace(/\r\n/g, '\n');
+        const lines = [];
+
+        source.split('\n').forEach((paragraph, paragraphIndex, paragraphs) => {
+          const words = paragraph.split(/(\s+)/).filter((part) => part.length);
+          let current = '';
+
+          words.forEach((word) => {
+            const candidate = current + word;
+            if (this.ctx.measureText(candidate).width <= maxWidth || !current.trim()) {
+              current = candidate;
+              return;
+            }
+            lines.push({ text: current.trimEnd(), width: this.ctx.measureText(current).width });
+            current = word.trimStart();
+          });
+
+          if (current || paragraph.length === 0) {
+            lines.push({ text: current.trimEnd(), width: this.ctx.measureText(current).width });
+          }
+          if (paragraphIndex < paragraphs.length - 1 && paragraph.trim()) {
+            lines.push({ text: '', width: 0 });
+          }
+        });
+
+        return lines;
+      }
+
+      clearCache() {
+        this.cache.clear();
+        this.pretext?.clearCache?.();
+      }
+    }
+
+    class TextBlockRenderer {
+      constructor(app) {
+        this.app = app;
+        this.container = document.getElementById('textContainer');
+        this.statusBadge = document.getElementById('statusBadge');
+        this.audioCtx = null;
+        this.isMuted = true;
+        this.visibleLines = [];
+      }
+
+      async renderTextBlock(doc, blockIndex, mode, runId) {
+        const text = doc.blocks[blockIndex] || '';
+        const lines = this.app.layoutEngine.layoutLines(text);
+        this.setBadge(mode === 'urgent' ? '[긴급]' : '', mode);
+
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+          if (runId !== this.app.engine.session) return;
+          const lineText = lines[lineIndex].text || '';
+          const current = this.beginCurrentLine(`${doc.id}:${blockIndex}:${lineIndex}`, lineText);
+
+          for (const char of lineText) {
+            if (runId !== this.app.engine.session) return;
+            while ((this.app.engine.isPaused || document.hidden) && runId === this.app.engine.session) {
+              await this.sleep(120);
+            }
+            current.textContent += char;
+            this.playTypeSound();
+            await this.sleep(this.getTypingDelay(char));
+          }
+
+          await this.sleep(this.getLineHoldDelay(lineText, lineIndex, lines.length));
+        }
+        await this.sleep(Math.max(180, Math.floor(this.app.settings.delay * 0.35)));
+      }
+
+      async showIdle() {
+        this.visibleLines = [];
+        this.container.innerHTML = '<div class="block current">활성 문서가 없습니다.</div>';
+        this.setBadge('', 'normal');
+      }
+
+      beginCurrentLine(key, fullText) {
+        this.visibleLines.forEach((item) => {
+          item.age += 1;
+          this.applyLineAge(item);
+        });
+
+        const element = document.createElement('div');
+        element.className = 'broadcast-line after';
+        element.dataset.lineKey = key;
+        element.dataset.fullText = fullText;
+        element.textContent = '';
+        this.container.appendChild(element);
+
+        const item = { key, element, age: 0 };
+        this.visibleLines.unshift(item);
+        this.trimLineWindow();
+        void element.offsetHeight;
+        this.applyLineAge(item);
+        return element;
+      }
+
+      applyLineAge(item) {
+        if (item.age === 0) item.element.className = 'broadcast-line current';
+        else if (item.age === 1) item.element.className = 'broadcast-line before';
+        else if (item.age === 2) item.element.className = 'broadcast-line before-far';
+        else item.element.className = 'broadcast-line leaving';
+      }
+
+      trimLineWindow() {
+        const staying = [];
+        this.visibleLines.forEach((item) => {
+          if (item.age <= 2) {
+            staying.push(item);
+            return;
+          }
+          setTimeout(() => item.element.remove(), 650);
+        });
+        this.visibleLines = staying;
+      }
+
+      getTypingDelay(char) {
+        const base = Math.max(5, Number(this.app.settings.speed) || 42);
+        if (/[.!?。！？…]/.test(char)) return base + 420 + Math.random() * 180;
+        if (/[,，、;；:：]/.test(char)) return base + 180 + Math.random() * 120;
+        if (/\s/.test(char)) return Math.max(12, base * 0.55);
+        return base + Math.random() * Math.max(10, base * 0.45);
+      }
+
+      getLineHoldDelay(lineText, lineIndex, lineCount) {
+        const base = Math.max(120, Number(this.app.settings.delay) || 1500);
+        const isLastLine = lineIndex === lineCount - 1;
+        const punctuationPause = /[.!?。！？…]$/.test(lineText.trim()) ? 280 : 0;
+        return Math.floor(base * (isLastLine ? 0.58 : 0.32)) + punctuationPause;
+      }
+
+      setBadge(text, mode) {
+        this.statusBadge.textContent = text;
+        this.statusBadge.className = `status-badge${text ? ' show' : ''}${mode === 'urgent' ? ' urgent' : ''}${mode === 'resume' ? ' resume' : ''}`;
       }
 
       toggleSound() {
         this.isMuted = !this.isMuted;
-        document.getElementById('soundBtn').querySelector('span').innerText = this.isMuted ? '🔈' : '🔊';
-        this.player.contentWindow.postMessage(JSON.stringify({ event: 'command', func: this.isMuted ? 'mute' : 'unMute', args: '' }), '*');
         if (!this.isMuted && this.audioCtx?.state === 'suspended') this.audioCtx.resume();
-        this.showMsg(this.isMuted ? "MUTED" : "SOUND ON");
+        return this.isMuted;
       }
 
-      showMsg(text) {
-        this.msgBox.textContent = text; this.msgBox.style.display = 'block';
-        setTimeout(() => { this.msgBox.style.display = 'none'; }, 2000);
+      playTypeSound() {
+        if (this.isMuted || this.app.engine.isPaused || document.hidden) return;
+        if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(135 + Math.random() * 45, this.audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.045, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + 0.04);
       }
 
-      async handlePaste() {
-        try {
-          const text = await navigator.clipboard.readText();
-          if (text) { 
-            document.getElementById('scriptInput').value = text; 
-            this.showMsg("SYNCED & SAVING...");
-            this.saveSettings();
-          }
-        } catch (err) { this.showMsg("USE CTRL+V TO PASTE"); }
-      }
-
-      async sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-      async checkPause() { while (this.isPaused || this.isTabHidden) await this.sleep(100); }
-
-      togglePause() {
-        this.isPaused = !this.isPaused;
-        document.getElementById('playPauseBtn').querySelector('span').innerText = this.isPaused ? '▶' : '⏸';
-      }
-
-      async start() {
-        this.currentSessionId++;
-        const mySessionId = this.currentSessionId;
-        this.container.innerHTML = '';
-        this.container.style.transform = 'translateY(0)';
-        this.isPaused = false;
-        
-        const scriptRaw = document.getElementById('scriptInput').value;
-        const lines = scriptRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-        let idx = 0;
-        while (idx < lines.length && mySessionId === this.currentSessionId) {
-          await this.checkPause();
-          const lineEl = document.createElement('div');
-          lineEl.className = 'line current';
-          this.container.appendChild(lineEl);
-          
-          for (let char of lines[idx]) {
-            if (mySessionId !== this.currentSessionId) return;
-            await this.checkPause();
-            lineEl.textContent += char;
-            this.playTypeSound();
-            this.autoScroll(); 
-            await this.sleep(char === ',' ? this.commaDelay : this.speed);
-          }
-          lineEl.classList.remove('current');
-          idx++;
-          await this.sleep(this.delay);
-          this.autoScroll();
-        }
-
-        if (mySessionId === this.currentSessionId) await this.handleRestart(mySessionId);
-      }
-
-      async handleRestart(sessionId) {
-        const cd = document.createElement('div');
-        cd.className = 'line current';
-        cd.style.color = 'var(--accent)';
-        this.container.appendChild(cd);
-        for (let i = this.restartDelaySeconds; i > 0; i--) {
-          if (sessionId !== this.currentSessionId) return;
-          await this.checkPause();
-          cd.textContent = `RESTARTING IN ${i}...`;
-          this.autoScroll();
-          await this.sleep(1000);
-        }
-        if (sessionId === this.currentSessionId) this.start();
-      }
-
-      autoScroll() {
-        const lastLine = this.container.lastElementChild;
-        if (!lastLine) return;
-        const stageH = this.stage.clientHeight;
-        const lastLineBottom = lastLine.offsetTop + lastLine.offsetHeight;
-        const offset = Math.max(0, lastLineBottom);
-        this.container.style.transform = `translateY(-${offset}px)`;
+      sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
       }
     }
 
-    window.onload = () => { window.app = new TypingOverlay(); };
+    class TextCastApp {
+      constructor() {
+        this.storage = new TextCastStorage();
+        this.documents = this.storage.loadDocuments();
+        this.settings = this.storage.loadSettings();
+        this.selectedDocId = this.documents[0]?.id || null;
+        this.ytPlayer = document.getElementById('ytPlayer');
+        this.layoutEngine = new TextLayoutEngine(this);
+
+        this.engine = new TextCastEngine({
+          getDocuments: () => this.documents,
+          updateDocument: (id, patch) => this.updateDocument(id, patch, { silentSelect: true }),
+          onStateChange: (state) => this.renderPlaybackState(state),
+          onMessage: (message) => this.showMessage(message)
+        });
+        this.renderer = new TextBlockRenderer(this);
+
+        this.bindEvents();
+        this.applySettingsToUi();
+        this.applySettingsToPage();
+        this.renderDocumentList();
+        this.loadEditor(this.selectedDocId);
+        this.engine.buildQueueFromStore();
+        this.engine.run(this.renderer);
+        this.layoutEngine.init();
+      }
+
+      bindEvents() {
+        document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => this.closeSettings());
+        document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePause());
+        document.getElementById('nextBtn').addEventListener('click', () => this.nextDocument());
+        document.getElementById('pasteBtn').addEventListener('click', () => this.handleClipboardUrgent());
+        document.getElementById('soundBtn').addEventListener('click', () => this.toggleSound());
+        document.getElementById('newDocBtn').addEventListener('click', () => this.newDocument());
+        document.getElementById('saveDocBtn').addEventListener('click', () => this.saveEditorDocument());
+        document.getElementById('queueDocBtn').addEventListener('click', () => this.queueSelectedDocument());
+        document.getElementById('duplicateDocBtn').addEventListener('click', () => this.duplicateSelectedDocument());
+        document.getElementById('deleteDocBtn').addEventListener('click', () => this.deleteSelectedDocument());
+        document.getElementById('saveRulesBtn').addEventListener('click', () => this.saveRules());
+        document.getElementById('resetStorageBtn').addEventListener('click', () => this.resetStorage());
+        document.getElementById('searchInput').addEventListener('input', () => this.renderDocumentList());
+        document.getElementById('categoryFilter').addEventListener('change', () => this.renderDocumentList());
+
+        window.addEventListener('paste', (event) => {
+          const target = event.target;
+          if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+          const text = event.clipboardData?.getData('text');
+          if (text?.trim()) this.addUrgentFromText(text);
+        });
+
+        document.addEventListener('visibilitychange', () => this.engine.emit());
+      }
+
+      openSettings() {
+        document.getElementById('settingsModal').classList.add('show');
+        this.renderDocumentList();
+      }
+
+      closeSettings() {
+        document.getElementById('settingsModal').classList.remove('show');
+      }
+
+      togglePause() {
+        this.engine.togglePause();
+        this.updatePlayButton();
+      }
+
+      nextDocument() {
+        this.engine.nextDocument();
+        this.engine.run(this.renderer);
+        this.showMessage('다음 문서로 이동합니다.');
+      }
+
+      async handleClipboardUrgent() {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (!text.trim()) {
+            this.showMessage('클립보드에 텍스트가 없습니다.');
+            return;
+          }
+          this.addUrgentFromText(text);
+        } catch (error) {
+          this.showMessage('Ctrl+V로 긴급 문서를 붙여넣어 주세요.');
+        }
+      }
+
+      addUrgentFromText(text) {
+        const doc = createDocument({
+          title: `긴급 ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`,
+          text,
+          category: 'urgent',
+          enabled: true
+        });
+        this.documents.unshift(doc);
+        this.selectedDocId = doc.id;
+        this.persistDocuments();
+        this.renderDocumentList();
+        this.loadEditor(doc.id);
+        this.engine.addUrgentDocument(doc);
+        this.engine.run(this.renderer);
+        this.showMessage('긴급 문서가 Urgent Queue에 추가되었습니다.');
+      }
+
+      newDocument() {
+        const doc = createDocument({
+          title: '새 문서',
+          text: '',
+          category: 'normal',
+          enabled: true
+        });
+        this.documents.unshift(doc);
+        this.selectedDocId = doc.id;
+        this.persistDocuments();
+        this.renderDocumentList();
+        this.loadEditor(doc.id);
+      }
+
+      saveEditorDocument() {
+        const docId = this.selectedDocId;
+        if (!docId) return;
+        const text = document.getElementById('docTextInput').value;
+        this.updateDocument(docId, {
+          title: document.getElementById('docTitleInput').value.trim() || 'Untitled Document',
+          text,
+          category: document.getElementById('docCategoryInput').value,
+          enabled: document.getElementById('docEnabledInput').checked,
+          blocks: splitIntoBlocks(text),
+          updatedAt: nowIso()
+        });
+        this.engine.buildQueueFromStore();
+        this.showMessage('문서를 저장했습니다.');
+      }
+
+      updateDocument(docId, patch, options = {}) {
+        const index = this.documents.findIndex((doc) => doc.id === docId);
+        if (index < 0) return;
+        this.documents[index] = { ...this.documents[index], ...patch };
+        this.persistDocuments();
+        if (!options.silentSelect) this.selectedDocId = docId;
+        this.renderDocumentList();
+        if (!options.silentSelect) this.loadEditor(docId);
+      }
+
+      queueSelectedDocument() {
+        if (!this.selectedDocId) return;
+        this.engine.queueDocument(this.selectedDocId, 0, 10);
+        this.showMessage('선택 문서를 Play Queue에 추가했습니다.');
+      }
+
+      duplicateSelectedDocument() {
+        const source = this.currentEditorDoc();
+        if (!source) return;
+        const doc = createDocument({
+          title: `${source.title} copy`,
+          text: source.text,
+          category: source.category,
+          enabled: source.enabled
+        });
+        this.documents.unshift(doc);
+        this.selectedDocId = doc.id;
+        this.persistDocuments();
+        this.renderDocumentList();
+        this.loadEditor(doc.id);
+      }
+
+      deleteSelectedDocument() {
+        if (!this.selectedDocId) return;
+        const doc = this.currentEditorDoc();
+        if (!doc) return;
+        if (!confirm(`'${doc.title}' 문서를 삭제할까요?`)) return;
+        this.documents = this.documents.filter((item) => item.id !== doc.id);
+        this.selectedDocId = this.documents[0]?.id || null;
+        this.persistDocuments();
+        this.engine.buildQueueFromStore();
+        this.renderDocumentList();
+        this.loadEditor(this.selectedDocId);
+        this.showMessage('문서를 삭제했습니다.');
+      }
+
+      saveRules() {
+        this.settings = {
+          ytId: document.getElementById('ytIdInput').value.trim() || 'kFnxuOnbHU0',
+          fontFamily: document.getElementById('fontFamilyInput').value,
+          textColor: document.getElementById('textColorInput').value,
+          fontSize: Number(document.getElementById('fontSizeInput').value) || 42,
+          accentColor: document.getElementById('accentColorInput').value,
+          dimming: Number(document.getElementById('dimmingInput').value) || 40,
+          speed: Number(document.getElementById('speedInput').value) || 42,
+          delay: Number(document.getElementById('delayInput').value) || 1500
+        };
+        this.storage.saveSettings(this.settings);
+        this.applySettingsToPage();
+        this.layoutEngine.clearCache();
+        this.showMessage('재생 규칙을 저장했습니다.');
+      }
+
+      resetStorage() {
+        if (!confirm('TextCast v2 로컬 저장소를 초기화할까요?')) return;
+        this.storage.clear();
+        this.documents = this.storage.loadDocuments();
+        this.settings = this.storage.loadSettings();
+        this.selectedDocId = this.documents[0]?.id || null;
+        this.applySettingsToUi();
+        this.applySettingsToPage();
+        this.layoutEngine.clearCache();
+        this.renderDocumentList();
+        this.loadEditor(this.selectedDocId);
+        this.engine.buildQueueFromStore();
+        this.engine.nextDocument();
+        this.engine.run(this.renderer);
+        this.showMessage('로컬 저장소를 초기화했습니다.');
+      }
+
+      currentEditorDoc() {
+        return this.documents.find((doc) => doc.id === this.selectedDocId);
+      }
+
+      loadEditor(docId) {
+        const doc = this.documents.find((item) => item.id === docId);
+        const titleInput = document.getElementById('docTitleInput');
+        const textInput = document.getElementById('docTextInput');
+        const categoryInput = document.getElementById('docCategoryInput');
+        const enabledInput = document.getElementById('docEnabledInput');
+
+        if (!doc) {
+          titleInput.value = '';
+          textInput.value = '';
+          categoryInput.value = 'normal';
+          enabledInput.checked = true;
+          return;
+        }
+
+        this.selectedDocId = doc.id;
+        titleInput.value = doc.title;
+        textInput.value = doc.text;
+        categoryInput.value = doc.category;
+        enabledInput.checked = doc.enabled;
+        this.renderDocumentList();
+      }
+
+      renderDocumentList() {
+        const list = document.getElementById('documentList');
+        const search = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+        const category = document.getElementById('categoryFilter')?.value || 'all';
+        const docs = this.documents.filter((doc) => {
+          const matchesSearch = !search || `${doc.title} ${doc.text}`.toLowerCase().includes(search);
+          const matchesCategory = category === 'all' || doc.category === category;
+          return matchesSearch && matchesCategory;
+        });
+
+        list.innerHTML = '';
+        if (!docs.length) {
+          const empty = document.createElement('div');
+          empty.className = 'doc-row disabled';
+          empty.textContent = '표시할 문서가 없습니다.';
+          list.appendChild(empty);
+          this.renderStoreMetric();
+          return;
+        }
+
+        docs.forEach((doc) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = `doc-row${doc.id === this.selectedDocId ? ' active' : ''}${doc.enabled ? '' : ' disabled'}`;
+          row.innerHTML = `
+            <strong>${this.escapeHtml(doc.title)}</strong>
+            <span class="doc-meta">
+              <span>${doc.category}</span>
+              <span>${doc.blocks.length} blocks</span>
+              <span>${doc.playCount || 0} plays</span>
+              <span>${doc.enabled ? 'enabled' : 'disabled'}</span>
+            </span>
+          `;
+          row.addEventListener('click', () => this.loadEditor(doc.id));
+          list.appendChild(row);
+        });
+        this.renderStoreMetric();
+      }
+
+      renderPlaybackState(state) {
+        const doc = this.documents.find((item) => item.id === state.currentDocId);
+        document.getElementById('currentTitle').textContent = doc?.title || '대기 중';
+        document.getElementById('currentMeta').textContent = doc
+          ? `${doc.category} / ${doc.playCount || 0} plays / last ${formatDate(doc.lastPlayedAt)}`
+          : '활성 문서가 Play Queue에 올라오기를 기다리는 중입니다.';
+        document.getElementById('blockMetric').textContent = doc ? `${state.currentBlockIndex + 1} / ${doc.blocks.length}` : '0 / 0';
+        document.getElementById('queueMetric').textContent = `${state.queueCount + state.urgentCount}`;
+        this.renderStoreMetric();
+        this.updatePlayButton();
+      }
+
+      renderStoreMetric() {
+        document.getElementById('storeMetric').textContent = `${this.documents.length}`;
+      }
+
+      updatePlayButton() {
+        const button = document.getElementById('playPauseBtn');
+        button.querySelector('span').textContent = this.engine.isPaused ? '▶' : 'Ⅱ';
+      }
+
+      toggleSound() {
+        const muted = this.renderer.toggleSound();
+        document.getElementById('soundBtn').querySelector('span').textContent = muted ? '♪' : '♫';
+        this.ytPlayer.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: muted ? 'mute' : 'unMute', args: '' }), '*');
+        this.showMessage(muted ? '타이핑 소리 꺼짐' : '타이핑 소리 켜짐');
+      }
+
+      getCanvasFont() {
+        const size = Number(this.settings.fontSize) || 42;
+        const family = this.settings.fontFamily || "'Pretendard', sans-serif";
+        return `800 ${size}px ${family}`;
+      }
+
+      getLineHeightPx() {
+        const size = Number(this.settings.fontSize) || 42;
+        return size * 1.5;
+      }
+
+      applySettingsToUi() {
+        document.getElementById('ytIdInput').value = this.settings.ytId;
+        document.getElementById('fontFamilyInput').value = this.settings.fontFamily;
+        document.getElementById('textColorInput').value = this.settings.textColor;
+        document.getElementById('fontSizeInput').value = this.settings.fontSize;
+        document.getElementById('accentColorInput').value = this.settings.accentColor;
+        document.getElementById('dimmingInput').value = this.settings.dimming;
+        document.getElementById('speedInput').value = this.settings.speed;
+        document.getElementById('delayInput').value = this.settings.delay;
+      }
+
+      applySettingsToPage() {
+        const root = document.documentElement;
+        root.style.setProperty('--text-color', this.settings.textColor);
+        root.style.setProperty('--accent', this.settings.accentColor);
+        root.style.setProperty('--font-size', `${this.settings.fontSize}px`);
+        root.style.setProperty('--font-family', this.settings.fontFamily);
+        root.style.setProperty('--dimming', this.settings.dimming / 100);
+
+        const id = this.settings.ytId;
+        const newSrc = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&modestbranding=1&rel=0&enablejsapi=1`;
+        if (!String(this.ytPlayer.src || '').includes(id)) this.ytPlayer.src = newSrc;
+      }
+
+      persistDocuments() {
+        this.storage.saveDocuments(this.documents);
+      }
+
+      showMessage(text) {
+        const box = document.getElementById('msgBox');
+        box.textContent = text;
+        box.style.display = 'block';
+        clearTimeout(this.messageTimer);
+        this.messageTimer = setTimeout(() => {
+          box.style.display = 'none';
+        }, 2200);
+
+        if (text === '[방송 재개]') {
+          this.renderer.setBadge('[방송 재개]', 'resume');
+          setTimeout(() => {
+            if (this.engine.state.mode !== 'urgent') this.renderer.setBadge('', 'normal');
+          }, 1800);
+        }
+      }
+
+      escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      window.textCast = new TextCastApp();
+    });
   </script>
 </body>
 </html>
