@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -732,11 +732,11 @@
 
   <header class="topbar">
     <nav class="toolbar" aria-label="Reader controls">
-      <button class="icon-btn" id="playPauseBtn" title="재생/일시정지"><span>Ⅱ</span><label>PLAY</label></button>
-      <button class="icon-btn" id="nextBtn" title="다음 문서"><span>↷</span><label>NEXT</label></button>
-      <button class="icon-btn" id="pasteBtn" title="클립보드의 텍스트를 긴급 문서로 추가"><span>!</span><label>URGENT</label></button>
-      <button class="icon-btn" id="soundBtn" title="타이핑 소리 켜기/끄기"><span>♪</span><label>SOUND</label></button>
-      <button class="icon-btn" id="settingsBtn" title="설정"><span>⚙</span><label>SET</label></button>
+      <button class="icon-btn" id="playPauseBtn" title="Play / Pause"><span>Ⅱ</span><label>PLAY</label></button>
+      <button class="icon-btn" id="nextBtn" title="Next document"><span>↷</span><label>NEXT</label></button>
+      <button class="icon-btn" id="pasteBtn" title="Add clipboard text as an urgent message"><span>!</span><label>URGENT</label></button>
+      <button class="icon-btn" id="soundBtn" title="Toggle typing sound"><span>♪</span><label>SOUND</label></button>
+      <button class="icon-btn" id="settingsBtn" title="Settings"><span>⚙</span><label>SET</label></button>
     </nav>
   </header>
 
@@ -747,8 +747,8 @@
 
   <footer class="bottombar">
     <div class="now-playing">
-      <strong id="currentTitle">대기 중</strong>
-      <span id="currentMeta">문서를 추가하거나 활성 문서를 재생 큐에 올려주세요.</span>
+      <strong id="currentTitle">Standby</strong>
+      <span id="currentMeta">Add a document or enable documents in the broadcast queue.</span>
     </div>
     <div class="metrics">
       <div class="metric"><span>Block</span><strong id="blockMetric">0 / 0</strong></div>
@@ -757,34 +757,34 @@
     </div>
   </footer>
 
-  <div id="urgentComposer" class="urgent-composer" aria-label="긴급 메시지 입력">
+  <div id="urgentComposer" class="urgent-composer" aria-label="Urgent message input">
     <div class="urgent-composer-inner">
-      <textarea id="urgentInput" rows="1" placeholder="긴급 메시지 입력"></textarea>
-      <button class="text-btn" id="sendUrgentBtn" title="긴급 큐에 추가">!</button>
+      <textarea id="urgentInput" rows="1" placeholder="Type urgent message"></textarea>
+      <button class="text-btn" id="sendUrgentBtn" title="Add to urgent queue">!</button>
     </div>
   </div>
 
   <div id="msgBox">SYSTEM NOTIFIED</div>
 
-  <section id="settingsModal" class="modal" aria-label="설정 패널">
+  <section id="settingsModal" class="modal" aria-label="Settings panel">
     <div class="settings-content">
       <div class="settings-head">
         <div>
           <h2>TextCast Reader v2</h2>
           <p>Document Store / Play Queue / Urgent Queue / Player</p>
         </div>
-        <button class="text-btn" id="closeSettingsBtn">닫기</button>
+        <button class="text-btn" id="closeSettingsBtn">Close</button>
       </div>
       <div class="settings-body">
         <aside class="store-panel">
           <div class="panel-tools">
             <div class="field">
-              <label for="searchInput">문서 검색</label>
-              <input type="search" id="searchInput" placeholder="제목 또는 본문 검색" />
+              <label for="searchInput">Search Documents</label>
+              <input type="search" id="searchInput" placeholder="Search title or body" />
             </div>
             <div class="split-row">
               <div class="field">
-                <label for="categoryFilter">카테고리</label>
+                <label for="categoryFilter">Category</label>
                 <select id="categoryFilter">
                   <option value="all">all</option>
                   <option value="normal">normal</option>
@@ -797,7 +797,7 @@
               </div>
               <div class="field">
                 <label>&nbsp;</label>
-                <button class="text-btn primary-btn" id="newDocBtn">문서 추가</button>
+                <button class="text-btn primary-btn" id="newDocBtn">Add Document</button>
               </div>
             </div>
           </div>
@@ -807,11 +807,11 @@
         <section class="editor-panel">
           <div class="editor-grid">
             <div class="field">
-              <label for="docTitleInput">제목</label>
+              <label for="docTitleInput">Title</label>
               <input type="text" id="docTitleInput" />
             </div>
             <div class="field">
-              <label for="docCategoryInput">문서 카테고리</label>
+              <label for="docCategoryInput">Document Category</label>
               <select id="docCategoryInput">
                 <option value="normal">normal</option>
                 <option value="notice">notice</option>
@@ -821,12 +821,12 @@
                 <option value="urgent">urgent</option>
               </select>
             </div>
-            <label class="toggle"><input type="checkbox" id="docEnabledInput" /> 활성</label>
+            <label class="toggle"><input type="checkbox" id="docEnabledInput" /> Enabled</label>
           </div>
 
           <div class="field">
-            <label for="docTextInput">본문</label>
-            <textarea id="docTextInput" placeholder="문서를 문단 또는 문장 단위로 입력하세요. 저장 시 블록으로 분리됩니다."></textarea>
+            <label for="docTextInput">Body</label>
+            <textarea id="docTextInput" placeholder="Enter paragraphs or sentences. The document will be split into blocks when saved."></textarea>
           </div>
 
           <div class="style-grid">
@@ -869,12 +869,12 @@
           </div>
 
           <div class="editor-actions">
-            <button class="text-btn primary-btn" id="saveDocBtn">문서 저장</button>
-            <button class="text-btn" id="queueDocBtn">큐에 올리기</button>
-            <button class="text-btn" id="duplicateDocBtn">복제</button>
-            <button class="text-btn danger-btn" id="deleteDocBtn">삭제</button>
-            <button class="text-btn" id="saveRulesBtn">재생 규칙 저장</button>
-            <button class="text-btn danger-btn" id="resetStorageBtn">로컬 저장소 초기화</button>
+            <button class="text-btn primary-btn" id="saveDocBtn">Save Document</button>
+            <button class="text-btn" id="queueDocBtn">Add to Queue</button>
+            <button class="text-btn" id="duplicateDocBtn">Duplicate</button>
+            <button class="text-btn danger-btn" id="deleteDocBtn">Delete</button>
+            <button class="text-btn" id="saveRulesBtn">Save Playback Rules</button>
+            <button class="text-btn danger-btn" id="resetStorageBtn">Reset Local Storage</button>
           </div>
         </section>
       </div>
@@ -884,18 +884,18 @@
   <script>
     const CATEGORIES = ['normal', 'notice', 'ad', 'quote', 'character', 'urgent'];
 
-    const defaultDocumentText = `조용한 텍스트 방송을 시작합니다.
+    const defaultDocumentText = `A quiet text broadcast begins.
 
-이제 긴 문서 하나를 계속 DOM에 쌓지 않습니다.
-문서는 Document Store에 저장되고,
-Player는 Play Queue에서 docId와 blockIndex만 꺼내 재생합니다.
+Long documents are no longer stacked into the DOM.
+Documents live in the Document Store,
+and the Player reads only docId and blockIndex from the Play Queue.
 
-Ctrl+V 또는 긴급 붙여넣기 버튼으로 들어온 텍스트는
-Urgent Queue에 즉시 올라가고,
-현재 방송은 지금 블록의 처음으로 돌아갈 수 있도록 위치를 기억합니다.
+Text added with Ctrl+V, the urgent paste button, or the urgent input composer
+enters the Urgent Queue immediately.
+The current broadcast remembers its position so it can return to the start of the interrupted block.
 
-긴급 문서가 끝나면 [방송 재개] 표시와 함께
-중단된 문서의 현재 블록부터 다시 재생합니다.`;
+When urgent playback ends,
+the original broadcast resumes from the interrupted block.`;
 
     function uid(prefix = 'id') {
       return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1186,7 +1186,7 @@ Urgent Queue에 즉시 올라가고,
           this.state.interruptedDocId = null;
           this.state.interruptedBlockIndex = 0;
           this.resumeItem = { docId: interruptedDocId, blockIndex: interruptedBlockIndex, priority: 50 };
-          this.onMessage?.('[방송 재개]');
+          this.onMessage?.('[Broadcast Resumed]');
         }
         this.emit();
       }
@@ -1320,7 +1320,7 @@ Urgent Queue에 즉시 올라가고,
       async renderTextBlock(doc, blockIndex, mode, runId) {
         const text = doc.blocks[blockIndex] || '';
         const lines = this.app.layoutEngine.layoutLines(text);
-        this.setBadge(mode === 'urgent' ? '[긴급]' : '', mode);
+        this.setBadge(mode === 'urgent' ? '[Urgent]' : '', mode);
 
         for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
           if (runId !== this.app.engine.session) return;
@@ -1344,7 +1344,7 @@ Urgent Queue에 즉시 올라가고,
 
       async showIdle() {
         this.visibleLines = [];
-        this.container.innerHTML = '<div class="block current">활성 문서가 없습니다.</div>';
+        this.container.innerHTML = '<div class="block current">No enabled documents.</div>';
         this.setBadge('', 'normal');
       }
 
@@ -1510,19 +1510,19 @@ Urgent Queue에 즉시 올라가고,
       nextDocument() {
         this.engine.nextDocument();
         this.engine.run(this.renderer);
-        this.showMessage('다음 문서로 이동합니다.');
+        this.showMessage('Moving to the next document.');
       }
 
       async handleClipboardUrgent() {
         try {
           const text = await navigator.clipboard.readText();
           if (!text.trim()) {
-            this.showMessage('클립보드에 텍스트가 없습니다.');
+            this.showMessage('Clipboard does not contain text.');
             return;
           }
           this.addUrgentFromText(text);
         } catch (error) {
-          this.showMessage('Ctrl+V로 긴급 문서를 붙여넣어 주세요.');
+          this.showMessage('Use Ctrl+V to paste an urgent message.');
         }
       }
 
@@ -1592,7 +1592,7 @@ Urgent Queue에 즉시 올라가고,
 
       addUrgentFromText(text) {
         const doc = createDocument({
-          title: `긴급 ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`,
+          title: `Urgent ${new Date().toLocaleTimeString('en-US', { hour12: false })}`,
           text,
           category: 'urgent',
           enabled: true
@@ -1605,12 +1605,12 @@ Urgent Queue에 즉시 올라가고,
         this.loadEditor(doc.id);
         this.engine.addUrgentDocument(doc);
         this.engine.run(this.renderer);
-        this.showMessage('긴급 문서가 Urgent Queue에 추가되었습니다.');
+        this.showMessage('Urgent message added to the Urgent Queue.');
       }
 
       newDocument() {
         const doc = createDocument({
-          title: '새 문서',
+          title: 'New Document',
           text: '',
           category: 'normal',
           enabled: true
@@ -1636,7 +1636,7 @@ Urgent Queue에 즉시 올라가고,
           updatedAt: nowIso()
         });
         this.engine.ensureBroadcastQueue();
-        this.showMessage('문서를 저장했습니다.');
+        this.showMessage('Document saved.');
       }
 
       updateDocument(docId, patch, options = {}) {
@@ -1652,7 +1652,7 @@ Urgent Queue에 즉시 올라가고,
       queueSelectedDocument() {
         if (!this.selectedDocId) return;
         this.engine.queueDocument(this.selectedDocId, 0, 10);
-        this.showMessage('선택 문서를 Play Queue에 추가했습니다.');
+        this.showMessage('Selected document added to the Play Queue.');
       }
 
       duplicateSelectedDocument() {
@@ -1675,7 +1675,7 @@ Urgent Queue에 즉시 올라가고,
         if (!this.selectedDocId) return;
         const doc = this.currentEditorDoc();
         if (!doc) return;
-        if (!confirm(`'${doc.title}' 문서를 삭제할까요?`)) return;
+        if (!confirm(`Delete '${doc.title}'?`)) return;
         this.documents = this.documents.filter((item) => item.id !== doc.id);
         this.selectedDocId = this.documents[0]?.id || null;
         this.persistDocuments();
@@ -1684,7 +1684,7 @@ Urgent Queue에 즉시 올라가고,
         this.engine.ensureBroadcastQueue();
         this.renderDocumentList();
         this.loadEditor(this.selectedDocId);
-        this.showMessage('문서를 삭제했습니다.');
+        this.showMessage('Document deleted.');
       }
 
       saveRules() {
@@ -1701,11 +1701,11 @@ Urgent Queue에 즉시 올라가고,
         this.storage.saveSettings(this.settings);
         this.applySettingsToPage();
         this.layoutEngine.clearCache();
-        this.showMessage('재생 규칙을 저장했습니다.');
+        this.showMessage('Playback rules saved.');
       }
 
       resetStorage() {
-        if (!confirm('TextCast v2 로컬 저장소를 초기화할까요?')) return;
+        if (!confirm('Reset TextCast v2 local storage?')) return;
         this.storage.clear();
         this.documents = this.storage.loadDocuments();
         this.settings = this.storage.loadSettings();
@@ -1718,7 +1718,7 @@ Urgent Queue에 즉시 올라가고,
         this.engine.buildQueueFromStore();
         this.engine.nextDocument();
         this.engine.run(this.renderer);
-        this.showMessage('로컬 저장소를 초기화했습니다.');
+        this.showMessage('Local storage reset.');
       }
 
       currentEditorDoc() {
@@ -1762,7 +1762,7 @@ Urgent Queue에 즉시 올라가고,
         if (!docs.length) {
           const empty = document.createElement('div');
           empty.className = 'doc-row disabled';
-          empty.textContent = '표시할 문서가 없습니다.';
+          empty.textContent = 'No documents to display.';
           list.appendChild(empty);
           this.renderStoreMetric();
           return;
@@ -1789,10 +1789,10 @@ Urgent Queue에 즉시 올라가고,
 
       renderPlaybackState(state) {
         const doc = this.documents.find((item) => item.id === state.currentDocId);
-        document.getElementById('currentTitle').textContent = doc?.title || '대기 중';
+        document.getElementById('currentTitle').textContent = doc?.title || 'Standby';
         document.getElementById('currentMeta').textContent = doc
           ? `${doc.category} / ${doc.playCount || 0} plays / last ${formatDate(doc.lastPlayedAt)}`
-          : '활성 문서가 Play Queue에 올라오기를 기다리는 중입니다.';
+          : 'Waiting for enabled documents to enter the Play Queue.';
         document.getElementById('blockMetric').textContent = doc ? `${state.currentBlockIndex + 1} / ${doc.blocks.length}` : '0 / 0';
         document.getElementById('queueMetric').textContent = `${state.queueCount + state.urgentCount}`;
         this.renderStoreMetric();
@@ -1812,7 +1812,7 @@ Urgent Queue에 즉시 올라가고,
         const muted = this.renderer.toggleSound();
         document.getElementById('soundBtn').querySelector('span').textContent = muted ? '♪' : '♫';
         this.ytPlayer.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: muted ? 'mute' : 'unMute', args: '' }), '*');
-        this.showMessage(muted ? '타이핑 소리 꺼짐' : '타이핑 소리 켜짐');
+        this.showMessage(muted ? 'Typing sound off.' : 'Typing sound on.');
       }
 
       getCanvasFont() {
@@ -1863,8 +1863,8 @@ Urgent Queue에 즉시 올라가고,
           box.style.display = 'none';
         }, 2200);
 
-        if (text === '[방송 재개]') {
-          this.renderer.setBadge('[방송 재개]', 'resume');
+        if (text === '[Broadcast Resumed]') {
+          this.renderer.setBadge('[Broadcast Resumed]', 'resume');
           setTimeout(() => {
             if (this.engine.state.mode !== 'urgent') this.renderer.setBadge('', 'normal');
           }, 1800);
