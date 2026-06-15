@@ -73,7 +73,7 @@
     }
     .tabs {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       padding: 8px;
       gap: 6px;
       border-bottom: 1px solid var(--line);
@@ -187,9 +187,8 @@
       font-weight: 700;
     }
     .check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
-    select, input[type="number"] {
+    select, input[type="number"], textarea {
       width: 100%;
-      min-height: 40px;
       padding: 0 10px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -197,6 +196,8 @@
       background: var(--panel-2);
       color: var(--text);
     }
+    select, input[type="number"] { min-height: 40px; }
+    textarea { min-height: 280px; padding: 10px; resize: vertical; line-height: 1.55; }
     select:focus, input:focus { border-color: var(--accent); }
     .rule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .rule {
@@ -339,12 +340,13 @@
       </header>
 
       <div class="tabs">
-        <button class="tab active" data-tab="assets">Assets</button>
+        <button class="tab" data-tab="assets">Assets</button>
         <button class="tab" data-tab="settings">Rendering Rules</button>
+        <button class="tab active" data-tab="text">Text Stream</button>
       </div>
 
       <div class="panel-scroll">
-        <section class="tab-pane active" data-pane="assets">
+        <section class="tab-pane" data-pane="assets">
           <div class="section">
             <div class="section-title"><span>Images</span><span class="count" id="imageCount">0</span></div>
             <div class="dropzone" id="imageDropzone">
@@ -365,6 +367,69 @@
             <button class="upload-button" id="chooseAudioButton" type="button">Choose Audio</button>
             <input id="audioInput" type="file" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a" />
             <div id="audioAsset"></div>
+          </div>
+        </section>
+
+        <section class="tab-pane active" data-pane="text">
+          <div class="section">
+            <div class="section-title"><span>Reader Text Stream</span></div>
+            <div class="field">
+              <label class="check-field"><input id="showTextStream" type="checkbox" checked /> Show Text Stream</label>
+            </div>
+            <div class="field">
+              <label for="textFontFamily">Font</label>
+              <select id="textFontFamily">
+                <option value="system-ui, sans-serif">System Sans</option>
+                <option value="'Arial', sans-serif">Arial</option>
+                <option value="'Georgia', serif">Georgia</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="'Noto Sans KR', sans-serif" selected>Noto Sans KR</option>
+                <option value="'Nanum Gothic', sans-serif">Nanum Gothic</option>
+              </select>
+            </div>
+            <div class="rule-grid">
+              <div class="field">
+                <label for="textFontSize">Text Size (px)</label>
+                <input id="textFontSize" type="number" value="80" min="16" max="240" step="1" />
+              </div>
+              <div class="field">
+                <label for="textLineCount">Visible Lines</label>
+                <input id="textLineCount" type="number" value="2" min="1" max="8" step="1" />
+              </div>
+            </div>
+            <div class="rule-grid">
+              <div class="field">
+                <label for="textSpeed">Text Speed (chars/sec)</label>
+                <input id="textSpeed" type="number" value="18" min="1" max="120" step="1" />
+              </div>
+              <div class="field">
+                <label for="textLineDelay">Line Break Delay (ms)</label>
+                <input id="textLineDelay" type="number" value="1000" min="0" max="5000" step="50" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="textCommaDelay">Comma Delay (ms)</label>
+              <input id="textCommaDelay" type="number" value="500" min="0" max="3000" step="20" />
+            </div>
+            <div class="field">
+              <label class="check-field"><input id="showTextCursor" type="checkbox" checked /> Show Typing Cursor</label>
+            </div>
+            <div class="field">
+              <label class="check-field"><input id="showTextOutline" type="checkbox" checked /> Show Text and Cursor Outline</label>
+            </div>
+            <div class="field">
+              <label for="textEndBehavior">After Document Ends</label>
+              <select id="textEndBehavior">
+                <option value="repeat">Repeat Text Stream</option>
+                <option value="stop">Stop on Last Line</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="textStreamInput">Broadcast Text</label>
+              <textarea id="textStreamInput" placeholder="Text from reader/index.html appears here."></textarea>
+            </div>
+            <button class="button" id="loadReaderTextButton" type="button">Load Reader Documents</button>
           </div>
         </section>
 
@@ -941,10 +1006,22 @@
         this.spectrumFloor = [];
         this.spectrumPeak = [];
         this.lastWaveformTime = 0;
+        this.textStream = '';
+        this.showTextStream = true;
+        this.textFontFamily = "'Noto Sans KR', sans-serif";
+        this.textFontSize = 80;
+        this.textLineCount = 2;
+        this.textSpeed = 18;
+        this.textLineDelay = 1000;
+        this.textCommaDelay = 500;
+        this.showTextCursor = true;
+        this.showTextOutline = true;
+        this.textEndBehavior = 'repeat';
+        this.textPlan = null;
         this.transitionEngine = new TransitionEngine();
       }
 
-      configure(width, height, plan, transition, transitionDuration, waveform = [], showWaveform = true) {
+      configure(width, height, plan, transition, transitionDuration, waveform = [], showWaveform = true, textStream = '', showTextStream = true, textFontFamily = "'Noto Sans KR', sans-serif", textFontSize = 80, textLineCount = 2, textSpeed = 18, textLineDelay = 1000, textCommaDelay = 500, showTextCursor = true, showTextOutline = true, textEndBehavior = 'repeat') {
         this.canvas.width = width;
         this.canvas.height = height;
         this.buffer.width = width;
@@ -954,6 +1031,18 @@
         this.plan = plan;
         this.waveform = waveform;
         this.showWaveform = showWaveform;
+        this.textStream = String(textStream || '').replace(/\r\n/g, '\n').replace(/\n+/g, '\n').trim();
+        this.showTextStream = showTextStream;
+        this.textFontFamily = textFontFamily || "'Noto Sans KR', sans-serif";
+        this.textFontSize = clamp(Number(textFontSize) || 80, 16, 240);
+        this.textLineCount = clamp(Math.round(Number(textLineCount) || 2), 1, 8);
+        this.textSpeed = clamp(Number(textSpeed) || 18, 1, 120);
+        this.textLineDelay = clamp(Number(textLineDelay) || 1000, 0, 5000);
+        this.textCommaDelay = clamp(Number(textCommaDelay) || 500, 0, 3000);
+        this.showTextCursor = showTextCursor;
+        this.showTextOutline = showTextOutline;
+        this.textEndBehavior = textEndBehavior === 'stop' ? 'stop' : 'repeat';
+        this.textPlan = this.buildTextPlan();
         this.waveformBars = [];
         this.waveformVelocity = [];
         this.spectrumFloor = [];
@@ -961,6 +1050,48 @@
         this.lastWaveformTime = 0;
         this.transitionEngine.type = transition;
         this.transitionEngine.duration = transitionDuration;
+      }
+
+      buildTextPlan() {
+        if (!this.textStream) return null;
+        const { width } = this.canvas;
+        const fontSize = this.textFontSize;
+        const maxWidth = width * .82;
+        this.ctx.save();
+        this.ctx.font = `800 ${fontSize}px ${this.textFontFamily}`;
+        const lines = [];
+        this.textStream.split('\n').forEach((paragraph) => {
+          const parts = paragraph.split(/(\s+)/).filter(Boolean);
+          let current = '';
+          parts.forEach((part) => {
+            const candidate = current + part;
+            if (!current.trim() || this.ctx.measureText(candidate).width <= maxWidth) {
+              current = candidate;
+            } else {
+              lines.push(current.trimEnd());
+              current = part.trimStart();
+            }
+          });
+          if (current.trim() || !lines.length) lines.push(current.trimEnd());
+        });
+        this.ctx.restore();
+        const baseDelay = 1000 / this.textSpeed;
+        let cursor = 0;
+        let previousComplete = 0;
+        const planned = lines.map((text, index) => {
+          const enter = index ? previousComplete : 0;
+          const start = index ? previousComplete + this.textLineDelay : 0;
+          cursor = start;
+          const charTimes = [start];
+          for (const char of text) {
+            cursor += baseDelay + (/[,，、;；:：]/.test(char) ? this.textCommaDelay : 0);
+            charTimes.push(cursor);
+          }
+          const item = { text, enter, start, typedAt: charTimes, complete: cursor };
+          previousComplete = cursor;
+          return item;
+        });
+        return { lines: planned, duration: previousComplete + this.textLineDelay };
       }
 
       frameAt(time) {
@@ -973,7 +1104,94 @@
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.transitionEngine.draw(this.ctx, this, scene, next, safeTime - scene.start);
+        this.drawTextStream(safeTime);
         this.drawWaveform(safeTime, duration);
+      }
+
+      drawTextStream(time) {
+        if (!this.showTextStream || !this.textPlan?.lines.length) return;
+        const { width, height } = this.canvas;
+        const fontSize = this.textFontSize;
+        const elapsed = time * 1000;
+        const repeat = this.textEndBehavior !== 'stop';
+        const repeatActive = repeat && elapsed >= this.textPlan.duration;
+        const cycleTime = repeatActive
+          ? elapsed % this.textPlan.duration + this.textPlan.duration
+          : Math.min(elapsed, this.textPlan.duration - 1);
+        const playbackLines = repeatActive
+          ? [
+              ...this.textPlan.lines,
+              ...this.textPlan.lines.map((line) => ({
+                ...line,
+                enter: line.enter + this.textPlan.duration,
+                start: line.start + this.textPlan.duration,
+                complete: line.complete + this.textPlan.duration,
+                typedAt: line.typedAt.map((value) => value + this.textPlan.duration)
+              }))
+            ]
+          : this.textPlan.lines;
+        let currentIndex = -1;
+        for (let index = 0; index < playbackLines.length; index++) {
+          if (cycleTime >= playbackLines[index].enter) currentIndex = index;
+          else break;
+        }
+        if (currentIndex < 0) currentIndex = 0;
+        const current = playbackLines[currentIndex];
+        let typedInLine = current.typedAt.findIndex((value) => value > cycleTime) - 1;
+        if (typedInLine < 0) typedInLine = cycleTime >= current.complete ? current.text.length : 0;
+        this.ctx.save();
+        this.ctx.font = `800 ${fontSize}px ${this.textFontFamily}`;
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.lineJoin = 'round';
+        const lineHeight = fontSize * 1.35;
+        const transitionDuration = Math.max(1, Math.min(650, this.textLineDelay));
+        const tween = currentIndex ? smooth(clamp((cycleTime - current.enter) / transitionDuration)) : 0;
+        const lastLine = this.textPlan.lines[this.textPlan.lines.length - 1];
+        const exitElapsed = this.textEndBehavior === 'stop' ? Math.max(0, elapsed - lastLine.complete) : 0;
+        const exitDelay = Math.max(1, this.textLineDelay);
+        const exitSteps = this.textLineCount + 1;
+        const exitStep = Math.min(exitSteps, Math.floor(exitElapsed / exitDelay));
+        const exitTween = exitStep < exitSteps
+          ? smooth(clamp((exitElapsed - exitStep * exitDelay) / transitionDuration))
+          : 0;
+        const exitShift = exitStep + exitTween;
+        const anchorY = height * .7;
+        const firstLine = Math.max(0, currentIndex - this.textLineCount);
+        playbackLines.slice(firstLine, currentIndex + 1).forEach((item, offset) => {
+          const index = firstLine + offset;
+          const age = currentIndex - index;
+          const text = index === currentIndex ? item.text.slice(0, typedInLine) : item.text;
+          const y = (currentIndex
+            ? anchorY + (index - currentIndex + 1) * lineHeight - tween * lineHeight
+            : anchorY) - exitShift * lineHeight;
+          const lineAlpha = age === this.textLineCount ? Math.max(0, 1 - tween) : Math.max(.35, 1 - age * .18);
+          const exitAge = age + exitShift;
+          this.ctx.globalAlpha = lineAlpha * clamp(this.textLineCount + 1 - exitAge);
+          if (this.showTextOutline) {
+            this.ctx.lineWidth = Math.max(5, fontSize * .16);
+            this.ctx.strokeStyle = 'rgba(0,0,0,.92)';
+            this.ctx.strokeText(text, width * .09, y);
+          }
+          this.ctx.fillStyle = '#fff';
+          this.ctx.fillText(text, width * .09, y);
+        });
+        const isWaiting = cycleTime < current.start;
+        const showCursorNow = !isWaiting || Math.floor(time * 4) % 2 === 0;
+        if (this.showTextCursor && showCursorNow && exitElapsed === 0) {
+          const cursorText = current.text.slice(0, typedInLine);
+          const cursorX = width * .09 + this.ctx.measureText(cursorText).width + fontSize * .1;
+          const cursorY = currentIndex ? anchorY + lineHeight - tween * lineHeight : anchorY;
+          this.ctx.globalAlpha = 1;
+          if (this.showTextOutline) {
+            this.ctx.lineWidth = Math.max(3, fontSize * .1);
+            this.ctx.strokeStyle = 'rgba(0,0,0,.92)';
+            this.ctx.strokeRect(cursorX, cursorY + fontSize * .42, fontSize * .55, Math.max(3, fontSize * .07));
+          }
+          this.ctx.fillStyle = '#fff';
+          this.ctx.fillRect(cursorX, cursorY + fontSize * .42, fontSize * .55, Math.max(3, fontSize * .07));
+        }
+        this.ctx.restore();
       }
 
       drawWaveform(time, duration) {
@@ -1000,8 +1218,20 @@
         }
         this.lastWaveformTime = time;
         this.ctx.save();
+        const segmentHeight = Math.max(4, height * .006);
+        const segmentGap = Math.max(2, segmentHeight * .45);
+        const segmentStep = segmentHeight + segmentGap;
+        const segmentCount = Math.max(1, Math.floor(areaHeight / segmentStep));
+        const stackTop = bottom - segmentCount * segmentStep;
+        const stackBottom = bottom - segmentGap;
+        const backgroundPadding = Math.max(8, segmentHeight);
         this.ctx.fillStyle = 'rgba(0,0,0,.38)';
-        this.ctx.fillRect(groupLeft - width * .018, bottom - areaHeight - height * .006, usableWidth + width * .036, areaHeight + height * .012);
+        this.ctx.fillRect(
+          groupLeft - backgroundPadding,
+          stackTop - backgroundPadding,
+          usableWidth + backgroundPadding * 2,
+          stackBottom - stackTop + backgroundPadding * 2
+        );
         for (let slot = 0; slot < visibleBars; slot++) {
           const raw = spectrum[slot];
           const floor = this.spectrumFloor[slot] ?? raw;
@@ -1024,9 +1254,18 @@
           this.waveformBars[slot] = level;
           this.waveformVelocity[slot] = velocity;
           const x = groupLeft + slot * step;
-          const barHeight = Math.max(2, level * areaHeight);
-          this.ctx.fillStyle = `rgba(67,226,195,${.48 + level * .5})`;
-          this.ctx.fillRect(x, bottom - barHeight, barWidth, barHeight);
+          const activeCount = Math.round(level * segmentCount);
+          this.ctx.fillStyle = 'rgba(22,54,49,.34)';
+          for (let segment = 0; segment < segmentCount; segment++) {
+            this.ctx.fillRect(x, bottom - (segment + 1) * segmentStep, barWidth, segmentHeight);
+          }
+          this.ctx.shadowColor = 'rgba(67,226,195,.75)';
+          this.ctx.shadowBlur = Math.max(4, height * .004);
+          this.ctx.fillStyle = `rgba(93,255,225,${.65 + level * .35})`;
+          for (let segment = 0; segment < activeCount; segment++) {
+            this.ctx.fillRect(x, bottom - (segment + 1) * segmentStep, barWidth, segmentHeight);
+          }
+          this.ctx.shadowBlur = 0;
         }
         this.ctx.restore();
       }
@@ -1168,6 +1407,7 @@
         this.rendering = false;
         this.downloadUrl = null;
         this.restoreSettings();
+        if (!$('textStreamInput').value) this.loadReaderText();
         this.bind();
         this.updateUi();
         this.assets.restore();
@@ -1190,7 +1430,15 @@
         });
         this.setupDropzone($('imageDropzone'), (files) => this.assets.addImages(files));
         this.setupDropzone($('audioDropzone'), (files) => this.assets.setAudio(files[0]));
-        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'showTextStream', 'textFontFamily', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'textEndBehavior'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        $('textStreamInput').addEventListener('input', () => {
+          clearTimeout(this.textSettingsTimer);
+          this.textSettingsTimer = setTimeout(() => this.settingsChanged(), 180);
+        });
+        $('loadReaderTextButton').addEventListener('click', () => {
+          this.loadReaderText();
+          this.settingsChanged();
+        });
         $('previewSpeedButton').addEventListener('click', () => this.togglePreviewSpeed());
         $('previewButton').addEventListener('click', () => this.togglePreview());
         $('restartButton').addEventListener('click', () => this.restartPreview());
@@ -1250,7 +1498,18 @@
           $('transition').value,
           transitionFrames / fps,
           this.assets.audio?.waveform || [],
-          $('showWaveform').checked
+          $('showWaveform').checked,
+          $('textStreamInput').value,
+          $('showTextStream').checked,
+          $('textFontFamily').value,
+          Number($('textFontSize').value),
+          Number($('textLineCount').value),
+          Number($('textSpeed').value),
+          Number($('textLineDelay').value),
+          Number($('textCommaDelay').value),
+          $('showTextCursor').checked,
+          $('showTextOutline').checked,
+          $('textEndBehavior').value
         );
         this.updateCanvasShape();
         this.renderer.frameAt(0);
@@ -1471,6 +1730,17 @@
             waveform: this.assets.audio?.waveform || [],
             spectrumFrames: this.assets.audio?.spectrumFrames || [],
             showWaveform: Boolean(this.assets.audio) && $('showWaveform').checked,
+            textStream: $('textStreamInput').value,
+            showTextStream: $('showTextStream').checked,
+            textFontFamily: $('textFontFamily').value,
+            textFontSize: Number($('textFontSize').value),
+            textLineCount: Number($('textLineCount').value),
+            textSpeed: Number($('textSpeed').value),
+            textLineDelay: Number($('textLineDelay').value),
+            textCommaDelay: Number($('textCommaDelay').value),
+            showTextCursor: $('showTextCursor').checked,
+            showTextOutline: $('showTextOutline').checked,
+            textEndBehavior: $('textEndBehavior').value,
             duration: this.getDuration()
           };
           const html = this.buildStandaloneHtml(project);
@@ -1518,16 +1788,19 @@ const P=${data};const stage=document.getElementById('stage'),c=document.getEleme
 c.width=P.width;c.height=P.height;if(P.audio){a.src=P.audio;a.muted=true}
 function sizeStage(){const scale=Math.min(innerWidth/P.width,innerHeight/P.height);stage.style.width=Math.floor(P.width*scale)+'px';stage.style.height=Math.floor(P.height*scale)+'px';stage.classList.toggle('compact',P.width*scale<500)}sizeStage();addEventListener('resize',sizeStage);
 const imgs=P.images.map((v,i)=>{const m=new Image();m.src=v.src;return{...v,img:m,motion:i%10<8?'in':i%10===8?'out':'pan'}});
-const clamp=(v,n=0,m=1)=>Math.max(n,Math.min(m,v)),ease=t=>t*t*(3-2*t),dur=P.audio?P.duration:P.images.length*P.imageDuration;
+const clamp=(v,n=0,m=1)=>Math.max(n,Math.min(m,v)),ease=t=>t*t*(3-2*t),smooth=ease,dur=P.audio?P.duration:P.images.length*P.imageDuration;
+const textPlan=buildTextPlan();
 let playing=false,soundOn=false,startAt=0,base=0,raf=0,waveBars=[],waveVelocity=[],spectrumFloor=[],spectrumPeak=[],lastWaveTime=0,ac=null,analyser=null,freq=null;const buf=document.createElement('canvas'),bx=buf.getContext('2d'),old=document.createElement('canvas'),ox=old.getContext('2d');buf.width=old.width=P.width;buf.height=old.height=P.height;
 function fit(ctx,s,t){const im=s.img,q=Math.max(P.width/im.naturalWidth,P.height/im.naturalHeight),e=ease(clamp(t));let z=s.motion==='in'?1+.1*e:s.motion==='out'?1.1-.1*e:1.06,dx=0,dy=0;if(s.motion==='pan')dx=P.width*.025*(-1+2*e);const w=im.naturalWidth*q*z,h=im.naturalHeight*q*z,p={'center':[.5,.5],'top-left':[0,0],'top-right':[1,0],'bottom-left':[0,1],'bottom-right':[1,1]}[s.poi]||[.5,.5];ctx.drawImage(im,-Math.max(0,w-P.width)*p[0]+dx,-Math.max(0,h-P.height)*p[1]+dy,w,h)}
 function sceneTo(ctx,s,t){ctx.fillStyle='#000';ctx.fillRect(0,0,P.width,P.height);fit(ctx,s,t)}
-function frame(time){const count=Math.ceil(dur/P.imageDuration),i=Math.min(count-1,Math.floor(time/P.imageDuration)),s=imgs[i%imgs.length],n=imgs[(i+1)%imgs.length],local=time-i*P.imageDuration,td=P.transitionFrames/P.fps,pr=clamp((local-(P.imageDuration-td))/td);sceneTo(x,s,local/P.imageDuration);if(pr>0&&i!==count-1){if(P.transition==='fade'){x.save();x.globalAlpha=ease(pr);fit(x,n,0);x.restore()}else if(P.transition==='mosaic'){sceneTo(bx,n,0);const size=Math.max(18,Math.floor(P.width/42)),cols=Math.ceil(P.width/size),rows=Math.ceil(P.height/size),total=cols*rows,cut=Math.floor(ease(pr)*total);for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){let k=r*cols+q;if((k*47+23)%total<cut)x.drawImage(buf,q*size,r*size,size,size,q*size,r*size,size,size)}}else page(s,n,pr,local)}wave(time)}
+function frame(time){const count=Math.ceil(dur/P.imageDuration),i=Math.min(count-1,Math.floor(time/P.imageDuration)),s=imgs[i%imgs.length],n=imgs[(i+1)%imgs.length],local=time-i*P.imageDuration,td=P.transitionFrames/P.fps,pr=clamp((local-(P.imageDuration-td))/td);sceneTo(x,s,local/P.imageDuration);if(pr>0&&i!==count-1){if(P.transition==='fade'){x.save();x.globalAlpha=ease(pr);fit(x,n,0);x.restore()}else if(P.transition==='mosaic'){sceneTo(bx,n,0);const size=Math.max(18,Math.floor(P.width/42)),cols=Math.ceil(P.width/size),rows=Math.ceil(P.height/size),total=cols*rows,cut=Math.floor(ease(pr)*total);for(let r=0;r<rows;r++)for(let q=0;q<cols;q++){let k=r*cols+q;if((k*47+23)%total<cut)x.drawImage(buf,q*size,r*size,size,size,q*size,r*size,size,size)}}else page(s,n,pr,local)}textStream(time);wave(time)}
 function page(s,n,p,local){const h=P.width/2,ang=ease(p)*Math.PI,w=Math.max(1,Math.abs(Math.cos(ang))*h);sceneTo(bx,s,Math.max(0,(P.imageDuration-P.transitionFrames/P.fps)/P.imageDuration));ox.clearRect(0,0,P.width,P.height);ox.drawImage(buf,0,0);sceneTo(bx,n,0);x.drawImage(old,0,0);x.drawImage(buf,h,0,h,P.height,h,0,h,P.height);if(ang<Math.PI/2)x.drawImage(old,h,0,h,P.height,h,0,w,P.height);else{x.drawImage(buf,0,0,h,P.height,h-w,0,w,P.height);x.fillStyle='rgba(20,20,20,'+(.22*Math.sin(ang))+')';x.fillRect(h-w,0,w,P.height)}}
 function setupAnalyser(){if(!P.audio||analyser)return;try{ac=new AudioContext();analyser=ac.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.62;freq=new Uint8Array(analyser.frequencyBinCount);const source=ac.createMediaElementSource(a);source.connect(analyser);analyser.connect(ac.destination)}catch(e){}}
 function bands(count=24){if(!analyser||!freq)return[];analyser.getByteFrequencyData(freq);const nyquist=ac.sampleRate/2,minHz=35,maxHz=Math.min(12000,nyquist),binHz=nyquist/freq.length;return Array.from({length:count},(_,i)=>{const sh=minHz*Math.pow(maxHz/minHz,i/count),eh=minHz*Math.pow(maxHz/minHz,(i+1)/count),s=Math.max(1,Math.floor(sh/binHz)),e=Math.max(s+1,Math.ceil(eh/binHz));let total=0,peak=0;for(let q=s;q<Math.min(e,freq.length);q++){const v=freq[q]/255;total+=v*v;peak=Math.max(peak,v)}const rms=Math.sqrt(total/Math.max(1,e-s)),gain=1.18-.28*Math.pow(i/(count-1),.55);return clamp((rms*.72+peak*.28)*gain)})}
 function bakedBands(time){if(P.spectrumFrames?.length){const exact=clamp(time/dur)*(P.spectrumFrames.length-1),i=Math.floor(exact),n=Math.min(P.spectrumFrames.length-1,i+1),mix=exact-i;return P.spectrumFrames[i].map((v,k)=>v*(1-mix)+(P.spectrumFrames[n][k]||0)*mix)}if(P.waveform?.length){const center=Math.floor(clamp(time/dur)*(P.waveform.length-1));return Array.from({length:24},(_,i)=>P.waveform[Math.min(P.waveform.length-1,Math.max(0,center+(i-12)*2))]||0)}return[]}
-function wave(time){if(!P.showWaveform)return;const spectrum=bakedBands(time);if(!spectrum.length)return;const ah=Math.max(54,P.height*.11),b=P.height*.94,bars=spectrum.length,bw=10,gap=12,step=bw+gap,uw=bars*bw+(bars-1)*gap,l=(P.width-uw)/2,dt=lastWaveTime&&time>=lastWaveTime?Math.min(.08,time-lastWaveTime):1/30;if(time<lastWaveTime){waveBars=[];waveVelocity=[];spectrumFloor=[];spectrumPeak=[]}lastWaveTime=time;x.save();x.fillStyle='rgba(0,0,0,.38)';x.fillRect(l-P.width*.018,b-ah-P.height*.006,uw+P.width*.036,ah+P.height*.012);for(let slot=0;slot<bars;slot++){const raw=spectrum[slot],floor=spectrumFloor[slot]??raw,peak=spectrumPeak[slot]??Math.max(raw,floor+.08);spectrumFloor[slot]=floor+(raw<floor?.08:.0015)*(raw-floor);spectrumPeak[slot]=raw>peak?raw:Math.max(spectrumFloor[slot]+.08,peak*.994);const normalized=clamp((raw-spectrumFloor[slot])/Math.max(.08,spectrumPeak[slot]-spectrumFloor[slot])),target=raw<.025?0:clamp(Math.pow(normalized,.78)*(.28+Math.pow(raw,.58)*.72),0,.96);let level=waveBars[slot]||0,velocity=waveVelocity[slot]||0;if(target>=level){level=target;velocity=0}else{velocity+=3.8*dt;level=Math.max(target*.12,level-velocity*dt)}waveBars[slot]=level;waveVelocity[slot]=velocity;const px=l+slot*step,bh=Math.max(2,level*ah);x.fillStyle='rgba(67,226,195,'+(.48+level*.5)+')';x.fillRect(px,b-bh,bw,bh)}x.restore()}
+function buildTextPlan(){const source=String(P.textStream||'').replace(/\\r\\n/g,'\\n').replace(/\\n+/g,'\\n').trim();if(!source)return null;const fs=clamp(Number(P.textFontSize)||80,16,240),family=P.textFontFamily||"'Noto Sans KR', sans-serif",speed=clamp(Number(P.textSpeed)||18,1,120),lineDelay=clamp(Number(P.textLineDelay)||1000,0,5000),commaDelay=clamp(Number(P.textCommaDelay)||500,0,3000),max=P.width*.82,lines=[];x.save();x.font='800 '+fs+'px '+family;source.split('\\n').forEach(paragraph=>{const parts=paragraph.split(/(\\s+)/).filter(Boolean);let current='';for(const part of parts){const candidate=current+part;if(!current.trim()||x.measureText(candidate).width<=max)current=candidate;else{lines.push(current.trimEnd());current=part.trimStart()}}if(current.trim()||!lines.length)lines.push(current.trimEnd())});x.restore();let cursor=0,previousComplete=0;const planned=lines.map((text,index)=>{const enter=index?previousComplete:0,start=index?previousComplete+lineDelay:0;cursor=start;const typedAt=[start];for(const ch of text){cursor+=1000/speed+(/[,，、;；:：]/.test(ch)?commaDelay:0);typedAt.push(cursor)}const item={text,enter,start,typedAt,complete:cursor};previousComplete=cursor;return item});return{lines:planned,duration:previousComplete+lineDelay}}
+function textStream(time){if(P.showTextStream===false||!textPlan?.lines.length)return;const fs=clamp(Number(P.textFontSize)||80,16,240),family=P.textFontFamily||"'Noto Sans KR', sans-serif",lineCount=clamp(Math.round(Number(P.textLineCount)||2),1,8),lineDelay=clamp(Number(P.textLineDelay)||1000,0,5000),outline=P.showTextOutline!==false,elapsed=time*1000,repeat=P.textEndBehavior!=='stop',repeatActive=repeat&&elapsed>=textPlan.duration,ct=repeatActive?elapsed%textPlan.duration+textPlan.duration:Math.min(elapsed,textPlan.duration-1),lines=repeatActive?[...textPlan.lines,...textPlan.lines.map(line=>({...line,enter:line.enter+textPlan.duration,start:line.start+textPlan.duration,complete:line.complete+textPlan.duration,typedAt:line.typedAt.map(value=>value+textPlan.duration)}))]:textPlan.lines;let ci=-1;for(let i=0;i<lines.length;i++)if(ct>=lines[i].enter)ci=i;else break;if(ci<0)ci=0;const current=lines[ci];let typed=current.typedAt.findIndex(value=>value>ct)-1;if(typed<0)typed=ct>=current.complete?current.text.length:0;const lh=fs*1.35,transition=Math.max(1,Math.min(650,lineDelay)),tween=ci?smooth(clamp((ct-current.enter)/transition)):0,last=textPlan.lines[textPlan.lines.length-1],exitElapsed=P.textEndBehavior==='stop'?Math.max(0,elapsed-last.complete):0,exitDelay=Math.max(1,lineDelay),exitSteps=lineCount+1,exitStep=Math.min(exitSteps,Math.floor(exitElapsed/exitDelay)),exitTween=exitStep<exitSteps?smooth(clamp((exitElapsed-exitStep*exitDelay)/transition)):0,exitShift=exitStep+exitTween,anchor=P.height*.7,first=Math.max(0,ci-lineCount);x.save();x.font='800 '+fs+'px '+family;x.textAlign='left';x.textBaseline='middle';x.lineJoin='round';lines.slice(first,ci+1).forEach((item,offset)=>{const index=first+offset,age=ci-index,value=index===ci?item.text.slice(0,typed):item.text,y=(ci?anchor+(index-ci+1)*lh-tween*lh:anchor)-exitShift*lh,lineAlpha=age===lineCount?Math.max(0,1-tween):Math.max(.35,1-age*.18),exitAge=age+exitShift;x.globalAlpha=lineAlpha*clamp(lineCount+1-exitAge);if(outline){x.lineWidth=Math.max(5,fs*.16);x.strokeStyle='rgba(0,0,0,.92)';x.strokeText(value,P.width*.09,y)}x.fillStyle='#fff';x.fillText(value,P.width*.09,y)});const waiting=ct<current.start,showCursor=!waiting||Math.floor(time*4)%2===0;if(P.showTextCursor!==false&&showCursor&&exitElapsed===0){const value=current.text.slice(0,typed),cx=P.width*.09+x.measureText(value).width+fs*.1,cy=ci?anchor+lh-tween*lh:anchor,ch=Math.max(3,fs*.07);x.globalAlpha=1;if(outline){x.lineWidth=Math.max(3,fs*.1);x.strokeStyle='rgba(0,0,0,.92)';x.strokeRect(cx,cy+fs*.42,fs*.55,ch)}x.fillStyle='#fff';x.fillRect(cx,cy+fs*.42,fs*.55,ch)}x.restore()}
+function wave(time){if(!P.showWaveform)return;const spectrum=bakedBands(time);if(!spectrum.length)return;const ah=Math.max(54,P.height*.11),b=P.height*.94,bars=spectrum.length,bw=10,gap=12,step=bw+gap,uw=bars*bw+(bars-1)*gap,l=(P.width-uw)/2,sh=Math.max(4,P.height*.006),sg=Math.max(2,sh*.45),ss=sh+sg,sc=Math.max(1,Math.floor(ah/ss)),top=b-sc*ss,base=b-sg,pad=Math.max(8,sh),dt=lastWaveTime&&time>=lastWaveTime?Math.min(.08,time-lastWaveTime):1/30;if(time<lastWaveTime){waveBars=[];waveVelocity=[];spectrumFloor=[];spectrumPeak=[]}lastWaveTime=time;x.save();x.fillStyle='rgba(0,0,0,.38)';x.fillRect(l-pad,top-pad,uw+pad*2,base-top+pad*2);for(let slot=0;slot<bars;slot++){const raw=spectrum[slot],floor=spectrumFloor[slot]??raw,peak=spectrumPeak[slot]??Math.max(raw,floor+.08);spectrumFloor[slot]=floor+(raw<floor?.08:.0015)*(raw-floor);spectrumPeak[slot]=raw>peak?raw:Math.max(spectrumFloor[slot]+.08,peak*.994);const normalized=clamp((raw-spectrumFloor[slot])/Math.max(.08,spectrumPeak[slot]-spectrumFloor[slot])),target=raw<.025?0:clamp(Math.pow(normalized,.78)*(.28+Math.pow(raw,.58)*.72),0,.96);let level=waveBars[slot]||0,velocity=waveVelocity[slot]||0;if(target>=level){level=target;velocity=0}else{velocity+=3.8*dt;level=Math.max(target*.12,level-velocity*dt)}waveBars[slot]=level;waveVelocity[slot]=velocity;const px=l+slot*step,active=Math.round(level*sc);x.fillStyle='rgba(22,54,49,.34)';for(let seg=0;seg<sc;seg++)x.fillRect(px,b-(seg+1)*ss,bw,sh);x.shadowColor='rgba(67,226,195,.75)';x.shadowBlur=Math.max(4,P.height*.004);x.fillStyle='rgba(93,255,225,'+(.65+level*.35)+')';for(let seg=0;seg<active;seg++)x.fillRect(px,b-(seg+1)*ss,bw,sh);x.shadowBlur=0}x.restore()}
 function fmt(v){v=Math.max(0,Math.floor(v));return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
 function tick(){if(!playing)return;let t=base+(performance.now()-startAt)/1000;if(t>=dur){t=dur-.001;pause();base=0}frame(t);document.getElementById('time').textContent=fmt(t)+' / '+fmt(dur);raf=requestAnimationFrame(tick)}
 function setPlayButton(){const b=document.getElementById('play');b.classList.toggle('active',playing);b.title=playing?'Pause':'Play';b.innerHTML=playing?'<svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>':'<svg viewBox="0 0 24 24"><path class="fill-icon" d="m8 5 11 7-11 7V5Z"/></svg>'}
@@ -1577,6 +1850,39 @@ Promise.all(imgs.map(v=>v.img.decode())).then(()=>{frame(0);play()});
         return this.assets.audio?.duration || Math.max(imageDuration, this.assets.images.length * imageDuration);
       }
 
+      loadReaderText() {
+        try {
+          const documents = JSON.parse(localStorage.getItem('textcast_reader_v2_store') || '[]');
+          const text = Array.isArray(documents)
+            ? documents.filter((doc) => doc?.enabled !== false && doc?.text).map((doc) => doc.text.trim()).filter(Boolean).join(' ')
+            : '';
+          $('textStreamInput').value = text || this.getDefaultTextStream();
+        } catch (error) {
+          console.warn('Unable to load Reader documents.', error);
+          $('textStreamInput').value = this.getDefaultTextStream();
+        }
+      }
+
+      getDefaultTextStream() {
+        return `Welcome to Project Mosaic, a rule-driven visual album and text stream authoring tool designed for creating polished videos without a traditional editing timeline.
+
+Add a collection of photographs, illustrations, or artwork. Project Mosaic automatically arranges the images, applies subtle motion, and connects each scene with a consistent transition.
+
+Add music when you want the soundtrack to define the final duration. The visual sequence continues naturally for the entire song, repeating the image collection whenever necessary.
+
+The audio visualizer responds to the soundtrack with a segmented equalizer display. Its motion, glow, and visibility can be adjusted or disabled whenever the images and text should take center stage.
+
+Text Stream turns written material into a continuous broadcast. Each line is prepared before playback, typed at a readable pace, held briefly, and moved upward with a smooth transition.
+
+Use the Text Stream controls to select a font, text size, visible line count, typing speed, punctuation delay, cursor style, outline, and end behavior.
+
+Choose Repeat Text Stream for a continuous broadcast in which the ending flows naturally into the beginning. Choose Stop on Last Line when the text should finish and leave the screen one line at a time.
+
+Preview the complete composition directly in the browser. When the result is ready, generate a downloadable video or bake the project into a single standalone HTML file.
+
+Project Mosaic keeps the creative process focused on images, music, and written content. Instead of editing hundreds of timeline events, define the rules once and let the composition continue to flow.`;
+      }
+
       updateCanvasShape() {
         const [width, height] = $('resolution').value.split('x').map(Number);
         const shell = document.querySelector('.canvas-shell');
@@ -1593,10 +1899,14 @@ Promise.all(imgs.map(v=>v.img.decode())).then(()=>{frame(0);play()});
       restoreSettings() {
         try {
           const saved = JSON.parse(localStorage.getItem(this.settingsKey) || '{}');
-          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames'].forEach((id) => {
+          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'textFontFamily', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'textEndBehavior'].forEach((id) => {
             if (saved[id] !== undefined) $(id).value = String(saved[id]);
           });
           if (saved.showWaveform !== undefined) $('showWaveform').checked = Boolean(saved.showWaveform);
+          if (saved.showTextStream !== undefined) $('showTextStream').checked = Boolean(saved.showTextStream);
+          if (saved.showTextCursor !== undefined) $('showTextCursor').checked = Boolean(saved.showTextCursor);
+          if (saved.showTextOutline !== undefined) $('showTextOutline').checked = Boolean(saved.showTextOutline);
+          if (saved.textStream !== undefined) $('textStreamInput').value = String(saved.textStream);
           this.previewRate = saved.previewRate === 4 ? 4 : 1;
           $('previewSpeedButton').textContent = `${this.previewRate}x`;
           $('previewSpeedButton').classList.toggle('active', this.previewRate === 4);
@@ -1613,6 +1923,17 @@ Promise.all(imgs.map(v=>v.img.decode())).then(()=>{frame(0);play()});
           imageDuration: $('imageDuration').value,
           transitionFrames: $('transitionFrames').value,
           showWaveform: $('showWaveform').checked,
+          showTextStream: $('showTextStream').checked,
+          textStream: $('textStreamInput').value,
+          textFontFamily: $('textFontFamily').value,
+          textFontSize: $('textFontSize').value,
+          textLineCount: $('textLineCount').value,
+          textSpeed: $('textSpeed').value,
+          textLineDelay: $('textLineDelay').value,
+          textCommaDelay: $('textCommaDelay').value,
+          showTextCursor: $('showTextCursor').checked,
+          showTextOutline: $('showTextOutline').checked,
+          textEndBehavior: $('textEndBehavior').value,
           previewRate: this.previewRate
         };
         try {
@@ -1629,6 +1950,7 @@ Promise.all(imgs.map(v=>v.img.decode())).then(()=>{frame(0);play()});
       }
 
       dispose() {
+        clearTimeout(this.textSettingsTimer);
         this.stageResizeObserver?.disconnect();
         this.assets.dispose();
         this.motion.dispose();
