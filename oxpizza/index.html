@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>옥수동 화덕피자</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #130f0c;
+      --oven: #211813;
+      --board: #2b211a;
+      --card: rgba(255, 247, 230, .055);
+      --line: rgba(255, 226, 178, .16);
+      --text: #fff5e6;
+      --muted: #cdb9a0;
+      --fire: #f6a04d;
+      --ember: #d85d32;
+      --dough: #f4d7a1;
+      --shadow: 0 30px 90px rgba(58, 24, 10, .48);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(246, 160, 77, .16), transparent 30rem),
+        radial-gradient(circle at 10% 20%, rgba(216, 93, 50, .12), transparent 22rem),
+        linear-gradient(180deg, #17100c 0%, #100d0b 60%, #0c0a09 100%);
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      align-items: center;
+      padding: 4.5rem 1rem 3.5rem;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(255, 226, 178, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 226, 178, .08) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: linear-gradient(to bottom, black, transparent 78%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .social-links {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 5;
+      display: flex;
+      gap: .45rem;
+      padding: .35rem;
+      border: 1px solid var(--line);
+      border-radius: .8rem;
+      background: rgba(29, 20, 14, .66);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 16px 40px rgba(58, 24, 10, .28);
+    }
+
+    .social-link {
+      width: 2.4rem;
+      height: 2.4rem;
+      display: grid;
+      place-items: center;
+      border-radius: .55rem;
+      color: #f3d5ad;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .social-link:hover {
+      color: #1a100a;
+      background: var(--fire);
+      transform: translateY(-1px);
+    }
+
+    .social-link svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: 1.15rem;
+      padding: .48rem .72rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 247, 230, .055);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800;
+    }
+
+    .tag::before {
+      content: "";
+      width: .5rem;
+      height: .5rem;
+      border-radius: 50%;
+      background: var(--fire);
+      box-shadow: 0 0 20px rgba(246, 160, 77, .9);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(3.1rem, 12vw, 8rem);
+      line-height: 1;
+      font-weight: 850;
+      word-break: keep-all;
+    }
+
+    .subtitle {
+      margin: 1.1rem auto .45rem;
+      width: min(760px, 100%);
+      color: #f2d9b7;
+      font-size: clamp(1.08rem, 3vw, 1.55rem);
+      line-height: 1.55;
+      word-break: keep-all;
+    }
+
+    .subline {
+      margin: 0 auto 2rem;
+      color: #b99f83;
+      font-size: .98rem;
+    }
+
+    .frame {
+      width: min(1000px, 100%);
+      margin: 0 auto;
+      padding: .7rem;
+      border: 1px solid rgba(255, 226, 178, .2);
+      border-radius: 1.35rem;
+      background:
+        linear-gradient(180deg, rgba(255, 226, 178, .13), rgba(255, 226, 178, .035)),
+        rgba(29, 20, 14, .78);
+      box-shadow: var(--shadow);
+      position: relative;
+      animation: rise .7s ease-out both;
+    }
+
+    .frame-label {
+      position: absolute;
+      left: 1.35rem;
+      top: 1.25rem;
+      z-index: 2;
+      padding: .42rem .62rem;
+      border: 1px solid rgba(255, 226, 178, .18);
+      border-radius: 999px;
+      background: rgba(17, 12, 9, .72);
+      color: #f8dcad;
+      font-size: .75rem;
+      font-weight: 800;
+    }
+
+    .frame iframe {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      border-radius: .9rem;
+      background:
+        radial-gradient(circle at 50% 55%, rgba(246,160,77,.28), transparent 18rem),
+        #100c09;
+    }
+
+    .section {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 5rem 1rem;
+    }
+
+    .section-head {
+      margin-bottom: 1.4rem;
+    }
+
+    .kicker {
+      color: var(--fire);
+      font-size: .78rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: .4rem 0 0;
+      font-size: clamp(2rem, 6vw, 3.3rem);
+      line-height: 1.08;
+      word-break: keep-all;
+    }
+
+    .principles,
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .9rem;
+    }
+
+    .principle,
+    .menu-card {
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: var(--card);
+      transition: transform .22s ease, border-color .22s ease, background .22s ease;
+    }
+
+    .principle {
+      padding: 1.25rem;
+    }
+
+    .principle:hover,
+    .menu-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(246, 160, 77, .48);
+      background: rgba(246, 160, 77, .09);
+    }
+
+    .principle h3,
+    .menu-card h3 {
+      margin: 0 0 .45rem;
+      font-size: 1.15rem;
+    }
+
+    .principle p,
+    .menu-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      word-break: keep-all;
+    }
+
+    .menu-card {
+      min-height: 12rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(180deg, rgba(255, 247, 230, .07), rgba(255, 247, 230, .025)),
+        var(--board);
+    }
+
+    .icon {
+      width: 3rem;
+      height: 3rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255, 226, 178, .18);
+      border-radius: .85rem;
+      background: rgba(255, 226, 178, .07);
+      font-size: 1.45rem;
+    }
+
+    .cta {
+      width: min(900px, calc(100% - 2rem));
+      margin: 0 auto 5rem;
+      padding: 1.25rem;
+      border: 1px solid rgba(255, 226, 178, .18);
+      border-radius: 1.1rem;
+      background: rgba(255, 247, 230, .055);
+      text-align: center;
+    }
+
+    .cta p {
+      margin: 0 0 1rem;
+      color: #e7c8a4;
+      word-break: keep-all;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .65rem;
+    }
+
+    .button {
+      min-width: 8.5rem;
+      padding: .85rem 1rem;
+      border: 1px solid rgba(255, 226, 178, .2);
+      border-radius: .75rem;
+      background: #f0b05f;
+      color: #1a100a;
+      font-weight: 850;
+      transition: transform .2s ease, background .2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      background: #ffd28a;
+    }
+
+    .button.secondary {
+      background: rgba(255, 247, 230, .06);
+      color: var(--text);
+    }
+
+    .footer {
+      padding: 3rem 1rem 4rem;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      color: var(--muted);
+      background: #0d0a08;
+    }
+
+    .footer strong {
+      display: block;
+      margin-bottom: .4rem;
+      color: var(--text);
+      font-size: 1.1rem;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (min-width: 680px) {
+      .hero {
+        padding-inline: 1.5rem;
+      }
+
+      .principles {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 980px) {
+      .menu-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .social-links {
+        top: .7rem;
+        left: .7rem;
+      }
+
+      .social-link {
+        width: 2.15rem;
+        height: 2.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="옥수동 화덕피자 소개">
+      <nav class="social-links" aria-label="옥수동 화덕피자 링크">
+        <a class="social-link" href="https://kitscript.com/pizza/" target="_blank" rel="noopener noreferrer" title="Homepage" aria-label="Homepage">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        </a>
+        <a class="social-link" href="https://youtube.com/@oxpizza" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.8.5 7.6.5 7.6.5s5.8 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8Z"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+        </a>
+        <a class="social-link" href="https://www.instagram.com/oxoosourdoughpizza/" target="_blank" rel="noopener noreferrer" title="Instagram" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>
+        </a>
+      </nav>
+      <div class="hero-inner">
+        <div class="tag">Oksu-dong Wood-Fired Kitchen</div>
+        <h1>옥수동 화덕피자</h1>
+        <p class="subtitle">골목 안 작은 화덕에서 시작되는 따뜻한 한 조각.</p>
+        <p class="subline">Small oven. Honest dough. Warm stories.</p>
+
+        <div class="frame" aria-label="Mood demo photo story area">
+          <div class="frame-label">Mood demo / photo story</div>
+          <iframe
+            title="옥수동 화덕피자 무드 데모"
+            src="https://textcube.github.io/kitscript/album/ex1.html"
+            loading="lazy"
+            allow="autoplay; fullscreen"
+          ></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="philosophy-title">
+      <div class="section-head">
+        <div class="kicker">Living Kitchen</div>
+        <h2 id="philosophy-title">작은 주방에서 매일 다시 시작하는 일.</h2>
+      </div>
+      <div class="principles">
+        <article class="principle">
+          <h3>Dough</h3>
+          <p>천천히 숙성한 반죽.</p>
+        </article>
+        <article class="principle">
+          <h3>Fire</h3>
+          <p>화덕에서 빠르게 구운 풍미.</p>
+        </article>
+        <article class="principle">
+          <h3>Table</h3>
+          <p>함께 나누는 따뜻한 한 조각.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="menu" aria-labelledby="menu-title">
+      <div class="section-head">
+        <div class="kicker">Menu / Story</div>
+        <h2 id="menu-title">단순하지만 오래 기억나는 피자.</h2>
+      </div>
+      <div class="menu-grid" id="menuGrid"></div>
+    </section>
+
+    <section class="cta" id="contact" aria-label="문의 버튼">
+      <p>오늘 먹을 한 판, 작은 모임에 놓을 몇 판. 필요한 만큼 편하게 물어보세요.</p>
+      <div class="actions">
+        <a class="button" href="#menu">메뉴 보기</a>
+        <a class="button secondary" href="#contact">주문 문의</a>
+        <a class="button secondary" href="#location">오시는 길</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="location">
+    <strong>옥수동 화덕피자</strong>
+    <span>Small oven. Honest dough. Warm stories.</span>
+  </footer>
+
+  <script>
+    const menu = [
+      ['Margherita', '토마토, 모차렐라, 바질의 기본.', '🍅'],
+      ['Pepperoni', '짭짤하고 선명한 클래식.', '●'],
+      ['Seasonal Pizza', '계절 재료로 바뀌는 오늘의 피자.', '✦'],
+      ['Half & Half', '두 가지 맛을 한 판에.', '◐'],
+      ['Frozen Pizza', '집에서도 간편하게 즐기는 화덕 스타일.', '❄'],
+      ['Catering / Events', '모임과 작은 행사에 어울리는 피자.', '▣']
+    ];
+
+    const menuGrid = document.getElementById('menuGrid');
+    menuGrid.replaceChildren(...menu.map(([title, description, icon]) => {
+      const card = document.createElement('a');
+      card.className = 'menu-card';
+      card.href = '#contact';
+      card.innerHTML = `
+        <div>
+          <div class="icon" aria-hidden="true">${icon}</div>
+          <h3>${title}</h3>
+        </div>
+        <p>${description}</p>
+      `;
+      return card;
+    }));
+  </script>
+</body>
+</html>

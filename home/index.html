@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KITSCRIPT</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d0f10;
+      --panel: #15191b;
+      --panel-soft: #101415;
+      --line: rgba(255, 255, 255, .1);
+      --text: #f4f7f7;
+      --muted: #9aa7aa;
+      --accent: #43e2c3;
+      --accent-2: #8bb7ff;
+      --shadow: 0 28px 80px rgba(0, 0, 0, .42);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .site {
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(67, 226, 195, .08), transparent 38rem),
+        radial-gradient(circle at 20% 10%, rgba(139, 183, 255, .12), transparent 26rem),
+        #0d0f10;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      align-items: center;
+      padding: 5rem 1rem 4rem;
+      position: relative;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .24;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .project-links {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 5;
+      display: flex;
+      gap: .45rem;
+      padding: .35rem;
+      border: 1px solid var(--line);
+      border-radius: .8rem;
+      background: rgba(8, 10, 11, .64);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .24);
+    }
+
+    .project-link {
+      width: 2.4rem;
+      height: 2.4rem;
+      display: grid;
+      place-items: center;
+      border-radius: .55rem;
+      color: #dce3e5;
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .project-link:hover {
+      color: #06110f;
+      background: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .project-link svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: 1.25rem;
+      padding: .5rem .75rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .045);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: .48rem;
+      height: .48rem;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(67, 226, 195, .8);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(3.6rem, 13vw, 9rem);
+      line-height: .88;
+      font-weight: 850;
+    }
+
+    .subtitle {
+      width: min(760px, 100%);
+      margin: 1.25rem auto 2.25rem;
+      color: #c4cdcf;
+      font-size: clamp(1.05rem, 2.8vw, 1.45rem);
+      line-height: 1.55;
+    }
+
+    .screen {
+      width: min(1000px, 100%);
+      margin: 0 auto;
+      padding: .7rem;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 1.35rem;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.025)),
+        rgba(12, 15, 16, .72);
+      box-shadow: var(--shadow);
+      transform: translateY(0);
+      animation: floatIn .7s ease-out both;
+    }
+
+    .screen iframe {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 0;
+      border-radius: .9rem;
+      background: #000;
+    }
+
+    .section {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 5rem 1rem;
+    }
+
+    .section-head {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-kicker {
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: .4rem 0 0;
+      font-size: clamp(2rem, 6vw, 3.35rem);
+      line-height: 1.05;
+    }
+
+    .principles {
+      display: grid;
+      gap: .9rem;
+      grid-template-columns: 1fr;
+    }
+
+    .principle,
+    .tool-card {
+      border: 1px solid var(--line);
+      border-radius: .9rem;
+      background: rgba(255, 255, 255, .045);
+      transition: transform .22s ease, border-color .22s ease, background .22s ease;
+    }
+
+    .principle {
+      padding: 1.25rem;
+    }
+
+    .principle h3,
+    .tool-card h3 {
+      margin: 0 0 .45rem;
+      font-size: 1.1rem;
+    }
+
+    .principle p,
+    .tool-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .9rem;
+    }
+
+    .tool-card {
+      min-height: 12rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025)),
+        var(--panel-soft);
+    }
+
+    .tool-card:hover,
+    .principle:hover {
+      transform: translateY(-4px);
+      border-color: rgba(67, 226, 195, .42);
+      background: rgba(67, 226, 195, .07);
+    }
+
+    .icon {
+      width: 3rem;
+      height: 3rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: .8rem;
+      background: rgba(255, 255, 255, .06);
+      font-size: 1.35rem;
+    }
+
+    .footer {
+      padding: 3rem 1rem 4rem;
+      border-top: 1px solid var(--line);
+      text-align: center;
+      color: var(--muted);
+      background: #0a0c0d;
+    }
+
+    .footer strong {
+      display: block;
+      margin-bottom: .4rem;
+      color: var(--text);
+      font-size: 1.15rem;
+      letter-spacing: .08em;
+    }
+
+    @keyframes floatIn {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (min-width: 680px) {
+      .hero {
+        padding-inline: 1.5rem;
+      }
+
+      .principles {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .gallery {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .project-links {
+        top: .7rem;
+        left: .7rem;
+      }
+
+      .project-link {
+        width: 2.15rem;
+        height: 2.15rem;
+      }
+    }
+
+    @media (min-width: 980px) {
+      .gallery {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="site">
+    <section class="hero" aria-label="KITSCRIPT introduction">
+      <nav class="project-links" aria-label="Project links">
+        <a class="project-link" href="https://kitscript.com/pickme/" target="_blank" rel="noopener noreferrer" title="Homepage" aria-label="Homepage">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+        </a>
+        <a class="project-link" href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.8.5 7.6.5 7.6.5s5.8 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8Z"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+        </a>
+        <a class="project-link" href="https://github.com/textcube/kitscript" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.3-.4 6.8-1.6 6.8-7A5.5 5.5 0 0 0 19.3 4 5.1 5.1 0 0 0 19.1.5S18 0 15 2a13.4 13.4 0 0 0-7 0C5 0 3.9.5 3.9.5A5.1 5.1 0 0 0 3.7 4a5.5 5.5 0 0 0-1.5 3.5c0 5.4 3.5 6.6 6.8 7A4.8 4.8 0 0 0 8 18v4"/><path d="M8 19c-3 .9-3-1.5-4-2"/></svg>
+        </a>
+      </nav>
+      <div class="hero-inner">
+        <div class="eyebrow">Build -> Observe -> Iterate</div>
+        <h1>KITSCRIPT</h1>
+        <p class="subtitle">One-page experiments for creators, developers, and restless ideas.</p>
+        <div class="screen" aria-label="Live demo">
+          <iframe
+            title="KITSCRIPT live demo"
+            src="https://textcube.github.io/kitscript/album/ex1.html"
+            loading="lazy"
+            allow="autoplay; fullscreen"
+          ></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="philosophy-title">
+      <div class="section-head">
+        <div class="section-kicker">Philosophy</div>
+        <h2 id="philosophy-title">Small experiments, observable behavior.</h2>
+      </div>
+      <div class="principles">
+        <article class="principle">
+          <h3>Build</h3>
+          <p>Make ideas tangible.</p>
+        </article>
+        <article class="principle">
+          <h3>Observe</h3>
+          <p>Watch how people use them.</p>
+        </article>
+        <article class="principle">
+          <h3>Iterate</h3>
+          <p>Improve through experiments.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="gallery-title">
+      <div class="section-head">
+        <div class="section-kicker">Tool Gallery</div>
+        <h2 id="gallery-title">Playable ideas in one page.</h2>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <strong>KITSCRIPT</strong>
+    <span>Small tools. Fast experiments. Playable ideas.</span>
+  </footer>
+
+  <script>
+    const tools = [
+      ['Album Builder', 'Turn images into motion.', '▣'],
+      ['TextCast', 'Turn text into ambient broadcast.', '⌁'],
+      ['Quiz Factory', 'Turn questions into playable content.', '?'],
+      ['Model2Sprite', 'Turn models into game-ready sprites.', '◇'],
+      ['Mosaic World', 'A one-page experimental world.', '◎'],
+      ['Cable Defense', 'A tiny defense game experiment.', '⌘'],
+      ['Spell Claw', 'A small action RPG experiment.', '✦']
+    ];
+
+    const gallery = document.getElementById('gallery');
+    gallery.replaceChildren(...tools.map(([title, description, icon]) => {
+      const card = document.createElement('article');
+      card.className = 'tool-card';
+      card.innerHTML = `
+        <div>
+          <div class="icon" aria-hidden="true">${icon}</div>
+          <h3>${title}</h3>
+        </div>
+        <p>${description}</p>
+      `;
+      return card;
+    }));
+  </script>
+</body>
+</html>
