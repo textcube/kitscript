@@ -18,6 +18,7 @@
       --muted: rgba(255, 255, 255, 0.62);
       --text-shadow: 0 4px 15px rgba(0, 0, 0, 0.9);
       --dimming: 0.4;
+      --overlay-opacity: 1;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,7 +77,24 @@
       background:
         linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 28%, rgba(0, 0, 0, 0.7)),
         radial-gradient(circle, transparent 25%, rgba(0, 0, 0, 0.58) 100%);
+      opacity: var(--overlay-opacity);
       pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    body.no-dark-overlay .overlay {
+      display: none;
+    }
+
+    body.no-dark-overlay .video-background iframe {
+      filter: none;
+    }
+
+    body.no-text-outline .block,
+    body.no-text-outline .broadcast-line,
+    body.no-text-outline .block.current::after,
+    body.no-text-outline .broadcast-line.current::after {
+      text-shadow: none !important;
     }
 
     .topbar {
@@ -1029,6 +1047,8 @@
               <label for="dimmingInput">Dimming (%)</label>
               <input type="number" id="dimmingInput" value="40" min="0" max="100" />
             </div>
+            <label class="toggle"><input type="checkbox" id="darkOverlayInput" checked /> Use Dark Translucent Overlay</label>
+            <label class="toggle"><input type="checkbox" id="textOutlineInput" checked /> Use Text Outline / Shadow</label>
           </div>
 
           <div class="editor-actions">
@@ -1188,6 +1208,8 @@ the original broadcast resumes from the interrupted block.`;
           fontSize: Number(saved?.fontSize || legacy?.fontSize || 42),
           accentColor: saved?.accentColor || legacy?.accentColor || '#00f2ff',
           dimming: Number(saved?.dimming || legacy?.dimming || 40),
+          darkOverlay: saved?.darkOverlay !== false,
+          textOutline: saved?.textOutline !== false,
           speed: Number(saved?.speed || legacy?.speed || 42),
           delay: Number(saved?.delay || legacy?.delay || 1500)
         };
@@ -1658,6 +1680,14 @@ the original broadcast resumes from the interrupted block.`;
         document.getElementById('deleteDocBtn').addEventListener('click', () => this.deleteSelectedDocument());
         document.getElementById('saveRulesBtn').addEventListener('click', () => this.saveRules());
         document.getElementById('resetStorageBtn').addEventListener('click', () => this.resetStorage());
+        ['darkOverlayInput', 'textOutlineInput'].forEach((id) => {
+          document.getElementById(id).addEventListener('change', () => {
+            this.settings.darkOverlay = document.getElementById('darkOverlayInput').checked;
+            this.settings.textOutline = document.getElementById('textOutlineInput').checked;
+            this.storage.saveSettings(this.settings);
+            this.applySettingsToPage();
+          });
+        });
         document.getElementById('searchInput').addEventListener('input', () => this.renderDocumentList());
         document.getElementById('categoryFilter').addEventListener('change', () => this.renderDocumentList());
         document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
@@ -1895,6 +1925,8 @@ the original broadcast resumes from the interrupted block.`;
           fontSize: Number(document.getElementById('fontSizeInput').value) || 42,
           accentColor: document.getElementById('accentColorInput').value,
           dimming: Number(document.getElementById('dimmingInput').value) || 40,
+          darkOverlay: document.getElementById('darkOverlayInput').checked,
+          textOutline: document.getElementById('textOutlineInput').checked,
           speed: Number(document.getElementById('speedInput').value) || 42,
           delay: Number(document.getElementById('delayInput').value) || 1500
         };
@@ -2036,6 +2068,8 @@ the original broadcast resumes from the interrupted block.`;
         document.getElementById('fontSizeInput').value = this.settings.fontSize;
         document.getElementById('accentColorInput').value = this.settings.accentColor;
         document.getElementById('dimmingInput').value = this.settings.dimming;
+        document.getElementById('darkOverlayInput').checked = this.settings.darkOverlay !== false;
+        document.getElementById('textOutlineInput').checked = this.settings.textOutline !== false;
         document.getElementById('speedInput').value = this.settings.speed;
         document.getElementById('delayInput').value = this.settings.delay;
       }
@@ -2047,6 +2081,10 @@ the original broadcast resumes from the interrupted block.`;
         root.style.setProperty('--font-size', `${this.settings.fontSize}px`);
         root.style.setProperty('--font-family', this.settings.fontFamily);
         root.style.setProperty('--dimming', this.settings.dimming / 100);
+        root.style.setProperty('--overlay-opacity', this.settings.darkOverlay === false ? '0' : '1');
+        root.style.setProperty('--text-shadow', this.settings.textOutline === false ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.95)');
+        document.body.classList.toggle('no-dark-overlay', this.settings.darkOverlay === false);
+        document.body.classList.toggle('no-text-outline', this.settings.textOutline === false);
 
         const id = this.settings.ytId;
         const newSrc = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&modestbranding=1&rel=0&enablejsapi=1`;

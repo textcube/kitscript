@@ -418,6 +418,10 @@
                 <input id="textLineCount" type="number" value="2" min="1" max="5" step="1" />
               </div>
             </div>
+            <div class="field">
+              <label for="textColor">Text Color</label>
+              <input id="textColor" type="color" value="#ffffff" />
+            </div>
             <div class="rule-grid">
               <div class="field">
                 <label for="textSpeed">Text Speed (chars/sec)</label>
@@ -437,6 +441,9 @@
             </div>
             <div class="field">
               <label class="check-field"><input id="showTextOutline" type="checkbox" checked /> Show Text and Cursor Outline</label>
+            </div>
+            <div class="field">
+              <label class="check-field"><input id="showTextShadow" type="checkbox" checked /> Show Text Shadow</label>
             </div>
             <div class="field">
               <label for="textEndBehavior">After Document Ends</label>
@@ -1224,6 +1231,7 @@
         this.textStream = '';
         this.showTextStream = true;
         this.textFontFamily = "'Noto Sans KR', sans-serif";
+        this.textColor = '#ffffff';
         this.textFontSize = 80;
         this.textLineCount = 2;
         this.textSpeed = 18;
@@ -1231,12 +1239,13 @@
         this.textCommaDelay = 500;
         this.showTextCursor = true;
         this.showTextOutline = true;
+        this.showTextShadow = true;
         this.textEndBehavior = 'repeat';
         this.textPlan = null;
         this.transitionEngine = new TransitionEngine();
       }
 
-      configure(width, height, plan, transition, transitionDuration, waveform = [], showWaveform = true, textStream = '', showTextStream = true, textFontFamily = "'Noto Sans KR', sans-serif", textFontSize = 80, textLineCount = 2, textSpeed = 18, textLineDelay = 1000, textCommaDelay = 500, showTextCursor = true, showTextOutline = true, textEndBehavior = 'repeat') {
+      configure(width, height, plan, transition, transitionDuration, waveform = [], showWaveform = true, textStream = '', showTextStream = true, textFontFamily = "'Noto Sans KR', sans-serif", textColor = '#ffffff', textFontSize = 80, textLineCount = 2, textSpeed = 18, textLineDelay = 1000, textCommaDelay = 500, showTextCursor = true, showTextOutline = true, showTextShadow = true, textEndBehavior = 'repeat') {
         this.canvas.width = width;
         this.canvas.height = height;
         this.buffer.width = width;
@@ -1249,6 +1258,7 @@
         this.textStream = String(textStream || '').replace(/\r\n/g, '\n').replace(/\n+/g, '\n').trim();
         this.showTextStream = showTextStream;
         this.textFontFamily = textFontFamily || "'Noto Sans KR', sans-serif";
+        this.textColor = /^#[0-9a-f]{6}$/i.test(String(textColor || '')) ? textColor : '#ffffff';
         this.textFontSize = clamp(Number(textFontSize) || 80, 16, 240);
         this.textLineCount = clamp(Math.round(Number(textLineCount) || 2), 1, 5);
         this.textSpeed = clamp(Number(textSpeed) || 18, 1, 120);
@@ -1256,6 +1266,7 @@
         this.textCommaDelay = clamp(Number(textCommaDelay) || 500, 0, 3000);
         this.showTextCursor = showTextCursor;
         this.showTextOutline = showTextOutline;
+        this.showTextShadow = showTextShadow;
         this.textEndBehavior = textEndBehavior === 'stop' ? 'stop' : 'repeat';
         this.textPlan = this.buildTextPlan();
         this.waveformBars = [];
@@ -1380,15 +1391,27 @@
           const y = (currentIndex
             ? anchorY + (index - currentIndex + 1) * lineHeight - tween * lineHeight
             : anchorY) - exitShift * lineHeight;
-          const fadeAge = exitElapsed > 0 ? age + exitShift : age + tween;
+          const fadeAge = exitElapsed > 0 ? age + 1 + exitShift : age + tween;
           this.ctx.globalAlpha = fadeAge >= this.textLineCount ? clamp(this.textLineCount + 1 - fadeAge) : 1;
           if (this.showTextOutline) {
             this.ctx.lineWidth = Math.max(5, fontSize * .16);
             this.ctx.strokeStyle = 'rgba(0,0,0,.92)';
             this.ctx.strokeText(text, width * .09, y);
           }
-          this.ctx.fillStyle = '#fff';
+          if (this.showTextShadow) {
+            this.ctx.shadowColor = 'rgba(0,0,0,.72)';
+            this.ctx.shadowBlur = Math.max(8, fontSize * .16);
+            this.ctx.shadowOffsetY = Math.max(3, fontSize * .06);
+          } else {
+            this.ctx.shadowColor = 'transparent';
+            this.ctx.shadowBlur = 0;
+            this.ctx.shadowOffsetY = 0;
+          }
+          this.ctx.fillStyle = this.textColor;
           this.ctx.fillText(text, width * .09, y);
+          this.ctx.shadowColor = 'transparent';
+          this.ctx.shadowBlur = 0;
+          this.ctx.shadowOffsetY = 0;
         });
         const isWaiting = cycleTime < current.start;
         const showCursorNow = !isWaiting || Math.floor(time * 4) % 2 === 0;
@@ -1402,8 +1425,16 @@
             this.ctx.strokeStyle = 'rgba(0,0,0,.92)';
             this.ctx.strokeRect(cursorX, cursorY + fontSize * .42, fontSize * .55, Math.max(3, fontSize * .07));
           }
-          this.ctx.fillStyle = '#fff';
+          if (this.showTextShadow) {
+            this.ctx.shadowColor = 'rgba(0,0,0,.72)';
+            this.ctx.shadowBlur = Math.max(8, fontSize * .16);
+            this.ctx.shadowOffsetY = Math.max(3, fontSize * .06);
+          }
+          this.ctx.fillStyle = this.textColor;
           this.ctx.fillRect(cursorX, cursorY + fontSize * .42, fontSize * .55, Math.max(3, fontSize * .07));
+          this.ctx.shadowColor = 'transparent';
+          this.ctx.shadowBlur = 0;
+          this.ctx.shadowOffsetY = 0;
         }
         this.ctx.restore();
       }
@@ -1644,7 +1675,7 @@
         });
         this.setupDropzone($('imageDropzone'), (files) => this.assets.addImages(files));
         this.setupDropzone($('audioDropzone'), (files) => this.assets.setAudio(files[0]));
-        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'showTextStream', 'textFontFamily', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
         $('textStreamInput').addEventListener('input', () => {
           clearTimeout(this.textSettingsTimer);
           this.textSettingsTimer = setTimeout(() => this.settingsChanged(), 180);
@@ -1717,6 +1748,7 @@
           $('textStreamInput').value,
           $('showTextStream').checked,
           $('textFontFamily').value,
+          $('textColor').value,
           Number($('textFontSize').value),
           Number($('textLineCount').value),
           Number($('textSpeed').value),
@@ -1724,6 +1756,7 @@
           Number($('textCommaDelay').value),
           $('showTextCursor').checked,
           $('showTextOutline').checked,
+          $('showTextShadow').checked,
           $('textEndBehavior').value
         );
         this.updateCanvasShape();
@@ -1963,6 +1996,7 @@
             textStream: $('textStreamInput').value,
             showTextStream: $('showTextStream').checked,
             textFontFamily: $('textFontFamily').value,
+            textColor: $('textColor').value,
             textFontSize: Number($('textFontSize').value),
             textLineCount: clamp(Math.round(Number($('textLineCount').value) || 2), 1, 5),
             textSpeed: Number($('textSpeed').value),
@@ -1970,6 +2004,7 @@
             textCommaDelay: Number($('textCommaDelay').value),
             showTextCursor: $('showTextCursor').checked,
             showTextOutline: $('showTextOutline').checked,
+            showTextShadow: $('showTextShadow').checked,
             textEndBehavior: $('textEndBehavior').value,
             homeButtonUrl: this.getHomeButtonUrl(),
             duration: this.getDuration()
@@ -2033,7 +2068,7 @@ function setupAnalyser(){if(!P.audio||analyser)return;try{ac=new AudioContext();
 function bands(count=24){if(!analyser||!freq)return[];analyser.getByteFrequencyData(freq);const nyquist=ac.sampleRate/2,minHz=35,maxHz=Math.min(12000,nyquist),binHz=nyquist/freq.length;return Array.from({length:count},(_,i)=>{const sh=minHz*Math.pow(maxHz/minHz,i/count),eh=minHz*Math.pow(maxHz/minHz,(i+1)/count),s=Math.max(1,Math.floor(sh/binHz)),e=Math.max(s+1,Math.ceil(eh/binHz));let total=0,peak=0;for(let q=s;q<Math.min(e,freq.length);q++){const v=freq[q]/255;total+=v*v;peak=Math.max(peak,v)}const rms=Math.sqrt(total/Math.max(1,e-s)),gain=1.18-.28*Math.pow(i/(count-1),.55);return clamp((rms*.72+peak*.28)*gain)})}
 function bakedBands(time){if(P.spectrumFrames?.length){const exact=clamp(time/dur)*(P.spectrumFrames.length-1),i=Math.floor(exact),n=Math.min(P.spectrumFrames.length-1,i+1),mix=exact-i;return P.spectrumFrames[i].map((v,k)=>v*(1-mix)+(P.spectrumFrames[n][k]||0)*mix)}if(P.waveform?.length){const center=Math.floor(clamp(time/dur)*(P.waveform.length-1));return Array.from({length:24},(_,i)=>P.waveform[Math.min(P.waveform.length-1,Math.max(0,center+(i-12)*2))]||0)}return[]}
 function buildTextPlan(){const source=String(P.textStream||'').replace(/\\r\\n/g,'\\n').replace(/\\n+/g,'\\n').trim();if(!source)return null;const fs=clamp(Number(P.textFontSize)||80,16,240),family=P.textFontFamily||"'Noto Sans KR', sans-serif",speed=clamp(Number(P.textSpeed)||18,1,120),lineDelay=clamp(Number(P.textLineDelay)||1000,0,5000),commaDelay=clamp(Number(P.textCommaDelay)||500,0,3000),max=P.width*.82,lines=[];x.save();x.font='800 '+fs+'px '+family;source.split('\\n').forEach(paragraph=>{const parts=paragraph.split(/(\\s+)/).filter(Boolean);let current='';for(const part of parts){const candidate=current+part;if(!current.trim()||x.measureText(candidate).width<=max)current=candidate;else{lines.push(current.trimEnd());current=part.trimStart()}}if(current.trim()||!lines.length)lines.push(current.trimEnd())});x.restore();let cursor=0,previousComplete=0;const planned=lines.map((text,index)=>{const enter=index?previousComplete:0,start=index?previousComplete+lineDelay:0;cursor=start;const typedAt=[start];for(const ch of text){cursor+=1000/speed+(/[,，、;；:：]/.test(ch)?commaDelay:0);typedAt.push(cursor)}const item={text,enter,start,typedAt,complete:cursor};previousComplete=cursor;return item});return{lines:planned,duration:previousComplete+lineDelay}}
-function textStream(time){if(P.showTextStream===false||!textPlan?.lines.length)return;const fs=clamp(Number(P.textFontSize)||80,16,240),family=P.textFontFamily||"'Noto Sans KR', sans-serif",lineCount=clamp(Math.round(Number(P.textLineCount)||2),1,5),lineDelay=clamp(Number(P.textLineDelay)||1000,0,5000),outline=P.showTextOutline!==false,elapsed=time*1000,repeat=P.textEndBehavior!=='stop',repeatActive=repeat&&elapsed>=textPlan.duration,ct=repeatActive?elapsed%textPlan.duration+textPlan.duration:Math.min(elapsed,textPlan.duration-1),lines=repeatActive?[...textPlan.lines,...textPlan.lines.map(line=>({...line,enter:line.enter+textPlan.duration,start:line.start+textPlan.duration,complete:line.complete+textPlan.duration,typedAt:line.typedAt.map(value=>value+textPlan.duration)}))]:textPlan.lines;let ci=-1;for(let i=0;i<lines.length;i++)if(ct>=lines[i].enter)ci=i;else break;if(ci<0)ci=0;const current=lines[ci];let typed=current.typedAt.findIndex(value=>value>ct)-1;if(typed<0)typed=ct>=current.complete?current.text.length:0;const lh=fs*1.35,transition=Math.max(1,Math.min(650,lineDelay)),tween=ci?smooth(clamp((ct-current.enter)/transition)):0,last=textPlan.lines[textPlan.lines.length-1],exitElapsed=P.textEndBehavior==='stop'?Math.max(0,elapsed-last.complete):0,exitDelay=Math.max(1,lineDelay),exitSteps=lineCount+1,exitStep=Math.min(exitSteps,Math.floor(exitElapsed/exitDelay)),exitTween=exitStep<exitSteps?smooth(clamp((exitElapsed-exitStep*exitDelay)/transition)):0,exitShift=exitStep+exitTween,anchor=P.height*.7,first=Math.max(0,ci-lineCount);x.save();x.font='800 '+fs+'px '+family;x.textAlign='left';x.textBaseline='middle';x.lineJoin='round';lines.slice(first,ci+1).forEach((item,offset)=>{const index=first+offset,age=ci-index,value=index===ci?item.text.slice(0,typed):item.text,y=(ci?anchor+(index-ci+1)*lh-tween*lh:anchor)-exitShift*lh,fadeAge=exitElapsed>0?age+exitShift:age+tween;x.globalAlpha=fadeAge>=lineCount?clamp(lineCount+1-fadeAge):1;if(outline){x.lineWidth=Math.max(5,fs*.16);x.strokeStyle='rgba(0,0,0,.92)';x.strokeText(value,P.width*.09,y)}x.fillStyle='#fff';x.fillText(value,P.width*.09,y)});const waiting=ct<current.start,showCursor=!waiting||Math.floor(time*4)%2===0;if(P.showTextCursor!==false&&showCursor&&exitElapsed===0){const value=current.text.slice(0,typed),cx=P.width*.09+x.measureText(value).width+fs*.1,cy=ci?anchor+lh-tween*lh:anchor,ch=Math.max(3,fs*.07);x.globalAlpha=1;if(outline){x.lineWidth=Math.max(3,fs*.1);x.strokeStyle='rgba(0,0,0,.92)';x.strokeRect(cx,cy+fs*.42,fs*.55,ch)}x.fillStyle='#fff';x.fillRect(cx,cy+fs*.42,fs*.55,ch)}x.restore()}
+function textStream(time){if(P.showTextStream===false||!textPlan?.lines.length)return;const fs=clamp(Number(P.textFontSize)||80,16,240),family=P.textFontFamily||"'Noto Sans KR', sans-serif",color=/^#[0-9a-f]{6}$/i.test(String(P.textColor||''))?P.textColor:'#fff',lineCount=clamp(Math.round(Number(P.textLineCount)||2),1,5),lineDelay=clamp(Number(P.textLineDelay)||1000,0,5000),outline=P.showTextOutline!==false,shadow=P.showTextShadow!==false,elapsed=time*1000,repeat=P.textEndBehavior!=='stop',repeatActive=repeat&&elapsed>=textPlan.duration,ct=repeatActive?elapsed%textPlan.duration+textPlan.duration:Math.min(elapsed,textPlan.duration-1),lines=repeatActive?[...textPlan.lines,...textPlan.lines.map(line=>({...line,enter:line.enter+textPlan.duration,start:line.start+textPlan.duration,complete:line.complete+textPlan.duration,typedAt:line.typedAt.map(value=>value+textPlan.duration)}))]:textPlan.lines;let ci=-1;for(let i=0;i<lines.length;i++)if(ct>=lines[i].enter)ci=i;else break;if(ci<0)ci=0;const current=lines[ci];let typed=current.typedAt.findIndex(value=>value>ct)-1;if(typed<0)typed=ct>=current.complete?current.text.length:0;const lh=fs*1.35,transition=Math.max(1,Math.min(650,lineDelay)),tween=ci?smooth(clamp((ct-current.enter)/transition)):0,last=textPlan.lines[textPlan.lines.length-1],exitElapsed=P.textEndBehavior==='stop'?Math.max(0,elapsed-last.complete):0,exitDelay=Math.max(1,lineDelay),exitSteps=lineCount+1,exitStep=Math.min(exitSteps,Math.floor(exitElapsed/exitDelay)),exitTween=exitStep<exitSteps?smooth(clamp((exitElapsed-exitStep*exitDelay)/transition)):0,exitShift=exitStep+exitTween,anchor=P.height*.7,first=Math.max(0,ci-lineCount);x.save();x.font='800 '+fs+'px '+family;x.textAlign='left';x.textBaseline='middle';x.lineJoin='round';lines.slice(first,ci+1).forEach((item,offset)=>{const index=first+offset,age=ci-index,value=index===ci?item.text.slice(0,typed):item.text,y=(ci?anchor+(index-ci+1)*lh-tween*lh:anchor)-exitShift*lh,fadeAge=exitElapsed>0?age+1+exitShift:age+tween;x.globalAlpha=fadeAge>=lineCount?clamp(lineCount+1-fadeAge):1;if(outline){x.lineWidth=Math.max(5,fs*.16);x.strokeStyle='rgba(0,0,0,.92)';x.strokeText(value,P.width*.09,y)}if(shadow){x.shadowColor='rgba(0,0,0,.72)';x.shadowBlur=Math.max(8,fs*.16);x.shadowOffsetY=Math.max(3,fs*.06)}x.fillStyle=color;x.fillText(value,P.width*.09,y);x.shadowColor='transparent';x.shadowBlur=0;x.shadowOffsetY=0});const waiting=ct<current.start,showCursor=!waiting||Math.floor(time*4)%2===0;if(P.showTextCursor!==false&&showCursor&&exitElapsed===0){const value=current.text.slice(0,typed),cx=P.width*.09+x.measureText(value).width+fs*.1,cy=ci?anchor+lh-tween*lh:anchor,ch=Math.max(3,fs*.07);x.globalAlpha=1;if(outline){x.lineWidth=Math.max(3,fs*.1);x.strokeStyle='rgba(0,0,0,.92)';x.strokeRect(cx,cy+fs*.42,fs*.55,ch)}if(shadow){x.shadowColor='rgba(0,0,0,.72)';x.shadowBlur=Math.max(8,fs*.16);x.shadowOffsetY=Math.max(3,fs*.06)}x.fillStyle=color;x.fillRect(cx,cy+fs*.42,fs*.55,ch);x.shadowColor='transparent';x.shadowBlur=0;x.shadowOffsetY=0}x.restore()}
 function wave(time){if(!P.showWaveform)return;const spectrum=bakedBands(time);if(!spectrum.length)return;const ah=Math.max(54,P.height*.11),b=P.height*.94,bars=spectrum.length,bw=10,gap=12,step=bw+gap,uw=bars*bw+(bars-1)*gap,l=(P.width-uw)/2,sh=Math.max(4,P.height*.006),sg=Math.max(2,sh*.45),ss=sh+sg,sc=Math.max(1,Math.floor(ah/ss)),top=b-sc*ss,base=b-sg,pad=Math.max(8,sh),dt=lastWaveTime&&time>=lastWaveTime?Math.min(.08,time-lastWaveTime):1/30;if(time<lastWaveTime){waveBars=[];waveVelocity=[];spectrumFloor=[];spectrumPeak=[]}lastWaveTime=time;x.save();x.fillStyle='rgba(0,0,0,.38)';x.fillRect(l-pad,top-pad,uw+pad*2,base-top+pad*2);for(let slot=0;slot<bars;slot++){const raw=spectrum[slot],floor=spectrumFloor[slot]??raw,peak=spectrumPeak[slot]??Math.max(raw,floor+.08);spectrumFloor[slot]=floor+(raw<floor?.08:.0015)*(raw-floor);spectrumPeak[slot]=raw>peak?raw:Math.max(spectrumFloor[slot]+.08,peak*.994);const normalized=clamp((raw-spectrumFloor[slot])/Math.max(.08,spectrumPeak[slot]-spectrumFloor[slot])),target=raw<.025?0:clamp(Math.pow(normalized,.78)*(.28+Math.pow(raw,.58)*.72),0,.96);let level=waveBars[slot]||0,velocity=waveVelocity[slot]||0;if(target>=level){level=target;velocity=0}else{velocity+=3.8*dt;level=Math.max(target*.12,level-velocity*dt)}waveBars[slot]=level;waveVelocity[slot]=velocity;const px=l+slot*step,active=Math.round(level*sc);x.fillStyle='rgba(22,54,49,.34)';for(let seg=0;seg<sc;seg++)x.fillRect(px,b-(seg+1)*ss,bw,sh);x.shadowColor='rgba(67,226,195,.75)';x.shadowBlur=Math.max(4,P.height*.004);x.fillStyle='rgba(93,255,225,'+(.65+level*.35)+')';for(let seg=0;seg<active;seg++)x.fillRect(px,b-(seg+1)*ss,bw,sh);x.shadowBlur=0}x.restore()}
 function fmt(v){v=Math.max(0,Math.floor(v));return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
 function tick(){if(!playing)return;let t=base+(performance.now()-startAt)/1000;if(t>=dur){if(loopOn){base=0;startAt=performance.now();t=0;if(P.audio){a.currentTime=0;a.play().catch(()=>{})}waveBars=[];waveVelocity=[];spectrumFloor=[];spectrumPeak=[];lastWaveTime=0}else{t=dur-.001;frame(t);document.getElementById('time').textContent=fmt(dur)+' / '+fmt(dur);pause();base=0;return}}frame(t);document.getElementById('time').textContent=fmt(t)+' / '+fmt(dur);raf=requestAnimationFrame(tick)}
@@ -2149,7 +2184,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
       restoreSettings() {
         try {
           const saved = JSON.parse(localStorage.getItem(this.settingsKey) || '{}');
-          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'textFontFamily', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => {
+          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => {
             if (saved[id] !== undefined) $(id).value = String(saved[id]);
           });
           $('textLineCount').value = String(clamp(Math.round(Number($('textLineCount').value) || 2), 1, 5));
@@ -2157,6 +2192,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           if (saved.showTextStream !== undefined) $('showTextStream').checked = Boolean(saved.showTextStream);
           if (saved.showTextCursor !== undefined) $('showTextCursor').checked = Boolean(saved.showTextCursor);
           if (saved.showTextOutline !== undefined) $('showTextOutline').checked = Boolean(saved.showTextOutline);
+          if (saved.showTextShadow !== undefined) $('showTextShadow').checked = Boolean(saved.showTextShadow);
           if (saved.textStream !== undefined) $('textStreamInput').value = String(saved.textStream);
           this.previewRate = saved.previewRate === 4 ? 4 : 1;
           $('previewSpeedButton').textContent = `${this.previewRate}x`;
@@ -2177,6 +2213,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           showTextStream: $('showTextStream').checked,
           textStream: $('textStreamInput').value,
           textFontFamily: $('textFontFamily').value,
+          textColor: $('textColor').value,
           textFontSize: $('textFontSize').value,
           textLineCount: String(clamp(Math.round(Number($('textLineCount').value) || 2), 1, 5)),
           textSpeed: $('textSpeed').value,
@@ -2184,6 +2221,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           textCommaDelay: $('textCommaDelay').value,
           showTextCursor: $('showTextCursor').checked,
           showTextOutline: $('showTextOutline').checked,
+          showTextShadow: $('showTextShadow').checked,
           textEndBehavior: $('textEndBehavior').value,
           homeButtonUrl: this.getHomeButtonUrl(),
           previewRate: this.previewRate
