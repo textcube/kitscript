@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SopraKnight: Defend the Concert Hall</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07101f;
+      --navy: #0d1830;
+      --panel: rgba(13, 24, 48, .86);
+      --line: rgba(255, 232, 179, .18);
+      --gold: #f5c86a;
+      --amber: #e78b3c;
+      --white: #fff8e8;
+      --muted: #aeb8c7;
+      --danger: #f06d6d;
+      --hope: #7ee7c8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(245, 200, 106, .16), transparent 30rem),
+        linear-gradient(180deg, #091426, #050911);
+      color: var(--white);
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      letter-spacing: .01em;
+    }
+
+    .app {
+      height: 100vh;
+      height: 100svh;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 42px 42px;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+      min-height: 0;
+      padding: .75rem;
+      border-right: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(245, 200, 106, .12), transparent 14rem),
+        rgba(5, 10, 20, .82);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .brand {
+      position: relative;
+      min-height: 152px;
+      overflow: hidden;
+      padding: 1rem;
+      border: 2px solid rgba(245, 200, 106, .38);
+      border-radius: 12px;
+      background:
+        linear-gradient(90deg, rgba(5, 8, 16, .92) 0%, rgba(5, 8, 16, .72) 48%, rgba(5, 8, 16, .25) 100%),
+        url("images/sopranian/brand-violin.jpg?v=2") center / cover no-repeat;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 248, 232, .08),
+        0 16px 34px rgba(0, 0, 0, .32);
+    }
+
+    .brand::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(245, 200, 106, .26), transparent 34%),
+        linear-gradient(180deg, transparent, rgba(0, 0, 0, .42));
+      pointer-events: none;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      color: var(--gold);
+      max-width: 210px;
+      font-size: 2.05rem;
+      line-height: .92;
+      letter-spacing: .02em;
+      text-shadow: 0 3px 0 rgba(0,0,0,.72), 0 0 22px rgba(245,200,106,.34);
+      text-transform: uppercase;
+    }
+
+    .brand p {
+      position: relative;
+      z-index: 1;
+      max-width: 220px;
+      margin-top: .7rem;
+      color: rgba(255,248,232,.9);
+      font-size: .9rem;
+      font-weight: 900;
+      line-height: 1.28;
+      text-shadow: 0 2px 0 rgba(0,0,0,.78);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .45rem;
+    }
+
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      min-height: 42px;
+      border: 2px solid rgba(255, 248, 232, .2);
+      border-radius: 8px;
+      color: var(--white);
+      text-decoration: none;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.035)),
+        rgba(7, 16, 31, .86);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 0 rgba(0,0,0,.28), 0 5px 0 rgba(0,0,0,.36);
+      transition: transform .12s, filter .12s, box-shadow .12s, border-color .12s;
+    }
+
+    .icon-btn:hover,
+    .icon-btn.active {
+      filter: brightness(1.08);
+      border-color: rgba(126, 231, 200, .72);
+    }
+
+    .icon-btn:active {
+      transform: translateY(3px);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(0,0,0,.22), 0 2px 0 rgba(0,0,0,.44);
+    }
+
+    .icon-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .icon-btn.sound-off {
+      color: rgba(174, 184, 199, .9);
+    }
+
+    .icon-btn.sound-on {
+      color: var(--hope);
+      background:
+        linear-gradient(180deg, rgba(126,231,200,.24), rgba(126,231,200,.06)),
+        rgba(7, 16, 31, .9);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .35rem;
+    }
+
+    .stat,
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.018)),
+        var(--panel);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 8px 18px rgba(0,0,0,.18);
+    }
+
+    .stat {
+      padding: .52rem;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: .58rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: .15rem;
+      color: var(--white);
+      font-size: .92rem;
+    }
+
+    .section-title {
+      margin: .2rem 0 .35rem;
+      color: #f8dc9c;
+      font-size: .68rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .roster {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .45rem;
+    }
+
+    .card {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .28rem;
+      align-items: center;
+      justify-items: center;
+      min-height: 106px;
+      padding: .45rem;
+      text-align: center;
+      color: var(--white);
+      transition: transform .16s, border-color .16s, background .16s;
+    }
+
+    .card-art {
+      width: 64px;
+      height: 64px;
+      border: 1px solid rgba(255, 232, 179, .18);
+      border-radius: 8px;
+      background: radial-gradient(circle at 50% 20%, rgba(245, 200, 106, .18), rgba(6, 10, 18, .9));
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.5), 0 4px 0 rgba(0,0,0,.42);
+      object-fit: contain;
+      padding: 2px;
+    }
+
+    .card:hover,
+    .card.selected {
+      transform: translateY(-1px);
+      border-color: rgba(245, 200, 106, .55);
+      background: rgba(245, 200, 106, .1);
+    }
+
+    .card.selected {
+      border-color: rgba(126, 231, 200, .9);
+      box-shadow: 0 0 0 1px rgba(126, 231, 200, .32), 0 12px 30px rgba(126, 231, 200, .08);
+    }
+
+    .card:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .card.unavailable {
+      opacity: .58;
+    }
+
+    .card.unavailable .cost {
+      color: rgba(240, 109, 109, .92);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: center;
+      gap: .35rem;
+      align-items: center;
+      margin-bottom: .1rem;
+    }
+
+    .card h2 {
+      font-size: .74rem;
+      line-height: 1.1;
+      text-shadow: 0 2px 0 rgba(0,0,0,.65);
+    }
+
+    .cost {
+      color: var(--gold);
+      font-weight: 900;
+      font-size: .7rem;
+    }
+
+    .card p,
+    .hint,
+    .bonus-list {
+      color: var(--muted);
+      font-size: .68rem;
+      line-height: 1.25;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .45rem;
+      margin-top: auto;
+    }
+
+    .control {
+      border: 2px solid rgba(255, 248, 232, .24);
+      border-radius: 8px;
+      padding: .65rem;
+      color: #160f05;
+      background:
+        linear-gradient(180deg, #ffe28e 0%, #f5c86a 52%, #c98a2f 100%);
+      font-weight: 900;
+      text-transform: uppercase;
+      text-shadow: 0 1px 0 rgba(255,255,255,.35);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.38), inset 0 -3px 0 rgba(90,48,8,.32), 0 5px 0 rgba(0,0,0,.38);
+      transition: transform .12s, box-shadow .12s, filter .12s;
+    }
+
+    .control:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .control:active {
+      transform: translateY(3px);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,.2), inset 0 -1px 0 rgba(90,48,8,.28), 0 2px 0 rgba(0,0,0,.45);
+    }
+
+    .control.secondary {
+      color: var(--white);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.035)),
+        rgba(7, 16, 31, .86);
+      text-shadow: 0 2px 0 rgba(0,0,0,.75);
+    }
+
+    .hint {
+      padding: .55rem .65rem;
+      border: 1px solid rgba(255, 232, 179, .12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    #skillBtn {
+      grid-column: 1 / -1;
+    }
+
+    .stage-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: .6rem;
+    }
+
+    canvas {
+      width: min(100%, calc(100vh * 1.55));
+      max-height: calc(100vh - 1.2rem);
+      aspect-ratio: 16 / 10;
+      border: 1px solid rgba(255, 232, 179, .18);
+      border-radius: 14px;
+      background: #08101f;
+      box-shadow: 0 34px 110px rgba(0, 0, 0, .45);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 1rem;
+      transform: translateX(-50%);
+      max-width: min(720px, calc(100vw - 2rem));
+      padding: .85rem 1rem;
+      border: 1px solid rgba(245, 200, 106, .32);
+      border-radius: 999px;
+      background: rgba(7, 16, 31, .9);
+      color: var(--white);
+      box-shadow: 0 18px 50px rgba(0,0,0,.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      font-weight: 800;
+      font-size: .88rem;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, -8px);
+    }
+
+    @media (max-width: 880px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        order: 2;
+        border-right: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .stage-wrap {
+        min-height: 56vh;
+      }
+
+      canvas {
+        width: 100%;
+      }
+    }
+
+    @media (max-height: 820px) and (min-width: 881px) {
+      .panel {
+        gap: .45rem;
+        padding: .55rem;
+      }
+
+      .brand {
+        min-height: 122px;
+        padding: .75rem;
+      }
+
+      h1 {
+        font-size: 1.55rem;
+      }
+
+      .brand p {
+        max-width: 190px;
+      }
+
+      .brand p,
+      .hint,
+      .card p {
+        font-size: .62rem;
+      }
+
+      .card {
+        min-height: 92px;
+        padding: .35rem;
+      }
+
+      .card-art {
+        width: 56px;
+        height: 56px;
+      }
+
+      .control {
+        padding: .52rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <div class="brand">
+        <h1>SopraKnight</h1>
+        <p>The world does not need another battle. It needs one final performance.</p>
+      </div>
+
+      <div class="quick-actions" aria-label="Quick links">
+        <button class="icon-btn sound-off" id="soundBtn" type="button" title="Sound off" aria-label="Toggle sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+            <path d="M18 9l4 6M22 9l-4 6" fill="none" stroke-linecap="round"></path>
+          </svg>
+        </button>
+        <a class="icon-btn" href="https://kitscript.com/pickme/" target="_blank" rel="noopener noreferrer" title="Homepage" aria-label="Homepage">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 11.5 12 4l9 7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M5.5 10.5V20h13v-9.5" fill="none" stroke-linejoin="round"></path>
+            <path d="M9.5 20v-6h5v6" fill="none" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+        <a class="icon-btn" href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.8 7.8c.2-1.3 1.2-2.3 2.5-2.4C8.2 5.2 10.2 5.1 12 5.1s3.8.1 5.7.3c1.3.1 2.3 1.1 2.5 2.4.2 1.2.3 2.6.3 4.2s-.1 3-.3 4.2c-.2 1.3-1.2 2.3-2.5 2.4-1.9.2-3.9.3-5.7.3s-3.8-.1-5.7-.3c-1.3-.1-2.3-1.1-2.5-2.4-.2-1.2-.3-2.6-.3-4.2s.1-3 .3-4.2Z" fill="none" stroke-linejoin="round"></path>
+            <path d="m10 9 5 3-5 3V9Z"></path>
+          </svg>
+        </a>
+        <a class="icon-btn" href="https://textcube.github.io/kitscript/" target="_blank" rel="noopener noreferrer" title="KITSCRIPT" aria-label="KITSCRIPT GitHub Pages">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2.5a9.5 9.5 0 0 0-3 18.5c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.1-3.4-1.1-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.6 1.1 1.6 1.1.9 1.5 2.4 1.1 2.9.8.1-.7.4-1.1.7-1.3-2.2-.3-4.6-1.1-4.6-4.8 0-1.1.4-1.9 1-2.6-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.5 9.5 0 0 1 4.9 0c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.5 1 2.6 0 3.7-2.4 4.5-4.6 4.8.4.3.7.9.7 1.8v2.5c0 .3.2.6.7.5A9.5 9.5 0 0 0 12 2.5Z"></path>
+          </svg>
+        </a>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span>Inspiration</span><strong id="inspiration">90</strong></div>
+        <div class="stat"><span>Morale</span><strong id="morale">100</strong></div>
+        <div class="stat"><span>Audience</span><strong id="audience">0 / 36</strong></div>
+        <div class="stat"><span>Concert</span><strong id="wave">0 / 1</strong></div>
+      </div>
+
+      <div class="section-title">Recruit Musicians</div>
+      <div class="roster" id="roster"></div>
+
+      <div class="section-title">Ensemble Bonuses</div>
+      <div class="bonus-list" id="bonuses">Place musicians to awaken ensemble effects.</div>
+
+      <div class="controls">
+        <button class="control" id="startBtn">Begin Concert</button>
+        <button class="control secondary" id="resetBtn">Reset</button>
+        <button class="control secondary" id="skillBtn">Grand Wave</button>
+      </div>
+      <p class="hint">Choose a portrait, then click a stage circle. The team locks when the concert begins.</p>
+    </aside>
+
+    <main class="stage-wrap">
+      <canvas id="game" width="1280" height="800" aria-label="SopraKnight concert hall game"></canvas>
+    </main>
+  </div>
+  <div class="toast" id="toast">Welcome to the final performance.</div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+    function drawRoundRect(context, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.lineTo(x + width - r, y);
+      context.quadraticCurveTo(x + width, y, x + width, y + r);
+      context.lineTo(x + width, y + height - r);
+      context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      context.lineTo(x + r, y + height);
+      context.quadraticCurveTo(x, y + height, x, y + height - r);
+      context.lineTo(x, y + r);
+      context.quadraticCurveTo(x, y, x + r, y);
+      context.closePath();
+    }
+
+    const musicianTypes = [
+      { id: 'soprano', name: 'Soprano', icon: 'S', role: 'Area resonance', cost: 55, range: 138, rate: 1.15, hope: 24, despair: 22, color: '#f7d77c', group: 'Vocal', pulse: 'circle' },
+      { id: 'pianist', name: 'Pianist', icon: 'P', role: 'Speed support', cost: 45, range: 125, rate: 1.65, hope: 12, despair: 10, color: '#fff2c7', group: 'Percussion', pulse: 'support' },
+      { id: 'cellist', name: 'Cellist', icon: 'C', role: 'Slow and sustain', cost: 50, range: 130, rate: .95, hope: 18, despair: 18, slow: .55, color: '#d9915d', group: 'Strings', pulse: 'circle' },
+      { id: 'flutist', name: 'Flutist', icon: 'F', role: 'Crowd control', cost: 48, range: 145, rate: 1.25, hope: 14, despair: 12, push: 18, color: '#9ee7ff', group: 'Woodwinds', pulse: 'wind' },
+      { id: 'trumpeter', name: 'Trumpeter', icon: 'T', role: 'Piercing burst', cost: 62, range: 170, rate: .82, hope: 32, despair: 28, color: '#ffbd5c', group: 'Brass', pulse: 'ray' },
+      { id: 'harpist', name: 'Harpist', icon: 'H', role: 'Morale healing', cost: 58, range: 122, rate: 1.05, hope: 12, despair: 10, morale: 3, color: '#d8c4ff', group: 'Strings', pulse: 'halo' }
+    ];
+
+    const lanes = Array.from({ length: 6 }, (_, lane) => ({ lane, y: 180 + lane * 70 }));
+    const stageTiles = lanes.flatMap(({ lane, y }) => [260, 375, 490, 605].map((x, col) => ({ x, y, lane, col })));
+    const seats = [];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 9; col++) seats.push({ x: 245 + col * 76, y: 650 + row * 30, taken: false });
+    }
+
+    const state = {
+      running: false,
+      setupDone: false,
+      selected: 'soprano',
+      inspiration: 520,
+      morale: 100,
+      audience: 0,
+      targetAudience: 30,
+      wave: 0,
+      maxWave: 1,
+      waveTimer: 0,
+      spawnLeft: 0,
+      spawnTimer: 0,
+      spawnQueue: [],
+      skillCooldown: 0,
+      musicians: [],
+      enemies: [],
+      audienceMembers: [],
+      particles: [],
+      pulses: [],
+      beams: [],
+      message: 'Auto mode is choosing the ensemble.',
+      gameOver: false,
+      win: false,
+      last: performance.now(),
+      rosterKey: '',
+      pointer: null,
+      hoveredTile: null,
+      hoveredMusician: null,
+      autoMode: true,
+      autoPhase: 'placing',
+      autoTimer: .7,
+      autoSlotIndex: 0,
+      restartCountdown: 0
+    };
+
+    let autoPlacementPlan = [];
+    const audioState = {
+      enabled: false,
+      context: null,
+      master: null,
+      lastBeamAt: 0
+    };
+
+    const undeadPlan = [
+      [{ type: 'shambler', count: 5 }, { type: 'elite', count: 1 }],
+      [{ type: 'runner', count: 7 }],
+      [{ type: 'shambler', count: 4 }, { type: 'brute', count: 1 }],
+      [{ type: 'runner', count: 4 }, { type: 'elite', count: 2 }],
+      [{ type: 'shambler', count: 8 }],
+      [{ type: 'brute', count: 2 }, { type: 'runner', count: 3 }]
+    ];
+
+    const undeadTypes = {
+      shambler: { label: 'Gray Walkers', speed: 34, hope: 100, radius: 16, spriteSize: 78, morale: 8, color: '#60646f' },
+      runner: { label: 'Hollow Runners', speed: 52, hope: 85, radius: 14, spriteSize: 76, morale: 7, color: '#777b86' },
+      elite: { label: 'Silent Elites', speed: 30, hope: 145, radius: 20, spriteSize: 88, morale: 13, color: '#87828c' },
+      brute: { label: 'Dread Brutes', speed: 24, hope: 180, radius: 24, spriteSize: 96, morale: 18, color: '#6f6670' }
+    };
+
+    const undeadSprites = Object.fromEntries(Object.keys(undeadTypes).map((type) => {
+      const image = new Image();
+      image.src = `images/undeath/${type}.png`;
+      return [type, image];
+    }));
+
+    const sopranianSprites = Object.fromEntries(musicianTypes.map((type) => {
+      const image = new Image();
+      image.src = `images/sopranian/${type.id}.png`;
+      return [type.id, image];
+    }));
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    function ensureAudio() {
+      if (audioState.context) return audioState.context;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      const context = new AudioContext();
+      const master = context.createGain();
+      master.gain.value = .12;
+      master.connect(context.destination);
+      audioState.context = context;
+      audioState.master = master;
+      return context;
+    }
+
+    function updateSoundButton() {
+      const button = document.getElementById('soundBtn');
+      button.classList.toggle('sound-on', audioState.enabled);
+      button.classList.toggle('sound-off', !audioState.enabled);
+      button.title = audioState.enabled ? 'Sound on' : 'Sound off';
+      button.setAttribute('aria-label', audioState.enabled ? 'Turn sound off' : 'Turn sound on');
+      button.innerHTML = audioState.enabled
+        ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M17 8c1.1 1 1.8 2.4 1.8 4s-.7 3-1.8 4M20 5.5A9 9 0 0 1 22 12a9 9 0 0 1-2 6.5" fill="none" stroke-linecap="round"></path></svg>`
+        : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M18 9l4 6M22 9l-4 6" fill="none" stroke-linecap="round"></path></svg>`;
+    }
+
+    async function toggleSound() {
+      const context = ensureAudio();
+      if (!context) return showToast('This browser does not support Web Audio.');
+      if (context.state === 'suspended') await context.resume();
+      audioState.enabled = !audioState.enabled;
+      updateSoundButton();
+      if (audioState.enabled) {
+        playTone(523, .08, 'sine', .16);
+        setTimeout(() => playTone(784, .1, 'sine', .14), 80);
+        showToast('Sound on.');
+      } else {
+        showToast('Sound off.');
+      }
+    }
+
+    function playTone(freq, duration = .08, type = 'sine', gain = .08) {
+      if (!audioState.enabled || !audioState.context || !audioState.master) return;
+      const now = audioState.context.currentTime;
+      const osc = audioState.context.createOscillator();
+      const amp = audioState.context.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      amp.gain.setValueAtTime(0, now);
+      amp.gain.linearRampToValueAtTime(gain, now + .01);
+      amp.gain.exponentialRampToValueAtTime(.0001, now + duration);
+      osc.connect(amp);
+      amp.connect(audioState.master);
+      osc.start(now);
+      osc.stop(now + duration + .03);
+    }
+
+    function playAttackSound(colorSeed = 0) {
+      if (!audioState.enabled || !audioState.context) return;
+      const now = audioState.context.currentTime;
+      if (now - audioState.lastBeamAt < .055) return;
+      audioState.lastBeamAt = now;
+      playTone(420 + colorSeed * 37, .055, 'triangle', .045);
+    }
+
+    function playRestoreSound() {
+      playTone(660, .08, 'sine', .09);
+      setTimeout(() => playTone(880, .1, 'sine', .075), 70);
+    }
+
+    function playGrandWaveSound() {
+      [196, 247, 330, 392].forEach((freq, index) => {
+        setTimeout(() => playTone(freq, .22, 'sine', .085), index * 55);
+      });
+    }
+
+    function updateHud() {
+      document.getElementById('inspiration').textContent = Math.floor(state.inspiration);
+      document.getElementById('morale').textContent = Math.max(0, Math.floor(state.morale));
+      document.getElementById('audience').textContent = `${state.audience} / ${state.targetAudience}`;
+      document.getElementById('wave').textContent = `${state.wave} / ${state.maxWave}`;
+      renderRoster();
+      renderBonuses();
+      document.getElementById('skillBtn').disabled = state.skillCooldown > 0 || !state.running;
+      document.getElementById('skillBtn').textContent = state.skillCooldown > 0 ? `Grand Wave ${Math.ceil(state.skillCooldown)}s` : 'Grand Wave';
+    }
+
+    function renderRoster(force = false) {
+      const key = `${state.selected}|${state.setupDone}|${musicianTypes.map((type) => state.inspiration < type.cost ? '0' : '1').join('')}`;
+      if (!force && state.rosterKey === key) return;
+      state.rosterKey = key;
+      const roster = document.getElementById('roster');
+      roster.replaceChildren(...musicianTypes.map((type) => {
+        const button = document.createElement('button');
+        button.className = `card ${state.selected === type.id ? 'selected' : ''} ${state.inspiration < type.cost ? 'unavailable' : ''}`;
+        button.disabled = state.setupDone;
+        button.type = 'button';
+        button.dataset.musician = type.id;
+        button.innerHTML = `
+          <img class="card-art" src="images/sopranian/${type.id}.png" alt="" />
+          <div>
+            <div class="card-head"><h2>${type.name}</h2><span class="cost">${type.cost}</span></div>
+            <p>${type.role}</p>
+          </div>
+        `;
+        button.onclick = () => {
+          if (state.setupDone) return;
+          state.selected = type.id;
+          updateHud();
+          showToast(state.inspiration < type.cost ? `${type.name} selected. More inspiration needed to place.` : `${type.name} selected.`);
+        };
+        return button;
+      }));
+    }
+
+    function renderBonuses() {
+      const active = getBonuses();
+      document.getElementById('bonuses').innerHTML = active.length ? active.map((b) => `- ${b}`).join('<br>') : 'Place musicians to awaken ensemble effects.';
+    }
+
+    function getBonuses() {
+      const ids = state.musicians.map((m) => m.type.id);
+      const groups = new Set(state.musicians.map((m) => m.type.group));
+      const bonuses = [];
+      if (ids.includes('soprano') && ids.includes('pianist') && ids.includes('cellist')) bonuses.push('Classical Trio: +20% emotional recovery');
+      if (ids.includes('flutist')) bonuses.push('Woodwind Ensemble seed: wider resonance for winds');
+      if (ids.includes('trumpeter')) bonuses.push('Brass Ensemble seed: opening shockwaves');
+      if (ids.filter((id) => id === 'soprano').length >= 4) bonuses.push('Heavenly Chorus: instant restoration chance');
+      if (['Strings', 'Woodwinds', 'Brass', 'Percussion', 'Vocal'].every((g) => groups.has(g))) bonuses.push('Grand Orchestra: Symphony Mode');
+      return bonuses;
+    }
+
+    function recoveryMultiplier() {
+      const ids = state.musicians.map((m) => m.type.id);
+      let mult = 1;
+      if (ids.includes('soprano') && ids.includes('pianist') && ids.includes('cellist')) mult += .2;
+      return mult;
+    }
+
+    function rangeProfile(type, origin) {
+      const lane = origin.tile?.lane ?? origin.lane;
+      if (type.id === 'trumpeter') {
+        return { laneMin: lane, laneMax: lane, x1: origin.x - 10, x2: 1220, label: 'Piercing lane' };
+      }
+      if (type.id === 'soprano' || type.id === 'cellist') {
+        return {
+          laneMin: Math.max(0, lane - 1),
+          laneMax: Math.min(lanes.length - 1, lane + 1),
+          x1: origin.x - 30,
+          x2: origin.x + type.range * 2.6,
+          label: type.id === 'soprano' ? 'Area resonance' : 'Slow field'
+        };
+      }
+      if (type.id === 'harpist') {
+        return {
+          laneMin: Math.max(0, lane - 1),
+          laneMax: Math.min(lanes.length - 1, lane + 1),
+          x1: origin.x - 20,
+          x2: origin.x + type.range * 2.1,
+          label: 'Healing aura'
+        };
+      }
+      return { laneMin: lane, laneMax: lane, x1: origin.x - 16, x2: origin.x + type.range * 3.2, label: type.id === 'flutist' ? 'Push lane' : 'Support lane' };
+    }
+
+    function enemiesInRange(type, origin) {
+      const profile = rangeProfile(type, origin);
+      return state.enemies.filter((e) => e.lane >= profile.laneMin && e.lane <= profile.laneMax && e.x >= profile.x1 && e.x <= profile.x2);
+    }
+
+    function startWave() {
+      if (state.gameOver || state.win) return;
+      if (state.running || state.setupDone) return showToast('This is a one-concert challenge. Press Reset for a new run.');
+      if (!state.musicians.length) return showToast('Place at least one musician before the concert begins.');
+      state.wave = 1;
+      state.running = true;
+      state.setupDone = true;
+      state.spawnQueue = buildSpawnQueue();
+      state.spawnLeft = state.spawnQueue.length;
+      state.spawnTimer = 0;
+      state.skillCooldown = 2;
+      state.autoPhase = 'playing';
+      state.message = 'The one final performance begins. Restore every lane.';
+      if (state.musicians.some((m) => m.type.id === 'trumpeter')) emitPulse({ x: 1040, y: 390 }, 260, '#ffbd5c', .45);
+      showToast('The concert begins. Watch all six lanes.');
+      updateHud();
+    }
+
+    function buildSpawnQueue() {
+      const queue = [];
+      undeadPlan.forEach((lanePlan, lane) => {
+        let offset = 0;
+        lanePlan.forEach((item) => {
+          for (let i = 0; i < item.count; i++) {
+            queue.push({ lane, type: item.type, delay: offset + i * .68 + lane * .12 });
+          }
+          offset += item.count * .68 + .8;
+        });
+      });
+      return queue.sort((a, b) => a.delay - b.delay);
+    }
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function buildAutoPlacementPlan() {
+      const byLane = lanes.map(({ lane }) => {
+        const laneTiles = shuffle(stageTiles.filter((tile) => tile.lane === lane));
+        const type = musicianTypes[Math.floor(Math.random() * musicianTypes.length)].id;
+        return { tile: laneTiles[0], type };
+      });
+      const extraCount = 1 + Math.floor(Math.random() * 3);
+      const used = new Set(byLane.map((step) => step.tile));
+      const openTiles = shuffle(stageTiles.filter((tile) => !used.has(tile))).slice(0, extraCount);
+      const extras = openTiles.map((tile) => ({
+        tile,
+        type: musicianTypes[Math.floor(Math.random() * musicianTypes.length)].id
+      }));
+      return shuffle([...byLane, ...extras]);
+    }
+
+    function placeMusician(typeId, tile, silent = false) {
+      if (!tile || state.musicians.some((m) => m.tile === tile)) return false;
+      const type = musicianTypes.find((m) => m.id === typeId);
+      if (!type || state.inspiration < type.cost) return false;
+      state.selected = type.id;
+      state.inspiration -= type.cost;
+      state.musicians.push({ type, tile, x: tile.x, y: tile.y, cooldown: .35, level: 1 });
+      state.message = `${type.name} is ready. Press Begin Concert.`;
+      if (!silent) showToast(`${type.name} joins the ensemble.`);
+      updateHud();
+      return true;
+    }
+
+    function beginRestartCountdown() {
+      if (!state.autoMode || state.autoPhase === 'countdown') return;
+      state.autoPhase = 'countdown';
+      state.restartCountdown = 7;
+      state.autoTimer = 0;
+    }
+
+    function resetRoundForAuto() {
+      autoPlacementPlan = buildAutoPlacementPlan();
+      Object.assign(state, {
+        running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
+        spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
+        message: 'Auto mode is choosing the ensemble.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
+        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
+      });
+      seats.forEach((s) => s.taken = false);
+      updateHud();
+    }
+
+    function updateAutoMode(dt) {
+      if (!state.autoMode) return;
+      if (state.autoPhase === 'countdown') {
+        state.restartCountdown = Math.max(0, state.restartCountdown - dt);
+        state.message = `Next concert starts in ${Math.ceil(state.restartCountdown)}.`;
+        if (state.restartCountdown <= 0) resetRoundForAuto();
+        return;
+      }
+      if (state.autoPhase !== 'placing' || state.running || state.setupDone) return;
+      state.autoTimer -= dt;
+      if (state.autoTimer > 0) return;
+      const step = autoPlacementPlan[state.autoSlotIndex];
+      if (step) {
+        placeMusician(step.type, step.tile, true);
+        state.hoveredTile = step.tile;
+        state.selected = step.type;
+        state.message = `Auto mode selected ${musicianTypes.find((m) => m.id === step.type).name}.`;
+        state.autoSlotIndex += 1;
+        state.autoTimer = 1;
+        return;
+      }
+      state.message = 'Auto mode begins the concert.';
+      startWave();
+    }
+
+    function resetGame() {
+      autoPlacementPlan = buildAutoPlacementPlan();
+      Object.assign(state, {
+        running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
+        spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
+        message: 'Study the incoming lanes, place a team, then begin the concert.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
+        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
+      });
+      seats.forEach((s) => s.taken = false);
+      updateHud();
+      showToast('The concert hall is ready.');
+    }
+
+    function canvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: (event.clientX - rect.left) * W / rect.width, y: (event.clientY - rect.top) * H / rect.height };
+    }
+
+    function updatePointer(point) {
+      state.pointer = point;
+      state.hoveredTile = !state.setupDone ? stageTiles.find((t) => Math.hypot(t.x - point.x, t.y - point.y) < 46) || null : null;
+      state.hoveredMusician = state.musicians.find((m) => Math.hypot(m.x - point.x, m.y - point.y) < 44) || null;
+    }
+
+    canvas.addEventListener('mousemove', (event) => updatePointer(canvasPoint(event)));
+    canvas.addEventListener('mouseleave', () => {
+      state.pointer = null;
+      state.hoveredTile = null;
+      state.hoveredMusician = null;
+    });
+
+    canvas.addEventListener('click', (event) => {
+      if (state.gameOver || state.win) return;
+      if (state.running || state.setupDone) {
+        showToast('The team is locked once the concert begins.');
+        return;
+      }
+      const p = canvasPoint(event);
+      updatePointer(p);
+      const tile = stageTiles.find((t) => Math.hypot(t.x - p.x, t.y - p.y) < 46 && !state.musicians.some((m) => m.tile === t));
+      if (!tile) {
+        showToast('Click one of the glowing circles on the stage.');
+        return;
+      }
+      const type = musicianTypes.find((m) => m.id === state.selected);
+      if (state.inspiration < type.cost) return showToast('Not enough inspiration.');
+      placeMusician(type.id, tile);
+    });
+
+    document.getElementById('startBtn').onclick = startWave;
+    document.getElementById('resetBtn').onclick = resetGame;
+    document.getElementById('skillBtn').onclick = useGrandWave;
+    document.getElementById('soundBtn').onclick = toggleSound;
+
+    function spawnEnemy(entry) {
+      const laneInfo = lanes[entry.lane];
+      const type = undeadTypes[entry.type];
+      state.enemies.push({
+        x: 1230 + Math.random() * 40,
+        y: laneInfo.y,
+        lane: entry.lane,
+        type: entry.type,
+        speed: type.speed + Math.random() * 5,
+        despair: 100,
+        hope: 0,
+        hopeMax: type.hope,
+        radius: type.radius,
+        spriteSize: type.spriteSize,
+        moraleDamage: type.morale,
+        color: type.color,
+        slow: 1,
+        elite: entry.type === 'elite' || entry.type === 'brute'
+      });
+    }
+
+    function useGrandWave() {
+      if (!state.running || state.skillCooldown > 0) return;
+      const hasGrand = getBonuses().some((bonus) => bonus.startsWith('Grand Orchestra'));
+      const power = hasGrand ? 52 : 34;
+      state.skillCooldown = hasGrand ? 14 : 18;
+      state.message = hasGrand ? 'Grand Orchestra releases Symphony Mode.' : 'Grand Wave restores hope across the hall.';
+      emitPulse({ x: W / 2, y: H / 2 }, 620, '#f5c86a', .8);
+      playGrandWaveSound();
+      for (const enemy of state.enemies) {
+        enemy.hope += power;
+        enemy.despair -= power * .8;
+        enemy.slow = Math.min(enemy.slow, .45);
+      }
+      showToast(hasGrand ? 'Symphony Mode!' : 'Grand Wave!');
+    }
+
+    function emitPulse(origin, radius, color, life = .5) {
+      state.pulses.push({ x: origin.x, y: origin.y, radius, color, age: 0, life });
+    }
+
+    function emitBeam(from, to, color) {
+      state.beams.push({
+        x1: from.x,
+        y1: from.y,
+        x2: to.x,
+        y2: to.y,
+        color,
+        age: 0,
+        life: .22
+      });
+      playAttackSound(Math.max(0, from.type?.id?.length || 0));
+    }
+
+    function restoreEnemy(enemy) {
+      const seat = seats.find((s) => !s.taken);
+      if (seat) seat.taken = true;
+      state.audience += 1;
+      state.inspiration += 18 + state.wave * 2;
+      state.audienceMembers.push({
+        x: enemy.x,
+        y: enemy.y,
+        tx: seat?.x || 130,
+        ty: seat?.y || 700,
+        color: ['#f5c86a', '#fff2c7', '#e78b3c', '#f5a6a6'][state.audience % 4]
+      });
+      for (let i = 0; i < 18; i++) {
+        state.particles.push({ x: enemy.x, y: enemy.y, vx: (Math.random() - .5) * 80, vy: (Math.random() - .5) * 80, life: .8, color: '#f5c86a' });
+      }
+      playRestoreSound();
+      showToast('A heart remembers the music.');
+    }
+
+    function update(dt) {
+      if (state.gameOver || state.win) {
+        updateAutoMode(dt);
+        updateHud();
+        return;
+      }
+      updateAutoMode(dt);
+      if (state.skillCooldown > 0) state.skillCooldown = Math.max(0, state.skillCooldown - dt);
+      if (state.running) {
+        state.waveTimer += dt;
+        while (state.spawnQueue.length && state.spawnQueue[0].delay <= state.waveTimer) {
+          spawnEnemy(state.spawnQueue.shift());
+          state.spawnLeft -= 1;
+        }
+        if (state.spawnLeft <= 0 && !state.enemies.length) {
+          state.running = false;
+          if (state.audience >= state.targetAudience) {
+            state.win = true;
+            beginRestartCountdown();
+            showToast('Victory: the hall is full of living applause.');
+          } else {
+            state.gameOver = true;
+            beginRestartCountdown();
+            showToast('The final chord fades before the hall is full.');
+          }
+        }
+      }
+
+      state.inspiration += state.audience * dt * .28;
+
+      const mult = recoveryMultiplier();
+      for (const m of state.musicians) {
+        m.cooldown -= dt;
+        const support = state.musicians.some((a) => a.type.id === 'pianist' && dist(a, m) < 170) ? .82 : 1;
+        if (m.cooldown <= 0) {
+          m.cooldown = m.type.rate * support;
+          if (m.type.morale) state.morale = clamp(state.morale + m.type.morale, 0, 100);
+          let targets = enemiesInRange(m.type, m);
+          if (m.type.id === 'trumpeter') targets = targets.slice(0, 4);
+          if (targets.length) emitPulse(m, m.type.id === 'trumpeter' ? 240 : m.type.range, m.type.color, .45);
+          for (const e of targets) {
+            emitBeam(m, e, m.type.color);
+            const bonus = m.type.id === 'soprano' && state.musicians.filter((x) => x.type.id === 'soprano').length >= 4 && Math.random() < .04 ? 100 : 1;
+            e.hope += m.type.hope * mult * (e.elite ? .7 : 1) * bonus;
+            e.despair -= m.type.despair * mult;
+            if (m.type.slow) e.slow = Math.min(e.slow, m.type.slow);
+            if (m.type.push) e.x += m.type.push;
+          }
+        }
+      }
+
+      for (const e of state.enemies) {
+        e.x -= e.speed * e.slow * dt;
+        e.slow += (1 - e.slow) * dt * 1.8;
+        if (e.x < 195) {
+          state.morale -= e.moraleDamage;
+          state.message = 'A listener reached the stage before hope returned.';
+          e.hope = -999;
+        }
+      }
+      const restored = state.enemies.filter((e) => e.hope >= e.hopeMax);
+      restored.forEach(restoreEnemy);
+      state.enemies = state.enemies.filter((e) => e.hope < e.hopeMax && e.hope > -900);
+
+      for (const a of state.audienceMembers) {
+        a.x += (a.tx - a.x) * dt * 2.4;
+        a.y += (a.ty - a.y) * dt * 2.4;
+      }
+      state.particles = state.particles.filter((p) => (p.life -= dt) > 0);
+      for (const p of state.particles) { p.x += p.vx * dt; p.y += p.vy * dt; }
+      state.pulses = state.pulses.filter((p) => (p.age += dt) < p.life);
+      state.beams = state.beams.filter((b) => (b.age += dt) < b.life);
+
+      if (state.morale <= 0) {
+        state.gameOver = true;
+        beginRestartCountdown();
+        showToast('Concert hall morale reached zero.');
+      }
+      updateHud();
+    }
+
+    function drawFutureHallBackdrop() {
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#101a33');
+      bg.addColorStop(.42, '#091224');
+      bg.addColorStop(1, '#03060d');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      const glow = ctx.createRadialGradient(W * .52, 170, 30, W * .52, 170, 620);
+      glow.addColorStop(0, 'rgba(245,200,106,.22)');
+      glow.addColorStop(.38, 'rgba(126,231,200,.055)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.globalAlpha = .72;
+      for (let i = 0; i < 7; i++) {
+        const x = 110 + i * 180;
+        const arch = ctx.createLinearGradient(x, 80, x, 590);
+        arch.addColorStop(0, 'rgba(245,200,106,.18)');
+        arch.addColorStop(1, 'rgba(245,200,106,.025)');
+        ctx.strokeStyle = arch;
+        ctx.lineWidth = i % 2 ? 2 : 3;
+        ctx.beginPath();
+        ctx.moveTo(x - 70, 590);
+        ctx.bezierCurveTo(x - 80, 250, x - 50, 120, x, 92);
+        ctx.bezierCurveTo(x + 50, 120, x + 80, 250, x + 70, 590);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 10; i++) {
+        const x = 75 + i * 130;
+        ctx.strokeStyle = 'rgba(126,231,200,.055)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, 118);
+        ctx.lineTo(W / 2 + (x - W / 2) * .3, 585);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const lamp of [{ x: 310, y: 125 }, { x: 635, y: 94 }, { x: 965, y: 125 }]) {
+        const light = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, 210);
+        light.addColorStop(0, 'rgba(255,248,232,.24)');
+        light.addColorStop(.18, 'rgba(245,200,106,.13)');
+        light.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = light;
+        ctx.fillRect(lamp.x - 220, lamp.y - 80, 440, 420);
+      }
+      ctx.restore();
+
+      const floor = ctx.createLinearGradient(0, 525, 0, H);
+      floor.addColorStop(0, 'rgba(255,248,232,.045)');
+      floor.addColorStop(.38, 'rgba(245,200,106,.07)');
+      floor.addColorStop(1, 'rgba(0,0,0,.38)');
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, 520, W, H - 520);
+
+      ctx.strokeStyle = 'rgba(255,248,232,.035)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 12; i++) {
+        const y = 540 + i * 24;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y + i * 5);
+        ctx.stroke();
+      }
+    }
+
+    function drawHall() {
+      ctx.clearRect(0, 0, W, H);
+      drawFutureHallBackdrop();
+
+      ctx.fillStyle = 'rgba(255,248,232,.86)';
+      ctx.font = '800 18px system-ui';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(state.message, 48, 58);
+      ctx.fillStyle = 'rgba(174,184,199,.78)';
+      ctx.font = '700 14px system-ui';
+      ctx.fillText('Set your artists by lane, then begin the one-concert challenge.', 48, 84);
+
+      const seatBg = ctx.createLinearGradient(145, 620, 905, 765);
+      seatBg.addColorStop(0, 'rgba(20,13,30,.82)');
+      seatBg.addColorStop(1, 'rgba(5,11,22,.72)');
+      ctx.fillStyle = seatBg;
+      ctx.beginPath();
+      drawRoundRect(ctx, 145, 620, 760, 145, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245,200,106,.26)';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,248,232,.62)';
+      ctx.font = '900 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('AUDIENCE SEATS', 525, 642);
+      for (const seat of seats) {
+        ctx.fillStyle = seat.taken ? 'rgba(245,200,106,.32)' : 'rgba(255,255,255,.045)';
+        ctx.beginPath();
+        drawRoundRect(ctx, seat.x - 20, seat.y - 12, 40, 24, 6);
+        ctx.fill();
+      }
+
+      const stageBg = ctx.createLinearGradient(215, 140, 780, 580);
+      stageBg.addColorStop(0, 'rgba(68,45,20,.78)');
+      stageBg.addColorStop(.52, 'rgba(41,25,12,.82)');
+      stageBg.addColorStop(1, 'rgba(14,19,30,.88)');
+      ctx.fillStyle = stageBg;
+      ctx.beginPath();
+      drawRoundRect(ctx, 215, 140, 565, 440, 16);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245,200,106,.62)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(126,231,200,.16)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      drawRoundRect(ctx, 225, 150, 545, 420, 12);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(245,200,106,.08)';
+      ctx.fillRect(230, 165, 535, 34);
+      ctx.fillStyle = 'rgba(255,248,232,.68)';
+      ctx.font = '900 16px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('LOCKED STAGE TEAM', 497, 188);
+
+      for (let i = 0; i < lanes.length; i++) {
+        const y = lanes[i].y;
+        const laneGlow = ctx.createLinearGradient(170, y, 1220, y);
+        laneGlow.addColorStop(0, 'rgba(255,248,232,.04)');
+        laneGlow.addColorStop(.48, 'rgba(126,231,200,.11)');
+        laneGlow.addColorStop(1, 'rgba(245,200,106,.07)');
+        ctx.strokeStyle = laneGlow;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(170, y);
+        ctx.lineTo(1220, y);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,248,232,.34)';
+        ctx.font = '800 12px system-ui';
+        ctx.textAlign = 'left';
+        ctx.fillText(`LANE ${i + 1}`, 78, y + 4);
+      }
+
+      ctx.fillStyle = 'rgba(245,200,106,.78)';
+      ctx.font = '900 14px system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillText('<- UNDEAD ENTER FROM THIS SIDE', 1215, 138);
+
+      if (!state.setupDone) {
+        ctx.fillStyle = 'rgba(7,16,31,.66)';
+        ctx.strokeStyle = 'rgba(255,232,179,.16)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundRect(ctx, 930, 154, 292, 418, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,248,232,.72)';
+        ctx.font = '900 13px system-ui';
+        ctx.textAlign = 'left';
+        ctx.fillText('INCOMING PREVIEW', 948, 178);
+        undeadPlan.forEach((lanePlan, lane) => {
+          const y = lanes[lane].y;
+          ctx.fillStyle = 'rgba(255,255,255,.05)';
+          ctx.fillRect(948, y - 25, 252, 50);
+          ctx.fillStyle = 'rgba(245,200,106,.82)';
+          ctx.font = '900 11px system-ui';
+          ctx.fillText(`L${lane + 1}`, 958, y + 4);
+          let x = 996;
+          for (const item of lanePlan) {
+            const sprite = undeadSprites[item.type];
+            if (sprite?.complete && sprite.naturalWidth) {
+              ctx.drawImage(sprite, x, y - 22, 42, 42);
+            } else {
+              ctx.fillStyle = undeadTypes[item.type].color;
+              ctx.beginPath();
+              ctx.arc(x + 21, y, 14, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.fillStyle = '#fff8e8';
+            ctx.font = '900 12px system-ui';
+            ctx.fillText(`x${item.count}`, x + 28, y + 18);
+            x += 72;
+          }
+        });
+      }
+
+      drawRangeHints();
+
+      for (const tile of stageTiles) {
+        const occupied = state.musicians.some((m) => m.tile === tile);
+        ctx.fillStyle = occupied ? 'rgba(245,200,106,.12)' : 'rgba(245,200,106,.06)';
+        ctx.strokeStyle = occupied ? 'rgba(245,200,106,.42)' : 'rgba(245,200,106,.22)';
+        ctx.beginPath();
+        ctx.arc(tile.x, tile.y, 35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    function drawRangeHints() {
+      const previewType = musicianTypes.find((type) => type.id === state.selected);
+      const previewOrigin = state.hoveredTile && !state.setupDone && previewType ? { x: state.hoveredTile.x, y: state.hoveredTile.y, tile: state.hoveredTile } : null;
+      const activeOrigin = state.hoveredMusician || null;
+      if (previewOrigin) drawRangeProfile(previewType, previewOrigin, .42, true);
+      if (activeOrigin) drawRangeProfile(activeOrigin.type, activeOrigin, .56, false);
+    }
+
+    function drawRangeProfile(type, origin, alpha, preview) {
+      const profile = rangeProfile(type, origin);
+      const x1 = clamp(profile.x1, 120, 1220);
+      const x2 = clamp(profile.x2, 120, 1220);
+      const y1 = lanes[profile.laneMin].y - 26;
+      const y2 = lanes[profile.laneMax].y + 26;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = type.color;
+      ctx.beginPath();
+      drawRoundRect(ctx, Math.min(x1, x2), y1, Math.abs(x2 - x1), y2 - y1, 14);
+      ctx.fill();
+      ctx.globalAlpha = Math.min(1, alpha + .18);
+      ctx.strokeStyle = type.color;
+      ctx.lineWidth = preview ? 2 : 3;
+      ctx.setLineDash(preview ? [12, 8] : []);
+      ctx.beginPath();
+      drawRoundRect(ctx, Math.min(x1, x2), y1, Math.abs(x2 - x1), y2 - y1, 14);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const arrowY = origin.y;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(origin.x + 28, arrowY);
+      ctx.lineTo(Math.min(x2 - 18, 1210), arrowY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(Math.min(x2 - 18, 1210), arrowY);
+      ctx.lineTo(Math.min(x2 - 34, 1194), arrowY - 10);
+      ctx.lineTo(Math.min(x2 - 34, 1194), arrowY + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(7,16,31,.86)';
+      ctx.strokeStyle = type.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      drawRoundRect(ctx, origin.x - 72, origin.y - 63, 144, 28, 10);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff8e8';
+      ctx.font = '900 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(profile.label, origin.x, origin.y - 49);
+      ctx.restore();
+    }
+
+    function draw() {
+      drawHall();
+      for (const p of state.pulses) {
+        const t = p.age / p.life;
+        ctx.strokeStyle = p.color;
+        ctx.globalAlpha = (1 - t) * .55;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius * t, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      for (const b of state.beams) {
+        const t = b.age / b.life;
+        const alpha = (1 - t) * .95;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = b.color;
+        ctx.globalAlpha = alpha * .32;
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(b.x1 + 22, b.y1 - 6);
+        ctx.lineTo(b.x2 - 18, b.y2 - 8);
+        ctx.stroke();
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(b.x1 + 22, b.y1 - 6);
+        ctx.lineTo(b.x2 - 18, b.y2 - 8);
+        ctx.stroke();
+        ctx.fillStyle = '#fff8e8';
+        ctx.globalAlpha = alpha * .9;
+        ctx.beginPath();
+        ctx.arc(b.x2 - 18, b.y2 - 8, 4 + t * 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const m of state.musicians) {
+        const sprite = sopranianSprites[m.type.id];
+        const size = 74;
+        ctx.fillStyle = 'rgba(0,0,0,.2)';
+        ctx.beginPath();
+        ctx.ellipse(m.x, m.y + 29, 27, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (sprite?.complete && sprite.naturalWidth) {
+          ctx.drawImage(sprite, m.x - size / 2, m.y - size / 2 - 2, size, size);
+        } else {
+          ctx.fillStyle = m.type.color;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, 22, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#111';
+          ctx.font = '900 18px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(m.type.icon, m.x, m.y);
+        }
+      }
+
+      for (const e of state.enemies) {
+        const sprite = undeadSprites[e.type];
+        ctx.fillStyle = 'rgba(0,0,0,.22)';
+        ctx.beginPath();
+        ctx.ellipse(e.x, e.y + e.spriteSize * .34, e.spriteSize * .23, e.spriteSize * .06, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (sprite?.complete && sprite.naturalWidth) {
+          ctx.drawImage(sprite, e.x - e.spriteSize * .5, e.y - e.spriteSize * .58, e.spriteSize, e.spriteSize);
+        } else {
+          ctx.fillStyle = e.color;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,248,232,.72)';
+          ctx.font = '900 11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(e.type[0].toUpperCase(), e.x, e.y);
+        }
+        const despairRatio = clamp(e.despair / 100);
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(174,184,199,.2)';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y + e.spriteSize * .35, e.spriteSize * .18, Math.PI * .08, Math.PI * .92);
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(174,184,199,${.28 + despairRatio * .48})`;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y + e.spriteSize * .35, e.spriteSize * .18, Math.PI * .08, Math.PI * (.08 + .84 * despairRatio));
+        ctx.stroke();
+        if (e.hope > 0) {
+          const hopeRatio = clamp(e.hope / e.hopeMax);
+          ctx.fillStyle = `rgba(126,231,200,${.04 + hopeRatio * .11})`;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, e.radius + 4 + hopeRatio * 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      for (const a of state.audienceMembers) {
+        ctx.fillStyle = a.color;
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const p of state.particles) {
+        ctx.globalAlpha = clamp(p.life / .8);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        ctx.globalAlpha = 1;
+      }
+
+      if (state.gameOver || state.win) {
+        ctx.fillStyle = 'rgba(0,0,0,.58)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = state.win ? '#f5c86a' : '#f06d6d';
+        ctx.font = '900 54px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(state.win ? 'Final Performance Complete' : 'The Hall Falls Silent', W / 2, H / 2 - 20);
+        ctx.fillStyle = '#fff8e8';
+        ctx.font = '700 22px system-ui';
+        const nextText = state.autoMode && state.autoPhase === 'countdown'
+          ? `Auto restart in ${Math.ceil(state.restartCountdown)}`
+          : 'Press Reset to conduct another prototype run.';
+        ctx.fillText(nextText, W / 2, H / 2 + 24);
+      }
+    }
+
+    function loop(now) {
+      const dt = Math.min(.05, (now - state.last) / 1000);
+      state.last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    updateSoundButton();
+    autoPlacementPlan = buildAutoPlacementPlan();
+    updateHud();
+    showToast('Sopranian Challenge prototype ready.');
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
