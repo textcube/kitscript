@@ -217,6 +217,25 @@ Important note:
 
 The brand image must keep its source aspect ratio and be cropped, not stretched.
 
+### SD Musician Assets
+
+Generated SD/chibi game-ready musicians:
+
+`sopraknight/images/sopranian_sd`
+
+Current files:
+
+- `sopranian-sd-concept-sheet.png`
+- `soprano.png`
+- `pianist.png`
+- `cellist.png`
+- `flutist.png`
+- `trumpeter.png`
+- `harpist.png`
+- `preview.png`
+
+These are now the active in-game musician sprites. They were generated to match the small cute design-sheet feeling of the undead samples, then split into separate transparent PNG files.
+
 ## UI Direction
 
 Current visual direction:
@@ -345,4 +364,3 @@ Avoid:
 - damage numbers
 - kill language
 - gore
-

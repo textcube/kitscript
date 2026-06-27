@@ -47,7 +47,7 @@
       height: 100vh;
       height: 100svh;
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 320px 1fr;
       background-image:
         linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
@@ -57,9 +57,9 @@
     .panel {
       display: flex;
       flex-direction: column;
-      gap: .65rem;
+      gap: .55rem;
       min-height: 0;
-      padding: .75rem;
+      padding: .6rem;
       border-right: 1px solid var(--line);
       background:
         radial-gradient(circle at 20% 0%, rgba(245, 200, 106, .12), transparent 14rem),
@@ -70,7 +70,7 @@
 
     .brand {
       position: relative;
-      min-height: 152px;
+      min-height: 142px;
       overflow: hidden;
       padding: 1rem;
       border: 2px solid rgba(245, 200, 106, .38);
@@ -98,7 +98,7 @@
       z-index: 1;
       color: var(--gold);
       max-width: 210px;
-      font-size: 2.05rem;
+      font-size: 1.86rem;
       line-height: .92;
       letter-spacing: .02em;
       text-shadow: 0 3px 0 rgba(0,0,0,.72), 0 0 22px rgba(245,200,106,.34);
@@ -223,16 +223,16 @@
       gap: .28rem;
       align-items: center;
       justify-items: center;
-      min-height: 106px;
-      padding: .45rem;
+      min-height: 102px;
+      padding: .4rem;
       text-align: center;
       color: var(--white);
       transition: transform .16s, border-color .16s, background .16s;
     }
 
     .card-art {
-      width: 64px;
-      height: 64px;
+      width: 60px;
+      height: 60px;
       border: 1px solid rgba(255, 232, 179, .18);
       border-radius: 8px;
       background: radial-gradient(circle at 50% 20%, rgba(245, 200, 106, .18), rgba(6, 10, 18, .9));
@@ -549,11 +549,23 @@
       { id: 'harpist', name: 'Harpist', icon: 'H', role: 'Morale healing', cost: 58, range: 122, rate: 1.05, hope: 12, despair: 10, morale: 3, color: '#d8c4ff', group: 'Strings', pulse: 'halo' }
     ];
 
-    const lanes = Array.from({ length: 6 }, (_, lane) => ({ lane, y: 180 + lane * 70 }));
-    const stageTiles = lanes.flatMap(({ lane, y }) => [260, 375, 490, 605].map((x, col) => ({ x, y, lane, col })));
+    const lanes = Array.from({ length: 6 }, (_, lane) => ({ lane, y: 166 + lane * 76 }));
+    const stageColumns = [170, 310, 450, 590];
+    const stageTiles = lanes.flatMap(({ lane, y }) => stageColumns.map((x, col) => ({ x, y, lane, col })));
     const seats = [];
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 9; col++) seats.push({ x: 245 + col * 76, y: 650 + row * 30, taken: false });
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 15; col++) seats.push({ x: 165 + col * 65, y: 696 + row * 38, taken: false });
+    }
+
+    let nextLayerOrder = 0;
+
+    function laneLayerDepth(lane) {
+      return lane * 1000;
+    }
+
+    function assignLayerDepth(lane) {
+      nextLayerOrder += 1;
+      return laneLayerDepth(lane) + nextLayerOrder;
     }
 
     const state = {
@@ -610,10 +622,10 @@
     ];
 
     const undeadTypes = {
-      shambler: { label: 'Gray Walkers', speed: 34, hope: 100, radius: 16, spriteSize: 78, morale: 8, color: '#60646f' },
-      runner: { label: 'Hollow Runners', speed: 52, hope: 85, radius: 14, spriteSize: 76, morale: 7, color: '#777b86' },
-      elite: { label: 'Silent Elites', speed: 30, hope: 145, radius: 20, spriteSize: 88, morale: 13, color: '#87828c' },
-      brute: { label: 'Dread Brutes', speed: 24, hope: 180, radius: 24, spriteSize: 96, morale: 18, color: '#6f6670' }
+      shambler: { label: 'Gray Walkers', speed: 34, hope: 100, radius: 16, spriteSize: 96, morale: 8, color: '#60646f' },
+      runner: { label: 'Hollow Runners', speed: 52, hope: 85, radius: 14, spriteSize: 92, morale: 7, color: '#777b86' },
+      elite: { label: 'Silent Elites', speed: 30, hope: 145, radius: 20, spriteSize: 108, morale: 13, color: '#87828c' },
+      brute: { label: 'Dread Brutes', speed: 24, hope: 180, radius: 24, spriteSize: 122, morale: 18, color: '#6f6670' }
     };
 
     const undeadSprites = Object.fromEntries(Object.keys(undeadTypes).map((type) => {
@@ -624,7 +636,7 @@
 
     const sopranianSprites = Object.fromEntries(musicianTypes.map((type) => {
       const image = new Image();
-      image.src = `images/sopranian/${type.id}.png`;
+      image.src = `images/sopranian_sd/${type.id}.png`;
       return [type.id, image];
     }));
 
@@ -733,7 +745,7 @@
         button.type = 'button';
         button.dataset.musician = type.id;
         button.innerHTML = `
-          <img class="card-art" src="images/sopranian/${type.id}.png" alt="" />
+          <img class="card-art" src="images/sopranian_sd/${type.id}.png" alt="" />
           <div>
             <div class="card-head"><h2>${type.name}</h2><span class="cost">${type.cost}</span></div>
             <p>${type.role}</p>
@@ -867,7 +879,7 @@
       if (!type || state.inspiration < type.cost) return false;
       state.selected = type.id;
       state.inspiration -= type.cost;
-      state.musicians.push({ type, tile, x: tile.x, y: tile.y, cooldown: .35, level: 1 });
+      state.musicians.push({ type, tile, x: tile.x, y: tile.y, layerDepth: assignLayerDepth(tile.lane), cooldown: .35, level: 1 });
       state.message = `${type.name} is ready. Press Begin Concert.`;
       if (!silent) showToast(`${type.name} joins the ensemble.`);
       updateHud();
@@ -889,6 +901,7 @@
         message: 'Auto mode is choosing the ensemble.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
         pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
       });
+      nextLayerOrder = 0;
       seats.forEach((s) => s.taken = false);
       updateHud();
     }
@@ -926,6 +939,7 @@
         message: 'Study the incoming lanes, place a team, then begin the concert.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
         pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
       });
+      nextLayerOrder = 0;
       seats.forEach((s) => s.taken = false);
       updateHud();
       showToast('The concert hall is ready.');
@@ -938,8 +952,8 @@
 
     function updatePointer(point) {
       state.pointer = point;
-      state.hoveredTile = !state.setupDone ? stageTiles.find((t) => Math.hypot(t.x - point.x, t.y - point.y) < 46) || null : null;
-      state.hoveredMusician = state.musicians.find((m) => Math.hypot(m.x - point.x, m.y - point.y) < 44) || null;
+      state.hoveredTile = !state.setupDone ? stageTiles.find((t) => Math.hypot(t.x - point.x, t.y - point.y) < 56) || null : null;
+      state.hoveredMusician = state.musicians.find((m) => Math.hypot(m.x - point.x, m.y - point.y) < 58) || null;
     }
 
     canvas.addEventListener('mousemove', (event) => updatePointer(canvasPoint(event)));
@@ -957,7 +971,7 @@
       }
       const p = canvasPoint(event);
       updatePointer(p);
-      const tile = stageTiles.find((t) => Math.hypot(t.x - p.x, t.y - p.y) < 46 && !state.musicians.some((m) => m.tile === t));
+      const tile = stageTiles.find((t) => Math.hypot(t.x - p.x, t.y - p.y) < 56 && !state.musicians.some((m) => m.tile === t));
       if (!tile) {
         showToast('Click one of the glowing circles on the stage.');
         return;
@@ -979,6 +993,7 @@
         x: 1230 + Math.random() * 40,
         y: laneInfo.y,
         lane: entry.lane,
+        layerDepth: assignLayerDepth(entry.lane),
         type: entry.type,
         speed: type.speed + Math.random() * 5,
         despair: 100,
@@ -1099,7 +1114,7 @@
       for (const e of state.enemies) {
         e.x -= e.speed * e.slow * dt;
         e.slow += (1 - e.slow) * dt * 1.8;
-        if (e.x < 195) {
+        if (e.x < 92) {
           state.morale -= e.moraleDamage;
           state.message = 'A listener reached the stage before hope returned.';
           e.hope = -999;
@@ -1211,19 +1226,19 @@
       ctx.font = '700 14px system-ui';
       ctx.fillText('Set your artists by lane, then begin the one-concert challenge.', 48, 84);
 
-      const seatBg = ctx.createLinearGradient(145, 620, 905, 765);
+      const seatBg = ctx.createLinearGradient(118, 652, 1162, 762);
       seatBg.addColorStop(0, 'rgba(20,13,30,.82)');
       seatBg.addColorStop(1, 'rgba(5,11,22,.72)');
       ctx.fillStyle = seatBg;
       ctx.beginPath();
-      drawRoundRect(ctx, 145, 620, 760, 145, 10);
+      drawRoundRect(ctx, 118, 652, 1044, 108, 12);
       ctx.fill();
       ctx.strokeStyle = 'rgba(245,200,106,.26)';
       ctx.stroke();
       ctx.fillStyle = 'rgba(255,248,232,.62)';
       ctx.font = '900 14px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('AUDIENCE SEATS', 525, 642);
+      ctx.fillText('AUDIENCE SEATS', 640, 674);
       for (const seat of seats) {
         ctx.fillStyle = seat.taken ? 'rgba(245,200,106,.32)' : 'rgba(255,255,255,.045)';
         ctx.beginPath();
@@ -1231,13 +1246,13 @@
         ctx.fill();
       }
 
-      const stageBg = ctx.createLinearGradient(215, 140, 780, 580);
+      const stageBg = ctx.createLinearGradient(88, 112, 828, 598);
       stageBg.addColorStop(0, 'rgba(68,45,20,.78)');
       stageBg.addColorStop(.52, 'rgba(41,25,12,.82)');
       stageBg.addColorStop(1, 'rgba(14,19,30,.88)');
       ctx.fillStyle = stageBg;
       ctx.beginPath();
-      drawRoundRect(ctx, 215, 140, 565, 440, 16);
+      drawRoundRect(ctx, 88, 112, 740, 488, 18);
       ctx.fill();
       ctx.strokeStyle = 'rgba(245,200,106,.62)';
       ctx.lineWidth = 3;
@@ -1245,31 +1260,31 @@
       ctx.strokeStyle = 'rgba(126,231,200,.16)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      drawRoundRect(ctx, 225, 150, 545, 420, 12);
+      drawRoundRect(ctx, 100, 124, 716, 464, 14);
       ctx.stroke();
       ctx.fillStyle = 'rgba(245,200,106,.08)';
-      ctx.fillRect(230, 165, 535, 34);
+      ctx.fillRect(110, 132, 696, 34);
       ctx.fillStyle = 'rgba(255,248,232,.68)';
       ctx.font = '900 16px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('LOCKED STAGE TEAM', 497, 188);
+      ctx.fillText('LOCKED STAGE TEAM', 458, 156);
 
       for (let i = 0; i < lanes.length; i++) {
         const y = lanes[i].y;
-        const laneGlow = ctx.createLinearGradient(170, y, 1220, y);
+        const laneGlow = ctx.createLinearGradient(54, y, 1220, y);
         laneGlow.addColorStop(0, 'rgba(255,248,232,.04)');
         laneGlow.addColorStop(.48, 'rgba(126,231,200,.11)');
         laneGlow.addColorStop(1, 'rgba(245,200,106,.07)');
         ctx.strokeStyle = laneGlow;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(170, y);
+        ctx.moveTo(54, y);
         ctx.lineTo(1220, y);
         ctx.stroke();
         ctx.fillStyle = 'rgba(255,248,232,.34)';
         ctx.font = '800 12px system-ui';
         ctx.textAlign = 'left';
-        ctx.fillText(`LANE ${i + 1}`, 78, y + 4);
+        ctx.fillText(`LANE ${i + 1}`, 18, y + 4);
       }
 
       ctx.fillStyle = 'rgba(245,200,106,.78)';
@@ -1282,35 +1297,35 @@
         ctx.strokeStyle = 'rgba(255,232,179,.16)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        drawRoundRect(ctx, 930, 154, 292, 418, 14);
+        drawRoundRect(ctx, 890, 130, 330, 462, 14);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = 'rgba(255,248,232,.72)';
         ctx.font = '900 13px system-ui';
         ctx.textAlign = 'left';
-        ctx.fillText('INCOMING PREVIEW', 948, 178);
+        ctx.fillText('INCOMING PREVIEW', 908, 154);
         undeadPlan.forEach((lanePlan, lane) => {
           const y = lanes[lane].y;
           ctx.fillStyle = 'rgba(255,255,255,.05)';
-          ctx.fillRect(948, y - 25, 252, 50);
+          ctx.fillRect(908, y - 28, 288, 56);
           ctx.fillStyle = 'rgba(245,200,106,.82)';
           ctx.font = '900 11px system-ui';
-          ctx.fillText(`L${lane + 1}`, 958, y + 4);
-          let x = 996;
+          ctx.fillText(`L${lane + 1}`, 918, y + 4);
+          let x = 958;
           for (const item of lanePlan) {
             const sprite = undeadSprites[item.type];
             if (sprite?.complete && sprite.naturalWidth) {
-              ctx.drawImage(sprite, x, y - 22, 42, 42);
+              ctx.drawImage(sprite, x, y - 25, 48, 48);
             } else {
               ctx.fillStyle = undeadTypes[item.type].color;
               ctx.beginPath();
-              ctx.arc(x + 21, y, 14, 0, Math.PI * 2);
+              ctx.arc(x + 24, y, 16, 0, Math.PI * 2);
               ctx.fill();
             }
             ctx.fillStyle = '#fff8e8';
             ctx.font = '900 12px system-ui';
-            ctx.fillText(`x${item.count}`, x + 28, y + 18);
-            x += 72;
+            ctx.fillText(`x${item.count}`, x + 34, y + 20);
+            x += 84;
           }
         });
       }
@@ -1318,11 +1333,12 @@
       drawRangeHints();
 
       for (const tile of stageTiles) {
+        const radius = 43;
         const occupied = state.musicians.some((m) => m.tile === tile);
         ctx.fillStyle = occupied ? 'rgba(245,200,106,.12)' : 'rgba(245,200,106,.06)';
         ctx.strokeStyle = occupied ? 'rgba(245,200,106,.42)' : 'rgba(245,200,106,.22)';
         ctx.beginPath();
-        ctx.arc(tile.x, tile.y, 35, 0, Math.PI * 2);
+        ctx.arc(tile.x, tile.y, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
@@ -1338,10 +1354,10 @@
 
     function drawRangeProfile(type, origin, alpha, preview) {
       const profile = rangeProfile(type, origin);
-      const x1 = clamp(profile.x1, 120, 1220);
-      const x2 = clamp(profile.x2, 120, 1220);
-      const y1 = lanes[profile.laneMin].y - 26;
-      const y2 = lanes[profile.laneMax].y + 26;
+      const x1 = clamp(profile.x1, 54, 1220);
+      const x2 = clamp(profile.x2, 54, 1220);
+      const y1 = lanes[profile.laneMin].y - 34;
+      const y2 = lanes[profile.laneMax].y + 34;
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.fillStyle = type.color;
@@ -1384,6 +1400,70 @@
       ctx.restore();
     }
 
+    function drawMusicianActor(m) {
+      const sprite = sopranianSprites[m.type.id];
+      const size = 112;
+      ctx.fillStyle = 'rgba(0,0,0,.23)';
+      ctx.beginPath();
+      ctx.ellipse(m.x, m.y + 35, 32, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (sprite?.complete && sprite.naturalWidth) {
+        ctx.drawImage(sprite, m.x - size / 2, m.y - size / 2 - 6, size, size);
+      } else {
+        ctx.fillStyle = m.type.color;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.font = '900 18px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(m.type.icon, m.x, m.y);
+      }
+    }
+
+    function drawEnemyActor(e) {
+      const sprite = undeadSprites[e.type];
+      const spriteSize = e.spriteSize;
+      ctx.fillStyle = 'rgba(0,0,0,.24)';
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y + spriteSize * .34, spriteSize * .23, spriteSize * .06, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (sprite?.complete && sprite.naturalWidth) {
+        ctx.drawImage(sprite, e.x - spriteSize * .5, e.y - spriteSize * .58, spriteSize, spriteSize);
+      } else {
+        ctx.fillStyle = e.color;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,248,232,.72)';
+        ctx.font = '900 11px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(e.type[0].toUpperCase(), e.x, e.y);
+      }
+      const despairRatio = clamp(e.despair / 100);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(174,184,199,.2)';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y + spriteSize * .35, spriteSize * .18, Math.PI * .08, Math.PI * .92);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(174,184,199,${.28 + despairRatio * .48})`;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y + spriteSize * .35, spriteSize * .18, Math.PI * .08, Math.PI * (.08 + .84 * despairRatio));
+      ctx.stroke();
+      if (e.hope > 0) {
+        const hopeRatio = clamp(e.hope / e.hopeMax);
+        ctx.fillStyle = `rgba(126,231,200,${.04 + hopeRatio * .11})`;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.radius + 4 + hopeRatio * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function draw() {
       drawHall();
       for (const p of state.pulses) {
@@ -1423,67 +1503,13 @@
         ctx.restore();
       }
 
-      for (const m of state.musicians) {
-        const sprite = sopranianSprites[m.type.id];
-        const size = 74;
-        ctx.fillStyle = 'rgba(0,0,0,.2)';
-        ctx.beginPath();
-        ctx.ellipse(m.x, m.y + 29, 27, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-        if (sprite?.complete && sprite.naturalWidth) {
-          ctx.drawImage(sprite, m.x - size / 2, m.y - size / 2 - 2, size, size);
-        } else {
-          ctx.fillStyle = m.type.color;
-          ctx.beginPath();
-          ctx.arc(m.x, m.y, 22, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#111';
-          ctx.font = '900 18px system-ui';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(m.type.icon, m.x, m.y);
-        }
-      }
-
-      for (const e of state.enemies) {
-        const sprite = undeadSprites[e.type];
-        ctx.fillStyle = 'rgba(0,0,0,.22)';
-        ctx.beginPath();
-        ctx.ellipse(e.x, e.y + e.spriteSize * .34, e.spriteSize * .23, e.spriteSize * .06, 0, 0, Math.PI * 2);
-        ctx.fill();
-        if (sprite?.complete && sprite.naturalWidth) {
-          ctx.drawImage(sprite, e.x - e.spriteSize * .5, e.y - e.spriteSize * .58, e.spriteSize, e.spriteSize);
-        } else {
-          ctx.fillStyle = e.color;
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = 'rgba(255,248,232,.72)';
-          ctx.font = '900 11px system-ui';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(e.type[0].toUpperCase(), e.x, e.y);
-        }
-        const despairRatio = clamp(e.despair / 100);
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(174,184,199,.2)';
-        ctx.beginPath();
-        ctx.arc(e.x, e.y + e.spriteSize * .35, e.spriteSize * .18, Math.PI * .08, Math.PI * .92);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(174,184,199,${.28 + despairRatio * .48})`;
-        ctx.beginPath();
-        ctx.arc(e.x, e.y + e.spriteSize * .35, e.spriteSize * .18, Math.PI * .08, Math.PI * (.08 + .84 * despairRatio));
-        ctx.stroke();
-        if (e.hope > 0) {
-          const hopeRatio = clamp(e.hope / e.hopeMax);
-          ctx.fillStyle = `rgba(126,231,200,${.04 + hopeRatio * .11})`;
-          ctx.beginPath();
-          ctx.arc(e.x, e.y, e.radius + 4 + hopeRatio * 5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
+      const actors = [
+        ...state.musicians.map((actor) => ({ kind: 'musician', actor, layerDepth: actor.layerDepth })),
+        ...state.enemies.map((actor) => ({ kind: 'enemy', actor, layerDepth: actor.layerDepth }))
+      ].sort((a, b) => a.layerDepth - b.layerDepth);
+      for (const item of actors) {
+        if (item.kind === 'musician') drawMusicianActor(item.actor);
+        else drawEnemyActor(item.actor);
       }
 
       for (const a of state.audienceMembers) {
