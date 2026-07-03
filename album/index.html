@@ -90,6 +90,28 @@
     .tab-pane { display: none; padding: 14px; }
     .tab-pane.active { display: block; }
     .section { margin-bottom: 18px; }
+    .source-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #0d1012;
+    }
+    .source-option {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .source-option.active {
+      color: #07110f;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
     .section-title {
       display: flex;
       align-items: center;
@@ -149,7 +171,7 @@
       border-radius: var(--radius);
       background: var(--panel-2);
     }
-    .asset img { width: 58px; height: 50px; border-radius: 4px; object-fit: cover; background: #050606; }
+    .asset img, .asset video { width: 58px; height: 50px; border-radius: 4px; object-fit: cover; background: #050606; }
     .asset-copy { min-width: 0; }
     .asset-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .76rem; }
     .asset-copy select { width: 100%; margin-top: 5px; min-height: 25px; font-size: .68rem; }
@@ -172,6 +194,8 @@
     .audio-card strong { font-size: .78rem; }
     .audio-card span { margin-top: 3px; color: var(--muted); font-size: .68rem; }
     .field { display: grid; gap: 6px; margin-bottom: 11px; }
+    .source-volume { margin-top: 13px; }
+    .source-volume.hidden { display: none !important; }
     .field label { color: var(--muted); font-size: .72rem; font-weight: 700; }
     .check-field {
       min-height: 42px;
@@ -187,7 +211,7 @@
       font-weight: 700;
     }
     .check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
-    select, input[type="number"], textarea {
+    select, input[type="number"], input[type="range"], textarea {
       width: 100%;
       padding: 0 10px;
       border: 1px solid var(--line);
@@ -197,6 +221,7 @@
       color: var(--text);
     }
     select, input[type="number"] { min-height: 40px; }
+    input[type="range"] { height: 40px; padding: 0; accent-color: var(--accent); }
     textarea { min-height: 280px; padding: 10px; resize: vertical; line-height: 1.55; }
     select:focus, input:focus { border-color: var(--accent); }
     .rule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -368,13 +393,25 @@
       <div class="panel-scroll">
         <section class="tab-pane" data-pane="assets">
           <div class="section">
-            <div class="section-title"><span>Images</span><span class="count" id="imageCount">0</span></div>
+            <div class="section-title"><span>Source Type</span></div>
+            <div class="source-toggle" aria-label="Source type">
+              <button class="source-option active" type="button" data-source-mode="images">Image Sequence</button>
+              <button class="source-option" type="button" data-source-mode="video">Video</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title"><span id="sourceSectionTitle">Images</span><span class="count" id="imageCount">0</span></div>
             <div class="dropzone" id="imageDropzone">
-              <strong>Add image sequence</strong>
-              <span>Drop JPG, PNG, or WEBP files here</span>
+              <strong id="sourceDropTitle">Add image sequence</strong>
+              <span id="sourceDropHint">Drop JPG, PNG, or WEBP files here</span>
             </div>
             <button class="upload-button" id="chooseImagesButton" type="button">Choose Images</button>
-            <input id="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple />
+            <input id="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.webm,.mov,video/mp4,video/webm,video/quicktime" multiple />
+            <div class="field source-volume hidden" id="videoSourceControls" hidden>
+              <label for="videoVolume">Video Source Volume <span id="videoVolumeValue">100%</span></label>
+              <input id="videoVolume" type="range" value="100" min="0" max="100" step="1" />
+            </div>
             <div class="asset-list" id="assetList"></div>
           </div>
 
@@ -386,6 +423,10 @@
             </div>
             <button class="upload-button" id="chooseAudioButton" type="button">Choose Audio</button>
             <input id="audioInput" type="file" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a" />
+            <div class="field source-volume hidden" id="audioSourceControls" hidden>
+              <label for="audioVolume">Audio Source Volume <span id="audioVolumeValue">100%</span></label>
+              <input id="audioVolume" type="range" value="100" min="0" max="100" step="1" />
+            </div>
             <div id="audioAsset"></div>
           </div>
         </section>
@@ -574,6 +615,7 @@
   </div>
 
   <audio id="audioElement" preload="metadata"></audio>
+  <video id="videoElement" preload="metadata" muted playsinline></video>
 
   <script type="module">
     const POIS = [
@@ -640,8 +682,10 @@
     class AssetManager {
       constructor(onChange) {
         this.images = [];
+        this.video = null;
         this.audio = null;
         this.audioElement = $('audioElement');
+        this.videoElement = $('videoElement');
         this.onChange = onChange;
         this.storage = new MediaStorage();
         this.audioContext = null;
@@ -673,6 +717,69 @@
         }
         await this.persistImages();
         this.onChange();
+      }
+
+      async setVideo(file) {
+        if (!file || !/^video\//.test(file.type)) return;
+        if (this.video?.url) URL.revokeObjectURL(this.video.url);
+        $('videoVolume').value = '0';
+        const url = URL.createObjectURL(file);
+        this.videoElement.src = url;
+        this.videoElement.muted = true;
+        this.videoElement.playsInline = true;
+        this.videoElement.load();
+        await new Promise((resolve, reject) => {
+          this.videoElement.onloadeddata = resolve;
+          this.videoElement.onerror = reject;
+        });
+        this.video = {
+          id: crypto.randomUUID(),
+          file,
+          url,
+          name: file.name || 'Source video',
+          duration: this.videoElement.duration || 0,
+          width: this.videoElement.videoWidth || 1280,
+          height: this.videoElement.videoHeight || 720,
+          type: file.type
+        };
+        this.videoElement.volume = 0;
+        this.videoElement.muted = true;
+        $('videoVolumeValue').textContent = '0%';
+        await this.prepareVideoFrame(0);
+        try {
+          await this.storage.put('video', { blob: file, name: this.video.name, type: file.type });
+        } catch (error) {
+          console.warn('Unable to persist video. It will remain available for this session.', error);
+        }
+        this.onChange();
+      }
+
+      async prepareVideoFrame(time = 0) {
+        if (!this.video || !this.videoElement.src) return;
+        const video = this.videoElement;
+        const duration = Math.max(0, this.video.duration || video.duration || 0);
+        const target = duration > .1 ? Math.min(Math.max(.001, time), duration - .05) : 0;
+        if (Math.abs(video.currentTime - target) > .01) {
+          await new Promise((resolve) => {
+            const done = () => {
+              video.removeEventListener('seeked', done);
+              resolve();
+            };
+            video.addEventListener('seeked', done, { once: true });
+            video.currentTime = target;
+          });
+        }
+        if (video.requestVideoFrameCallback) {
+          await new Promise((resolve) => {
+            const timeout = setTimeout(resolve, 180);
+            video.requestVideoFrameCallback(() => {
+              clearTimeout(timeout);
+              resolve();
+            });
+          });
+        } else {
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
       }
 
       async createSampleImages() {
@@ -758,6 +865,7 @@
       async setAudio(file) {
         if (!file) return;
         if (this.audio?.url) URL.revokeObjectURL(this.audio.url);
+        $('audioVolume').value = '100';
         const url = URL.createObjectURL(file);
         this.audioElement.src = url;
         this.audioElement.load();
@@ -767,6 +875,9 @@
         });
         const analysis = await this.analyzeAudio(file);
         this.audio = { file, url, name: file.name, duration: this.audioElement.duration, spectrumVersion: 3, ...analysis };
+        this.audioElement.volume = 1;
+        this.audioElement.muted = false;
+        $('audioVolumeValue').textContent = '100%';
         this.setupAudioAnalyser();
         try {
           await this.storage.put('audio', { blob: file, name: file.name, type: file.type, spectrumVersion: 3, ...analysis });
@@ -897,6 +1008,20 @@
         this.onChange();
       }
 
+      async clearVideo() {
+        if (this.video?.url) URL.revokeObjectURL(this.video.url);
+        this.video = null;
+        this.videoElement.pause();
+        this.videoElement.removeAttribute('src');
+        this.videoElement.load();
+        try {
+          await this.storage.remove('video');
+        } catch (error) {
+          console.warn('Unable to remove saved video.', error);
+        }
+        this.onChange();
+      }
+
       setupAudioAnalyser() {
         if (this.analyser) return;
         try {
@@ -1017,6 +1142,30 @@
             await this.createSampleImages();
           }
           const savedAudio = await this.storage.get('audio');
+          const savedVideo = await this.storage.get('video');
+          if (savedVideo?.blob) {
+            const file = new File([savedVideo.blob], savedVideo.name || 'Saved video', { type: savedVideo.type || savedVideo.blob.type });
+            const url = URL.createObjectURL(file);
+            this.videoElement.src = url;
+            this.videoElement.muted = true;
+            this.videoElement.playsInline = true;
+            this.videoElement.load();
+            await new Promise((resolve, reject) => {
+              this.videoElement.onloadeddata = resolve;
+              this.videoElement.onerror = reject;
+            });
+            this.video = {
+              id: crypto.randomUUID(),
+              file,
+              url,
+              name: file.name,
+              duration: this.videoElement.duration || 0,
+              width: this.videoElement.videoWidth || 1280,
+              height: this.videoElement.videoHeight || 720,
+              type: file.type
+            };
+            await this.prepareVideoFrame(0);
+          }
           if (savedAudio?.blob) {
             const file = new File([savedAudio.blob], savedAudio.name || 'Saved audio', { type: savedAudio.type || savedAudio.blob.type });
             const url = URL.createObjectURL(file);
@@ -1059,6 +1208,7 @@
 
       dispose() {
         this.images.forEach((asset) => URL.revokeObjectURL(asset.url));
+        if (this.video?.url) URL.revokeObjectURL(this.video.url);
         if (this.audio?.url) URL.revokeObjectURL(this.audio.url);
         this.audioContext?.close();
       }
@@ -1516,6 +1666,10 @@
       }
 
       drawScene(ctx, scene, progress) {
+        if (scene.asset.type === 'video') {
+          this.drawVideoScene(ctx, scene.asset);
+          return;
+        }
         const image = scene.asset.image;
         const canvas = ctx.canvas;
         const baseScale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
@@ -1531,6 +1685,18 @@
         const x = -overflowX * poi[0] + transform.x;
         const y = -overflowY * poi[1] + transform.y;
         ctx.drawImage(image, x, y, width, height);
+      }
+
+      drawVideoScene(ctx, asset) {
+        const video = asset.element;
+        const canvas = ctx.canvas;
+        if (!video || video.readyState < 2) return;
+        const sourceWidth = video.videoWidth || asset.width || canvas.width;
+        const sourceHeight = video.videoHeight || asset.height || canvas.height;
+        const baseScale = Math.max(canvas.width / sourceWidth, canvas.height / sourceHeight);
+        const width = sourceWidth * baseScale;
+        const height = sourceHeight * baseScale;
+        ctx.drawImage(video, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
       }
 
       drawSceneToBuffer(scene, progress) {
@@ -1559,7 +1725,7 @@
         return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
       }
 
-      async record(canvas, audioElement, duration, fps, renderFrame) {
+      async record(canvas, audioElement, duration, fps, renderFrame, sourceVideo = null) {
         let canvasStream = canvas.captureStream(0);
         let videoTrack = canvasStream.getVideoTracks()[0];
         if (!videoTrack?.requestFrame) {
@@ -1567,12 +1733,16 @@
           canvasStream = canvas.captureStream(fps);
           videoTrack = canvasStream.getVideoTracks()[0];
         }
-        const hasAudio = Boolean(audioElement?.src);
+        const hasAudio = Boolean(audioElement?.src && !audioElement.muted && audioElement.volume > 0);
         const audioStream = hasAudio ? (audioElement.captureStream?.() || audioElement.mozCaptureStream?.()) : null;
         if (hasAudio && !audioStream) throw new Error('This browser cannot capture audio. Use a Chromium-based browser.');
+        const videoAudioStream = sourceVideo?.src && !sourceVideo.muted && sourceVideo.volume > 0
+          ? (sourceVideo.captureStream?.() || sourceVideo.mozCaptureStream?.())
+          : null;
         const stream = new MediaStream([
           ...canvasStream.getVideoTracks(),
-          ...(audioStream?.getAudioTracks() || [])
+          ...(audioStream?.getAudioTracks() || []),
+          ...(videoAudioStream?.getAudioTracks() || [])
         ]);
         const type = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
           .find((mime) => MediaRecorder.isTypeSupported(mime));
@@ -1581,8 +1751,13 @@
         recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
         const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
         if (hasAudio) audioElement.currentTime = 0;
+        if (sourceVideo?.src) {
+          sourceVideo.currentTime = 0;
+          sourceVideo.playbackRate = 1;
+        }
         recorder.start(1000);
         if (hasAudio) await audioElement.play();
+        if (sourceVideo?.src) await sourceVideo.play().catch(() => {});
         const startedAt = performance.now();
 
         await new Promise((resolve) => {
@@ -1598,6 +1773,7 @@
           tick();
         });
         if (hasAudio) audioElement.pause();
+        if (sourceVideo?.src) sourceVideo.pause();
         recorder.stop();
         await stopped;
         stream.getTracks().forEach((track) => track.stop());
@@ -1645,6 +1821,7 @@
         this.renderer = new Renderer($('previewCanvas'), this.motion, () => this.assets.getFrequencyBands(24));
         this.encoder = new Encoder((...args) => this.updateProgress(...args));
         this.plan = [];
+        this.sourceMode = 'images';
         this.previewing = false;
         this.previewRate = 1;
         this.previewStartedAt = 0;
@@ -1654,6 +1831,7 @@
         this.restoreSettings();
         if (!$('textStreamInput').value) this.loadReaderText();
         this.bind();
+        this.renderAssets();
         this.updateUi();
         this.assets.restore();
       }
@@ -1663,19 +1841,36 @@
           document.querySelectorAll('[data-tab]').forEach((item) => item.classList.toggle('active', item === tab));
           document.querySelectorAll('[data-pane]').forEach((pane) => pane.classList.toggle('active', pane.dataset.pane === tab.dataset.tab));
         }));
+        document.querySelectorAll('[data-source-mode]').forEach((button) => {
+          button.addEventListener('click', () => this.setSourceMode(button.dataset.sourceMode));
+        });
         $('chooseImagesButton').addEventListener('click', () => $('imageInput').click());
         $('chooseAudioButton').addEventListener('click', () => $('audioInput').click());
         $('imageInput').addEventListener('change', async (event) => {
-          await this.assets.addImages(event.target.files);
+          if (this.sourceMode === 'video') await this.assets.setVideo(event.target.files[0]);
+          else await this.assets.addImages(event.target.files);
+          if (this.sourceMode === 'video') this.saveSettings();
           event.target.value = '';
         });
         $('audioInput').addEventListener('change', async (event) => {
           await this.assets.setAudio(event.target.files[0]);
+          this.saveSettings();
           event.target.value = '';
         });
-        this.setupDropzone($('imageDropzone'), (files) => this.assets.addImages(files));
-        this.setupDropzone($('audioDropzone'), (files) => this.assets.setAudio(files[0]));
+        this.setupDropzone($('imageDropzone'), (files) => {
+          if (this.sourceMode === 'video') return this.assets.setVideo(files[0]).then(() => this.saveSettings());
+          return this.assets.addImages(files);
+        });
+        this.setupDropzone($('audioDropzone'), (files) => this.assets.setAudio(files[0]).then(() => this.saveSettings()));
         ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        $('videoVolume').addEventListener('input', () => {
+          this.applyVideoVolume();
+          this.saveSettings();
+        });
+        $('audioVolume').addEventListener('input', () => {
+          this.applyAudioVolume();
+          this.saveSettings();
+        });
         $('textStreamInput').addEventListener('input', () => {
           clearTimeout(this.textSettingsTimer);
           this.textSettingsTimer = setTimeout(() => this.settingsChanged(), 180);
@@ -1702,6 +1897,18 @@
         window.addEventListener('beforeunload', () => this.dispose());
       }
 
+      async setSourceMode(mode) {
+        this.sourceMode = mode === 'video' ? 'video' : 'images';
+        this.previewing = false;
+        this.assets.audioElement.pause();
+        this.assets.videoElement.pause();
+        this.previewStartTime = 0;
+        this.saveSettings();
+        await this.rebuildPlan();
+        this.renderAssets();
+        this.updateUi();
+      }
+
       setupDropzone(element, callback) {
         ['dragenter', 'dragover'].forEach((type) => element.addEventListener(type, (event) => {
           event.preventDefault();
@@ -1722,20 +1929,60 @@
 
       async settingsChanged() {
         this.saveSettings();
+        this.applyVideoVolume();
+        this.applyAudioVolume();
         await this.rebuildPlan();
         this.updateUi();
       }
 
+      getVideoVolume() {
+        return clamp((Number($('videoVolume')?.value) || 0) / 100, 0, 1);
+      }
+
+      applyVideoVolume() {
+        const volume = this.getVideoVolume();
+        $('videoVolumeValue').textContent = `${Math.round(volume * 100)}%`;
+        this.assets.videoElement.volume = volume;
+        this.assets.videoElement.muted = this.sourceMode !== 'video' || volume <= 0;
+      }
+
+      getAudioVolume() {
+        return clamp((Number($('audioVolume')?.value) || 0) / 100, 0, 1);
+      }
+
+      applyAudioVolume() {
+        const volume = this.getAudioVolume();
+        $('audioVolumeValue').textContent = `${Math.round(volume * 100)}%`;
+        this.assets.audioElement.volume = volume;
+        this.assets.audioElement.muted = volume <= 0;
+      }
+
       async rebuildPlan() {
-        if (!this.assets.images.length) {
+        if (this.sourceMode === 'video') {
+          if (!this.assets.video) {
+            this.plan = [];
+            this.updatePreviewProgress(0);
+            return;
+          }
+          await this.assets.prepareVideoFrame(0);
+          const duration = this.getDuration();
+          this.plan = [{
+            asset: { ...this.assets.video, type: 'video', element: this.assets.videoElement },
+            motion: { type: 'video', direction: 'none' },
+            start: 0,
+            end: duration,
+            duration
+          }];
+        } else if (!this.assets.images.length) {
           this.plan = [];
           this.updatePreviewProgress(0);
           return;
+        } else {
+          const imageDuration = Math.max(.5, Number($('imageDuration').value) || 2);
+          this.plan = await this.motion.buildPlan(this.assets.images, this.getDuration(), imageDuration);
         }
-        const imageDuration = Math.max(.5, Number($('imageDuration').value) || 2);
         const fps = Number($('frameRate').value) || 30;
         const transitionFrames = Math.max(1, Number($('transitionFrames').value) || 18);
-        this.plan = await this.motion.buildPlan(this.assets.images, this.getDuration(), imageDuration);
         const [width, height] = $('resolution').value.split('x').map(Number);
         this.renderer.configure(
           width,
@@ -1765,8 +2012,40 @@
       }
 
       renderAssets() {
-        $('imageCount').textContent = this.assets.images.length;
-        $('assetList').replaceChildren(...this.assets.images.map((asset, index) => {
+        const isVideo = this.sourceMode === 'video';
+        document.querySelectorAll('[data-source-mode]').forEach((button) => {
+          button.classList.toggle('active', button.dataset.sourceMode === this.sourceMode);
+        });
+        $('sourceSectionTitle').textContent = isVideo ? 'Video' : 'Images';
+        $('sourceDropTitle').textContent = isVideo ? 'Add source video' : 'Add image sequence';
+        $('sourceDropHint').textContent = isVideo ? 'Drop one MP4, WEBM, or MOV file here' : 'Drop JPG, PNG, or WEBP files here';
+        $('chooseImagesButton').textContent = isVideo ? 'Choose Video' : 'Choose Images';
+        $('videoSourceControls').hidden = !isVideo;
+        $('videoSourceControls').classList.toggle('hidden', !isVideo);
+        $('imageInput').multiple = !isVideo;
+        $('imageInput').accept = isVideo
+          ? '.mp4,.webm,.mov,video/mp4,video/webm,video/quicktime'
+          : '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
+        $('imageCount').textContent = isVideo ? (this.assets.video ? '1' : '0') : this.assets.images.length;
+        if (isVideo) {
+          if (this.assets.video) {
+            const row = document.createElement('div');
+            row.className = 'asset';
+            row.innerHTML = `
+              <video src="${this.assets.video.url}" muted playsinline></video>
+              <div class="asset-copy">
+                <strong>${this.escape(this.assets.video.name)}</strong>
+                <span>${formatTime(this.assets.video.duration)} · source video</span>
+              </div>
+              <button class="remove" title="Remove video">×</button>
+            `;
+            row.querySelector('.remove').addEventListener('click', () => this.assets.clearVideo());
+            $('assetList').replaceChildren(row);
+          } else {
+            $('assetList').replaceChildren();
+          }
+        } else {
+          $('assetList').replaceChildren(...this.assets.images.map((asset, index) => {
           const row = document.createElement('div');
           row.className = 'asset';
           row.innerHTML = `
@@ -1780,7 +2059,8 @@
           row.querySelector('select').addEventListener('change', (event) => this.assets.setPoi(asset.id, event.target.value));
           row.querySelector('.remove').addEventListener('click', () => this.assets.removeImage(asset.id));
           return row;
-        }));
+          }));
+        }
         if (this.assets.audio) {
           $('audioAsset').innerHTML = `<div class="audio-card"><div class="audio-icon">♪</div><div><strong>${this.escape(this.assets.audio.name)}</strong><span>${formatTime(this.assets.audio.duration)} · primary timing source</span></div><button class="remove" type="button" title="Remove audio">×</button></div>`;
           $('audioAsset').querySelector('.remove').addEventListener('click', () => this.assets.clearAudio());
@@ -1790,16 +2070,26 @@
       }
 
       updateUi() {
-        const ready = Boolean(this.assets.images.length);
+        const isVideo = this.sourceMode === 'video';
+        const ready = isVideo ? Boolean(this.assets.video) : Boolean(this.assets.images.length);
         $('showWaveform').disabled = !this.assets.audio;
+        $('videoVolume').disabled = !isVideo || !this.assets.video;
+        $('audioSourceControls').hidden = !this.assets.audio;
+        $('audioSourceControls').classList.toggle('hidden', !this.assets.audio);
+        $('audioVolume').disabled = !this.assets.audio;
+        this.applyVideoVolume();
+        this.applyAudioVolume();
         this.updateCanvasShape();
         $('generateButton').disabled = !ready || this.rendering;
-        $('bakeHtmlButton').disabled = !ready || this.rendering;
+        $('bakeHtmlButton').disabled = isVideo || !ready || this.rendering;
         $('previewSpeedButton').disabled = !ready || this.rendering;
         $('restartButton').disabled = !ready || this.rendering;
         $('previewButton').disabled = !ready || this.rendering;
         this.updatePreviewButton();
         $('emptyState').classList.toggle('hidden', ready);
+        $('emptyState').innerHTML = isVideo
+          ? '<div><strong>Awaiting source video</strong>Add a video to build a render plan. Audio is optional.</div>'
+          : '<div><strong>Awaiting source images</strong>Add images to build a silent render plan. Audio is optional.</div>';
         this.updatePreviewProgress(this.previewStartTime || 0);
         const transition = $('transition').selectedOptions[0].textContent;
         $('previewMeta').textContent = `${$('resolution').value.replace('x', ' x ')} · ${$('frameRate').value} FPS · ${transition} · Preview ${this.previewRate}x`;
@@ -1808,6 +2098,11 @@
           const fps = Number($('frameRate').value) || 30;
           const transitionFrames = Math.max(1, Number($('transitionFrames').value) || 18);
           const duration = this.getDuration();
+          if (isVideo) {
+            const source = this.assets.audio ? `audio-timed ${formatTime(duration)}` : `video-timed ${formatTime(duration)}`;
+            $('timingDetail').textContent = `${source} · single source video · transitions disabled`;
+            return;
+          }
           const sceneCount = Math.ceil(duration / imageDuration);
           const source = this.assets.audio ? `audio-timed ${formatTime(duration)}` : `silent ${formatTime(duration)}`;
           $('timingDetail').textContent = `${source} · ${sceneCount} scenes · ${imageDuration.toFixed(1)}s each · ${transitionFrames} frames (${(transitionFrames / fps).toFixed(2)}s) transition`;
@@ -1825,6 +2120,7 @@
           );
           this.previewing = false;
           this.assets.audioElement.pause();
+          this.assets.videoElement.pause();
           this.updatePreviewButton();
           this.updatePreviewProgress(this.previewStartTime);
           return;
@@ -1832,10 +2128,18 @@
         this.previewing = true;
         this.updatePreviewButton();
         const hasAudio = Boolean(this.assets.audio);
+        const hasVideo = this.sourceMode === 'video' && Boolean(this.assets.video);
         const duration = this.getDuration();
         this.previewStartedAt = performance.now();
+        if (hasVideo) {
+          this.assets.videoElement.currentTime = this.previewStartTime % Math.max(.5, this.assets.video.duration || duration);
+          this.assets.videoElement.playbackRate = this.previewRate;
+          this.applyVideoVolume();
+          this.assets.videoElement.play().catch(() => {});
+        }
         if (hasAudio) {
           this.assets.audioElement.playbackRate = 1;
+          this.applyAudioVolume();
           try {
             await this.assets.resumeAudioAnalyser();
             await this.assets.audioElement.play();
@@ -1854,6 +2158,7 @@
             this.previewing = false;
             this.previewStartTime = 0;
             if (hasAudio) this.assets.audioElement.pause();
+            if (hasVideo) this.assets.videoElement.pause();
             this.updatePreviewButton();
             this.updatePreviewProgress(0);
             return;
@@ -1873,6 +2178,7 @@
         }
         this.previewRate = this.previewRate === 1 ? 4 : 1;
         this.assets.audioElement.playbackRate = 1;
+        this.assets.videoElement.playbackRate = this.previewRate;
         const button = $('previewSpeedButton');
         button.textContent = `${this.previewRate}x`;
         button.classList.toggle('active', this.previewRate === 4);
@@ -1884,12 +2190,16 @@
       restartPreview() {
         if (!this.plan.length || this.rendering) return;
         if (this.assets.audio) this.assets.audioElement.currentTime = 0;
+        if (this.sourceMode === 'video' && this.assets.video) this.assets.videoElement.currentTime = 0;
         this.previewStartTime = 0;
         this.previewStartedAt = performance.now();
         this.renderer.frameAt(0);
         this.updatePreviewProgress(0);
         if (this.previewing && this.assets.audio) {
           this.assets.audioElement.play().catch(() => {});
+        }
+        if (this.previewing && this.sourceMode === 'video' && this.assets.video) {
+          this.assets.videoElement.play().catch(() => {});
         }
       }
 
@@ -1905,7 +2215,11 @@
         this.rendering = true;
         this.previewing = false;
         this.assets.audioElement.pause();
+        this.assets.videoElement.pause();
         this.assets.audioElement.playbackRate = 1;
+        this.assets.videoElement.playbackRate = 1;
+        this.applyVideoVolume();
+        this.applyAudioVolume();
         this.updatePreviewButton();
         $('downloadLink').classList.remove('show');
         this.updateUi();
@@ -1919,7 +2233,14 @@
           }
           this.renderer.frameAt(0);
           await this.assets.resumeAudioAnalyser();
-          const webm = await this.encoder.record($('previewCanvas'), this.assets.audioElement, duration, fps, (time) => this.renderer.frameAt(time));
+          const webm = await this.encoder.record(
+            $('previewCanvas'),
+            this.assets.audioElement,
+            duration,
+            fps,
+            (time) => this.renderer.frameAt(time),
+            this.sourceMode === 'video' ? this.assets.videoElement : null
+          );
           this.offerDownload(webm, 'webm', 'Download WebM');
           $('statusText').textContent = 'WebM ready';
           $('statusText').classList.remove('error');
@@ -2121,6 +2442,9 @@ Promise.all(imgs.map(v=>waitImage(v.img))).then(()=>{revealFirstFrame();stage.cl
 
       getDuration() {
         const imageDuration = Math.max(.5, Number($('imageDuration').value) || 2);
+        if (this.sourceMode === 'video') {
+          return this.assets.audio?.duration || Math.max(.5, this.assets.video?.duration || imageDuration);
+        }
         return this.assets.audio?.duration || Math.max(imageDuration, this.assets.images.length * imageDuration);
       }
 
@@ -2184,7 +2508,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
       restoreSettings() {
         try {
           const saved = JSON.parse(localStorage.getItem(this.settingsKey) || '{}');
-          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => {
+          ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'videoVolume', 'audioVolume', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => {
             if (saved[id] !== undefined) $(id).value = String(saved[id]);
           });
           $('textLineCount').value = String(clamp(Math.round(Number($('textLineCount').value) || 2), 1, 5));
@@ -2195,6 +2519,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           if (saved.showTextShadow !== undefined) $('showTextShadow').checked = Boolean(saved.showTextShadow);
           if (saved.textStream !== undefined) $('textStreamInput').value = String(saved.textStream);
           this.previewRate = saved.previewRate === 4 ? 4 : 1;
+          this.sourceMode = saved.sourceMode === 'video' ? 'video' : 'images';
           $('previewSpeedButton').textContent = `${this.previewRate}x`;
           $('previewSpeedButton').classList.toggle('active', this.previewRate === 4);
         } catch (error) {
@@ -2204,12 +2529,15 @@ Project Mosaic keeps the creative process focused on images, music, and written 
 
       saveSettings() {
         const settings = {
+          sourceMode: this.sourceMode,
           transition: $('transition').value,
           resolution: $('resolution').value,
           frameRate: $('frameRate').value,
           imageDuration: $('imageDuration').value,
           transitionFrames: $('transitionFrames').value,
           showWaveform: $('showWaveform').checked,
+          videoVolume: $('videoVolume').value,
+          audioVolume: $('audioVolume').value,
           showTextStream: $('showTextStream').checked,
           textStream: $('textStreamInput').value,
           textFontFamily: $('textFontFamily').value,
