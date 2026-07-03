@@ -119,7 +119,7 @@
 
     .quick-actions {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: .45rem;
     }
 
@@ -168,6 +168,21 @@
         rgba(7, 16, 31, .9);
     }
 
+    .icon-btn.auto-on,
+    .icon-btn.speed-on {
+      color: var(--gold);
+      border-color: rgba(245, 200, 106, .68);
+      background:
+        linear-gradient(180deg, rgba(245,200,106,.24), rgba(245,200,106,.055)),
+        rgba(7, 16, 31, .9);
+    }
+
+    .icon-label {
+      font-size: .72rem;
+      font-weight: 1000;
+      letter-spacing: 0;
+    }
+
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -185,6 +200,8 @@
     }
 
     .stat {
+      position: relative;
+      overflow: hidden;
       padding: .52rem;
     }
 
@@ -197,10 +214,45 @@
     }
 
     .stat strong {
+      position: relative;
+      z-index: 1;
       display: block;
       margin-top: .15rem;
       color: var(--white);
       font-size: .92rem;
+    }
+
+    .stat span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat::after {
+      content: "";
+      position: absolute;
+      left: .42rem;
+      right: .42rem;
+      bottom: .34rem;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+    }
+
+    .stat .meter {
+      position: absolute;
+      left: .42rem;
+      bottom: .34rem;
+      z-index: 1;
+      width: calc(var(--value, 0) * 1%);
+      height: 4px;
+      border-radius: 999px;
+      background: var(--meter-color, var(--gold));
+      box-shadow: 0 0 12px color-mix(in srgb, var(--meter-color, var(--gold)) 70%, transparent);
+      transition: width .2s ease;
+    }
+
+    .stat.low strong {
+      color: var(--danger);
     }
 
     .section-title {
@@ -519,6 +571,19 @@
       canvas {
         width: 100%;
       }
+
+      .quick-actions {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: .001ms !important;
+        transition-duration: .001ms !important;
+      }
     }
 
     @media (max-height: 820px) and (min-width: 881px) {
@@ -581,6 +646,12 @@
             <path d="M18 9l4 6M22 9l-4 6" fill="none" stroke-linecap="round"></path>
           </svg>
         </button>
+        <button class="icon-btn auto-on" id="autoBtn" type="button" title="Auto mode" aria-label="Toggle auto mode">
+          <span class="icon-label">AUTO</span>
+        </button>
+        <button class="icon-btn" id="speedBtn" type="button" title="Playback speed" aria-label="Toggle playback speed">
+          <span class="icon-label">1x</span>
+        </button>
         <a class="icon-btn" href="https://kitscript.com/pickme/" target="_blank" rel="noopener noreferrer" title="Homepage" aria-label="Homepage">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 11.5 12 4l9 7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -602,10 +673,10 @@
       </div>
 
       <div class="stats">
-        <div class="stat"><span>Inspiration</span><strong id="inspiration">90</strong></div>
-        <div class="stat"><span>Morale</span><strong id="morale">100</strong></div>
-        <div class="stat"><span>Audience</span><strong id="audience">0 / 36</strong></div>
-        <div class="stat"><span>Concert</span><strong id="wave">0 / 1</strong></div>
+        <div class="stat" id="inspirationStat" style="--meter-color: var(--inspiration, var(--gold));"><span>Inspiration</span><strong id="inspiration">90</strong><i class="meter" aria-hidden="true"></i></div>
+        <div class="stat" id="moraleStat" style="--meter-color: var(--morale, var(--hope));"><span>Morale</span><strong id="morale">100</strong><i class="meter" aria-hidden="true"></i></div>
+        <div class="stat" id="audienceStat" style="--meter-color: var(--hope);"><span>Audience</span><strong id="audience">0 / 30</strong><i class="meter" aria-hidden="true"></i></div>
+        <div class="stat" id="waveStat" style="--meter-color: var(--gold);"><span>Concert</span><strong id="wave">0 / 1</strong><i class="meter" aria-hidden="true"></i></div>
       </div>
 
       <div class="section-title" id="rosterTitle">Recruit Musicians</div>
@@ -635,6 +706,17 @@
     const H = canvas.height;
     const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const PALETTE = {
+      gold: '#f5c86a',
+      amber: '#e78b3c',
+      white: '#fff8e8',
+      danger: '#f06d6d',
+      hope: '#7ee7c8',
+      inspiration: '#ffbd5c',
+      morale: '#7ee7c8',
+      shadow: 'rgba(0,0,0,.42)'
+    };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function drawRoundRect(context, x, y, width, height, radius) {
       const r = Math.min(radius, width / 2, height / 2);
@@ -715,7 +797,10 @@
       performerProfileIndex: 0,
       performerProfileTimer: 0,
       pendingPerformerProfile: null,
-      restartCountdown: 0
+      restartCountdown: 0,
+      speed: 1,
+      time: 0,
+      curtain: 0
     };
 
     let autoPlacementPlan = [];
@@ -786,6 +871,23 @@
         : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M18 9l4 6M22 9l-4 6" fill="none" stroke-linecap="round"></path></svg>`;
     }
 
+    function updateModeButtons() {
+      const autoButton = document.getElementById('autoBtn');
+      autoButton.classList.toggle('auto-on', state.autoMode);
+      autoButton.title = state.autoMode ? 'Auto mode on' : 'Auto mode off';
+      autoButton.setAttribute('aria-label', state.autoMode ? 'Turn auto mode off' : 'Turn auto mode on');
+      const speedButton = document.getElementById('speedBtn');
+      speedButton.classList.toggle('speed-on', state.speed > 1);
+      speedButton.querySelector('.icon-label').textContent = `${state.speed}x`;
+      speedButton.title = `${state.speed}x playback`;
+    }
+
+    function setStatMeter(id, value, low = false) {
+      const element = document.getElementById(id);
+      element.style.setProperty('--value', Math.round(clamp(value) * 100));
+      element.classList.toggle('low', low);
+    }
+
     async function toggleSound() {
       const context = ensureAudio();
       if (!context) return showToast('This browser does not support Web Audio.');
@@ -799,6 +901,27 @@
       } else {
         showToast('Sound off.');
       }
+    }
+
+    function toggleAutoMode() {
+      state.autoMode = !state.autoMode;
+      if (state.autoMode && !state.running && !state.setupDone && !state.musicians.length) {
+        autoPlacementPlan = buildAutoPlacementPlan();
+        state.autoPhase = 'placing';
+        state.autoSlotIndex = 0;
+        state.autoTimer = .2;
+        state.message = 'Auto mode is choosing the ensemble.';
+      } else if (!state.autoMode && state.autoPhase === 'countdown') {
+        state.autoPhase = 'playing';
+      }
+      showToast(state.autoMode ? 'Auto mode on.' : 'Auto mode off.');
+      updateHud();
+    }
+
+    function toggleSpeed() {
+      state.speed = state.speed === 1 ? 2 : 1;
+      showToast(`${state.speed}x playback.`);
+      updateHud();
     }
 
     function playTone(freq, duration = .08, type = 'sine', gain = .08) {
@@ -841,6 +964,11 @@
       document.getElementById('morale').textContent = Math.max(0, Math.floor(state.morale));
       document.getElementById('audience').textContent = `${state.audience} / ${state.targetAudience}`;
       document.getElementById('wave').textContent = `${state.wave} / ${state.maxWave}`;
+      setStatMeter('inspirationStat', state.inspiration / 520);
+      setStatMeter('moraleStat', state.morale / 100, state.morale <= 28);
+      setStatMeter('audienceStat', state.audience / state.targetAudience);
+      setStatMeter('waveStat', state.running || state.win || state.gameOver ? state.waveTimer / 22 : state.musicians.length / 8);
+      updateModeButtons();
       renderRoster();
       renderBonuses();
       document.getElementById('skillBtn').disabled = state.skillCooldown > 0 || !state.running;
@@ -876,6 +1004,7 @@
         `;
         button.onclick = () => {
           if (state.setupDone) return;
+          state.autoMode = false;
           state.selected = type.id;
           updateHud();
           showToast(state.inspiration < type.cost ? `${type.name} selected. More inspiration needed to place.` : `${type.name} selected.`);
@@ -1002,6 +1131,7 @@
       state.spawnTimer = 0;
       state.skillCooldown = 2;
       state.autoPhase = 'playing';
+      state.curtain = 1;
       state.message = 'The one final performance begins. Restore every lane.';
       if (state.musicians.some((m) => m.type.id === 'trumpeter')) emitPulse({ x: 1040, y: 390 }, 260, '#ffbd5c', .45);
       showToast('The concert begins. Watch all six lanes.');
@@ -1053,7 +1183,7 @@
       if (!type || state.inspiration < type.cost) return false;
       state.selected = type.id;
       state.inspiration -= type.cost;
-      state.musicians.push({ type, tile, x: tile.x, y: tile.y, layerDepth: assignLayerDepth(tile.lane), cooldown: .35, level: 1 });
+      state.musicians.push({ type, tile, x: tile.x, y: tile.y, layerDepth: assignLayerDepth(tile.lane), cooldown: .35, cooldownMax: type.rate, castFlash: 0, level: 1 });
       state.message = `${type.name} is ready. Press Begin Concert.`;
       if (!silent) showToast(`${type.name} joins the ensemble.`);
       updateHud();
@@ -1072,7 +1202,7 @@
       Object.assign(state, {
         running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
         spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
-        message: 'Auto mode is choosing the ensemble.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
+        message: 'Auto mode is choosing the ensemble.', gameOver: false, win: false, last: performance.now(), rosterKey: '', curtain: 0,
         pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0,
         performerProfileIndex: 0, performerProfileTimer: 0, pendingPerformerProfile: null, restartCountdown: 0
       });
@@ -1111,7 +1241,7 @@
       Object.assign(state, {
         running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
         spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
-        message: 'Study the incoming lanes, place a team, then begin the concert.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
+        message: 'Study the incoming lanes, place a team, then begin the concert.', gameOver: false, win: false, last: performance.now(), rosterKey: '', curtain: 0,
         pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0,
         performerProfileIndex: 0, performerProfileTimer: 0, pendingPerformerProfile: null, restartCountdown: 0
       });
@@ -1147,6 +1277,7 @@
       }
       const p = canvasPoint(event);
       updatePointer(p);
+      state.autoMode = false;
       const tile = stageTiles.find((t) => Math.hypot(t.x - p.x, t.y - p.y) < 56 && !state.musicians.some((m) => m.tile === t));
       if (!tile) {
         showToast('Click one of the glowing circles on the stage.');
@@ -1161,12 +1292,15 @@
     document.getElementById('resetBtn').onclick = resetGame;
     document.getElementById('skillBtn').onclick = useGrandWave;
     document.getElementById('soundBtn').onclick = toggleSound;
+    document.getElementById('autoBtn').onclick = toggleAutoMode;
+    document.getElementById('speedBtn').onclick = toggleSpeed;
 
     function spawnEnemy(entry) {
       const laneInfo = lanes[entry.lane];
       const type = undeadTypes[entry.type];
+      const spawnX = W + type.spriteSize * .62 + Math.random() * 80;
       state.enemies.push({
-        x: 1230 + Math.random() * 40,
+        x: spawnX,
         y: laneInfo.y,
         lane: entry.lane,
         layerDepth: assignLayerDepth(entry.lane),
@@ -1180,6 +1314,7 @@
         moraleDamage: type.morale,
         color: type.color,
         slow: 1,
+        restoreFlash: 0,
         elite: entry.type === 'elite' || entry.type === 'brute'
       });
     }
@@ -1238,11 +1373,14 @@
 
     function update(dt) {
       if (state.gameOver || state.win) {
+        state.time += dt;
         updateAutoMode(dt);
         updateHud();
         return;
       }
+      state.time += dt;
       updateAutoMode(dt);
+      state.curtain = Math.max(0, state.curtain - dt * .55);
       if (state.skillCooldown > 0) state.skillCooldown = Math.max(0, state.skillCooldown - dt);
       if (state.running) {
         state.performerProfileTimer += dt;
@@ -1276,10 +1414,12 @@
         const support = state.musicians.some((a) => a.type.id === 'pianist' && dist(a, m) < 170) ? .82 : 1;
         if (m.cooldown <= 0) {
           m.cooldown = m.type.rate * support;
+          m.cooldownMax = m.cooldown;
           if (m.type.morale) state.morale = clamp(state.morale + m.type.morale, 0, 100);
           let targets = enemiesInRange(m.type, m);
           if (m.type.id === 'trumpeter') targets = targets.slice(0, 4);
           if (targets.length) {
+            m.castFlash = prefersReducedMotion ? .12 : .3;
             queuePerformerProfile(m);
             emitPulse(m, m.type.id === 'trumpeter' ? 240 : m.type.range, m.type.color, .45);
           }
@@ -1288,15 +1428,18 @@
             const bonus = m.type.id === 'soprano' && state.musicians.filter((x) => x.type.id === 'soprano').length >= 4 && Math.random() < .04 ? 100 : 1;
             e.hope += m.type.hope * mult * (e.elite ? .7 : 1) * bonus;
             e.despair -= m.type.despair * mult;
+            e.restoreFlash = Math.max(e.restoreFlash || 0, .3);
             if (m.type.slow) e.slow = Math.min(e.slow, m.type.slow);
             if (m.type.push) e.x += m.type.push;
           }
         }
+        m.castFlash = Math.max(0, (m.castFlash || 0) - dt);
       }
 
       for (const e of state.enemies) {
         e.x -= e.speed * e.slow * dt;
         e.slow += (1 - e.slow) * dt * 1.8;
+        e.restoreFlash = Math.max(0, (e.restoreFlash || 0) - dt);
         if (e.x < 92) {
           state.morale -= e.moraleDamage;
           state.message = 'A listener reached the stage before hope returned.';
@@ -1407,7 +1550,20 @@
       ctx.fillText(state.message, 48, 58);
       ctx.fillStyle = 'rgba(174,184,199,.78)';
       ctx.font = '700 14px system-ui';
-      ctx.fillText('Set your artists by lane, then begin the one-concert challenge.', 48, 84);
+      ctx.fillText(state.running ? `${state.spawnLeft + state.enemies.length} souls still moving through the hall.` : 'Set your artists by lane, then begin the one-concert challenge.', 48, 84);
+      if (state.autoMode) {
+        ctx.fillStyle = 'rgba(245,200,106,.18)';
+        ctx.strokeStyle = 'rgba(245,200,106,.62)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundRect(ctx, 1112, 36, 92, 34, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = PALETTE.gold;
+        ctx.font = '1000 14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('AUTO', 1158, 58);
+      }
 
       const seatBg = ctx.createLinearGradient(118, 652, 1162, 762);
       seatBg.addColorStop(0, 'rgba(20,13,30,.82)');
@@ -1422,6 +1578,18 @@
       ctx.font = '900 14px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText('AUDIENCE SEATS', 640, 674);
+      const audienceRatio = clamp(state.audience / state.targetAudience);
+      ctx.fillStyle = 'rgba(255,255,255,.08)';
+      ctx.beginPath();
+      drawRoundRect(ctx, 484, 682, 312, 8, 4);
+      ctx.fill();
+      const audienceGrad = ctx.createLinearGradient(484, 682, 796, 682);
+      audienceGrad.addColorStop(0, PALETTE.hope);
+      audienceGrad.addColorStop(1, PALETTE.gold);
+      ctx.fillStyle = audienceGrad;
+      ctx.beginPath();
+      drawRoundRect(ctx, 484, 682, 312 * audienceRatio, 8, 4);
+      ctx.fill();
       for (const seat of seats) {
         ctx.fillStyle = seat.taken ? 'rgba(245,200,106,.32)' : 'rgba(255,255,255,.045)';
         ctx.beginPath();
@@ -1513,6 +1681,8 @@
         });
       }
 
+      drawLaneWarnings();
+      drawSpotlightFocus();
       drawRangeHints();
 
       for (const tile of stageTiles) {
@@ -1533,6 +1703,49 @@
       const activeOrigin = state.hoveredMusician || null;
       if (previewOrigin) drawRangeProfile(previewType, previewOrigin, .42, true);
       if (activeOrigin) drawRangeProfile(activeOrigin.type, activeOrigin, .56, false);
+    }
+
+    function drawLaneWarnings() {
+      if (!state.running) return;
+      const activeLanes = new Set(state.enemies.filter((e) => e.x > 980 || e.elite).map((e) => e.lane));
+      for (const entry of state.spawnQueue.slice(0, 8)) {
+        if (entry.delay - state.waveTimer < 2.4) activeLanes.add(entry.lane);
+      }
+      ctx.save();
+      for (const lane of activeLanes) {
+        const y = lanes[lane].y;
+        const flash = .45 + Math.sin(state.time * 7 + lane) * .18;
+        ctx.fillStyle = `rgba(240,109,109,${flash * .12})`;
+        ctx.fillRect(88, y - 34, 1110, 68);
+        ctx.strokeStyle = `rgba(240,109,109,${flash * .36})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(88, y - 34);
+        ctx.lineTo(1198, y - 34);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawSpotlightFocus() {
+      if (!state.setupDone || !state.musicians.length) return;
+      const performer = state.musicians[state.performerProfileIndex % state.musicians.length];
+      if (!performer) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const beam = ctx.createLinearGradient(performer.x, 90, performer.x, performer.y + 70);
+      beam.addColorStop(0, 'rgba(255,248,232,.16)');
+      beam.addColorStop(.65, `${performer.type.color}30`);
+      beam.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.moveTo(performer.x - 42, 92);
+      ctx.lineTo(performer.x + 42, 92);
+      ctx.lineTo(performer.x + 86, performer.y + 58);
+      ctx.lineTo(performer.x - 86, performer.y + 58);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
 
     function drawRangeProfile(type, origin, alpha, preview) {
@@ -1568,40 +1781,78 @@
       ctx.closePath();
       ctx.fill();
       ctx.globalAlpha = 1;
+      const labelWidth = 144;
+      const labelX = clamp(Math.max(x1 + 10, x2 - labelWidth - 10), 60, W - labelWidth - 60);
+      const labelY = clamp(y1 + 8, 96, H - 80);
       ctx.fillStyle = 'rgba(7,16,31,.86)';
       ctx.strokeStyle = type.color;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      drawRoundRect(ctx, origin.x - 72, origin.y - 63, 144, 28, 10);
+      drawRoundRect(ctx, labelX, labelY, labelWidth, 28, 10);
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = '#fff8e8';
       ctx.font = '900 12px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(profile.label, origin.x, origin.y - 49);
+      ctx.fillText(profile.label, labelX + labelWidth / 2, labelY + 14);
       ctx.restore();
     }
 
     function drawMusicianActor(m) {
       const sprite = sopranianSprites[m.type.id];
       const size = 112;
+      const flash = clamp((m.castFlash || 0) / .3);
+      const bob = prefersReducedMotion ? 0 : Math.sin(state.time * 2.2 + m.tile.col + m.tile.lane) * 2.5;
+      const scale = 1 + flash * .08;
       ctx.fillStyle = 'rgba(0,0,0,.23)';
       ctx.beginPath();
       ctx.ellipse(m.x, m.y + 35, 32, 8, 0, 0, Math.PI * 2);
       ctx.fill();
+      if (flash > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = `${m.type.color}44`;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y - 6, 52 + flash * 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.translate(m.x, m.y + bob);
+      ctx.scale(scale, scale);
       if (sprite?.complete && sprite.naturalWidth) {
-        ctx.drawImage(sprite, m.x - size / 2, m.y - size / 2 - 6, size, size);
+        ctx.drawImage(sprite, -size / 2, -size / 2 - 6, size, size);
       } else {
         ctx.fillStyle = m.type.color;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, 30, 0, Math.PI * 2);
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#111';
         ctx.font = '900 18px system-ui';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(m.type.icon, m.x, m.y);
+        ctx.fillText(m.type.icon, 0, 0);
+      }
+      ctx.restore();
+
+      if (state.running) {
+        const cooldownRatio = 1 - clamp((m.cooldown || 0) / (m.cooldownMax || m.type.rate));
+        const meterX = m.x - 30;
+        const meterY = m.y + 48;
+        ctx.save();
+        ctx.fillStyle = 'rgba(5,10,20,.72)';
+        ctx.strokeStyle = 'rgba(255,248,232,.18)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundRect(ctx, meterX, meterY, 60, 7, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = cooldownRatio > .98 ? PALETTE.gold : m.type.color;
+        ctx.beginPath();
+        drawRoundRect(ctx, meterX + 2, meterY + 2, 56 * cooldownRatio, 3, 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 
@@ -1639,11 +1890,62 @@
       ctx.stroke();
       if (e.hope > 0) {
         const hopeRatio = clamp(e.hope / e.hopeMax);
-        ctx.fillStyle = `rgba(126,231,200,${.04 + hopeRatio * .11})`;
+        ctx.fillStyle = `rgba(126,231,200,${.06 + hopeRatio * .16})`;
         ctx.beginPath();
         ctx.arc(e.x, e.y, e.radius + 4 + hopeRatio * 5, 0, Math.PI * 2);
         ctx.fill();
+        const hopeMeterWidth = Math.max(28, spriteSize * .46);
+        const hopeMeterX = e.x - hopeMeterWidth / 2;
+        const hopeMeterY = e.y + spriteSize * .12;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(5,10,20,.72)';
+        ctx.strokeStyle = 'rgba(255,248,232,.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundRect(ctx, hopeMeterX, hopeMeterY, hopeMeterWidth, 7, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = hopeRatio > .8 ? PALETTE.gold : PALETTE.hope;
+        ctx.beginPath();
+        drawRoundRect(ctx, hopeMeterX + 2, hopeMeterY + 2, (hopeMeterWidth - 4) * hopeRatio, 3, 2);
+        ctx.fill();
+        if (hopeRatio > .8 || e.restoreFlash > 0) {
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = `rgba(245,200,106,${.18 + hopeRatio * .3})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          drawRoundRect(ctx, hopeMeterX - 2, hopeMeterY - 2, hopeMeterWidth + 4, 11, 6);
+          ctx.stroke();
+        }
       }
+      ctx.restore();
+    }
+
+    function drawCurtain() {
+      if (state.curtain <= 0) return;
+      const t = clamp(state.curtain);
+      const width = W * .5 * t;
+      ctx.save();
+      const curtain = ctx.createLinearGradient(0, 0, width, 0);
+      curtain.addColorStop(0, 'rgba(72,18,24,.96)');
+      curtain.addColorStop(.55, 'rgba(136,37,36,.92)');
+      curtain.addColorStop(1, 'rgba(245,200,106,.18)');
+      ctx.fillStyle = curtain;
+      ctx.fillRect(0, 0, width, H);
+      ctx.save();
+      ctx.translate(W, 0);
+      ctx.scale(-1, 1);
+      ctx.fillStyle = curtain;
+      ctx.fillRect(0, 0, width, H);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(245,200,106,.3)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(width, 0);
+      ctx.lineTo(width, H);
+      ctx.moveTo(W - width, 0);
+      ctx.lineTo(W - width, H);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -1700,6 +2002,9 @@
         ctx.beginPath();
         ctx.arc(a.x, a.y, 12, 0, Math.PI * 2);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(255,248,232,.42)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
 
       for (const p of state.particles) {
@@ -1708,6 +2013,8 @@
         ctx.fillRect(p.x, p.y, 4, 4);
         ctx.globalAlpha = 1;
       }
+
+      drawCurtain();
 
       if (state.gameOver || state.win) {
         ctx.fillStyle = 'rgba(0,0,0,.58)';
@@ -1726,7 +2033,7 @@
     }
 
     function loop(now) {
-      const dt = Math.min(.05, (now - state.last) / 1000);
+      const dt = Math.min(.05, (now - state.last) / 1000) * state.speed;
       state.last = now;
       update(dt);
       draw();
