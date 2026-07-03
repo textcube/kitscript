@@ -308,14 +308,18 @@
       flex: 1;
       max-width: 520px;
       min-width: 140px;
-      height: 6px;
+      height: 8px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,.18);
       border-radius: 999px;
       background: rgba(0,0,0,.36);
       box-shadow: 0 4px 16px rgba(0,0,0,.32);
-      pointer-events: none;
+      cursor: pointer;
+      touch-action: none;
+      transition: height .12s ease, border-color .12s ease;
     }
+    .preview-progress:hover { height: 12px; border-color: rgba(67,226,195,.55); }
+    .preview-progress.disabled { cursor: default; pointer-events: none; opacity: .45; }
     .preview-progress-fill {
       width: 100%;
       height: 100%;
@@ -352,6 +356,86 @@
     .download.show { display: inline-block; }
     .error { color: var(--danger); }
     input[type="file"] { display: none; }
+
+    .panel-head h1::after {
+      content: "";
+      display: block;
+      width: 46px;
+      height: 3px;
+      margin-top: 9px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+    .panel-scroll { scrollbar-width: thin; scrollbar-color: #2c3439 transparent; }
+    .panel-scroll::-webkit-scrollbar { width: 10px; }
+    .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+    .panel-scroll::-webkit-scrollbar-thumb {
+      background: #2c3439;
+      border-radius: 999px;
+      border: 2px solid var(--panel);
+    }
+    .panel-scroll::-webkit-scrollbar-thumb:hover { background: #3a4449; }
+    .section-title > span:first-child::before {
+      content: "";
+      display: inline-block;
+      width: 3px;
+      height: 10px;
+      margin-right: 8px;
+      border-radius: 2px;
+      background: var(--accent);
+      vertical-align: -1px;
+    }
+    .tab, .icon-button, .button, .source-option, .upload-button, .project-link {
+      transition: color .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
+    .tab:hover:not(.active) { color: var(--text); border-color: #3a4449; }
+    .tab.active { box-shadow: 0 4px 18px rgba(67,226,195,.22); }
+    .button.primary:not(:disabled) { box-shadow: 0 6px 20px rgba(67,226,195,.2); }
+    .button:not(:disabled):active,
+    .icon-button:not(:disabled):active,
+    .source-option:not(:disabled):active,
+    .upload-button:active { transform: translateY(1px); }
+    button:focus-visible, select:focus-visible, input:focus-visible,
+    textarea:focus-visible, a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .asset { transition: border-color .15s ease; }
+    .asset:hover { border-color: #3a4449; }
+    .status::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      vertical-align: 1px;
+    }
+    body.rendering .status::before { animation: statusPulse 1.1s ease-in-out infinite; }
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .25; }
+    }
+    .download {
+      padding: 8px 16px;
+      border: 1px solid rgba(67,226,195,.5);
+      border-radius: 999px;
+      background: rgba(67,226,195,.1);
+    }
+    .download:hover { background: rgba(67,226,195,.2); }
+    .empty-state > div {
+      padding: 26px 34px;
+      border: 1px dashed #39454b;
+      border-radius: 10px;
+      background: rgba(8,10,11,.62);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        transition-duration: .001ms !important;
+      }
+    }
 
     @media (max-width: 850px) {
       body { overflow: auto; }
@@ -584,7 +668,7 @@
           <strong>Preview Canvas</strong>
           <span id="previewMeta">1280 × 720 · 30 FPS · Mosaic Shift</span>
         </div>
-        <div class="preview-progress" aria-hidden="true"><div class="preview-progress-fill" id="previewProgressFill"></div></div>
+        <div class="preview-progress" id="previewProgress" title="Seek preview"><div class="preview-progress-fill" id="previewProgressFill"></div></div>
         <div class="preview-actions">
           <button class="icon-button" id="previewSpeedButton" title="Toggle preview speed">1x</button>
           <button class="icon-button transport-button" id="previewButton" title="Play preview" aria-label="Play preview" aria-pressed="false"><span class="transport-icon play"></span></button>
@@ -1744,8 +1828,14 @@
           ...(audioStream?.getAudioTracks() || []),
           ...(videoAudioStream?.getAudioTracks() || [])
         ]);
-        const type = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
-          .find((mime) => MediaRecorder.isTypeSupported(mime));
+        const type = [
+          'video/mp4;codecs=avc1.640028,mp4a.40.2',
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm'
+        ].find((mime) => MediaRecorder.isTypeSupported(mime));
         const recorder = new MediaRecorder(stream, type ? { mimeType: type, videoBitsPerSecond: 12_000_000 } : undefined);
         const chunks = [];
         recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
@@ -1789,21 +1879,34 @@
         const [{ FFmpeg }, { toBlobURL, fetchFile }] = await this.withTimeout(Promise.all([
           import('https://esm.sh/@ffmpeg/ffmpeg@0.12.10'),
           import('https://esm.sh/@ffmpeg/util@0.12.1')
-        ]), 20000, 'The MP4 encoder package could not be downloaded.');
+        ]), 30000, 'The MP4 encoder package could not be downloaded.');
         const ffmpeg = new FFmpeg();
         ffmpeg.on('progress', ({ progress }) => this.onProgress('encoding H.264', clamp(progress), 0, 0, Infinity));
-        const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-        try {
-          this.onProgress('loading encoder core', .05, 0, 0, Infinity);
-          const [classWorkerURL, coreURL, wasmURL] = await this.withTimeout(Promise.all([
-            toBlobURL('https://esm.sh/@ffmpeg/ffmpeg@0.12.10/es2022/worker.js', 'text/javascript'),
-            toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
-            toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm')
-          ]), 45000, 'The MP4 encoder core download timed out.');
-          await this.withTimeout(ffmpeg.load({ classWorkerURL, coreURL, wasmURL }), 45000, 'The MP4 encoder could not start.');
-        } catch (error) {
+        const coreBases = [
+          'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm',
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
+        ];
+        let loaded = false;
+        let lastError = null;
+        for (const base of coreBases) {
+          try {
+            this.onProgress('loading encoder core', .05, 0, 0, Infinity);
+            const [classWorkerURL, coreURL, wasmURL] = await this.withTimeout(Promise.all([
+              toBlobURL('https://esm.sh/@ffmpeg/ffmpeg@0.12.10/es2022/worker.js', 'text/javascript'),
+              toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+              toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm')
+            ]), 45000, 'The MP4 encoder core download timed out.');
+            await this.withTimeout(ffmpeg.load({ classWorkerURL, coreURL, wasmURL }), 45000, 'The MP4 encoder could not start.');
+            loaded = true;
+            break;
+          } catch (error) {
+            lastError = error;
+            console.warn(`MP4 encoder core failed from ${base}. Trying the next mirror.`, error);
+          }
+        }
+        if (!loaded) {
           ffmpeg.terminate();
-          throw error;
+          throw lastError || new Error('The MP4 encoder could not be loaded.');
         }
         await ffmpeg.writeFile('mosaic.webm', await fetchFile(webm));
         await ffmpeg.exec(['-i', 'mosaic.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k', 'mosaic.mp4']);
@@ -1878,6 +1981,15 @@
         $('loadReaderTextButton').addEventListener('click', () => {
           this.loadReaderText();
           this.settingsChanged();
+        });
+        const progress = $('previewProgress');
+        progress.addEventListener('pointerdown', (event) => {
+          if (!this.plan.length || this.rendering) return;
+          progress.setPointerCapture(event.pointerId);
+          this.seekPreview(event);
+        });
+        progress.addEventListener('pointermove', (event) => {
+          if (event.buttons & 1) this.seekPreview(event);
         });
         $('previewSpeedButton').addEventListener('click', () => this.togglePreviewSpeed());
         $('previewButton').addEventListener('click', () => this.togglePreview());
@@ -2085,6 +2197,8 @@
         $('previewSpeedButton').disabled = !ready || this.rendering;
         $('restartButton').disabled = !ready || this.rendering;
         $('previewButton').disabled = !ready || this.rendering;
+        $('previewProgress').classList.toggle('disabled', !ready || this.rendering);
+        document.body.classList.toggle('rendering', this.rendering);
         this.updatePreviewButton();
         $('emptyState').classList.toggle('hidden', ready);
         $('emptyState').innerHTML = isVideo
@@ -2187,6 +2301,24 @@
         this.updatePreviewProgress(this.previewStartTime);
       }
 
+      seekPreview(event) {
+        if (!this.plan.length || this.rendering) return;
+        const rect = $('previewProgress').getBoundingClientRect();
+        const fraction = clamp((event.clientX - rect.left) / Math.max(1, rect.width));
+        const duration = this.getDuration();
+        const time = clamp(fraction * duration, 0, Math.max(0, duration - .05));
+        this.previewStartTime = time;
+        this.previewStartedAt = performance.now();
+        if (this.assets.audio) {
+          try { this.assets.audioElement.currentTime = time % Math.max(.1, this.assets.audio.duration || duration); } catch (error) {}
+        }
+        if (this.sourceMode === 'video' && this.assets.video) {
+          try { this.assets.videoElement.currentTime = time % Math.max(.1, this.assets.video.duration || duration); } catch (error) {}
+        }
+        this.renderer.frameAt(time);
+        this.updatePreviewProgress(time);
+      }
+
       restartPreview() {
         if (!this.plan.length || this.rendering) return;
         if (this.assets.audio) this.assets.audioElement.currentTime = 0;
@@ -2233,7 +2365,7 @@
           }
           this.renderer.frameAt(0);
           await this.assets.resumeAudioAnalyser();
-          const webm = await this.encoder.record(
+          const recorded = await this.encoder.record(
             $('previewCanvas'),
             this.assets.audioElement,
             duration,
@@ -2241,19 +2373,25 @@
             (time) => this.renderer.frameAt(time),
             this.sourceMode === 'video' ? this.assets.videoElement : null
           );
-          this.offerDownload(webm, 'webm', 'Download WebM');
-          $('statusText').textContent = 'WebM ready';
-          $('statusText').classList.remove('error');
-          $('statusDetail').textContent = 'WebM is ready. MP4 conversion is starting in the background.';
-          try {
-            const mp4 = await this.encoder.toMp4(webm);
-            this.offerDownload(mp4, 'mp4', 'Download MP4');
+          if ((recorded.type || '').includes('mp4')) {
+            this.offerDownload(recorded, 'mp4', 'Download MP4');
             this.updateProgress('complete', 1, Math.ceil(duration * fps), Math.ceil(duration * fps), 0);
-          } catch (encodingError) {
-            console.error('MP4 encoding failed. Offering WebM fallback.', encodingError);
+            $('statusDetail').textContent = 'MP4 was recorded directly by this browser. No conversion needed.';
+          } else {
+            this.offerDownload(recorded, 'webm', 'Download WebM');
             $('statusText').textContent = 'WebM ready';
             $('statusText').classList.remove('error');
-            $('statusDetail').textContent = `${encodingError.message || 'MP4 conversion was unavailable'} The rendered WebM is ready.`;
+            $('statusDetail').textContent = 'WebM is ready. MP4 conversion is starting in the background.';
+            try {
+              const mp4 = await this.encoder.toMp4(recorded);
+              this.offerDownload(mp4, 'mp4', 'Download MP4');
+              this.updateProgress('complete', 1, Math.ceil(duration * fps), Math.ceil(duration * fps), 0);
+            } catch (encodingError) {
+              console.error('MP4 encoding failed. Offering WebM fallback.', encodingError);
+              $('statusText').textContent = 'WebM ready';
+              $('statusText').classList.remove('error');
+              $('statusDetail').textContent = `${encodingError.message || 'MP4 conversion was unavailable.'} The rendered WebM is ready.`;
+            }
           }
         } catch (error) {
           console.error(error);
@@ -2413,7 +2551,7 @@ Promise.all(imgs.map(v=>waitImage(v.img))).then(()=>{revealFirstFrame();stage.cl
         const percent = Math.round(clamp(progress) * 100);
         $('statusText').classList.remove('error');
         $('statusText').textContent = status.replace(/\b\w/g, (char) => char.toUpperCase());
-        $('statusDetail').textContent = status === 'complete' ? 'H.264 MP4 is ready to download.' : 'Keep this tab visible while rendering.';
+        $('statusDetail').textContent = status === 'complete' ? 'The rendered video is ready to download.' : 'Keep this tab visible while rendering.';
         $('progressPercent').textContent = `${percent}%`;
         $('progressFill').style.width = `${percent}%`;
         $('currentFrame').textContent = totalFrames ? `${frame} / ${totalFrames}` : 'Encoding';
