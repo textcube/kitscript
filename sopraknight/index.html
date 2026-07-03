@@ -454,6 +454,29 @@
       line-height: 1.25;
     }
 
+    .mini-stats {
+      display: grid;
+      gap: 3px;
+      width: 100%;
+      margin-top: .22rem;
+    }
+
+    .mini-stats .bar {
+      position: relative;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .09);
+      overflow: hidden;
+    }
+
+    .mini-stats .bar i {
+      position: absolute;
+      inset: 0;
+      width: var(--w, 0%);
+      border-radius: 999px;
+      background: var(--bar-color, var(--gold));
+    }
+
     .controls {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -995,11 +1018,17 @@
         button.disabled = state.setupDone;
         button.type = 'button';
         button.dataset.musician = type.id;
+        const power = Math.round(clamp(type.hope / 32) * 100);
+        const tempo = Math.round(clamp(.82 / type.rate) * 100);
         button.innerHTML = `
           <img class="card-art" src="images/sopranian_sd/${type.id}.png" alt="" />
           <div>
             <div class="card-head"><h2>${type.name}</h2><span class="cost">${type.cost}</span></div>
             <p>${type.role}</p>
+            <div class="mini-stats" title="Gold: resonance power / Cyan: tempo">
+              <span class="bar"><i style="--w:${power}%; --bar-color:var(--gold)"></i></span>
+              <span class="bar"><i style="--w:${tempo}%; --bar-color:var(--hope)"></i></span>
+            </div>
           </div>
         `;
         button.onclick = () => {
@@ -1467,90 +1496,185 @@
       updateHud();
     }
 
-    function drawFutureHallBackdrop() {
-      const bg = ctx.createLinearGradient(0, 0, 0, H);
+    const backdropCanvas = document.createElement('canvas');
+    backdropCanvas.width = W;
+    backdropCanvas.height = H;
+    const motes = Array.from({ length: 26 }, () => ({
+      x: 60 + Math.random() * (W - 120),
+      speed: 5 + Math.random() * 9,
+      sway: 8 + Math.random() * 14,
+      phase: Math.random() * Math.PI * 2,
+      r: 1 + Math.random() * 1.8
+    }));
+
+    (function renderStaticBackdrop() {
+      const b = backdropCanvas.getContext('2d');
+      const bg = b.createLinearGradient(0, 0, 0, H);
       bg.addColorStop(0, '#101a33');
       bg.addColorStop(.42, '#091224');
       bg.addColorStop(1, '#03060d');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, W, H);
+      b.fillStyle = bg;
+      b.fillRect(0, 0, W, H);
 
-      const glow = ctx.createRadialGradient(W * .52, 170, 30, W * .52, 170, 620);
+      const glow = b.createRadialGradient(W * .52, 170, 30, W * .52, 170, 620);
       glow.addColorStop(0, 'rgba(245,200,106,.22)');
       glow.addColorStop(.38, 'rgba(126,231,200,.055)');
       glow.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, W, H);
+      b.fillStyle = glow;
+      b.fillRect(0, 0, W, H);
 
-      ctx.save();
-      ctx.globalAlpha = .72;
+      for (let i = 0; i < 60; i++) {
+        const x = Math.random() * W;
+        const y = 16 + Math.random() * 150;
+        const s = Math.random() < .2 ? 2 : 1;
+        b.fillStyle = `rgba(255,248,232,${.03 + Math.random() * .07})`;
+        b.fillRect(x, y, s, s);
+      }
+
+      b.save();
+      b.globalAlpha = .72;
       for (let i = 0; i < 7; i++) {
         const x = 110 + i * 180;
-        const arch = ctx.createLinearGradient(x, 80, x, 590);
+        const arch = b.createLinearGradient(x, 80, x, 590);
         arch.addColorStop(0, 'rgba(245,200,106,.18)');
         arch.addColorStop(1, 'rgba(245,200,106,.025)');
-        ctx.strokeStyle = arch;
-        ctx.lineWidth = i % 2 ? 2 : 3;
-        ctx.beginPath();
-        ctx.moveTo(x - 70, 590);
-        ctx.bezierCurveTo(x - 80, 250, x - 50, 120, x, 92);
-        ctx.bezierCurveTo(x + 50, 120, x + 80, 250, x + 70, 590);
-        ctx.stroke();
+        b.strokeStyle = arch;
+        b.lineWidth = i % 2 ? 2 : 3;
+        b.beginPath();
+        b.moveTo(x - 70, 590);
+        b.bezierCurveTo(x - 80, 250, x - 50, 120, x, 92);
+        b.bezierCurveTo(x + 50, 120, x + 80, 250, x + 70, 590);
+        b.stroke();
       }
 
       for (let i = 0; i < 10; i++) {
         const x = 75 + i * 130;
-        ctx.strokeStyle = 'rgba(126,231,200,.055)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, 118);
-        ctx.lineTo(W / 2 + (x - W / 2) * .3, 585);
-        ctx.stroke();
+        b.strokeStyle = 'rgba(126,231,200,.055)';
+        b.lineWidth = 1;
+        b.beginPath();
+        b.moveTo(x, 118);
+        b.lineTo(W / 2 + (x - W / 2) * .3, 585);
+        b.stroke();
       }
-      ctx.restore();
+      b.restore();
+
+      for (const side of [0, 1]) {
+        for (let i = 0; i < 3; i++) {
+          const bx = side ? W - 58 : 10;
+          const by = 150 + i * 128;
+          b.fillStyle = 'rgba(9,14,28,.78)';
+          b.strokeStyle = 'rgba(245,200,106,.16)';
+          b.lineWidth = 1;
+          b.beginPath();
+          drawRoundRect(b, bx, by, 48, 84, 8);
+          b.fill();
+          b.stroke();
+          b.fillStyle = 'rgba(245,200,106,.07)';
+          b.fillRect(bx + 6, by + 60, 36, 4);
+        }
+      }
+
+      for (const cx of [470, 800]) {
+        b.strokeStyle = 'rgba(245,200,106,.24)';
+        b.lineWidth = 1;
+        b.beginPath();
+        b.moveTo(cx, 0);
+        b.lineTo(cx, 40);
+        b.stroke();
+        for (let tier = 0; tier < 2; tier++) {
+          const count = 7 - tier * 2;
+          const radius = 26 - tier * 10;
+          const cy = 46 + tier * 14;
+          b.beginPath();
+          b.ellipse(cx, cy, radius, 6, 0, 0, Math.PI * 2);
+          b.stroke();
+          for (let k = 0; k < count; k++) {
+            const px = cx + Math.cos((k / count) * Math.PI * 2) * radius;
+            b.fillStyle = 'rgba(255,232,179,.5)';
+            b.beginPath();
+            b.arc(px, cy + 4, 1.6, 0, Math.PI * 2);
+            b.fill();
+          }
+        }
+        const halo = b.createRadialGradient(cx, 52, 2, cx, 52, 70);
+        halo.addColorStop(0, 'rgba(245,200,106,.2)');
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        b.fillStyle = halo;
+        b.fillRect(cx - 70, 0, 140, 130);
+      }
+
+      const floor = b.createLinearGradient(0, 525, 0, H);
+      floor.addColorStop(0, 'rgba(255,248,232,.045)');
+      floor.addColorStop(.38, 'rgba(245,200,106,.07)');
+      floor.addColorStop(1, 'rgba(0,0,0,.38)');
+      b.fillStyle = floor;
+      b.fillRect(0, 520, W, H - 520);
+
+      b.strokeStyle = 'rgba(255,248,232,.035)';
+      b.lineWidth = 1;
+      for (let i = 0; i < 12; i++) {
+        const y = 540 + i * 24;
+        b.beginPath();
+        b.moveTo(0, y);
+        b.lineTo(W, y + i * 5);
+        b.stroke();
+      }
+    })();
+
+    function drawFutureHallBackdrop() {
+      ctx.drawImage(backdropCanvas, 0, 0);
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      for (const lamp of [{ x: 310, y: 125 }, { x: 635, y: 94 }, { x: 965, y: 125 }]) {
-        const light = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, 210);
+      const sway = prefersReducedMotion ? 0 : 1;
+      [{ x: 310, y: 125 }, { x: 635, y: 94 }, { x: 965, y: 125 }].forEach((lamp, i) => {
+        const lx = lamp.x + Math.sin(state.time * .55 + i * 2.1) * 9 * sway;
+        const light = ctx.createRadialGradient(lx, lamp.y, 0, lx, lamp.y, 210);
         light.addColorStop(0, 'rgba(255,248,232,.24)');
         light.addColorStop(.18, 'rgba(245,200,106,.13)');
         light.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = light;
-        ctx.fillRect(lamp.x - 220, lamp.y - 80, 440, 420);
+        ctx.fillRect(lx - 220, lamp.y - 80, 440, 420);
+      });
+
+      if (!prefersReducedMotion) {
+        for (const mote of motes) {
+          const rise = (state.time * mote.speed + mote.phase * 60) % 520;
+          const my = 620 - rise;
+          const mx = mote.x + Math.sin(state.time * .7 + mote.phase) * mote.sway;
+          const fade = Math.sin((rise / 520) * Math.PI);
+          ctx.fillStyle = `rgba(255,232,179,${.14 * fade})`;
+          ctx.beginPath();
+          ctx.arc(mx, my, mote.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
-
-      const floor = ctx.createLinearGradient(0, 525, 0, H);
-      floor.addColorStop(0, 'rgba(255,248,232,.045)');
-      floor.addColorStop(.38, 'rgba(245,200,106,.07)');
-      floor.addColorStop(1, 'rgba(0,0,0,.38)');
-      ctx.fillStyle = floor;
-      ctx.fillRect(0, 520, W, H - 520);
-
-      ctx.strokeStyle = 'rgba(255,248,232,.035)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 12; i++) {
-        const y = 540 + i * 24;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y + i * 5);
-        ctx.stroke();
-      }
     }
 
     function drawHall() {
       ctx.clearRect(0, 0, W, H);
       drawFutureHallBackdrop();
 
+      ctx.save();
+      ctx.fillStyle = 'rgba(7,16,31,.58)';
+      ctx.strokeStyle = 'rgba(245,200,106,.28)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      drawRoundRect(ctx, 34, 26, 782, 68, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = PALETTE.gold;
+      ctx.fillRect(48, 40, 4, 40);
+      ctx.restore();
       ctx.fillStyle = 'rgba(255,248,232,.86)';
       ctx.font = '800 18px system-ui';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(state.message, 48, 58);
+      ctx.fillText(state.message, 64, 58);
       ctx.fillStyle = 'rgba(174,184,199,.78)';
       ctx.font = '700 14px system-ui';
-      ctx.fillText(state.running ? `${state.spawnLeft + state.enemies.length} souls still moving through the hall.` : 'Set your artists by lane, then begin the one-concert challenge.', 48, 84);
+      ctx.fillText(state.running ? `${state.spawnLeft + state.enemies.length} souls still moving through the hall.` : 'Set your artists by lane, then begin the one-concert challenge.', 64, 84);
       if (state.autoMode) {
         ctx.fillStyle = 'rgba(245,200,106,.18)';
         ctx.strokeStyle = 'rgba(245,200,106,.62)';
@@ -2014,21 +2138,58 @@
         ctx.globalAlpha = 1;
       }
 
+      const moraleRatio = clamp(state.morale / 100);
+      if (moraleRatio < .35 && !state.win) {
+        const strength = (.35 - moraleRatio) / .35;
+        const vignette = ctx.createRadialGradient(W / 2, H / 2, H * .32, W / 2, H / 2, H * .78);
+        vignette.addColorStop(0, 'rgba(0,0,0,0)');
+        vignette.addColorStop(1, `rgba(8,3,7,${.5 * strength})`);
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, W, H);
+      }
+
       drawCurtain();
 
       if (state.gameOver || state.win) {
-        ctx.fillStyle = 'rgba(0,0,0,.58)';
+        ctx.fillStyle = 'rgba(3,6,13,.66)';
         ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = state.win ? '#f5c86a' : '#f06d6d';
-        ctx.font = '900 54px system-ui';
+        const accent = state.win ? PALETTE.gold : PALETTE.danger;
+        ctx.save();
+        ctx.fillStyle = 'rgba(9,14,28,.94)';
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        drawRoundRect(ctx, W / 2 - 360, H / 2 - 138, 720, 276, 20);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,248,232,.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundRect(ctx, W / 2 - 348, H / 2 - 126, 696, 252, 16);
+        ctx.stroke();
+        ctx.fillStyle = accent;
+        ctx.font = '900 40px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText(state.win ? 'Final Performance Complete' : 'The Hall Falls Silent', W / 2, H / 2 - 20);
-        ctx.fillStyle = '#fff8e8';
-        ctx.font = '700 22px system-ui';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(state.win ? 'Final Performance Complete' : 'The Hall Falls Silent', W / 2, H / 2 - 56);
+        ctx.strokeStyle = 'rgba(245,200,106,.3)';
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - 220, H / 2 - 30);
+        ctx.lineTo(W / 2 + 220, H / 2 - 30);
+        ctx.stroke();
+        ctx.fillStyle = PALETTE.white;
+        ctx.font = '800 22px system-ui';
+        ctx.fillText(`Audience restored  ${state.audience} / ${state.targetAudience}`, W / 2, H / 2 + 8);
+        ctx.fillStyle = 'rgba(174,184,199,.85)';
+        ctx.font = '700 17px system-ui';
+        ctx.fillText(`Ensemble of ${state.musicians.length} - Morale ${Math.max(0, Math.floor(state.morale))}`, W / 2, H / 2 + 42);
+        ctx.fillStyle = 'rgba(255,248,232,.85)';
+        ctx.font = '700 18px system-ui';
         const nextText = state.autoMode && state.autoPhase === 'countdown'
           ? `Auto restart in ${Math.ceil(state.restartCountdown)}`
           : 'Press Reset to conduct another prototype run.';
-        ctx.fillText(nextText, W / 2, H / 2 + 24);
+        ctx.fillText(nextText, W / 2, H / 2 + 92);
+        ctx.restore();
       }
     }
 
