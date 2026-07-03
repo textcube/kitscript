@@ -217,6 +217,113 @@
       gap: .45rem;
     }
 
+    .roster.performing {
+      display: block;
+      overflow: hidden;
+    }
+
+    .performer-profile {
+      display: grid;
+      gap: .65rem;
+      padding: .75rem;
+      border: 1px solid rgba(245, 200, 106, .3);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(245, 200, 106, .16), transparent 58%),
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02)),
+        rgba(7, 16, 31, .82);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 28px rgba(0,0,0,.24);
+    }
+
+    .performer-art-frame {
+      --performer-art-inset: .12rem;
+      display: grid;
+      place-items: center;
+      position: relative;
+      width: min(230px, 92%);
+      aspect-ratio: 1;
+      justify-self: center;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 232, 179, .22);
+      border-radius: 8px;
+      background: radial-gradient(circle at 50% 20%, rgba(255, 248, 232, .18), rgba(6, 10, 18, .88));
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.45), 0 8px 0 rgba(0,0,0,.34), 0 18px 34px rgba(0,0,0,.3);
+    }
+
+    .performer-art {
+      position: absolute;
+      inset: var(--performer-art-inset);
+      width: calc(100% - var(--performer-art-inset) * 2);
+      height: calc(100% - var(--performer-art-inset) * 2);
+      object-fit: contain;
+    }
+
+    .performer-art.enter {
+      animation: performerArtSlideIn .8s cubic-bezier(.2, .85, .22, 1) both;
+    }
+
+    .performer-art.exit {
+      animation: performerArtSlideOut .8s cubic-bezier(.2, .85, .22, 1) both;
+    }
+
+    @keyframes performerArtSlideIn {
+      from {
+        transform: translateX(115%);
+      }
+
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes performerArtSlideOut {
+      from {
+        transform: translateX(0);
+      }
+
+      to {
+        transform: translateX(-115%);
+      }
+    }
+
+    .performer-copy {
+      display: grid;
+      gap: .4rem;
+      text-align: center;
+    }
+
+    .performer-copy h2 {
+      color: var(--white);
+      font-size: 1.05rem;
+      line-height: 1.1;
+      text-shadow: 0 2px 0 rgba(0,0,0,.68);
+    }
+
+    .performer-copy p {
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.32;
+    }
+
+    .performer-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .35rem;
+    }
+
+    .performer-meta span {
+      min-width: 0;
+      padding: .4rem .25rem;
+      border: 1px solid rgba(255, 232, 179, .14);
+      border-radius: 8px;
+      background: rgba(255,255,255,.04);
+      color: rgba(255,248,232,.9);
+      font-size: .62rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
     .card {
       display: grid;
       grid-template-columns: 1fr;
@@ -449,6 +556,10 @@
         height: 56px;
       }
 
+      .performer-art-frame {
+        width: min(188px, 86%);
+      }
+
       .control {
         padding: .52rem;
       }
@@ -497,7 +608,7 @@
         <div class="stat"><span>Concert</span><strong id="wave">0 / 1</strong></div>
       </div>
 
-      <div class="section-title">Recruit Musicians</div>
+      <div class="section-title" id="rosterTitle">Recruit Musicians</div>
       <div class="roster" id="roster"></div>
 
       <div class="section-title">Ensemble Bonuses</div>
@@ -601,6 +712,9 @@
       autoPhase: 'placing',
       autoTimer: .7,
       autoSlotIndex: 0,
+      performerProfileIndex: 0,
+      performerProfileTimer: 0,
+      pendingPerformerProfile: null,
       restartCountdown: 0
     };
 
@@ -734,10 +848,19 @@
     }
 
     function renderRoster(force = false) {
-      const key = `${state.selected}|${state.setupDone}|${musicianTypes.map((type) => state.inspiration < type.cost ? '0' : '1').join('')}`;
+      const key = state.setupDone
+        ? `performing|${state.performerProfileIndex}|${state.musicians.length}`
+        : `recruit|${state.selected}|${musicianTypes.map((type) => state.inspiration < type.cost ? '0' : '1').join('')}`;
       if (!force && state.rosterKey === key) return;
       state.rosterKey = key;
       const roster = document.getElementById('roster');
+      const rosterTitle = document.getElementById('rosterTitle');
+      roster.classList.toggle('performing', state.setupDone);
+      rosterTitle.textContent = state.setupDone ? 'Now Performing' : 'Recruit Musicians';
+      if (state.setupDone) {
+        renderPerformerProfile(roster);
+        return;
+      }
       roster.replaceChildren(...musicianTypes.map((type) => {
         const button = document.createElement('button');
         button.className = `card ${state.selected === type.id ? 'selected' : ''} ${state.inspiration < type.cost ? 'unavailable' : ''}`;
@@ -759,6 +882,57 @@
         };
         return button;
       }));
+    }
+
+    function renderPerformerProfile(roster) {
+      const performer = state.musicians[state.performerProfileIndex % Math.max(1, state.musicians.length)];
+      if (!performer) {
+        roster.replaceChildren();
+        return;
+      }
+      const newArtSrc = `images/sopranian_sd/${performer.type.id}.png`;
+      const oldArt = roster.querySelector('.performer-art:not(.exit)');
+      const oldArtSrc = oldArt?.getAttribute('src') || '';
+      const shouldSlide = oldArtSrc && oldArtSrc !== newArtSrc;
+      const profile = document.createElement('div');
+      profile.className = 'performer-profile';
+      profile.innerHTML = `
+        <div class="performer-art-frame">
+          ${shouldSlide ? `<img class="performer-art exit" src="${oldArtSrc}" alt="" />` : ''}
+          <img class="performer-art${shouldSlide ? ' enter' : ''}" src="${newArtSrc}" alt="" />
+        </div>
+        <div class="performer-copy">
+          <h2>${performer.type.name}</h2>
+          <p>${performer.type.role}</p>
+          <div class="performer-meta">
+            <span>Lane ${performer.tile.lane + 1}</span>
+            <span>${performer.type.group}</span>
+            <span>Lv ${performer.level}</span>
+          </div>
+        </div>
+      `;
+      roster.replaceChildren(profile);
+      if (shouldSlide) {
+        const enteringArt = profile.querySelector('.performer-art.enter');
+        const exitingArt = profile.querySelector('.performer-art.exit');
+        enteringArt.addEventListener('animationend', () => enteringArt.classList.remove('enter'), { once: true });
+        exitingArt.addEventListener('animationend', () => exitingArt.remove(), { once: true });
+      }
+    }
+
+    function focusPerformerProfile(performer) {
+      const index = state.musicians.indexOf(performer);
+      if (index < 0) return;
+      state.pendingPerformerProfile = null;
+      if (state.performerProfileIndex === index) return;
+      state.performerProfileIndex = index;
+      state.performerProfileTimer = 0;
+      renderRoster(true);
+    }
+
+    function queuePerformerProfile(performer) {
+      if (state.musicians.indexOf(performer) < 0) return;
+      state.pendingPerformerProfile = performer;
     }
 
     function renderBonuses() {
@@ -899,7 +1073,8 @@
         running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
         spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
         message: 'Auto mode is choosing the ensemble.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
-        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
+        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0,
+        performerProfileIndex: 0, performerProfileTimer: 0, pendingPerformerProfile: null, restartCountdown: 0
       });
       nextLayerOrder = 0;
       seats.forEach((s) => s.taken = false);
@@ -937,7 +1112,8 @@
         running: false, setupDone: false, selected: 'soprano', inspiration: 520, morale: 100, audience: 0, wave: 0, waveTimer: 0,
         spawnLeft: 0, spawnTimer: 0, spawnQueue: [], skillCooldown: 0, musicians: [], enemies: [], audienceMembers: [], particles: [], pulses: [], beams: [],
         message: 'Study the incoming lanes, place a team, then begin the concert.', gameOver: false, win: false, last: performance.now(), rosterKey: '',
-        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0, restartCountdown: 0
+        pointer: null, hoveredTile: null, hoveredMusician: null, autoPhase: 'placing', autoTimer: .2, autoSlotIndex: 0,
+        performerProfileIndex: 0, performerProfileTimer: 0, pendingPerformerProfile: null, restartCountdown: 0
       });
       nextLayerOrder = 0;
       seats.forEach((s) => s.taken = false);
@@ -1069,6 +1245,10 @@
       updateAutoMode(dt);
       if (state.skillCooldown > 0) state.skillCooldown = Math.max(0, state.skillCooldown - dt);
       if (state.running) {
+        state.performerProfileTimer += dt;
+        if (state.pendingPerformerProfile && state.performerProfileTimer >= 2) {
+          focusPerformerProfile(state.pendingPerformerProfile);
+        }
         state.waveTimer += dt;
         while (state.spawnQueue.length && state.spawnQueue[0].delay <= state.waveTimer) {
           spawnEnemy(state.spawnQueue.shift());
@@ -1099,7 +1279,10 @@
           if (m.type.morale) state.morale = clamp(state.morale + m.type.morale, 0, 100);
           let targets = enemiesInRange(m.type, m);
           if (m.type.id === 'trumpeter') targets = targets.slice(0, 4);
-          if (targets.length) emitPulse(m, m.type.id === 'trumpeter' ? 240 : m.type.range, m.type.color, .45);
+          if (targets.length) {
+            queuePerformerProfile(m);
+            emitPulse(m, m.type.id === 'trumpeter' ? 240 : m.type.range, m.type.color, .45);
+          }
           for (const e of targets) {
             emitBeam(m, e, m.type.color);
             const bonus = m.type.id === 'soprano' && state.musicians.filter((x) => x.type.id === 'soprano').length >= 4 && Math.random() < .04 ? 100 : 1;
