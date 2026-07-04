@@ -15,7 +15,9 @@
         body {
             margin: 0;
             padding: 0;
-            background: var(--bg-dark);
+            background:
+                radial-gradient(circle at 50% -12%, rgba(255, 120, 40, 0.14), transparent 58%),
+                var(--bg-dark);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -94,7 +96,11 @@
             background: #3e2723;
             padding: 15px;
             border-radius: 20px;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 20px 60px rgba(0,0,0,0.7);
+            border: 1px solid rgba(255, 159, 67, 0.18);
+            box-shadow:
+                inset 0 0 50px rgba(0,0,0,0.5),
+                0 20px 60px rgba(0,0,0,0.7),
+                0 0 70px rgba(255, 120, 40, 0.1);
         }
         canvas {
             border-radius: 10px;
@@ -468,8 +474,18 @@ let restartCountdown = 7;
 
 let grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
 let customers = [];
-let animations = []; 
+let animations = [];
 let effectParticles = [];
+let bakePulses = [];
+let deliveries = [];
+
+const OVEN_EMBERS = Array.from({ length: 16 }, () => ({
+    x: 70 + Math.random() * 820,
+    speed: 14 + Math.random() * 22,
+    phase: Math.random() * Math.PI * 2,
+    r: 1 + Math.random() * 1.8,
+    warm: Math.random()
+}));
 
 // --- Sound Engine ---
 let audioCtx = null;
@@ -529,7 +545,8 @@ document.getElementById('soundToggle').addEventListener('click', (e) => {
 class Customer {
     constructor() {
         this.id = Date.now() + Math.random();
-        this.x = WIDTH - 300;
+        this.x = WIDTH + 70; // 화면 밖에서 걸어 들어옴
+        this.targetX = WIDTH - 300;
         this.y = 120 + (this.getQueueCount() * 125);
         this.targetY = this.y;
         this.hunger = 0;
@@ -557,6 +574,11 @@ class Customer {
             this.leaveMoodTimer += dt;
             this.animState = 'happyLeaving';
             return;
+        }
+
+        // 입장: 오른쪽 화면 밖에서 자리로 걸어 들어옴
+        if (this.x > this.targetX + 1) {
+            this.x += (this.targetX - this.x) * Math.min(1, 3.2 * dt);
         }
 
         // 대기열 위치 조정 (앞 사람이 나가면 앞으로 당김)
@@ -751,7 +773,7 @@ class Customer {
             this.drawFallback();
         }
 
-        if (!this.isLeaving) {
+        if (!this.isLeaving && this.x - this.targetX < 24) {
             const orderOffsetX = 90;
             const sX = this.x + orderOffsetX;
             const sY = this.y + 15;
@@ -790,6 +812,8 @@ function resetGame() {
     customers = [];
     animations = [];
     effectParticles = [];
+    bakePulses = [];
+    deliveries = [];
     gold = 0;
     gameTime = 0;
     turnTimer = 0;
@@ -901,6 +925,12 @@ function update(time) {
                     grid[a.to].level++;
                     grid[a.to].scale = 1.4;
                     spawnParticles(a.endPos.x + TILE_SIZE/2, a.endPos.y + TILE_SIZE/2, PIZZA_DATA[grid[a.to].level-1].color, 'flame');
+                    bakePulses.push({
+                        x: a.endPos.x + TILE_SIZE / 2,
+                        y: a.endPos.y + TILE_SIZE / 2,
+                        color: PIZZA_DATA[grid[a.to].level - 1].color,
+                        age: 0, life: 0.5, radius: 74
+                    });
                 }
                 grid[a.from] = null;
             } else {
@@ -930,17 +960,25 @@ function update(time) {
     // 주문 수령 및 퇴장 처리
     customers.forEach(cust => {
         if (!cust.active || cust.isLeaving) return;
+        if (cust.x - cust.targetX >= 24) return; // 아직 입장 중이면 주문 대기
         for (let rIdx = 0; rIdx < cust.requirements.length; rIdx++) {
             const levelNeeded = cust.requirements[rIdx];
             const gIdx = grid.findIndex(it => it && !it.isAnimating && it.level === levelNeeded);
             if (gIdx !== -1) {
                 const p = grid[gIdx].getPos();
-                spawnParticles(p.x + TILE_SIZE/2, p.y + TILE_SIZE/2, PIZZA_DATA[levelNeeded-1].color, 'cheese');
+                deliveries.push({
+                    level: levelNeeded,
+                    sx: p.x + TILE_SIZE / 2,
+                    sy: p.y + TILE_SIZE / 2,
+                    tx: cust.x + 170,
+                    ty: cust.y + 62,
+                    custId: cust.id,
+                    progress: 0
+                });
+                bakePulses.push({ x: p.x + TILE_SIZE / 2, y: p.y + TILE_SIZE / 2, color: '#ffe27a', age: 0, life: 0.35, radius: 46 });
                 grid[gIdx] = null;
                 cust.requirements.splice(rIdx, 1);
-                gold += levelNeeded * 400;
-                sfx.success();
-                break; 
+                break;
             }
         }
         // 모든 주문 완료 시 퇴장 모드로 전환
@@ -957,14 +995,59 @@ function update(time) {
     customers = customers.filter(c => c.x < WIDTH + 200);
 
     effectParticles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.vy += 0.2; 
+        p.x += p.vx; p.y += p.vy; p.vy += 0.2;
         p.life -= dt * 1.5;
         p.vx *= 0.98;
     });
     effectParticles = effectParticles.filter(p => p.life > 0);
+
+    bakePulses.forEach(p => p.age += dt);
+    bakePulses = bakePulses.filter(p => p.age < p.life);
+
+    deliveries.forEach(d => {
+        d.progress += dt * 2.4;
+        const cust = customers.find(c => c.id === d.custId);
+        if (cust) {
+            d.tx = cust.isLeaving ? cust.x + 35 : cust.x + 170;
+            d.ty = cust.isLeaving ? cust.y + 45 : cust.y + 62;
+        }
+        if (d.progress >= 1) {
+            spawnParticles(d.tx, d.ty, PIZZA_DATA[d.level - 1].color, 'cheese');
+            gold += d.level * 400;
+            sfx.success();
+        }
+    });
+    deliveries = deliveries.filter(d => d.progress < 1);
 }
 
 // --- Drawing Systems ---
+
+function drawOvenAmbience() {
+    const pulse = 0.5 + 0.5 * Math.sin(gameTime * 2.1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 셰프 뒤 화덕의 맥동하는 온광
+    const glow = ctx.createRadialGradient(WIDTH / 2 - 200, 92, 12, WIDTH / 2 - 200, 92, 190);
+    glow.addColorStop(0, `rgba(255,140,50,${0.10 + pulse * 0.09})`);
+    glow.addColorStop(0.5, `rgba(255,100,40,${0.05 + pulse * 0.04})`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(WIDTH / 2 - 400, 0, 400, 240);
+
+    // 헤더 전체에 떠오르는 불씨
+    for (const e of OVEN_EMBERS) {
+        const rise = (gameTime * e.speed + e.phase * 40) % 128;
+        const ey = 126 - rise;
+        const ex = e.x + Math.sin(gameTime * 1.6 + e.phase) * 9;
+        const fade = Math.sin((rise / 128) * Math.PI);
+        ctx.fillStyle = `rgba(255,${140 + Math.floor(70 * e.warm)},58,${0.34 * fade})`;
+        ctx.beginPath();
+        ctx.arc(ex, ey, e.r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
 
 function drawChefFallback(x, y) {
     const phase = getChefMotionPhase();
@@ -1242,6 +1325,7 @@ function draw() {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(0, 0, WIDTH, 110);
     }
+    drawOvenAmbience();
     drawChef(WIDTH/2 - 200, 75);
 
     ctx.textAlign = "left";
@@ -1255,6 +1339,9 @@ function draw() {
 
     const tX = WIDTH / 2 - 80;
     const tY = 60;
+    ctx.font = "bold 11px Pretendard";
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillText("NEXT BAKE", tX + 4, tY - 6);
     const timerFillX = tX + 4;
     const timerFillY = tY + 11;
     const timerFillW = 152;
@@ -1295,6 +1382,20 @@ function draw() {
         drawItem(a.level, x, y, a.type === 'merge' ? 1.15 : 1.0);
     });
 
+    // 머지/픽업 시 베이킹 플래시 링
+    bakePulses.forEach(p => {
+        const t = p.age / p.life;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = (1 - t) * 0.8;
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 5 * (1 - t) + 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 12 + p.radius * t, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    });
+
     effectParticles.forEach(p => {
         ctx.globalAlpha = p.life;
         const particleSprite = generatedSprites.particles[p.kind] || generatedSprites.particles.cheese;
@@ -1310,7 +1411,17 @@ function draw() {
 
     // 퇴장 중인 손님을 나중에 그려서 우선순위 확보
     customers.forEach(c => c.draw());
-    
+
+    // 서빙 중인 피자: 그리드에서 주문서까지 포물선 비행
+    deliveries.forEach(d => {
+        const t = Math.min(1, d.progress);
+        const e = t * t * (3 - 2 * t);
+        const x = d.sx + (d.tx - d.sx) * e;
+        const y = d.sy + (d.ty - d.sy) * e - Math.sin(Math.PI * t) * 48;
+        const scale = 1 - 0.42 * e;
+        drawItem(d.level, x - TILE_SIZE / 2, y - TILE_SIZE / 2, scale);
+    });
+
     if (currentState === GameState.OVER) drawGameOver();
 }
 
