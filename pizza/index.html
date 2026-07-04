@@ -100,6 +100,20 @@
             border-radius: 10px;
             cursor: default;
         }
+        @media (max-width: 720px) {
+            .game-header {
+                height: auto;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 16px;
+            }
+            .brand-name { font-size: 18px; }
+            .canvas-container {
+                margin-top: 12px;
+                padding: 8px;
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -176,13 +190,26 @@ const ASSET_MANIFEST = {
         logicalName: 'background',
         webp: 'assets/bg/shop_bg_1920x1280.webp',
         png: 'assets/bg/shop_bg_1920x1280.png'
+    },
+    ui: {
+        parchment: { logicalName: 'parchment', webp: 'assets/ui/parchment_texture.webp', png: 'assets/ui/parchment_texture.png' },
+        headerTexture: { logicalName: 'headerTexture', webp: 'assets/ui/header_wood_texture.webp', png: 'assets/ui/header_wood_texture.png' },
+        timerFrame: { logicalName: 'timerFrame', webp: 'assets/ui/timer_frame.webp', png: 'assets/ui/timer_frame.png' },
+        gameoverFrame: { logicalName: 'gameoverFrame', webp: 'assets/ui/gameover_frame.webp', png: 'assets/ui/gameover_frame.png' },
+        iconHungry: { logicalName: 'icon-hungry', webp: 'assets/ui/icon_hungry.webp', png: 'assets/ui/icon_hungry.png' },
+        iconLeaving: { logicalName: 'icon-leaving', webp: 'assets/ui/icon_leaving.webp', png: 'assets/ui/icon_leaving.png' },
+        iconSatisfied: { logicalName: 'icon-satisfied', webp: 'assets/ui/icon_satisfied.webp', png: 'assets/ui/icon_satisfied.png' }
     }
 };
 
 function setupCanvasResolution() {
     const dpr = window.devicePixelRatio || 1;
-    canvas.style.width = `${WIDTH}px`;
-    canvas.style.height = `${HEIGHT}px`;
+    const headerHeight = document.querySelector('.game-header')?.offsetHeight || 80;
+    const availWidth = Math.max(300, window.innerWidth - 62);
+    const availHeight = Math.max(220, window.innerHeight - headerHeight - 88);
+    const scale = Math.min(1, availWidth / WIDTH, availHeight / HEIGHT);
+    canvas.style.width = `${Math.floor(WIDTH * scale)}px`;
+    canvas.style.height = `${Math.floor(HEIGHT * scale)}px`;
     canvas.width = Math.floor(WIDTH * dpr);
     canvas.height = Math.floor(HEIGHT * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -300,6 +327,7 @@ function getAssetList() {
     return [
         ...ASSET_MANIFEST.items,
         ...Object.values(ASSET_MANIFEST.customers),
+        ...Object.values(ASSET_MANIFEST.ui),
         ASSET_MANIFEST.chef,
         ASSET_MANIFEST.order,
         ASSET_MANIFEST.effect,
@@ -1216,6 +1244,8 @@ function draw() {
     }
     drawChef(WIDTH/2 - 200, 75);
 
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.fillStyle = "#ff9f43";
     ctx.font = "900 36px Pretendard";
     ctx.fillText(gold.toLocaleString(), 60, 86);
@@ -1423,6 +1453,17 @@ function getCustomerStatusIcon(customer) {
 function drawStatusIcon(iconType, x, y) {
     if (!iconType) return;
 
+    const iconImageKeyMap = { warning: 'icon-hungry', leave: 'icon-leaving', ok: 'icon-satisfied' };
+    const iconImg = loadedImages[iconImageKeyMap[iconType]];
+    if (iconImg) {
+        ctx.save();
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        ctx.drawImage(iconImg, x, y, 26, 26);
+        ctx.restore();
+        return;
+    }
+
     const iconRadius = 13;
     const centerX = x + iconRadius;
     const centerY = y + iconRadius;
@@ -1498,6 +1539,7 @@ function drawGameOver() {
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
 
 window.addEventListener('resize', setupCanvasResolution);
+initGeneratedSprites();
 loadAssets();
 
 </script>
