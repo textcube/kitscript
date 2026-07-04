@@ -64,6 +64,15 @@ Web Audio oscillator SFX for move / merge / serve. Off by default; toggled from 
 - The `assets/ui/*.svg` files had no `width`/`height` attributes, which breaks canvas `drawImage` in some browsers (notably Firefox). Intrinsic sizes added.
 - The canvas was fixed at 960px and overflowed small screens; it now scales to fit the viewport.
 
+## Visual Overhaul
+
+- **Wood-fired oven**: a brick arch with animated, flickering flames now sits behind the chef, with a pulsing mouth glow and embers rising through the header band.
+- **Scene layer** (cached offscreen): wood-plank floor shading, dashed queue floor markers, and a re-skinned counter — wood-grain gradient, flour dusting, gold trim, and double-rimmed cell wells.
+- **Lighting**: two gently flickering warm light pools over the counter and the queue, plus a global vignette that frames the scene.
+- **Tile decor**: level badges on every pizza from level 2 up (gold at level 10), steam wisps rising from freshly baked level 7+ pizzas, and a rotating sparkle on the level-10 masterpiece.
+- **Delivery flight**: served pizzas fly in an arc from the counter to the customer's ticket; revenue, particles, and the success sound land on arrival.
+- **Customer entrance**: customers walk in from off-screen right and only place their order once seated.
+
 ## Known Issues / Design Notes
 
 - Every asset load tries WebP and PNG first, producing two 404s per asset (~50 failed requests at startup). Harmless but noisy; ship WebP files or reorder the candidate list to fix.
@@ -84,9 +93,11 @@ Web Audio oscillator SFX for move / merge / serve. Off by default; toggled from 
 
 ### Visuals
 
-- Oven glow and ember particles behind the header to sell the wood-fired theme.
-- A brief "baking" flash when a merge completes (the flame particles now render after the sprite fix).
-- Customer entrance animation (walk in from the right) to match the exit animation.
+Shipped in the visual overhaul (see below): oven ambience, merge flash, customer entrance, delivery flight, scene relighting, level badges. Remaining ideas:
+
+- Animated chef sprite frames (kneading / peel motion) to replace the procedural overlay.
+- Customer reaction pop (heart / music note) when a delivery lands.
+- Seasonal reskin hooks (palette + background swap).
 
 ### Audio
 
