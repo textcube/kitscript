@@ -43,11 +43,34 @@
         }
         .brand-zone {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
+        .brand-mark {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            background:
+                radial-gradient(circle at 32% 28%, rgba(255,220,170,0.35), transparent 55%),
+                linear-gradient(160deg, #c9701f, #7a3a12);
+            border: 2px solid rgba(255, 200, 140, 0.55);
+            box-shadow:
+                inset 0 2px 3px rgba(255,255,255,0.25),
+                inset 0 -3px 6px rgba(0,0,0,0.4),
+                0 4px 10px rgba(0,0,0,0.4),
+                0 0 14px rgba(255,140,50,0.25);
+        }
+        .brand-mark svg {
+            width: 26px;
+            height: 26px;
+        }
+        .brand-text { display: flex; flex-direction: column; }
         .brand-name {
             font-weight: 900;
-            font-size: 24px;
+            font-size: 22px;
             color: var(--primary-color);
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -61,35 +84,51 @@
         }
         .link-zone {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
-        .nav-btn {
-            background: var(--btn-bg);
+        .icon-btn {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            border-radius: 10px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)),
+                var(--btn-bg);
             color: #e0c9b7;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: 700;
             border: 2px solid #5d432f;
             cursor: pointer;
+            text-decoration: none;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
         }
-        .nav-btn:hover {
+        .icon-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .icon-btn:hover {
             background: #5d432f;
             border-color: var(--primary-color);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
         }
-        .sound-btn.active {
+        .icon-btn.youtube-btn:hover { border-color: #ff4757; }
+        .icon-btn.sound-btn.active {
             border-color: #00d2d3;
             color: #00d2d3;
-            box-shadow: 0 0 15px rgba(0,210,211,0.2);
+            box-shadow: 0 0 15px rgba(0,210,211,0.25);
         }
+        .icon-btn.sound-btn .icon-off { display: block; }
+        .icon-btn.sound-btn .icon-on { display: none; }
+        .icon-btn.sound-btn.active .icon-off { display: none; }
+        .icon-btn.sound-btn.active .icon-on { display: block; }
         .canvas-container {
             position: relative;
             margin-top: 25px;
@@ -113,7 +152,12 @@
                 gap: 8px;
                 padding: 10px 16px;
             }
-            .brand-name { font-size: 18px; }
+            .brand-name { font-size: 16px; }
+            .game-subtitle { font-size: 11px; }
+            .brand-mark { width: 36px; height: 36px; border-radius: 10px; }
+            .brand-mark svg { width: 21px; height: 21px; }
+            .icon-btn { width: 36px; height: 36px; }
+            .icon-btn svg { width: 18px; height: 18px; }
             .canvas-container {
                 margin-top: 12px;
                 padding: 8px;
@@ -126,13 +170,44 @@
 
     <header class="game-header">
         <div class="brand-zone">
-            <span class="brand-name">BUNTGAMES</span>
-            <span class="game-subtitle">Eternal Invasion: Pizza Edition - Oksu Wood-Fired Pizza</span>
+            <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3 21 19H3Z" fill="#e8c07a" stroke="#7a4a1e" stroke-width="1.4" stroke-linejoin="round"></path>
+                    <path d="M12 3 21 19H3Z" fill="none" stroke="#fff2d9" stroke-width="1" stroke-linejoin="round" opacity="0.5"></path>
+                    <circle cx="11" cy="12" r="1.3" fill="#c0392b"></circle>
+                    <circle cx="15" cy="15.5" r="1.1" fill="#c0392b"></circle>
+                    <circle cx="9.5" cy="16.5" r="1" fill="#27ae60"></circle>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">BUNTGAMES</span>
+                <span class="game-subtitle">Eternal Invasion: Pizza Edition - Oksu Wood-Fired Pizza</span>
+            </div>
         </div>
         <div class="link-zone">
-            <button id="soundToggle" class="nav-btn sound-btn">Sound: OFF</button>
-            <a href="https://kitscript.com/game" target="_blank" class="nav-btn">Homepage</a>
-            <a href="https://www.youtube.com/@textcube" target="_blank" class="nav-btn" style="border-color: #ff4757;">YouTube</a>
+            <button id="soundToggle" class="icon-btn sound-btn" type="button" title="Sound: OFF" aria-label="Toggle sound">
+                <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+                    <path d="M18 9l4 6M22 9l-4 6" stroke-linecap="round"></path>
+                </svg>
+                <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 9v6h4l5 4V5L8 9H4Z"></path>
+                    <path d="M17 8c1.1 1 1.8 2.4 1.8 4s-.7 3-1.8 4M20 5.5A9 9 0 0 1 22 12a9 9 0 0 1-2 6.5" stroke-linecap="round"></path>
+                </svg>
+            </button>
+            <a href="https://kitscript.com/game" target="_blank" rel="noopener noreferrer" class="icon-btn" title="Homepage" aria-label="Homepage">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 11.5 12 4l9 7.5"></path>
+                    <path d="M5.5 10.5V20h13v-9.5"></path>
+                    <path d="M9.5 20v-6h5v6"></path>
+                </svg>
+            </a>
+            <a href="https://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="icon-btn youtube-btn" title="YouTube" aria-label="YouTube">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3.8 7.8c.2-1.3 1.2-2.3 2.5-2.4C8.2 5.2 10.2 5.1 12 5.1s3.8.1 5.7.3c1.3.1 2.3 1.1 2.5 2.4.2 1.2.3 2.6.3 4.2s-.1 3-.3 4.2c-.2 1.3-1.2 2.3-2.5 2.4-1.9.2-3.9.3-5.7.3s-3.8-.1-5.7-.3c-1.3-.1-2.3-1.1-2.5-2.4-.2-1.2-.3-2.6-.3-4.2s.1-3 .3-4.2Z" stroke-linejoin="round"></path>
+                    <path d="m10 9 5 3-5 3V9Z" fill="currentColor" stroke="none"></path>
+                </svg>
+            </a>
         </div>
     </header>
 
@@ -533,10 +608,12 @@ const sfx = {
 };
 
 document.getElementById('soundToggle').addEventListener('click', (e) => {
+    const button = e.currentTarget;
     initAudio();
     isSoundOn = !isSoundOn;
-    e.target.textContent = isSoundOn ? "Sound: ON" : "Sound: OFF";
-    e.target.classList.toggle('active', isSoundOn);
+    button.title = isSoundOn ? "Sound: ON" : "Sound: OFF";
+    button.setAttribute('aria-label', isSoundOn ? 'Turn sound off' : 'Turn sound on');
+    button.classList.toggle('active', isSoundOn);
     if (isSoundOn) audioCtx.resume();
 });
 
@@ -1174,6 +1251,102 @@ function drawVignette() {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 }
 
+function drawHeaderPlaque(x, y, w, h, radius = 14) {
+    ctx.save();
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowOffsetY = 4;
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, 'rgba(70, 47, 30, 0.85)');
+    g.addColorStop(1, 'rgba(34, 22, 14, 0.88)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(255, 159, 67, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(x + 1, y + 1, w - 2, h - 2, radius - 1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x + 3, y + 3, w - 6, h - 6, Math.max(2, radius - 3));
+    ctx.stroke();
+}
+
+function drawFlameIcon(cx, cy, size) {
+    const flicker = 0.85 + 0.15 * Math.sin(gameTime * 8 + cx);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const grad = ctx.createLinearGradient(cx, cy - size, cx, cy + size * 0.6);
+    grad.addColorStop(0, `rgba(255, 214, 96, ${0.9 * flicker})`);
+    grad.addColorStop(0.55, `rgba(255, 150, 46, ${0.9 * flicker})`);
+    grad.addColorStop(1, `rgba(255, 90, 30, ${0.9 * flicker})`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size);
+    ctx.quadraticCurveTo(cx + size * 0.85, cy - size * 0.1, cx, cy + size * 0.7);
+    ctx.quadraticCurveTo(cx - size * 0.85, cy - size * 0.1, cx, cy - size);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawHeaderStats() {
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    // 매출 명패
+    const rX = 40, rY = 24, rW = 210, rH = 70;
+    drawHeaderPlaque(rX, rY, rW, rH);
+    ctx.font = "bold 12px Pretendard";
+    ctx.fillStyle = "rgba(255,255,255,0.48)";
+    ctx.fillText("REVENUE COLLECTED", rX + 18, rY + 24);
+    ctx.fillStyle = "#ff9f43";
+    ctx.font = "900 34px Pretendard";
+    ctx.fillText(gold.toLocaleString(), rX + 18, rY + 58);
+
+    // 타이머 명패
+    const tPX = WIDTH / 2 - 114, tPY = 24, tPW = 224, tPH = 70;
+    drawHeaderPlaque(tPX, tPY, tPW, tPH);
+    drawFlameIcon(tPX + 24, tPY + 26, 9);
+    ctx.font = "bold 12px Pretendard";
+    ctx.fillStyle = "rgba(255,255,255,0.48)";
+    ctx.fillText("NEXT BAKE", tPX + 40, tPY + 24);
+
+    const barX = tPX + 18, barY = tPY + 38, barW = tPW - 36, barH = 16;
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, barH, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const fillRatio = clampRatio(turnTimer / 2);
+    if (fillRatio > 0) {
+        const tGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        tGrad.addColorStop(0, "#ff9f43");
+        tGrad.addColorStop(1, "#ff6b6b");
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, barH, 8);
+        ctx.clip();
+        ctx.fillStyle = tGrad;
+        ctx.fillRect(barX, barY, barW * fillRatio, barH);
+        ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(255, 220, 170, 0.28)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(barX + 1, barY + 1, barW - 2, barH - 2, 7);
+    ctx.stroke();
+}
+
+function clampRatio(v) { return Math.max(0, Math.min(1, v)); }
+
 function drawOvenAmbience() {
     const ox = WIDTH / 2 - 200; // 화덕 중심 (셰프 뒤)
     const oy = 108;             // 화덕 바닥 (헤더 하단)
@@ -1602,16 +1775,7 @@ function draw() {
     drawOvenAmbience();
     drawChef(WIDTH/2 - 200, 75);
 
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#ff9f43";
-    ctx.font = "900 36px Pretendard";
-    ctx.fillText(gold.toLocaleString(), 60, 86);
-    ctx.font = "bold 13px Pretendard";
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillText("REVENUE COLLECTED", 60, 48);
-
-    drawBakeTimerGauge();
+    drawHeaderStats();
 
     grid.forEach(it => { if (it && !it.isAnimating) drawItem(it.level, it.getPos().x, it.getPos().y, it.scale); });
     animations.forEach(a => {
