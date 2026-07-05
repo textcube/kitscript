@@ -73,6 +73,12 @@ Web Audio oscillator SFX for move / merge / serve. Off by default; toggled from 
 - **Delivery flight**: served pizzas fly in an arc from the counter to the customer's ticket; revenue, particles, and the success sound land on arrival.
 - **Customer entrance**: customers walk in from off-screen right and only place their order once seated.
 
+## Header Redesign
+
+- **Brand mark**: `BUNTGAMES` now sits next to a wood-and-gold badge with a pizza-slice glyph, replacing the bare text logo.
+- **Icon buttons**: Sound/Homepage/YouTube switched from text pills (`Sound: OFF`, `Homepage`, `YouTube`) to square icon buttons matching the `icon-btn` pattern used in `sopraknight` and `album`, with the sound button showing a distinct on/off glyph and a cyan active glow.
+- **Stat plaques**: the revenue readout and the "NEXT BAKE" merge-timer gauge (next to the chef) now share one `drawHeaderPlaque()` painter — same wood-gradient panel, gold trim, and inner highlight — instead of one being bare text and the other a floating bordered box. The timer plaque also gained a small flickering flame icon to tie it to the oven.
+
 ## Known Issues / Design Notes
 
 - Every asset load tries WebP and PNG first, producing two 404s per asset (~50 failed requests at startup). Harmless but noisy; ship WebP files or reorder the candidate list to fix.
