@@ -1408,6 +1408,12 @@ function drawHeaderStats() {
     ctx.beginPath();
     ctx.roundRect(barX + 1, barY + 1, barW - 2, barH - 2, 7);
     ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "900 10px Pretendard";
+    ctx.textAlign = "center";
+    ctx.fillText(`${Math.round(fillRatio * 100)}%`, barX + barW / 2, barY + 12);
+    ctx.textAlign = "left";
 }
 
 function clampRatio(v) { return Math.max(0, Math.min(1, v)); }
@@ -1762,54 +1768,6 @@ function drawChef(x, y) {
         return;
     }
     drawChefFallback(x, y);
-}
-
-function drawBakeTimerGauge() {
-    const progress = Math.max(0, Math.min(1, turnTimer / 2));
-    const tX = WIDTH / 2 - 80;
-    const tY = 60;
-    const timerFillX = tX + 4;
-    const timerFillY = tY + 11;
-    const timerFillW = 152;
-    const timerFillH = 16;
-    const timerFrame = loadedImages.timerFrame;
-
-    ctx.save();
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.font = "bold 11px Pretendard";
-    ctx.fillStyle = "rgba(255,255,255,0.58)";
-    ctx.fillText("NEXT BAKE", tX + 4, tY - 6);
-
-    if (timerFrame) {
-        ctx.drawImage(timerFrame, tX - 16, tY, 200, 38);
-    }
-
-    ctx.fillStyle = "rgba(18,10,6,0.62)";
-    ctx.beginPath();
-    ctx.roundRect(timerFillX, timerFillY, timerFillW, timerFillH, 8);
-    ctx.fill();
-
-    const tGrad = ctx.createLinearGradient(timerFillX, 0, timerFillX + timerFillW, 0);
-    tGrad.addColorStop(0, "#ff9f43");
-    tGrad.addColorStop(0.55, "#ffd166");
-    tGrad.addColorStop(1, "#ff6b6b");
-    ctx.fillStyle = tGrad;
-    ctx.beginPath();
-    ctx.roundRect(timerFillX + 2, timerFillY + 2, Math.max(0, (timerFillW - 4) * progress), timerFillH - 4, 6);
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(255,220,170,0.68)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(timerFillX - 2, timerFillY - 2, timerFillW + 4, timerFillH + 4, 9);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
-    ctx.font = "900 10px Pretendard";
-    ctx.textAlign = "center";
-    ctx.fillText(`${Math.round(progress * 100)}%`, timerFillX + timerFillW / 2, timerFillY + 12);
-    ctx.restore();
 }
 
 function draw() {
