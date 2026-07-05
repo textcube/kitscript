@@ -1,0 +1,18 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs>
+<linearGradient id='fSkinL' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#9cae76'/><stop offset='100%' stop-color='#5f7042'/></linearGradient>
+<linearGradient id='fCoatL' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#52443a'/><stop offset='100%' stop-color='#28211b'/></linearGradient>
+</defs>
+<ellipse cx='80' cy='132' rx='38' ry='10' fill='rgba(0,0,0,0.3)'/>
+<path d='M47 90 Q80 78 113 90 L117 142 Q80 153 43 142 Z' fill='url(#fCoatL)' stroke='#140f0b' stroke-width='4'/>
+<path d='M48 42 Q48 24 80 24 Q112 24 112 42 L112 68 Q112 92 80 92 Q48 92 48 68 Z' fill='url(#fSkinL)' stroke='#2c3620' stroke-width='4'/>
+<circle cx='45' cy='80' r='7' fill='#9aa0a8' stroke='#4a4f56' stroke-width='2'/><circle cx='115' cy='80' r='7' fill='#9aa0a8' stroke='#4a4f56' stroke-width='2'/>
+<path d='M62 44 l6 6 M58 50 l6 -6 M98 44 l6 6 M94 50 l6 -6' stroke='#2a231d' stroke-width='3' stroke-linecap='round'/>
+<ellipse cx='66' cy='62' rx='8' ry='6' fill='#dfe8c8'/><ellipse cx='94' cy='62' rx='8' ry='6' fill='#dfe8c8'/>
+<circle cx='66' cy='62' r='3' fill='#ffd36e'/><circle cx='94' cy='62' r='3' fill='#ffd36e'/>
+<path d='M68 78 Q80 88 92 78' stroke='#2c3620' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M45 98 L26 104' stroke='#5c6b40' stroke-width='8' stroke-linecap='round'/><circle cx='24' cy='104' r='6' fill='#8fa06a' stroke='#2c3620' stroke-width='2'/>
+<path d='M115 94 L136 74' stroke='#5c6b40' stroke-width='8' stroke-linecap='round'/><circle cx='138' cy='74' r='6' fill='#8fa06a' stroke='#2c3620' stroke-width='2'/>
+<path d='M88 102 l18 5 l-6 14 l-20 -7 z' fill='#ffb347' stroke='#8f3e0f' stroke-width='2'/>
+<path d='M118 40 l6 -10 l6 10 h-4 v8 h-4 v-8 z' fill='#ffd166'/>
+</svg>

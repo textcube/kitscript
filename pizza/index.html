@@ -250,7 +250,27 @@ const ASSET_MANIFEST = {
 
         draculaWaiting: { logicalName: 'customer-dracula-waiting', webp: 'assets/customers/dracula_waiting.webp', png: 'assets/customers/dracula_waiting.png' },
         draculaAngry: { logicalName: 'customer-dracula-angry', webp: 'assets/customers/dracula_angry.webp', png: 'assets/customers/dracula_angry.png' },
-        draculaLeaving: { logicalName: 'customer-dracula-leaving', webp: 'assets/customers/dracula_leaving.webp', png: 'assets/customers/dracula_leaving.png' }
+        draculaLeaving: { logicalName: 'customer-dracula-leaving', webp: 'assets/customers/dracula_leaving.webp', png: 'assets/customers/dracula_leaving.png' },
+
+        mummyWaiting: { logicalName: 'customer-mummy-waiting', webp: 'assets/undeath/mummy_waiting.webp', png: 'assets/undeath/mummy_waiting.png' },
+        mummyAngry: { logicalName: 'customer-mummy-angry', webp: 'assets/undeath/mummy_angry.webp', png: 'assets/undeath/mummy_angry.png' },
+        mummyLeaving: { logicalName: 'customer-mummy-leaving', webp: 'assets/undeath/mummy_leaving.webp', png: 'assets/undeath/mummy_leaving.png' },
+
+        witchWaiting: { logicalName: 'customer-witch-waiting', webp: 'assets/undeath/witch_waiting.webp', png: 'assets/undeath/witch_waiting.png' },
+        witchAngry: { logicalName: 'customer-witch-angry', webp: 'assets/undeath/witch_angry.webp', png: 'assets/undeath/witch_angry.png' },
+        witchLeaving: { logicalName: 'customer-witch-leaving', webp: 'assets/undeath/witch_leaving.webp', png: 'assets/undeath/witch_leaving.png' },
+
+        frankensteinWaiting: { logicalName: 'customer-frankenstein-waiting', webp: 'assets/undeath/frankenstein_waiting.webp', png: 'assets/undeath/frankenstein_waiting.png' },
+        frankensteinAngry: { logicalName: 'customer-frankenstein-angry', webp: 'assets/undeath/frankenstein_angry.webp', png: 'assets/undeath/frankenstein_angry.png' },
+        frankensteinLeaving: { logicalName: 'customer-frankenstein-leaving', webp: 'assets/undeath/frankenstein_leaving.webp', png: 'assets/undeath/frankenstein_leaving.png' },
+
+        pumpkinWaiting: { logicalName: 'customer-pumpkin-waiting', webp: 'assets/undeath/pumpkin_waiting.webp', png: 'assets/undeath/pumpkin_waiting.png' },
+        pumpkinAngry: { logicalName: 'customer-pumpkin-angry', webp: 'assets/undeath/pumpkin_angry.webp', png: 'assets/undeath/pumpkin_angry.png' },
+        pumpkinLeaving: { logicalName: 'customer-pumpkin-leaving', webp: 'assets/undeath/pumpkin_leaving.webp', png: 'assets/undeath/pumpkin_leaving.png' },
+
+        impWaiting: { logicalName: 'customer-imp-waiting', webp: 'assets/undeath/imp_waiting.webp', png: 'assets/undeath/imp_waiting.png' },
+        impAngry: { logicalName: 'customer-imp-angry', webp: 'assets/undeath/imp_angry.webp', png: 'assets/undeath/imp_angry.png' },
+        impLeaving: { logicalName: 'customer-imp-leaving', webp: 'assets/undeath/imp_leaving.webp', png: 'assets/undeath/imp_leaving.png' }
     },
     chef: {
         logicalName: 'chef',
@@ -349,17 +369,62 @@ const UNDEAD_ARCHETYPES = [
         eye: '#7de8ff',
         apparel: '#4f3930',
         silhouette: 'lean'
+    },
+    {
+        type: 'mummy',
+        skinBase: '#e8e0cc',
+        skinShade: '#c2b696',
+        eye: '#ffd36e',
+        apparel: '#8f8467',
+        silhouette: 'classic'
+    },
+    {
+        type: 'witch',
+        skinBase: '#9fb56b',
+        skinShade: '#5f7a3c',
+        eye: '#fff3c4',
+        apparel: '#3a2350',
+        silhouette: 'classic'
+    },
+    {
+        type: 'frankenstein',
+        skinBase: '#8fa06a',
+        skinShade: '#54633c',
+        eye: '#dfe8c8',
+        apparel: '#4a3d33',
+        silhouette: 'hunched'
+    },
+    {
+        type: 'pumpkin',
+        skinBase: '#ffcf6e',
+        skinShade: '#d97a1e',
+        eye: '#4a2a12',
+        apparel: '#6b4d34',
+        silhouette: 'classic'
+    },
+    {
+        type: 'imp',
+        skinBase: '#d9584f',
+        skinShade: '#8a2f2f',
+        eye: '#2a0d0d',
+        apparel: '#5c2020',
+        silhouette: 'lean'
     }
 ];
 
-const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie/ghost/skeleton/dracula customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
+const ASSET_STYLE_PROMPT = "dark-comic, wood-fired pizza shop, stylized zombie/ghost/skeleton/dracula/mummy/witch/frankenstein/pumpkin/imp customers, top-down game sprite, consistent warm palette (#ff9f43/#ff6b6b), clean silhouette";
 
 
 const CUSTOMER_ASSET_KEY_MAP = {
     zombie: { idle: 'customer-zombie-waiting', angry: 'customer-zombie-angry', happyLeaving: 'customer-zombie-leaving' },
     ghost: { idle: 'customer-ghost-waiting', angry: 'customer-ghost-angry', happyLeaving: 'customer-ghost-leaving' },
     skeleton: { idle: 'customer-skeleton-waiting', angry: 'customer-skeleton-angry', happyLeaving: 'customer-skeleton-leaving' },
-    dracula: { idle: 'customer-dracula-waiting', angry: 'customer-dracula-angry', happyLeaving: 'customer-dracula-leaving' }
+    dracula: { idle: 'customer-dracula-waiting', angry: 'customer-dracula-angry', happyLeaving: 'customer-dracula-leaving' },
+    mummy: { idle: 'customer-mummy-waiting', angry: 'customer-mummy-angry', happyLeaving: 'customer-mummy-leaving' },
+    witch: { idle: 'customer-witch-waiting', angry: 'customer-witch-angry', happyLeaving: 'customer-witch-leaving' },
+    frankenstein: { idle: 'customer-frankenstein-waiting', angry: 'customer-frankenstein-angry', happyLeaving: 'customer-frankenstein-leaving' },
+    pumpkin: { idle: 'customer-pumpkin-waiting', angry: 'customer-pumpkin-angry', happyLeaving: 'customer-pumpkin-leaving' },
+    imp: { idle: 'customer-imp-waiting', angry: 'customer-imp-angry', happyLeaving: 'customer-imp-leaving' }
 };
 
 const ZOMBIE_STATES = ['idle', 'angry', 'happyLeaving'];

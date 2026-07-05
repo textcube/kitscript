@@ -1,0 +1,23 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs>
+<linearGradient id='iSkinL' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#e8746a'/><stop offset='100%' stop-color='#9c3f3f'/></linearGradient>
+<linearGradient id='iTunicL' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#66272a'/><stop offset='100%' stop-color='#301212'/></linearGradient>
+</defs>
+<ellipse cx='80' cy='132' rx='32' ry='9' fill='rgba(0,0,0,0.3)'/>
+<path d='M53 92 Q80 82 107 92 L111 138 Q80 149 49 138 Z' fill='url(#iTunicL)' stroke='#190808' stroke-width='4'/>
+<path d='M51 56 Q41 66 49 78' stroke='#1c1c22' stroke-width='8' fill='none' stroke-linecap='round'/>
+<path d='M109 56 Q119 66 111 78' stroke='#1c1c22' stroke-width='8' fill='none' stroke-linecap='round'/>
+<circle cx='80' cy='60' r='30' fill='url(#iSkinL)' stroke='#6b1f1f' stroke-width='4'/>
+<path d='M58 34 L66 14 L74 32 Z' fill='#e2c78a' stroke='#a9843f' stroke-width='2'/>
+<path d='M102 34 L94 14 L86 32 Z' fill='#e2c78a' stroke='#a9843f' stroke-width='2'/>
+<path d='M50 38 Q64 26 80 30 Q96 26 110 38 Q96 32 80 34 Q64 32 50 38 Z' fill='#1c1c22'/>
+<path d='M62 90 L58 100 L68 96 Z' fill='#8a2f2f'/><path d='M98 90 L102 100 L92 96 Z' fill='#8a2f2f'/>
+<ellipse cx='68' cy='62' rx='6' ry='7' fill='#2a0d0d'/><ellipse cx='92' cy='62' rx='6' ry='7' fill='#2a0d0d'/>
+<circle cx='68' cy='60' r='1.6' fill='#ffd36e'/><circle cx='92' cy='60' r='1.6' fill='#ffd36e'/>
+<path d='M69 78 Q80 87 91 78' stroke='#6b1f1f' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M74 80 l0 4 M86 80 l0 4' stroke='#fff' stroke-width='2' stroke-linecap='round'/>
+<path d='M49 98 L30 104' stroke='#8a2f2f' stroke-width='8' stroke-linecap='round'/><circle cx='28' cy='104' r='6' fill='#e8746a' stroke='#6b1f1f' stroke-width='2'/>
+<path d='M111 94 L131 74' stroke='#8a2f2f' stroke-width='8' stroke-linecap='round'/><circle cx='133' cy='74' r='6' fill='#e8746a' stroke='#6b1f1f' stroke-width='2'/>
+<path d='M88 102 l18 5 l-6 14 l-20 -7 z' fill='#ffb347' stroke='#8f3e0f' stroke-width='2'/>
+<path d='M118 40 l6 -10 l6 10 h-4 v8 h-4 v-8 z' fill='#ffd166'/>
+</svg>
