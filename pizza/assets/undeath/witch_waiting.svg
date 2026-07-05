@@ -1,0 +1,21 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs>
+<linearGradient id='wSkin' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#9fb56b'/><stop offset='100%' stop-color='#5f7a3c'/></linearGradient>
+<linearGradient id='wCloak' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#3a2350'/><stop offset='100%' stop-color='#1c1330'/></linearGradient>
+</defs>
+<ellipse cx='80' cy='132' rx='36' ry='10' fill='rgba(0,0,0,0.35)'/>
+<path d='M46 88 Q80 74 114 88 L118 140 Q80 152 42 140 Z' fill='url(#wCloak)' stroke='#120c1e' stroke-width='4'/>
+<path d='M50 88 Q80 96 110 88 L106 100 Q80 106 54 100 Z' fill='#5b3a86' opacity='0.55'/>
+<circle cx='80' cy='60' r='32' fill='url(#wSkin)' stroke='#33421f' stroke-width='4'/>
+<path d='M45 58 Q40 70 47 78' stroke='#20241a' stroke-width='7' fill='none' stroke-linecap='round'/>
+<path d='M115 58 Q120 70 113 78' stroke='#20241a' stroke-width='7' fill='none' stroke-linecap='round'/>
+<ellipse cx='80' cy='42' rx='40' ry='8' fill='#1c1c22' stroke='#0d0d10' stroke-width='3'/>
+<path d='M64 42 L74 8 Q80 0 88 10 L98 42 Z' fill='#1c1c22' stroke='#0d0d10' stroke-width='3'/>
+<rect x='66' y='31' width='30' height='8' rx='3' fill='#5b3a86' stroke='#0d0d10' stroke-width='2'/>
+<ellipse cx='67' cy='62' rx='7' ry='8' fill='#fff3c4'/><ellipse cx='93' cy='62' rx='7' ry='8' fill='#fff3c4'/>
+<circle cx='67' cy='62' r='3' fill='#3a2a12'/><circle cx='93' cy='62' r='3' fill='#3a2a12'/>
+<path d='M68 82 Q80 87 92 82' stroke='#33421f' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M44 96 L26 104' stroke='#5f7a3c' stroke-width='8' stroke-linecap='round'/><circle cx='24' cy='104' r='6' fill='#9fb56b' stroke='#33421f' stroke-width='2'/>
+<path d='M116 98 L133 90' stroke='#5f7a3c' stroke-width='8' stroke-linecap='round'/><circle cx='135' cy='90' r='6' fill='#9fb56b' stroke='#33421f' stroke-width='2'/>
+<path d='M80 101 l10 10 l16 -2 l-9 14 z' fill='#ffb347' stroke='#a04d14' stroke-width='2'/>
+</svg>

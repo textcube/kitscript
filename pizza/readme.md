@@ -1,6 +1,6 @@
 # Eternal Invasion: Pizza Edition
 
-A single-file, auto-playing merge game set in a wood-fired pizza shop. Pizzas merge and level up on a 5x5 counter grid while undead customers (zombie, ghost, skeleton, dracula) queue up with orders. Serve them before their hunger peaks or the kitchen falls to an undead riot.
+A single-file, auto-playing merge game set in a wood-fired pizza shop. Pizzas merge and level up on a 5x5 counter grid while undead customers (zombie, ghost, skeleton, dracula, mummy, witch, frankenstein, pumpkin, imp) queue up with orders. Serve them before their hunger peaks or the kitchen falls to an undead riot.
 
 The game plays itself — it is a zero-input demo loop in the same spirit as the other kitscript modules, with sound as the only user control.
 
@@ -38,11 +38,15 @@ The game plays itself — it is a zero-input demo loop in the same spirit as the
 
 ### Customers
 
-- 4 archetypes in `UNDEAD_ARCHETYPES` with per-type palettes and silhouettes.
+- 9 archetypes in `UNDEAD_ARCHETYPES` with per-type palettes and silhouettes: zombie, dracula, ghost, skeleton, mummy, witch, frankenstein, pumpkin, imp.
 - Three animation states: `idle`, `angry` (hunger > 72), `happyLeaving`.
 - Sprite resolution order per state: SVG asset → procedural layered sprite sheet → vector fallback drawing.
 - Queue positions re-pack smoothly when a customer leaves.
 - Hunger growth accelerates with elapsed game time (`0.35 + gameTime / 600` per second).
+
+### Undeath Roster Sprites (`assets/undeath/`)
+
+Five archetypes (mummy, witch, frankenstein, pumpkin, imp), 3 states each, sourced from a design pass over `sopraknight/samples/undeath/` — 18 chibi character turnarounds. That folder mixes original monster archetypes with sprites that trace recognizable, trademarked horror-movie characters (Chucky/Child's Play, Ghostface/Scream, Michael Myers/Halloween, Jason Voorhees/Friday the 13th, Freddy Krueger/Nightmare on Elm Street, Predator). Those six were excluded; only the generic-archetype designs (skeleton, zombie, mummy, dracula, witch, pumpkin-scarecrow, imp) informed the new sprites, and every SVG here is an original drawing in the pizza game's own vector style (160x160, flat cel shading, black outlines) — not a trace or recolor of the source images. `assets/staff/` holds a chef and a waiter sprite from the same source pass, kept separate since they aren't undead and aren't wired into the live game (which already draws its own procedural chef).
 
 ### Order Tickets
 

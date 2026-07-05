@@ -1,0 +1,18 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs>
+<radialGradient id='pHeadL' cx='40%' cy='35%' r='70%'><stop offset='0%' stop-color='#ffe08a'/><stop offset='100%' stop-color='#e08a26'/></radialGradient>
+<linearGradient id='pCoatL' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#75573c'/><stop offset='100%' stop-color='#43301f'/></linearGradient>
+</defs>
+<ellipse cx='80' cy='132' rx='36' ry='10' fill='rgba(0,0,0,0.3)'/>
+<path d='M49 88 Q80 76 111 88 L115 140 Q80 151 45 140 Z' fill='url(#pCoatL)' stroke='#241a10' stroke-width='4'/>
+<rect x='68' y='94' width='16' height='14' rx='3' fill='#8a6a48' stroke='#241a10' stroke-width='2'/>
+<circle cx='80' cy='58' r='35' fill='url(#pHeadL)' stroke='#a85d16' stroke-width='4'/>
+<path d='M80 24 Q74 14 82 8' stroke='#6a8f3c' stroke-width='7' fill='none' stroke-linecap='round'/>
+<path d='M80 24 L80 92 M62 30 Q66 58 62 88 M98 30 Q94 58 98 88' stroke='#c96e17' stroke-width='2' fill='none' opacity='0.6'/>
+<path d='M62 52 Q68 46 74 52 Q68 58 62 52 Z' fill='#ffd36e' stroke='#a85d16' stroke-width='1.5'/><path d='M98 52 Q92 46 86 52 Q92 58 98 52 Z' fill='#ffd36e' stroke='#a85d16' stroke-width='1.5'/>
+<path d='M62 72 Q80 90 98 72 Q80 80 62 72 Z' fill='#ffd36e' stroke='#a85d16' stroke-width='1.5'/>
+<path d='M44 98 L26 104' stroke='#5c4530' stroke-width='8' stroke-linecap='round'/><circle cx='24' cy='104' r='7' fill='#e8c46a' stroke='#8a6a1e' stroke-width='2'/>
+<path d='M116 94 L134 74' stroke='#5c4530' stroke-width='8' stroke-linecap='round'/><circle cx='136' cy='74' r='7' fill='#e8c46a' stroke='#8a6a1e' stroke-width='2'/>
+<path d='M88 102 l18 5 l-6 14 l-20 -7 z' fill='#ffb347' stroke='#8f3e0f' stroke-width='2'/>
+<path d='M118 40 l6 -10 l6 10 h-4 v8 h-4 v-8 z' fill='#ffd166'/>
+</svg>

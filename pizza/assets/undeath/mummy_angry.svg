@@ -1,0 +1,15 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs><linearGradient id='mBodyA' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#ddd3ba'/><stop offset='100%' stop-color='#b2a582'/></linearGradient></defs>
+<ellipse cx='80' cy='132' rx='38' ry='10' fill='rgba(0,0,0,0.36)'/>
+<path d='M45 86 Q80 72 115 86 L119 140 Q80 153 41 140 Z' fill='url(#mBodyA)' stroke='#847a5d' stroke-width='4'/>
+<path d='M49 98 L111 90 M47 114 L113 106' stroke='#9c8f6d' stroke-width='3' fill='none' opacity='0.6'/>
+<circle cx='80' cy='58' r='34' fill='url(#mBodyA)' stroke='#847a5d' stroke-width='4'/>
+<path d='M48 46 Q80 38 112 46 M46 60 Q80 52 114 60' stroke='#9c8f6d' stroke-width='3' fill='none' opacity='0.5'/>
+<path d='M58 46 L72 51 M102 46 L88 51' stroke='#5c5340' stroke-width='5' stroke-linecap='round'/>
+<ellipse cx='66' cy='59' rx='7' ry='9' fill='#3a1a14'/><ellipse cx='94' cy='59' rx='7' ry='9' fill='#3a1a14'/>
+<circle cx='66' cy='59' r='3' fill='#ff5a4d'/><circle cx='94' cy='59' r='3' fill='#ff5a4d'/>
+<path d='M68 81 Q80 73 92 81' stroke='#5c5340' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M46 96 L28 90' stroke='#b2a582' stroke-width='8' stroke-linecap='round'/><circle cx='26' cy='90' r='6' fill='#ddd3ba' stroke='#847a5d' stroke-width='2'/>
+<path d='M114 96 L136 88' stroke='#b2a582' stroke-width='8' stroke-linecap='round'/><circle cx='138' cy='88' r='6' fill='#ddd3ba' stroke='#847a5d' stroke-width='2'/>
+<path d='M82 100 l12 8 l13 -5 l-6 16 z' fill='#ff9f43' stroke='#8f3e0f' stroke-width='2'/>
+</svg>

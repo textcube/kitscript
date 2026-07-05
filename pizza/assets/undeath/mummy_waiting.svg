@@ -1,0 +1,14 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs><linearGradient id='mBody' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#e8e0cc'/><stop offset='100%' stop-color='#c2b696'/></linearGradient></defs>
+<ellipse cx='80' cy='132' rx='36' ry='10' fill='rgba(0,0,0,0.33)'/>
+<path d='M47 88 Q80 74 113 88 L117 140 Q80 152 43 140 Z' fill='url(#mBody)' stroke='#8f8467' stroke-width='4'/>
+<path d='M50 100 L110 92 M48 116 L112 108 M52 132 L108 126' stroke='#a89b78' stroke-width='3' fill='none' opacity='0.6'/>
+<circle cx='80' cy='58' r='34' fill='url(#mBody)' stroke='#8f8467' stroke-width='4'/>
+<path d='M48 48 Q80 40 112 48 M46 62 Q80 54 114 62 M50 74 Q80 68 110 74' stroke='#a89b78' stroke-width='3' fill='none' opacity='0.55'/>
+<ellipse cx='66' cy='58' rx='7' ry='9' fill='#2a2420'/><ellipse cx='94' cy='58' rx='7' ry='9' fill='#2a2420'/>
+<path d='M70 78 Q80 82 90 78' stroke='#5c5340' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M44 96 L26 102' stroke='#c2b696' stroke-width='8' stroke-linecap='round'/><circle cx='24' cy='102' r='6' fill='#e8e0cc' stroke='#8f8467' stroke-width='2'/>
+<path d='M116 98 L133 90' stroke='#c2b696' stroke-width='8' stroke-linecap='round'/><circle cx='135' cy='90' r='6' fill='#e8e0cc' stroke='#8f8467' stroke-width='2'/>
+<path d='M104 118 l10 14 -8 4' fill='none' stroke='#c2b696' stroke-width='3'/>
+<path d='M80 100 l10 10 l16 -2 l-9 14 z' fill='#ffb347' stroke='#a04d14' stroke-width='2'/>
+</svg>
