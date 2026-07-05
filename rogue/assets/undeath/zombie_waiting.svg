@@ -1,0 +1,24 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+  <defs>
+    <linearGradient id='skin' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#9bc56f'/>
+      <stop offset='100%' stop-color='#5f7f43'/>
+    </linearGradient>
+    <linearGradient id='coat' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#6b4d34'/>
+      <stop offset='100%' stop-color='#3b281b'/>
+    </linearGradient>
+  </defs>
+  <ellipse cx='80' cy='132' rx='36' ry='10' fill='rgba(0,0,0,0.35)'/>
+  <path d='M48 86 Q80 72 112 86 L116 138 Q80 150 44 138 Z' fill='url(#coat)' stroke='#2d1e12' stroke-width='4'/>
+  <ellipse cx='80' cy='58' rx='38' ry='34' fill='url(#skin)' stroke='#2d1e12' stroke-width='4'/>
+  <path d='M58 52 Q80 40 102 52' stroke='#496235' stroke-width='5' fill='none' stroke-linecap='round'/>
+  <ellipse cx='66' cy='58' rx='8' ry='7' fill='#f2ffd0'/><ellipse cx='94' cy='58' rx='8' ry='7' fill='#f2ffd0'/>
+  <circle cx='66' cy='58' r='3.5' fill='#89ff5f'/><circle cx='94' cy='58' r='3.5' fill='#89ff5f'/>
+  <path d='M67 78 Q80 84 93 78' stroke='#2d1e12' stroke-width='4' fill='none' stroke-linecap='round'/>
+  <path d='M44 96 L26 104' stroke='#78995a' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='24' cy='104' r='6' fill='#9bc56f' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M116 98 L132 92' stroke='#78995a' stroke-width='8' stroke-linecap='round'/>
+  <circle cx='134' cy='92' r='6' fill='#9bc56f' stroke='#2d1e12' stroke-width='2'/>
+  <path d='M80 101 l10 10 l16 -2 l-9 14 z' fill='#ffb347' stroke='#a04d14' stroke-width='2'/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+<defs><linearGradient id='g2' x1='0' y1='0' x2='0' y2='1'><stop offset='0%' stop-color='#e8edff'/><stop offset='100%' stop-color='#7e8fc2'/></linearGradient></defs>
+<ellipse cx='80' cy='132' rx='34' ry='9' fill='rgba(0,0,0,0.3)'/>
+<path d='M44 78 Q80 30 116 78 L116 126 Q104 118 96 128 Q88 118 80 128 Q72 118 64 128 Q56 118 44 126 Z' fill='url(#g2)' stroke='#41547d' stroke-width='4'/>
+<path d='M58 66 L72 61 M88 61 L102 66' stroke='#2a3552' stroke-width='5' stroke-linecap='round'/>
+<circle cx='66' cy='73' r='8' fill='#ffdada'/><circle cx='94' cy='73' r='8' fill='#ffdada'/><circle cx='66' cy='73' r='3.5' fill='#ff5a5a'/><circle cx='94' cy='73' r='3.5' fill='#ff5a5a'/>
+<path d='M68 95 Q80 86 92 95' stroke='#2a3552' stroke-width='4' fill='none' stroke-linecap='round'/>
+<path d='M84 97 l14 4 l-4 11 l-18 -3 z' fill='#ff9f43' stroke='#8f3e0f' stroke-width='2'/></svg>

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eternal Invasion: Roguelike dungeon Edition</title>
     <style>
+        /* Without this, `width: 100%` elements that also declare padding
+           (like #top-bar) compute wider than their container and overflow
+           on narrow viewports once the padding grows. */
+        *, *::before, *::after { box-sizing: border-box; }
+
         :root {
             --bg-color: #020617;
             --panel-bg: rgba(15, 23, 42, 0.95);
@@ -14,20 +19,23 @@
             --accent-gold: #fbbf24;
             --accent-undead: #4ade80;
             --accent-red: #ef4444;
-            --tile-size: 68px; 
-            --grid-gap: 6px;
+            --tile-size: clamp(36px, 10vw, 96px);
+            --grid-gap: 8px;
             --tile-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
         }
 
         /* --- Animations --- */
         @keyframes wizard-idle {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
+            0%, 100% { transform: translateY(0) rotate(calc(var(--idle-tilt, 0deg) * -0.35)); }
+            50% { transform: translateY(calc(var(--idle-float, 4px) * -1)) rotate(var(--idle-tilt, 0deg)); }
         }
+        /* --atk-dx/--atk-dy (-1, 0, or 1) are set inline per-attack so the
+           lunge always points at the enemy actually being hit instead of
+           always lunging rightward. */
         @keyframes wizard-attack {
-            0% { transform: scale(1) translateX(0); }
-            30% { transform: scale(1.3) translateX(20px); }
-            100% { transform: scale(1) translateX(0); }
+            0% { transform: scale(1) translate(0, 0); }
+            30% { transform: scale(1.3) translate(calc(var(--atk-dx, 1) * 20px), calc(var(--atk-dy, 0) * 20px)); }
+            100% { transform: scale(1) translate(0, 0); }
         }
         @keyframes unit-damage {
             0% { transform: scale(1); filter: brightness(5) contrast(2); }
@@ -99,7 +107,7 @@
             background-image: 
                 radial-gradient(circle at 20% 20%, #1e1b4b 0%, transparent 40%),
                 radial-gradient(circle at 80% 80%, #0f172a 0%, #020617 100%);
-            overflow: hidden; user-select: none;
+            overflow-x: hidden; overflow-y: auto; user-select: none;
         }
 
         body.shaking { animation: screen-shake 0.3s ease-in-out; }
@@ -112,10 +120,22 @@
 
         #top-bar {
             width: 100%; max-width: 860px; margin-top: 15px;
-            padding: 8px 24px; background: var(--panel-bg);
-            backdrop-filter: blur(15px); border: 1px solid var(--border-color);
-            border-radius: 20px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6); z-index: 100;
+            padding: 16px 28px;
+            background: linear-gradient(180deg, rgba(36, 32, 68, 0.92), var(--panel-bg));
+            backdrop-filter: blur(15px); border: 2px solid var(--border-color);
+            border-radius: 22px; display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; row-gap: 10px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            z-index: 100;
+        }
+        /* The thicker padding/icons below need to shrink back down on
+           narrow phones, or the header's three flex groups (brand, stats,
+           icon buttons) don't fit on one row and overflow past the card. */
+        @media (max-width: 480px) {
+            #top-bar { padding: 10px 14px; }
+            .icon-btn { min-width: 32px; height: 32px; font-size: 1rem; padding: 0 6px; }
+            .icon-btn.auto-btn { font-size: 0.65rem; }
+            .stat-badge { padding: 5px 9px; font-size: 0.7rem; }
         }
 
         .brand-box { display: flex; flex-direction: column; gap: 0; }
@@ -131,79 +151,221 @@
         
         .stats-container { display: flex; gap: 10px; align-items: center; }
         .stat-badge {
-            background: rgba(2, 6, 23, 0.7); padding: 6px 12px;
-            border-radius: 10px; border: 1px solid var(--border-color);
+            background: rgba(2, 6, 23, 0.7); padding: 8px 14px;
+            border-radius: 12px; border: 1px solid var(--border-color);
             font-size: 0.8rem; display: flex; align-items: center; gap: 6px;
             transition: all 0.2s ease;
         }
         .stat-badge.hit { animation: hud-shake 0.4s ease-out; border-color: var(--accent-red); }
 
+        /* MP badge doubles as a fill gauge: a bar sized by JS sits behind
+           the text at z-index 0, the text itself is bumped to z-index 1
+           so it always stays legible on top of the fill. */
+        #hud-mana { position: relative; overflow: hidden; }
+        #hud-mana .mp-fill {
+            position: absolute; left: 0; top: 0; bottom: 0; z-index: 0;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.55), rgba(239, 68, 68, 0.2));
+            transition: width 0.3s ease;
+        }
+        #hud-mana > span, #hud-mana > b { position: relative; z-index: 1; }
+
         .control-links {
             display: flex; gap: 8px; align-items: center;
         }
+        /* One consistent accent (the brand's own cyan) for every icon
+           button instead of a different hover color per icon, so the
+           control cluster reads as a single simple unit. min-width (not a
+           fixed width) keeps single-emoji buttons square while letting the
+           text-label AUTO button grow to fit its content. */
         .icon-btn {
-            width: 32px; height: 32px; border-radius: 8px;
+            min-width: 38px; height: 38px; padding: 0 8px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
-            text-decoration: none; font-size: 1.1rem;
+            text-decoration: none; font-size: 1.15rem;
             transition: all 0.2s ease; cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(15, 23, 42, 0.5); color: #cbd5e1;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(15, 23, 42, 0.6); color: #94a3b8;
         }
         .icon-btn:hover {
             transform: translateY(-2px);
-            border-color: rgba(255,255,255,0.3);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            color: white;
+            border-color: var(--accent-mana);
+            background: rgba(56, 189, 248, 0.15);
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+            color: var(--accent-mana);
         }
-        .icon-btn.home:hover { background: var(--accent-mana); color: #020617; border-color: transparent; }
-        .icon-btn.youtube:hover { background: var(--accent-red); color: #fff; border-color: transparent; }
-        .icon-btn.sound:hover { border-color: var(--accent-gold); color: var(--accent-gold); }
+        /* AUTO toggle: a text-label pill among the icon buttons. Lights up
+           gold while gameLoop is driving the player; reverts to the same
+           neutral tone as the other buttons while manual control is active. */
+        .icon-btn.auto-btn { font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; padding: 0 10px; }
+        .icon-btn.auto-btn.active {
+            border-color: var(--accent-gold);
+            background: rgba(251, 191, 36, 0.18);
+            color: var(--accent-gold);
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.35);
+        }
 
         #game-area { position: relative; margin-top: 15px; padding: 10px; }
 
         #grid {
             display: grid;
-            grid-template-columns: repeat(10, var(--tile-size));
-            grid-template-rows: repeat(10, var(--tile-size));
+            grid-template-columns: repeat(8, var(--tile-size));
+            grid-template-rows: repeat(8, var(--tile-size));
             gap: var(--grid-gap);
-            background: rgba(15, 23, 42, 0.98);
-            padding: 12px; border-radius: 16px;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(168, 85, 247, 0.06), transparent 55%),
+                radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,0.55) 100%),
+                rgba(15, 23, 42, 0.98);
+            padding: 14px; border-radius: 20px;
             border: 2px solid var(--border-color);
             box-shadow: 0 25px 50px rgba(0,0,0,0.8);
         }
 
+        /* --- Fixed player/enemy profile panels (unwalkable corner blocks) ---
+           These are deliberately styled as ornate "character cards" (tinted
+           gradient + banner label) rather than dungeon tiles, so the two
+           reserved corners read as UI, not as part of the walkable floor. */
+        .profile-panel {
+            background:
+                radial-gradient(circle at 50% 10%, rgba(255,255,255,0.09), transparent 55%),
+                linear-gradient(180deg, rgba(30, 27, 60, 0.9), rgba(2, 6, 23, 0.97));
+            border-radius: 16px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; z-index: 5;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255,255,255,0.05);
+            padding: 10px 6px 8px;
+        }
+        .profile-panel::before {
+            content: attr(data-label);
+            position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+            padding: 3px 14px 4px; border-radius: 0 0 10px 10px;
+            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.1); border-top: none;
+            font-size: 0.6rem; font-weight: 900; letter-spacing: 2px; opacity: 0.95; white-space: nowrap;
+        }
+        #player-profile-panel {
+            border: 2px solid var(--accent-wizard);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), inset 0 0 20px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        #enemy-profile-panel {
+            border: 2px solid var(--accent-red);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.35), inset 0 0 20px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.05);
+            background:
+                radial-gradient(circle at 50% 10%, rgba(255,255,255,0.09), transparent 55%),
+                linear-gradient(180deg, rgba(64, 22, 26, 0.85), rgba(2, 6, 23, 0.97));
+        }
+        .profile-portrait { width: 68%; aspect-ratio: 1 / 1; margin-top: 16px; }
+        /* The panel is taller than it is wide (2x3 tiles), so sizing the
+           portrait off a 1:1 aspect-ratio left a big empty gap under the
+           label. Sizing width/height independently instead lets it fill
+           almost the whole card, leaving just enough room to clear the
+           label banner above and the stat overlay below. */
+        #player-profile-panel .profile-portrait {
+            width: 96%;
+            height: 84%;
+            margin-top: 0;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        #player-profile-panel .profile-portrait .char-container {
+            width: 100%;
+            height: 100%;
+        }
+        #player-profile-panel .profile-portrait img {
+            width: 148% !important;
+            height: 148% !important;
+        }
+        /* Mirror the same "overflow the frame" treatment on the NPC target
+           portrait so it reads as large and present as the player one —
+           the pizza-sprite SVGs have more internal padding than the
+           performer PNGs, so they need the boost even more. */
+        #enemy-profile-panel .profile-portrait {
+            width: 96%;
+            height: 84%;
+            margin-top: 0;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        #enemy-profile-panel .profile-portrait .char-container {
+            width: 100%;
+            height: 100%;
+        }
+        #enemy-profile-panel .profile-portrait img {
+            width: 158% !important;
+            height: 158% !important;
+        }
+        /* The oversized portrait images bleed past their own box (see the
+           overflow:visible rules above), so the name/MP/ATK text is pulled
+           out of normal flow and pinned to the bottom of the card on a
+           higher stacking layer — it always stays inside the panel bounds
+           instead of getting pushed out or buried under the artwork. */
+        .profile-stats {
+            position: absolute; left: 4px; right: 4px; bottom: 6px; z-index: 20;
+            display: flex; flex-direction: column; align-items: center;
+            pointer-events: none;
+        }
+        .profile-name { font-size: 0.75rem; font-weight: 900; letter-spacing: 1.5px; opacity: 0.95; text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.9); }
+        .profile-value { font-size: 0.85rem; font-weight: 900; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.9); }
+        /* On narrow phones the panel itself is only ~80-90px wide; three
+           stacked lines (name/note/MP) cover most of the portrait. Drop the
+           flavor-text note line and keep just name + MP. */
+        @media (max-width: 480px) {
+            .profile-note { display: none; }
+        }
+        .profile-empty { font-size: 0.75rem; opacity: 0.4; font-weight: 700; letter-spacing: 1px; }
+
         .tile {
             width: var(--tile-size); height: var(--tile-size);
-            border-radius: 8px; display: flex; flex-direction: column;
+            border-radius: 10px; display: flex; flex-direction: column;
             justify-content: center; align-items: center;
             transition: all 0.2s ease; position: relative;
             box-shadow: var(--tile-shadow);
         }
 
-        .tile-empty { 
-            background: linear-gradient(145deg, #1e293b, #0f172a); 
+        .tile-empty {
+            background:
+                repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 12px),
+                linear-gradient(145deg, #1e293b, #0f172a);
             border: 1px solid rgba(255,255,255,0.05);
         }
         
+        /* The player token needs to read as "the one tile that's always
+           alive" among a crowded board of similarly-sized enemy tiles, so
+           it gets a slow breathing glow plus a slight permanent scale-up. */
+        @keyframes player-pulse {
+            0%, 100% { box-shadow: 0 0 20px var(--player-color, var(--accent-wizard)), var(--tile-shadow); }
+            50% { box-shadow: 0 0 34px var(--player-color, var(--accent-wizard)), 0 0 12px var(--player-color, var(--accent-wizard)), var(--tile-shadow); }
+        }
         .tile-player {
-            background: radial-gradient(circle at center, var(--accent-wizard), #4c1d95);
-            z-index: 50; box-shadow: 0 0 20px var(--accent-wizard), var(--tile-shadow);
-            border: 2px solid #e9d5ff; color: white;
+            background: radial-gradient(circle at center, color-mix(in srgb, var(--player-color, var(--accent-wizard)) 42%, transparent), #0f172a);
+            z-index: 55; border: 2px solid #e9d5ff; color: white;
+            transform: scale(1.07);
+            animation: player-pulse 1.8s ease-in-out infinite;
         }
 
         .tile-player.entering .char-container {
             animation: playerEnterPortal 0.8s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards !important;
         }
 
-        .tile-enemy { border: 1.5px solid rgba(255,255,255,0.1); }
-        .enemy-zombie { background: linear-gradient(135deg, #166534, #064e3b); }
-        .enemy-skeleton { background: linear-gradient(135deg, #475569, #1e293b); }
-        .enemy-wraith { background: linear-gradient(135deg, #3730a3, #1e1b4b); filter: opacity(0.9); }
-        .enemy-ghoul { background: linear-gradient(135deg, #7f1d1d, #450a0a); }
-        .enemy-lich { background: linear-gradient(135deg, #4c1d95, #1e1b4b); border-color: #d8b4fe; }
-        .enemy-deathknight { background: linear-gradient(135deg, #0f172a, #020617); border: 2px solid #ef4444; }
+        /* Neutral card + a colored ring/glow per trait, so the sprite's own
+           palette reads clearly instead of clashing with a solid fill. */
+        .tile-enemy {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 2px solid rgba(255,255,255,0.08);
+        }
+        .enemy-zombie { border-color: rgba(74, 222, 128, 0.55); box-shadow: 0 0 14px rgba(74, 222, 128, 0.3), var(--tile-shadow); }
+        .enemy-skeleton { border-color: rgba(203, 213, 225, 0.5); box-shadow: 0 0 14px rgba(203, 213, 225, 0.25), var(--tile-shadow); }
+        .enemy-ghost { border-color: rgba(129, 140, 248, 0.55); box-shadow: 0 0 14px rgba(129, 140, 248, 0.3), var(--tile-shadow); }
+        .enemy-dracula { border-color: rgba(216, 180, 254, 0.55); box-shadow: 0 0 14px rgba(216, 180, 254, 0.3), var(--tile-shadow); }
 
         .cluster-active { border: 2px solid var(--accent-undead); box-shadow: 0 0 12px var(--accent-undead), var(--tile-shadow); }
+
+        /* Enemies the player can't currently beat (attack >= MP) read as
+           washed-out and carry a warning glyph, so the auto-pilot's
+           avoidance makes sense to a spectator at a glance. */
+        .tile-enemy.too-strong { filter: saturate(0.35) brightness(0.65); border-color: rgba(239, 68, 68, 0.7) !important; }
+        .tile-enemy.too-strong .atk-val { color: var(--accent-red); }
+        .tile-enemy.too-strong::after {
+            content: '⚠'; position: absolute; top: 2px; right: 3px; font-size: 0.75rem;
+            filter: none; text-shadow: 0 0 4px rgba(0,0,0,0.9); z-index: 15;
+        }
 
         /* --- Portal Styling & Layering --- */
         .tile-exit { 
@@ -211,32 +373,50 @@
             opacity: 0.6; color: var(--accent-wizard);
         }
         .tile-exit.unlocked { 
-            opacity: 1; 
-            background: radial-gradient(circle, #2e1065, #020617); 
+            opacity: 1;
+            background: radial-gradient(circle, #2e1065, #020617);
             color: white; border: 2px solid var(--accent-wizard);
             box-shadow: 0 0 25px var(--accent-wizard);
-            z-index: 10; /* 기본 빈 타일보다 상위 */
+            z-index: 10; /* stacked above the default empty tile */
         }
         .tile-exit.opening {
             animation: portal-reveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), portal-ripple 1s infinite;
-            z-index: 60; /* 플레이어(50)보다 높은 레이어로 배치하여 강조 */
+            z-index: 60; /* layered above the player (50) to stand out */
         }
         .portal-vortex-ui {
-            width: 40px; height: 40px;
+            width: 56%; height: 56%;
             animation: portal-vortex 3s linear infinite;
             filter: drop-shadow(0 0 10px var(--accent-wizard));
             pointer-events: none;
         }
+        .tile-exit .lock-icon { font-size: 1.6rem; }
+        .tile-exit .lock-label { font-size: 0.65rem; margin-top: 2px; }
+        .portal-label { font-size: 0.6rem; color: white; font-weight: 900; margin-top: 4px; }
 
+        /* Character art fills almost the whole tile now (~2x the old fixed
+           48px), scaling with --tile-size so it stays proportional at every
+           breakpoint instead of overflowing small tiles or looking tiny on
+           large ones. */
         .char-container {
-            width: 48px; height: 48px;
+            width: 92%; height: 92%;
             display: flex; justify-content: center; align-items: center;
             position: relative;
         }
 
-        .ani-idle { animation: wizard-idle 2s infinite ease-in-out; }
+        .ani-idle {
+            animation-name: wizard-idle;
+            animation-duration: var(--idle-duration, 2s);
+            animation-delay: var(--idle-delay, 0s);
+            animation-iteration-count: infinite;
+            animation-timing-function: ease-in-out;
+        }
         .ani-attack { animation: wizard-attack 0.4s ease-out; }
         .ani-damage { animation: unit-damage 0.5s ease-out forwards; }
+        @keyframes enemy-leaving {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(0.15) rotate(-18deg); opacity: 0; }
+        }
+        .ani-leaving { animation: enemy-leaving 0.32s ease-in forwards; }
 
         .tile-item-wrap {
             width: 100%; height: 100%;
@@ -247,9 +427,9 @@
         .tile-item-wrap.key-drop { animation: key-item-pulse 2s infinite ease-in-out; }
 
         .item-orb {
-            border-radius: 50%; width: 44px; height: 44px; 
+            border-radius: 50%; width: 66%; height: 66%;
             display: flex; justify-content: center; align-items: center;
-            font-size: 1.8rem; border: 2px solid rgba(255,255,255,0.8);
+            font-size: clamp(1.6rem, 4vw, 2.4rem); border: 2px solid rgba(255,255,255,0.8);
             box-shadow: 0 0 15px currentColor, inset 0 0 10px rgba(255,255,255,0.4);
             background: rgba(0,0,0,0.4);
         }
@@ -257,10 +437,10 @@
         .stat-container {
             width: 100%; display: flex; justify-content: space-around;
             background: rgba(0,0,0,0.75); position: absolute; bottom: 0;
-            padding: 2px 0; border-bottom-left-radius: 6px; border-bottom-right-radius: 8px;
+            padding: 3px 0; border-bottom-left-radius: 8px; border-bottom-right-radius: 10px;
             pointer-events: none;
         }
-        .unit-stat { font-size: 0.6rem; letter-spacing: -0.2px; line-height: 1.1; font-weight: 900; }
+        .unit-stat { font-size: 0.7rem; letter-spacing: -0.2px; line-height: 1.1; font-weight: 900; }
         .hp-val { color: #fca5a5; }
         .atk-val { color: #93c5fd; }
 
@@ -270,6 +450,77 @@
             animation: popUp 0.8s ease-out forwards;
             white-space: nowrap; text-shadow: 0 0 10px rgba(0,0,0,1);
         }
+
+        /* A brief X-shaped slash flash at the clash moment, so a hit reads
+           as an impact rather than just two sprites flickering. */
+        @keyframes impact-burst {
+            0% { transform: scale(0.3) rotate(0deg); opacity: 1; }
+            60% { transform: scale(1.25) rotate(20deg); opacity: 0.95; }
+            100% { transform: scale(1.5) rotate(30deg); opacity: 0; }
+        }
+        .impact-fx {
+            /* Sized off --tile-size, not a %, since this element is
+               absolutely positioned inside #game-area — a percentage here
+               would resolve against the whole board, not the one tile,
+               and balloon into a screen-sized X. */
+            position: absolute; width: calc(var(--tile-size) * 0.6); height: calc(var(--tile-size) * 0.6);
+            pointer-events: none; z-index: 95;
+            animation: impact-burst 0.35s ease-out forwards;
+        }
+        .impact-fx::before, .impact-fx::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 130%; height: 16%;
+            background: linear-gradient(90deg, transparent, #fff 30%, var(--accent-gold) 70%, transparent);
+            transform: translate(-50%, -50%) rotate(45deg);
+            border-radius: 4px; box-shadow: 0 0 12px rgba(255,255,255,0.85);
+        }
+        .impact-fx::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+        @keyframes sonic-wave {
+            0% {
+                transform: translate(calc(var(--wave-dx, 0) * -10%), calc(var(--wave-dy, 0) * -10%)) scale(0.16);
+                opacity: 0.92;
+                border-width: 4px;
+            }
+            70% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translate(calc(var(--wave-dx, 0) * 28%), calc(var(--wave-dy, 0) * 28%)) scale(2.55);
+                opacity: 0;
+                border-width: 1px;
+            }
+        }
+        .sonic-wave-fx {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: calc(var(--tile-size) * 0.72);
+            height: calc(var(--tile-size) * 0.72);
+            pointer-events: none;
+            z-index: 92;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--wave-color, var(--accent-mana));
+        }
+        .sonic-wave-fx span {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid currentColor;
+            box-shadow:
+                0 0 12px currentColor,
+                inset 0 0 10px currentColor;
+            animation: sonic-wave 0.62s ease-out forwards;
+        }
+        .sonic-wave-fx.directional span {
+            border-radius: 48% 52% 52% 48%;
+            transform-origin: calc(50% - var(--wave-dx, 0) * 22%) calc(50% - var(--wave-dy, 0) * 22%);
+        }
+        .sonic-wave-fx span:nth-child(2) { animation-delay: 0.08s; opacity: 0.78; }
+        .sonic-wave-fx span:nth-child(3) { animation-delay: 0.16s; opacity: 0.58; }
+
+        @keyframes impact-zoom { 0% { transform: scale(1); } 50% { transform: scale(1.015); } 100% { transform: scale(1); } }
+        #game-area.impact { animation: impact-zoom 0.15s ease-out; }
 
         #log-panel {
             width: 100%; max-width: 860px; height: 100px; margin-top: 15px;
@@ -286,6 +537,128 @@
             z-index: 500; border-radius: 16px; backdrop-filter: blur(15px); text-align: center; padding: 20px;
         }
 
+        #player-select {
+            position: fixed; inset: 0; z-index: 1200;
+            display: none; align-items: center; justify-content: center;
+            background:
+                radial-gradient(circle at 50% 20%, rgba(251, 191, 36, 0.16), transparent 34rem),
+                rgba(2, 6, 23, 0.96);
+            backdrop-filter: blur(18px);
+            padding: 24px;
+        }
+        .select-panel {
+            width: min(920px, calc(100vw - 32px));
+            border: 1px solid rgba(251, 191, 36, 0.32);
+            border-radius: 20px;
+            padding: 22px;
+            background: rgba(15, 23, 42, 0.94);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+        .select-title {
+            margin: 0;
+            font-size: clamp(1.8rem, 5vw, 3.3rem);
+            font-weight: 900;
+            color: #fff8e8;
+            text-align: center;
+        }
+        .select-copy {
+            margin: 8px auto 18px;
+            max-width: 680px;
+            color: #cbd5e1;
+            text-align: center;
+            font-weight: 700;
+        }
+        .player-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .player-choice {
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 10px 8px;
+            background: rgba(2, 6, 23, 0.72);
+            color: white;
+            cursor: pointer;
+            transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+        }
+        .player-choice:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-gold);
+            background: rgba(251, 191, 36, 0.12);
+        }
+        /* Roulette spin: the highlight hops left-to-right across the cards
+           (wrapping around) while a pick is being decided at random, then
+           settles into .selected on the final card with a small callout. */
+        .player-choice.rolling {
+            border-color: var(--accent-mana);
+            background: rgba(56, 189, 248, 0.18);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+        }
+        .player-choice.selected {
+            border-color: var(--accent-gold);
+            background: rgba(251, 191, 36, 0.22);
+            box-shadow: 0 0 26px rgba(251, 191, 36, 0.6);
+            animation: selection-pop 0.5s ease-out;
+        }
+        .player-choice.selected::after {
+            content: 'SELECTED!';
+            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            background: var(--accent-gold); color: #1a1206;
+            font-size: 0.6rem; font-weight: 900; letter-spacing: 1px;
+            padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        @keyframes selection-pop {
+            0% { transform: translateY(-3px) scale(1); }
+            45% { transform: translateY(-3px) scale(1.14); }
+            100% { transform: translateY(-3px) scale(1.05); }
+        }
+        .player-choice img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+            display: block;
+        }
+        .player-choice strong {
+            display: block;
+            margin-top: 6px;
+            font-size: .82rem;
+            text-transform: uppercase;
+        }
+        .player-choice span {
+            display: block;
+            min-height: 2.4em;
+            margin-top: 4px;
+            color: #aeb8c7;
+            font-size: .68rem;
+            line-height: 1.2;
+            font-weight: 800;
+        }
+        .select-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 18px;
+        }
+        .btn-random {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 26px;
+            background: linear-gradient(180deg, #fbbf24, #d97706);
+            color: #160f05;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 10px 30px rgba(251, 191, 36, 0.25);
+            transition: opacity 0.2s ease;
+        }
+        .btn-random:disabled { opacity: 0.55; cursor: default; }
+        @media (max-width: 760px) {
+            .player-choice-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+
         .btn-restart {
             background: var(--accent-mana); border: none; padding: 14px 44px; 
             cursor: pointer; color: white; font-weight: 900; border-radius: 10px;
@@ -298,6 +671,17 @@
 <body>
 
 <div id="damage-vignette"></div>
+
+<div id="player-select">
+    <div class="select-panel">
+        <h1 class="select-title">Choose Your Performer</h1>
+        <p class="select-copy">Pick one Sopranian to lead the descent. If you wait, the ensemble will choose one at random.</p>
+        <div class="player-choice-grid" id="player-choice-grid"></div>
+        <div class="select-actions">
+            <button class="btn-random" id="random-player-btn" type="button">Start Random</button>
+        </div>
+    </div>
+</div>
 
 <div id="transition-curtain" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #020617; z-index: 999; display: none; flex-direction: column; justify-content: center; align-items: center; opacity: 1;">
     <div style="font-size: 4rem; font-weight: 900; color: white; animation: wizard-idle 2s infinite;">DESCENDING</div>
@@ -315,14 +699,16 @@
     
     <div class="stats-container">
         <div class="stat-badge"><span style="color:var(--accent-mana)">FL</span> <b id="ui-level">1</b></div>
-        <div id="hud-mana" class="stat-badge"><span style="color:var(--accent-red)">MP</span> <b id="ui-hp">80</b>/<b id="ui-max-hp">100</b></div>
+        <div class="stat-badge"><span style="color:var(--accent-gold)">BEST</span> <b id="ui-best">1</b></div>
+        <div id="hud-mana" class="stat-badge"><div class="mp-fill" id="mp-fill" style="width:100%"></div><span style="color:var(--accent-red)">MP</span> <b id="ui-mp">80</b>/<b id="ui-max-mp">100</b></div>
         <div class="stat-badge"><span id="ui-key-icon" style="opacity: 0.2; transition: all 0.5s ease;">🔑</span></div>
     </div>
 
     <div class="control-links">
-        <a href="https://kitscript.com/game" target="_blank" class="icon-btn home" title="Homepage">🏠</a>
-        <a href="https://youtube.com/@textcube" target="_blank" class="icon-btn youtube" title="YouTube Channel">📺</a>
-        <div id="sound-toggle" class="icon-btn sound" title="Sound Mute/Unmute">🔇</div>
+        <div id="sound-toggle" class="icon-btn sound" title="Sound Mute/Unmute"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" stroke="none"/><path d="M16 9l5 6M21 9l-5 6"/></svg></div>
+        <div id="auto-toggle" class="icon-btn auto-btn" title="Toggle auto-play / manual control">AUTO</div>
+        <a href="https://kitscript.com/game" target="_blank" class="icon-btn home" title="Homepage"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1v-9"/></svg></a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-btn youtube" title="YouTube Channel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 8.5 16 12 10 15.5Z" fill="currentColor" stroke="none"/></svg></a>
     </div>
 </div>
 
@@ -332,6 +718,7 @@
     <div id="game-over" class="overlay">
         <h1 style="color: var(--accent-red); font-size: 4rem; margin: 0; font-weight: 900;">GAME OVER</h1>
         <p style="color: #f8fafc; font-size: 1.5rem; margin-top: 10px;">Depth reached: <b id="final-level" style="color: var(--accent-mana);">1</b>F</p>
+        <p style="color: #cbd5e1; font-size: 1rem; margin-top: -5px;">Best depth: <b id="best-level" style="color: var(--accent-gold);">1</b>F</p>
         <button onclick="resetGame()" class="btn-restart">RESTART</button>
     </div>
 
@@ -347,67 +734,98 @@
 
 <script>
     /* -------------------------------------------------------------------------- */
-    /* 설정 및 헬퍼                              */
+    /* Config & Helpers                                                            */
     /* -------------------------------------------------------------------------- */
-    const GRID_SIZE = 10;
-    const TRAITS = ['zombie', 'skeleton', 'wraith', 'ghoul', 'lich', 'deathknight'];
-    const ITEM_TYPES = ['potion', 'maxhp', 'shield', 'breaker', 'key'];
+    const GRID_SIZE = 8;
+    const TRAITS = ['zombie', 'skeleton', 'ghost', 'dracula'];
+    const ITEM_TYPES = ['potion', 'maxmp', 'shield', 'breaker', 'key'];
+    const PLAYER_TYPES = [
+        { id: 'soprano', name: 'Soprano', role: 'Balanced leader', maxMp: 110, damageReduction: 1, color: '#f7d77c', note: '-1 damage' },
+        { id: 'pianist', name: 'Pianist', role: 'Fast route finder', maxMp: 90, autoDelay: 650, color: '#fff2c7', note: 'Faster auto' },
+        { id: 'cellist', name: 'Cellist', role: 'Defensive anchor', maxMp: 125, damageReduction: 2, autoDelay: 1150, color: '#d9915d', note: '-2 damage' },
+        { id: 'flutist', name: 'Flutist', role: 'Evasive wind', maxMp: 95, dodgeChance: .22, color: '#9ee7ff', note: '22% evade' },
+        { id: 'trumpeter', name: 'Trumpeter', role: 'Brass breaker', maxMp: 100, attackBonus: 2, color: '#ffbd5c', note: '-2 enemy ATK' },
+        { id: 'harpist', name: 'Harpist', role: 'Sustain healer', maxMp: 105, regenOnKill: 2, potionBonus: 5, color: '#d8c4ff', note: '+2 on win' }
+    ];
 
-    const getDetailedWizard = (stateClass = 'ani-idle') => `
-        <div class="char-container ${stateClass}">
-            <svg viewBox="0 0 24 24" style="width:100%; height:100%;">
-                <rect x="8" y="19" width="3" height="4" fill="#3b0764" style="animation: leg-move 1s infinite; transform-origin: top;"/>
-                <rect x="13" y="19" width="3" height="4" fill="#3b0764" style="animation: leg-move 1s infinite 0.5s; transform-origin: top;"/>
-                <path d="M6,20 L18,20 L15,10 L9,10 Z" fill="#6b21a8"/>
-                <path d="M7,11 L4,15" stroke="#6b21a8" stroke-width="2.5" stroke-linecap="round"/>
-                <path d="M17,11 L20,15" stroke="#6b21a8" stroke-width="2.5" stroke-linecap="round"/>
-                <g style="animation: staff-glow 1.5s infinite;">
-                    <line x1="19" y1="22" x2="21" y2="8" stroke="#78350f" stroke-width="2"/>
-                    <circle cx="21" cy="7" r="2.5" fill="var(--accent-mana)" opacity="0.9"/>
-                </g>
-                <circle cx="12" cy="8" r="4" fill="#f5d0fe"/>
-                <path d="M7,6 L17,6 L12,0 Z" fill="#4c1d95"/>
-                <circle cx="10.5" cy="8" r="0.8" fill="#1e1b4b"/>
-                <circle cx="13.5" cy="8" r="0.8" fill="#1e1b4b"/>
-            </svg>
+    // Fixed 2x3 corner blocks reserved for the player/enemy profile panels.
+    // These are never walkable and never used for map generation.
+    const PLAYER_PANEL = { x0: 0, y0: 0, w: 2, h: 3 };
+    const ENEMY_PANEL = { x0: GRID_SIZE - 2, y0: GRID_SIZE - 3, w: 2, h: 3 };
+    function isReserved(x, y) {
+        return (x >= PLAYER_PANEL.x0 && x < PLAYER_PANEL.x0 + PLAYER_PANEL.w && y >= PLAYER_PANEL.y0 && y < PLAYER_PANEL.y0 + PLAYER_PANEL.h) ||
+               (x >= ENEMY_PANEL.x0 && x < ENEMY_PANEL.x0 + ENEMY_PANEL.w && y >= ENEMY_PANEL.y0 && y < ENEMY_PANEL.y0 + ENEMY_PANEL.h);
+    }
+
+    function getPlayerType(id = gameState?.selectedPlayerId) {
+        return PLAYER_TYPES.find((type) => type.id === id) || PLAYER_TYPES[0];
+    }
+
+    function makePlayerState(type = getPlayerType()) {
+        return { x: 0, y: 0, mp: type.maxMp, maxMp: type.maxMp, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle', attackDx: 0, attackDy: 0 };
+    }
+
+    function hashSeed(text) {
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i++) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return (hash >>> 0) / 4294967295;
+    }
+
+    function idleStyle(seedText) {
+        const a = hashSeed(`${seedText}:a`);
+        const b = hashSeed(`${seedText}:b`);
+        const c = hashSeed(`${seedText}:c`);
+        const d = hashSeed(`${seedText}:d`);
+        const float = (2.4 + a * 4.2).toFixed(2);
+        const duration = (1.65 + b * 1.65).toFixed(2);
+        const delay = (-c * duration).toFixed(2);
+        const tilt = (-1.4 + d * 2.8).toFixed(2);
+        return `--idle-float:${float}px; --idle-duration:${duration}s; --idle-delay:${delay}s; --idle-tilt:${tilt}deg;`;
+    }
+
+    const getPerformerArt = (stateClass = 'ani-idle', type = getPlayerType(), seed = type.id) => `
+        <div class="char-container ${stateClass}" style="${idleStyle(`player:${seed}:${type.id}`)}">
+            <img src="assets/sopranian/${type.id}.png" alt="${type.name}" draggable="false" style="width:112%; height:112%; object-fit:contain; -webkit-user-drag:none; filter:drop-shadow(0 0 10px ${type.color}66);">
         </div>`;
 
-    const getEnemySVG = (type, stateClass = 'ani-idle') => {
-        let bc = "#166534", hc = "#4ade80";
-        if (type === 'skeleton') { bc = "#475569"; hc = "#f1f5f9"; }
-        if (type === 'wraith') { bc = "#3730a3"; hc = "#a5b4fc"; }
-        if (type === 'ghoul') { bc = "#7f1d1d"; hc = "#f87171"; }
-        if (type === 'lich') { bc = "#4c1d95"; hc = "#d8b4fe"; }
-        if (type === 'deathknight') { bc = "#0f172a"; hc = "#ef4444"; }
-
+    // NPC art is sourced from the pizza customer sprite set (assets/undeath/).
+    // Each trait has waiting/angry/leaving poses; idle uses waiting, the
+    // combat-clash frame uses angry, and the brief death animation uses
+    // leaving right before the tile is cleared.
+    const getEnemySVG = (type, stateClass = 'ani-idle', seed = type) => {
+        const pose = stateClass === 'ani-damage' ? 'angry' : stateClass === 'ani-leaving' ? 'leaving' : 'waiting';
         return `
-        <div class="char-container ${stateClass}">
-            <svg viewBox="0 0 24 24" style="width:100%; height:100%;">
-                <rect x="7" y="18" width="3" height="5" fill="${bc}" style="animation: leg-move 1.2s infinite;"/>
-                <rect x="14" y="18" width="3" height="5" fill="${bc}" style="animation: leg-move 1.2s infinite 0.6s;"/>
-                <rect x="6" y="10" width="12" height="9" rx="2" fill="${bc}"/>
-                <path d="M5,11 L2,16" stroke="${bc}" stroke-width="2" stroke-linecap="round"/>
-                <path d="M19,11 L22,16" stroke="${bc}" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="12" cy="7" r="5" fill="${hc}"/>
-                <circle cx="10" cy="7" r="1.2" fill="black"/>
-                <circle cx="14" cy="7" r="1.2" fill="black"/>
-            </svg>
+        <div class="char-container ${stateClass}" style="${idleStyle(`enemy:${seed}:${type}`)}">
+            <img src="assets/undeath/${type}_${pose}.svg" alt="${type}" draggable="false" style="width:100%; height:100%; object-fit:contain; -webkit-user-drag:none;">
         </div>`;
     };
 
     /* -------------------------------------------------------------------------- */
-    /* 게임 상태                                 */
+    /* Game State                                                                  */
     /* -------------------------------------------------------------------------- */
     let gameState = {
         level: 1,
-        player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' },
-        grid: [], isAuto: true, lastInputTime: Date.now(), paused: false, gameOver: false, isAnimating: false, 
-        stuckCountDown: null, stuckTimer: null, soundEnabled: false,
-        portalJustOpened: false 
+        selectedPlayerId: null,
+        player: makePlayerState(PLAYER_TYPES[0]),
+        grid: [], isAuto: true, lastInputTime: Date.now(), paused: false, gameOver: false, isAnimating: false,
+        stuckCountDown: null, stuckTimer: null, stuckRerollCount: 0, soundEnabled: false,
+        portalJustOpened: false, lastEnemyProfile: null
     };
+    let tileEls = [], renderCache = [];
+    let playerPanelSig = null, enemyPanelSig = null;
+    const BEST_DEPTH_KEY = 'rogueBestDepth';
+    function getBestDepth() { return parseInt(localStorage.getItem(BEST_DEPTH_KEY) || '1', 10); }
+    function updateBestDepth(level) {
+        const best = getBestDepth();
+        if (level > best) { localStorage.setItem(BEST_DEPTH_KEY, level); return level; }
+        return best;
+    }
 
     /* -------------------------------------------------------------------------- */
-    /* 오디오 시스템                                */
+    /* Audio System                                                                */
     /* -------------------------------------------------------------------------- */
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
@@ -433,22 +851,166 @@
     };
 
     /* -------------------------------------------------------------------------- */
-    /* UI 요소                                */
+    /* UI Elements                                                                 */
     /* -------------------------------------------------------------------------- */
     const gridEl = document.getElementById('grid');
     const logPanel = document.getElementById('log-panel');
     const soundBtn = document.getElementById('sound-toggle');
+    // Emoji glyphs (🔇/🔊) render with their own baked-in colors and ignore
+    // the button's `color`, so they never actually matched the icon
+    // buttons' hover/theme color. Inline SVG with stroke="currentColor"
+    // fixes that.
+    const ICON_SOUND_ON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" stroke="none"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg>';
+    const ICON_SOUND_OFF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" stroke="none"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+    const playerSelectEl = document.getElementById('player-select');
+    const playerChoiceGridEl = document.getElementById('player-choice-grid');
+    const randomPlayerBtn = document.getElementById('random-player-btn');
+    const selectCopyEl = document.querySelector('.select-copy');
+    const autoBtn = document.getElementById('auto-toggle');
+    const DEFAULT_SELECT_COPY = selectCopyEl.textContent;
+    let selectionTimer = null;
+    let rouletteTimer = null;
+    let idleScanTimer = null;
+    let idleScanIndex = -1;
+    let gameLoopTimer = null;
 
-    soundBtn.onclick = () => { 
-        initAudio(); 
-        gameState.soundEnabled = !gameState.soundEnabled; 
-        soundBtn.innerText = gameState.soundEnabled ? "🔊" : "🔇"; 
+    soundBtn.onclick = () => {
+        initAudio();
+        gameState.soundEnabled = !gameState.soundEnabled;
+        soundBtn.innerHTML = gameState.soundEnabled ? ICON_SOUND_ON : ICON_SOUND_OFF;
     };
 
+    autoBtn.onclick = () => {
+        gameState.isAuto = !gameState.isAuto;
+        gameState.lastInputTime = Date.now();
+        addLog(gameState.isAuto ? "Auto-play engaged." : "Manual control engaged.");
+        updateAutoButton();
+    };
+
+    function updateAutoButton() { autoBtn.classList.toggle('active', gameState.isAuto); }
+
     /* -------------------------------------------------------------------------- */
-    /* 로직 함수                              */
+    /* Logic Functions                                                             */
     /* -------------------------------------------------------------------------- */
-    function init() { createMap(); render(); gameLoop(); }
+    function renderPlayerSelection() {
+        playerChoiceGridEl.innerHTML = PLAYER_TYPES.map((type) => `
+            <button class="player-choice" type="button" data-player="${type.id}">
+                <img src="assets/sopranian/${type.id}.png" alt="${type.name}">
+                <strong>${type.name}</strong>
+                <span>${type.role}<br>${type.note}</span>
+            </button>
+        `).join('');
+        playerChoiceGridEl.querySelectorAll('.player-choice').forEach((button) => {
+            // A manual click is a deliberate pick, so it always wins
+            // immediately and cancels any idle scan / roulette spin in progress.
+            button.onclick = () => {
+                clearTimeout(selectionTimer);
+                clearTimeout(rouletteTimer);
+                stopIdleScan();
+                randomPlayerBtn.disabled = false;
+                playerChoiceGridEl.querySelectorAll('.player-choice').forEach((b) => b.classList.remove('rolling', 'selected'));
+                startWithPlayer(button.dataset.player);
+            };
+        });
+    }
+
+    function chooseRandomPlayerId() {
+        return PLAYER_TYPES[Math.floor(Math.random() * PLAYER_TYPES.length)].id;
+    }
+
+    function startWithPlayer(playerId = chooseRandomPlayerId()) {
+        clearTimeout(selectionTimer);
+        clearTimeout(rouletteTimer);
+        stopIdleScan();
+        gameState.selectedPlayerId = playerId;
+        gameState.player = makePlayerState(getPlayerType(playerId));
+        playerSelectEl.style.display = 'none';
+        init();
+        addLog(`${getPlayerType(playerId).name} leads the ensemble.`);
+    }
+
+    // While the player is still deciding (or waiting out the 5s auto-pick),
+    // the highlight steadily visits each card in order instead of sitting on
+    // a frozen screen. `idleScanIndex` tracks where it currently is so the
+    // roulette spin below can pick up from there instead of resetting.
+    function startIdleScan() {
+        const buttons = [...playerChoiceGridEl.querySelectorAll('.player-choice')];
+        function tick() {
+            if (idleScanIndex >= 0) buttons[idleScanIndex].classList.remove('rolling');
+            idleScanIndex = (idleScanIndex + 1) % buttons.length;
+            buttons[idleScanIndex].classList.add('rolling');
+            idleScanTimer = setTimeout(tick, 480);
+        }
+        tick();
+    }
+
+    function stopIdleScan() {
+        clearTimeout(idleScanTimer);
+        idleScanTimer = null;
+    }
+
+    // Continues from wherever the idle scan currently sits and hops the
+    // highlight left-to-right across the cards (wrapping around), slowing
+    // down like a roulette wheel, and always lands exactly on targetId
+    // after a fixed number of steps before calling onDone.
+    function spinToPlayer(targetId, onDone) {
+        stopIdleScan();
+        const buttons = [...playerChoiceGridEl.querySelectorAll('.player-choice')];
+        buttons.forEach((b) => b.classList.remove('rolling', 'selected'));
+        const targetIndex = buttons.findIndex((b) => b.dataset.player === targetId);
+        const startIndex = idleScanIndex >= 0 ? idleScanIndex : -1;
+        const baseOffset = ((targetIndex - startIndex) % buttons.length + buttons.length) % buttons.length;
+        const totalSteps = baseOffset + 24; // a few extra full loops for a satisfying spin
+        let current = startIndex;
+
+        function tick(step) {
+            if (current >= 0) buttons[current].classList.remove('rolling');
+            current = (current + 1) % buttons.length;
+            buttons[current].classList.add('rolling');
+            Sounds.move();
+
+            if (step >= totalSteps) {
+                buttons[current].classList.remove('rolling');
+                buttons[current].classList.add('selected');
+                Sounds.drop();
+                selectCopyEl.textContent = `${getPlayerType(targetId).name} was chosen! Descending shortly...`;
+                setTimeout(onDone, 800);
+                return;
+            }
+            const progress = step / totalSteps;
+            const delay = 55 + Math.pow(progress, 3) * 260;
+            rouletteTimer = setTimeout(() => tick(step + 1), delay);
+        }
+        tick(1);
+    }
+
+    function triggerRandomSelection() {
+        clearTimeout(selectionTimer);
+        clearTimeout(rouletteTimer);
+        randomPlayerBtn.disabled = true;
+        selectCopyEl.textContent = 'Choosing a performer at random...';
+        const targetId = chooseRandomPlayerId();
+        spinToPlayer(targetId, () => startWithPlayer(targetId));
+    }
+
+    function showPlayerSelection() {
+        renderPlayerSelection();
+        randomPlayerBtn.disabled = false;
+        selectCopyEl.textContent = DEFAULT_SELECT_COPY;
+        playerSelectEl.style.display = 'flex';
+        idleScanIndex = -1;
+        startIdleScan();
+        selectionTimer = setTimeout(triggerRandomSelection, 5000);
+    }
+
+    randomPlayerBtn.onclick = () => triggerRandomSelection();
+
+    function init() {
+        clearTimeout(gameLoopTimer);
+        createMap();
+        render();
+        gameLoop();
+    }
 
     function addLog(msg) {
         const entry = document.createElement('div');
@@ -465,16 +1027,26 @@
         return n;
     }
 
-    function createMap() {
-        gameState.grid = Array.from({length: GRID_SIZE}, () => Array.from({length: GRID_SIZE}, () => ({ type: 'empty', anim: 'ani-idle' })));
-        gameState.player.x = 1; gameState.player.y = 5;
+    const MAX_ENEMIES = 32;
+    const MAX_MAP_ATTEMPTS = 30;
+
+    // Picks a random non-reserved, non-edge-row cell on column x for exit placement.
+    function randomOpenRow(x) {
+        const candidates = [];
+        for (let y = 1; y < GRID_SIZE - 1; y++) { if (!isReserved(x, y)) candidates.push(y); }
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
+    function generateFloorLayout() {
+        gameState.grid = Array.from({length: GRID_SIZE}, (_, y) => Array.from({length: GRID_SIZE}, (_, x) => ({ type: isReserved(x, y) ? 'reserved' : 'empty', anim: 'ani-idle' })));
+        gameState.player.x = 1; gameState.player.y = 3;
         gameState.player.hasKey = false; gameState.player.enteringPortal = false; gameState.player.anim = 'ani-idle';
         gameState.portalJustOpened = false;
 
-        gameState.grid[Math.floor(Math.random()*8)+1][0] = { type: 'exit' };
-        gameState.grid[Math.floor(Math.random()*8)+1][9] = { type: 'exit' };
+        gameState.grid[randomOpenRow(0)][0] = { type: 'exit' };
+        gameState.grid[randomOpenRow(GRID_SIZE - 1)][GRID_SIZE - 1] = { type: 'exit' };
 
-        const count = 18 + (gameState.level * 2);
+        const count = Math.min(MAX_ENEMIES, 12 + (gameState.level * 2));
         let placed = 0;
         while (placed < count) {
             let rx = Math.floor(Math.random() * GRID_SIZE), ry = Math.floor(Math.random() * GRID_SIZE);
@@ -485,11 +1057,84 @@
         }
         const enemies = [];
         gameState.grid.forEach((row, y) => row.forEach((tile, x) => { if (tile.type === 'enemy') enemies.push({x, y}); }));
-        if (enemies.length > 0) { 
-            const target = enemies[Math.floor(Math.random() * enemies.length)]; 
-            gameState.grid[target.y][target.x].hasKey = true; 
+        if (enemies.length > 0) {
+            const target = enemies[Math.floor(Math.random() * enemies.length)];
+            gameState.grid[target.y][target.x].hasKey = true;
         }
         updateCalculations();
+    }
+
+    function createMap() {
+        let attempts = 0;
+        do {
+            attempts++;
+            generateFloorLayout();
+        } while (!findPath() && attempts < MAX_MAP_ATTEMPTS);
+        setupGridDOM();
+    }
+
+    function setupGridDOM() {
+        gridEl.innerHTML = '';
+        tileEls = Array.from({length: GRID_SIZE}, () => new Array(GRID_SIZE));
+        renderCache = Array.from({length: GRID_SIZE}, () => new Array(GRID_SIZE).fill(null));
+        playerPanelSig = null; enemyPanelSig = null;
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                if (isReserved(x, y)) continue;
+                const el = document.createElement('div');
+                el.className = 'tile';
+                el.id = `tile-${x}-${y}`;
+                el.style.gridColumn = x + 1;
+                el.style.gridRow = y + 1;
+                gridEl.appendChild(el);
+                tileEls[y][x] = el;
+            }
+        }
+
+        const playerPanel = document.createElement('div');
+        playerPanel.id = 'player-profile-panel';
+        playerPanel.className = 'profile-panel';
+        playerPanel.dataset.label = '♪ YOU';
+        playerPanel.style.gridColumn = `${PLAYER_PANEL.x0 + 1} / span ${PLAYER_PANEL.w}`;
+        playerPanel.style.gridRow = `${PLAYER_PANEL.y0 + 1} / span ${PLAYER_PANEL.h}`;
+        gridEl.appendChild(playerPanel);
+
+        const enemyPanel = document.createElement('div');
+        enemyPanel.id = 'enemy-profile-panel';
+        enemyPanel.className = 'profile-panel';
+        enemyPanel.dataset.label = '☠ TARGET';
+        enemyPanel.style.gridColumn = `${ENEMY_PANEL.x0 + 1} / span ${ENEMY_PANEL.w}`;
+        enemyPanel.style.gridRow = `${ENEMY_PANEL.y0 + 1} / span ${ENEMY_PANEL.h}`;
+        gridEl.appendChild(enemyPanel);
+    }
+
+    function renderProfilePanels() {
+        const playerType = getPlayerType();
+        const pSig = `${playerType.id}:${gameState.player.anim}:${gameState.player.mp}:${gameState.player.maxMp}`;
+        if (pSig !== playerPanelSig) {
+            playerPanelSig = pSig;
+            document.getElementById('player-profile-panel').innerHTML = `
+                <div class="profile-portrait">${getPerformerArt(gameState.player.anim, playerType, 'profile-player')}</div>
+                <div class="profile-stats">
+                    <div class="profile-name">${playerType.name.toUpperCase()}</div>
+                    <div class="profile-value profile-note" style="color:${playerType.color}">${playerType.note}</div>
+                    <div class="profile-value" style="color:var(--accent-red)">MP ${Math.max(0, gameState.player.mp)}/${gameState.player.maxMp}</div>
+                </div>`;
+        }
+
+        const le = gameState.lastEnemyProfile;
+        const eSig = le ? `${le.trait}:${le.anim}:${le.power}:${le.clusterSize}` : 'empty';
+        if (eSig !== enemyPanelSig) {
+            enemyPanelSig = eSig;
+            const enemyPanelEl = document.getElementById('enemy-profile-panel');
+            enemyPanelEl.innerHTML = le ? `
+                <div class="profile-portrait">${getEnemySVG(le.trait, le.anim, `profile-enemy:${le.trait}`)}</div>
+                <div class="profile-stats">
+                    <div class="profile-name">${le.trait.toUpperCase()}</div>
+                    <div class="profile-value" style="color:var(--accent-red)">ATK ${le.power}${le.clusterSize > 1 ? ` x${le.clusterSize}` : ''}</div>
+                </div>`
+                : `<div class="profile-empty">NO TARGET</div>`;
+        }
     }
 
     function updateCalculations() {
@@ -513,74 +1158,116 @@
     }
 
     function render() {
-        gridEl.innerHTML = '';
-        document.getElementById('ui-hp').innerText = Math.max(0, gameState.player.hp);
-        document.getElementById('ui-max-hp').innerText = gameState.player.maxHp;
+        const mpNow = Math.max(0, gameState.player.mp);
+        document.getElementById('ui-mp').innerText = mpNow;
+        document.getElementById('ui-max-mp').innerText = gameState.player.maxMp;
+        const mpPct = gameState.player.maxMp > 0 ? Math.min(100, (mpNow / gameState.player.maxMp) * 100) : 0;
+        document.getElementById('mp-fill').style.width = `${mpPct}%`;
         document.getElementById('ui-level').innerText = gameState.level;
+        document.getElementById('ui-best').innerText = getBestDepth();
         document.getElementById('ui-key-icon').style.opacity = gameState.player.hasKey ? "1" : "0.2";
         document.getElementById('ui-key-icon').style.filter = gameState.player.hasKey ? "drop-shadow(0 0 8px gold)" : "none";
+        updateAutoButton();
 
-        gameState.grid.forEach((row, y) => {
-            row.forEach((tile, x) => {
-                const el = document.createElement('div');
-                el.className = 'tile';
-                el.id = `tile-${x}-${y}`;
-                if (x === gameState.player.x && y === gameState.player.y) {
-                    el.classList.add('tile-player');
-                    if(gameState.player.enteringPortal) el.classList.add('entering');
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) { if (!isReserved(x, y)) updateTile(x, y); }
+        }
+        renderProfilePanels();
+    }
+
+    function tileSignature(x, y) {
+        const tile = gameState.grid[y][x];
+        if (x === gameState.player.x && y === gameState.player.y) {
+            return `player:${gameState.selectedPlayerId}:${gameState.player.anim}:${gameState.player.enteringPortal}:${gameState.player.mp}:${gameState.player.attackDx}:${gameState.player.attackDy}`;
+        }
+        switch (tile.type) {
+            case 'empty': return 'empty';
+            case 'exit': return `exit:${gameState.player.hasKey}:${gameState.portalJustOpened}`;
+            case 'item': return `item:${tile.subtype}`;
+            case 'enemy': {
+                const power = getIncomingDamage(tile);
+                return `enemy:${tile.trait}:${tile.anim}:${tile.clusterSize > 1}:${power}:${canKill(tile)}`;
+            }
+        }
+        return 'unknown';
+    }
+
+    // Only tiles whose signature changed get their innerHTML rebuilt, so
+    // untouched tiles keep their running CSS animations (idle bob, etc.)
+    // instead of restarting on every render() call.
+    function updateTile(x, y) {
+        const sig = tileSignature(x, y);
+        if (renderCache[y][x] === sig) return;
+        renderCache[y][x] = sig;
+
+        const el = tileEls[y][x];
+        const tile = gameState.grid[y][x];
+        el.className = 'tile';
+        el.innerHTML = '';
+
+        if (x === gameState.player.x && y === gameState.player.y) {
+            const playerType = getPlayerType();
+            el.classList.add('tile-player');
+            el.style.setProperty('--player-color', playerType.color);
+            el.style.setProperty('--atk-dx', gameState.player.attackDx || 0);
+            el.style.setProperty('--atk-dy', gameState.player.attackDy || 0);
+            if (gameState.player.enteringPortal) el.classList.add('entering');
+            el.innerHTML = `
+                ${getPerformerArt(gameState.player.anim, playerType, `${x}:${y}`)}
+                <div class="stat-container">
+                    <div class="unit-stat hp-val" style="width:100%; text-align:center;">MP: ${gameState.player.mp}</div>
+                </div>`;
+            return;
+        }
+
+        switch (tile.type) {
+            case 'empty': el.classList.add('tile-empty'); break;
+            case 'exit':
+                el.classList.add('tile-exit');
+                if (gameState.player.hasKey) {
+                    el.classList.add('unlocked');
+                    if (gameState.portalJustOpened) el.classList.add('opening');
+                    const gradId = `portalGrad-${x}-${y}`;
                     el.innerHTML = `
-                        ${getDetailedWizard(gameState.player.anim)}
-                        <div class="stat-container">
-                            <div class="unit-stat hp-val" style="width:100%; text-align:center;">MP: ${gameState.player.hp}</div>
-                        </div>`;
+                        <div class="portal-vortex-ui">
+                            <svg viewBox="0 0 100 100">
+                                <defs>
+                                    <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" style="stop-color:white;stop-opacity:1" />
+                                        <stop offset="40%" style="stop-color:var(--accent-wizard);stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:transparent;stop-opacity:1" />
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="50" cy="50" r="45" fill="url(#${gradId})" />
+                                <path d="M50 5 Q70 20 50 50 T50 95" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
+                                <path d="M5 50 Q20 30 50 50 T95 50" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
+                            </svg>
+                        </div>
+                        <div class="portal-label">PORTAL</div>`;
                 } else {
-                    switch(tile.type) {
-                        case 'empty': el.classList.add('tile-empty'); break;
-                        case 'exit': 
-                            el.classList.add('tile-exit'); 
-                            if (gameState.player.hasKey) { 
-                                el.classList.add('unlocked'); 
-                                if (gameState.portalJustOpened) el.classList.add('opening');
-                                el.innerHTML = `
-                                    <div class="portal-vortex-ui">
-                                        <svg viewBox="0 0 100 100">
-                                            <defs>
-                                                <radialGradient id="portalGrad" cx="50%" cy="50%" r="50%">
-                                                    <stop offset="0%" style="stop-color:white;stop-opacity:1" />
-                                                    <stop offset="40%" style="stop-color:var(--accent-wizard);stop-opacity:1" />
-                                                    <stop offset="100%" style="stop-color:transparent;stop-opacity:1" />
-                                                </radialGradient>
-                                            </defs>
-                                            <circle cx="50" cy="50" r="45" fill="url(#portalGrad)" />
-                                            <path d="M50 5 Q70 20 50 50 T50 95" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
-                                            <path d="M5 50 Q20 30 50 50 T95 50" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
-                                        </svg>
-                                    </div>
-                                    <div style="font-size:0.5rem; color:white; font-weight:900; margin-top:2px;">PORTAL</div>`; 
-                            }
-                            else { el.innerHTML = `🔒<div style="font-size:0.5rem">LOCKED</div>`; }
-                            break;
-                        case 'item':
-                            let it = '💎';
-                            let itemClass = 'idle';
-                            if (tile.subtype === 'potion') it = '🧪'; 
-                            if (tile.subtype === 'maxhp') it = '💖'; 
-                            if (tile.subtype === 'shield') it = '🔮'; 
-                            if (tile.subtype === 'breaker') it = '⚡';
-                            if (tile.subtype === 'key') { it = '🔑'; itemClass = 'key-drop'; }
-                            el.innerHTML = `<div class="tile-item-wrap ${itemClass}"><div class="item-orb" style="${tile.subtype === 'key' ? 'color:gold; border-color:gold;' : ''}">${it}</div></div>`;
-                            break;
-                        case 'enemy':
-                            el.classList.add('tile-enemy', `enemy-${tile.trait}`);
-                            if (tile.clusterSize > 1) el.classList.add('cluster-active');
-                            const power = gameState.player.breaker > 0 ? tile.basePower : tile.finalPower;
-                            el.innerHTML += `${getEnemySVG(tile.trait, tile.anim)}<div class="stat-container"><div class="unit-stat hp-val">H:1</div><div class="unit-stat atk-val">A:${power}</div></div>`;
-                            break;
-                    }
+                    el.innerHTML = `<span class="lock-icon">🔒</span><div class="lock-label">LOCKED</div>`;
                 }
-                gridEl.appendChild(el);
-            });
-        });
+                break;
+            case 'item': {
+                let it = '💎';
+                let itemClass = 'idle';
+                if (tile.subtype === 'potion') it = '🧪';
+                if (tile.subtype === 'maxmp') it = '💖';
+                if (tile.subtype === 'shield') it = '🔮';
+                if (tile.subtype === 'breaker') it = '⚡';
+                if (tile.subtype === 'key') { it = '🔑'; itemClass = 'key-drop'; }
+                el.innerHTML = `<div class="tile-item-wrap ${itemClass}"><div class="item-orb" style="${tile.subtype === 'key' ? 'color:gold; border-color:gold;' : ''}">${it}</div></div>`;
+                break;
+            }
+            case 'enemy': {
+                el.classList.add('tile-enemy', `enemy-${tile.trait}`);
+                if (tile.clusterSize > 1) el.classList.add('cluster-active');
+                if (!canKill(tile)) el.classList.add('too-strong');
+                const power = getIncomingDamage(tile);
+                el.innerHTML += `${getEnemySVG(tile.trait, tile.anim, `${x}:${y}:${tile.trait}`)}<div class="stat-container"><div class="unit-stat hp-val">H:1</div><div class="unit-stat atk-val">A:${power}</div></div>`;
+                break;
+            }
+        }
     }
 
     async function movePlayer(dx, dy) {
@@ -588,13 +1275,14 @@
         if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
         const target = gameState.grid[ny][nx];
         if (target.type === 'enemy') await startBattleSequence(nx, ny);
-        else if (target.type === 'item') { 
-            Sounds.pick(); 
-            applyItem(target.subtype); 
-            gameState.grid[ny][nx] = { type: 'empty' }; 
-            gameState.player.x = nx; 
-            gameState.player.y = ny; 
-            endTurn(); 
+        else if (target.type === 'item') {
+            Sounds.pick();
+            addLog(`Picked up ${target.subtype}.`);
+            applyItem(target.subtype);
+            gameState.grid[ny][nx] = { type: 'empty' };
+            gameState.player.x = nx;
+            gameState.player.y = ny;
+            endTurn();
         }
         else if (target.type === 'exit' && gameState.player.hasKey) {
             gameState.isAnimating = true; 
@@ -611,36 +1299,56 @@
     async function startBattleSequence(x, y) {
         gameState.isAnimating = true;
         const enemy = gameState.grid[y][x];
-        const power = gameState.player.breaker > 0 ? enemy.basePower : enemy.finalPower;
-        
-        gameState.player.anim = 'ani-attack'; 
-        render(); 
-        Sounds.hit(); 
+        const playerType = getPlayerType();
+        const power = getIncomingDamage(enemy);
+        const clusterSize = enemy.clusterSize || 1;
+        gameState.lastEnemyProfile = { trait: enemy.trait, power, clusterSize, anim: enemy.anim };
+
+        gameState.player.attackDx = x - gameState.player.x;
+        gameState.player.attackDy = y - gameState.player.y;
+        gameState.player.anim = 'ani-attack';
+        render();
+        showSonicWave(gameState.player.x, gameState.player.y, gameState.player.attackDx, gameState.player.attackDy, playerType.color);
+        Sounds.hit();
         showFloatingText(x, y, "PURGE", "var(--accent-mana)");
         await new Promise(r => setTimeout(r, 400));
-        
-        gameState.player.anim = 'ani-damage'; 
+
+        gameState.player.anim = 'ani-damage';
         enemy.anim = 'ani-damage';
-        
+        gameState.lastEnemyProfile.anim = 'ani-damage';
+        showImpactBurst(x, y);
+        triggerImpactZoom();
+
+        const dodged = !gameState.player.invincible && playerType.dodgeChance && Math.random() < playerType.dodgeChance;
         if (gameState.player.invincible > 0) {
             showFloatingText(gameState.player.x, gameState.player.y, "BLOCK", "var(--accent-gold)");
+            addLog(`Shield blocked the ${enemy.trait}'s attack.`);
+        } else if (dodged) {
+            showFloatingText(gameState.player.x, gameState.player.y, "EVADE", playerType.color);
+            addLog(`${playerType.name} evaded the ${enemy.trait}.`);
         } else {
-            gameState.player.hp -= power;
+            gameState.player.mp -= power;
             triggerDamageVisuals();
             showFloatingText(gameState.player.x, gameState.player.y, `-${power}`, "var(--accent-red)");
+            addLog(`Defeated ${enemy.trait}${clusterSize > 1 ? ` x${clusterSize}` : ''}, took ${power} damage.`);
         }
-        
-        render(); 
-        await new Promise(r => setTimeout(r, 500));
-        
-        if (gameState.player.hp > 0) {
-            let kf = false; 
-            enemy.clusterCoords.forEach(c => { 
-                if (gameState.grid[c.y][c.x].hasKey) kf = true; 
-                gameState.grid[c.y][c.x] = { type: 'empty' }; 
-            });
 
-            if (kf) { 
+        render();
+        await new Promise(r => setTimeout(r, 500));
+
+        if (gameState.player.mp > 0) {
+            let kf = false;
+            enemy.clusterCoords.forEach(c => { if (gameState.grid[c.y][c.x].hasKey) kf = true; });
+
+            // Play the pizza sprite's own "leaving" pose with a shrink/fade
+            // before actually clearing the cluster, instead of an instant
+            // disappearance.
+            enemy.clusterCoords.forEach(c => { gameState.grid[c.y][c.x].anim = 'ani-leaving'; });
+            render();
+            await new Promise(r => setTimeout(r, 320));
+            enemy.clusterCoords.forEach(c => { gameState.grid[c.y][c.x] = { type: 'empty' }; });
+
+            if (kf) {
                 gameState.grid[y][x] = { type: 'item', subtype: 'key' };
                 showFloatingText(x, y, "KEY DROPPED", "var(--accent-gold)"); 
                 Sounds.drop();
@@ -665,23 +1373,31 @@
                 gameState.grid[y][x] = { type: 'empty' }; 
             }
             
-            updateCalculations(); 
-            gameState.player.anim = 'ani-idle'; 
+            if (playerType.regenOnKill) {
+                gameState.player.mp = Math.min(gameState.player.maxMp, gameState.player.mp + playerType.regenOnKill);
+                showFloatingText(x, y, `+${playerType.regenOnKill}`, playerType.color);
+            }
+            updateCalculations();
+            gameState.player.anim = 'ani-idle';
+            gameState.lastEnemyProfile.anim = 'ani-idle';
             endTurn();
-        } else { 
-            gameState.player.hp = 0; 
-            gameState.gameOver = true; 
-            Sounds.gameOver(); 
-            document.getElementById('final-level').innerText = gameState.level; 
-            document.getElementById('game-over').style.display = 'flex'; 
-            render(); 
+        } else {
+            gameState.player.mp = 0;
+            gameState.gameOver = true;
+            Sounds.gameOver();
+            const best = updateBestDepth(gameState.level);
+            document.getElementById('final-level').innerText = gameState.level;
+            document.getElementById('best-level').innerText = best;
+            document.getElementById('game-over').style.display = 'flex';
+            render();
         }
         gameState.isAnimating = false;
     }
 
     function applyItem(t) {
-        if (t === 'potion') gameState.player.hp = Math.min(gameState.player.maxHp, gameState.player.hp + 10);
-        if (t === 'maxhp') { gameState.player.maxHp = Math.min(200, gameState.player.maxHp + 10); gameState.player.hp += 10; }
+        const playerType = getPlayerType();
+        if (t === 'potion') gameState.player.mp = Math.min(gameState.player.maxMp, gameState.player.mp + 10 + (playerType.potionBonus || 0));
+        if (t === 'maxmp') { gameState.player.maxMp = Math.min(200, gameState.player.maxMp + 10); gameState.player.mp += 10; }
         if (t === 'shield') gameState.player.invincible = 4;
         if (t === 'breaker') gameState.player.breaker = 6;
         if (t === 'key') { 
@@ -709,15 +1425,54 @@
     }
 
     function showFloatingText(x, y, t, c) {
-        const fx = document.createElement('div'); 
-        fx.className = 'combat-fx'; 
-        fx.innerText = t; 
+        const fx = document.createElement('div');
+        fx.className = 'combat-fx';
+        fx.innerText = t;
         fx.style.color = c;
         if (t.startsWith('-')) fx.style.fontSize = '2rem';
-        fx.style.left = `${(x * 74) + 37}px`; 
-        fx.style.top = `${(y * 74) + 37}px`;
-        document.getElementById('game-area').appendChild(fx); 
+        const gameArea = document.getElementById('game-area');
+        const tileRect = tileEls[y][x].getBoundingClientRect();
+        const areaRect = gameArea.getBoundingClientRect();
+        fx.style.left = `${tileRect.left - areaRect.left + tileRect.width / 2}px`;
+        fx.style.top = `${tileRect.top - areaRect.top + tileRect.height / 2}px`;
+        gameArea.appendChild(fx);
         setTimeout(() => fx.remove(), 800);
+    }
+
+    function showImpactBurst(x, y) {
+        const gameArea = document.getElementById('game-area');
+        const tileRect = tileEls[y][x].getBoundingClientRect();
+        const areaRect = gameArea.getBoundingClientRect();
+        const fx = document.createElement('div');
+        fx.className = 'impact-fx';
+        fx.style.left = `${tileRect.left - areaRect.left + tileRect.width * 0.2}px`;
+        fx.style.top = `${tileRect.top - areaRect.top + tileRect.height * 0.2}px`;
+        gameArea.appendChild(fx);
+        setTimeout(() => fx.remove(), 350);
+    }
+
+    function showSonicWave(x, y, dx = 0, dy = 0, color = 'var(--accent-mana)') {
+        const gameArea = document.getElementById('game-area');
+        const tileRect = tileEls[y][x].getBoundingClientRect();
+        const areaRect = gameArea.getBoundingClientRect();
+        const offset = tileRect.width * 0.22;
+        const fx = document.createElement('div');
+        fx.className = 'sonic-wave-fx directional';
+        fx.style.left = `${tileRect.left - areaRect.left + tileRect.width / 2 + dx * offset}px`;
+        fx.style.top = `${tileRect.top - areaRect.top + tileRect.height / 2 + dy * offset}px`;
+        fx.style.setProperty('--wave-color', color);
+        fx.style.setProperty('--wave-dx', dx);
+        fx.style.setProperty('--wave-dy', dy);
+        fx.innerHTML = '<span></span><span></span><span></span>';
+        gameArea.appendChild(fx);
+        setTimeout(() => fx.remove(), 820);
+    }
+
+    function triggerImpactZoom() {
+        const gameArea = document.getElementById('game-area');
+        gameArea.classList.remove('impact');
+        void gameArea.offsetWidth;
+        gameArea.classList.add('impact');
     }
 
     function endTurn() { if (gameState.player.invincible > 0) gameState.player.invincible--; if (gameState.player.breaker > 0) gameState.player.breaker--; render(); }
@@ -729,7 +1484,11 @@
         cur.style.opacity = '1';
         pb.style.width = '100%';
         await new Promise(r => setTimeout(r, 1200));
-        gameState.level++; createMap(); render();
+        const playerType = getPlayerType();
+        gameState.level++; gameState.stuckRerollCount = 0;
+        if (playerType.floorHeal) gameState.player.mp = Math.min(gameState.player.maxMp, gameState.player.mp + playerType.floorHeal);
+        createMap(); render();
+        addLog(`Descended to floor ${gameState.level}F.`);
         cur.style.transition = 'opacity 0.6s ease';
         cur.style.opacity = '0';
         setTimeout(() => { cur.style.display = 'none'; cur.style.transition = 'none'; pb.style.width = '0%'; gameState.isAnimating = false; }, 600);
@@ -737,7 +1496,7 @@
 
     function resetGame() {
         clearTimeout(gameState.stuckTimer); document.getElementById('stuck-overlay').style.display = 'none'; document.getElementById('game-over').style.display = 'none';
-        gameState = { ...gameState, level: 1, player: { x: 0, y: 0, hp: 80, maxHp: 100, hasKey: false, invincible: 0, breaker: 0, enteringPortal: false, anim: 'ani-idle' }, grid: [], isAuto: true, lastInputTime: Date.now(), gameOver: false, isAnimating: false, stuckCountDown: null, portalJustOpened: false };
+        gameState = { ...gameState, level: 1, player: makePlayerState(getPlayerType()), grid: [], isAuto: true, lastInputTime: Date.now(), gameOver: false, isAnimating: false, stuckCountDown: null, stuckRerollCount: 0, portalJustOpened: false, lastEnemyProfile: null };
         init();
     }
 
@@ -747,12 +1506,13 @@
             const path = findPath();
             if (path && path.length > 1) {
                 if (gameState.stuckCountDown !== null) { gameState.stuckCountDown = null; document.getElementById('stuck-overlay').style.display = 'none'; clearTimeout(gameState.stuckTimer); }
+                gameState.stuckRerollCount = 0;
                 if (gameState.isAuto) await movePlayer(path[1].x - gameState.player.x, path[1].y - gameState.player.y);
             } else if (!gameState.gameOver) {
                 if (gameState.stuckCountDown === null) { gameState.stuckCountDown = 7; startStuckTimer(); }
             }
         }
-        setTimeout(gameLoop, 1000);
+        gameLoopTimer = setTimeout(gameLoop, getPlayerType().autoDelay || 1000);
     }
 
     function startStuckTimer() {
@@ -761,10 +1521,28 @@
         const tick = () => {
             if (gameState.stuckCountDown === null || gameState.gameOver) return;
             te.innerText = gameState.stuckCountDown;
-            if (gameState.stuckCountDown <= 0) resetGame();
+            if (gameState.stuckCountDown <= 0) rerollFloor();
             else { gameState.stuckCountDown--; gameState.stuckTimer = setTimeout(tick, 1000); }
         };
         tick();
+    }
+
+    // Regenerates the current floor instead of restarting the whole run.
+    // Falls back to a full reset if the player keeps getting stuck (e.g. mp
+    // too low to ever kill anything), so this can't loop forever.
+    function rerollFloor() {
+        clearTimeout(gameState.stuckTimer);
+        document.getElementById('stuck-overlay').style.display = 'none';
+        gameState.stuckCountDown = null;
+        gameState.stuckRerollCount = (gameState.stuckRerollCount || 0) + 1;
+        if (gameState.stuckRerollCount > 3 || gameState.player.mp <= 1) {
+            addLog("Truly stuck. Restarting from floor 1...");
+            resetGame();
+            return;
+        }
+        addLog(`No viable path. Regenerating floor ${gameState.level}F...`);
+        createMap();
+        render();
     }
 
     function findPath() {
@@ -803,12 +1581,35 @@
 
     function canKill(enemy) {
         if (gameState.player.invincible > 0) return true;
-        const p = gameState.player.breaker > 0 ? enemy.basePower : enemy.finalPower;
-        return gameState.player.hp > p;
+        const p = getIncomingDamage(enemy);
+        return gameState.player.mp > p;
     }
 
-    window.addEventListener('keydown', e => { if(e.key.startsWith('Arrow')) handleInput(e.key); });
-    window.onload = init;
+    function getIncomingDamage(enemy) {
+        const playerType = getPlayerType();
+        const base = gameState.player.breaker > 0 ? enemy.basePower : enemy.finalPower;
+        return Math.max(1, base - (playerType.attackBonus || 0) - (playerType.damageReduction || 0));
+    }
+
+    function handleInput(key) {
+        if (gameState.gameOver || gameState.isAnimating) return;
+        const dirs = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+        const d = dirs[key];
+        if (!d) return;
+        gameState.isAuto = false;
+        gameState.lastInputTime = Date.now();
+        movePlayer(d[0], d[1]);
+    }
+
+    window.addEventListener('keydown', e => {
+        if (e.key.startsWith('Arrow')) { e.preventDefault(); handleInput(e.key); }
+        if (e.code === 'Space') {
+            e.preventDefault();
+            gameState.paused = !gameState.paused;
+            addLog(gameState.paused ? "Game paused." : "Game resumed.");
+        }
+    });
+    window.onload = showPlayerSelection;
 </script>
 </body>
 </html>
