@@ -31,60 +31,114 @@
             display: block; z-index: 1;
         }
 
-        /* HUD 디자인 개선 */
+        /* HUD as a CSS Grid, named areas, direct children only (city pattern — no display:contents,
+           see city/README.md for the iOS Chrome WebKit bug that pattern used to cause). */
         #hud {
-            position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;
-            padding: 2.2rem 2.2rem 0; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10;
-            box-sizing: border-box; gap: 1rem;
+            position: fixed; top: 0; left: 0; width: 100%; pointer-events: none;
+            padding: max(1.4rem, env(safe-area-inset-top)) 2.2rem 0; z-index: 20;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "brand actions"
+                "location actions";
+            column-gap: 1.25rem;
+            row-gap: 0.5rem;
+            align-items: start;
         }
 
-        .brand-zone { pointer-events: auto; }
+        .hud-actions { grid-area: actions; pointer-events: auto; padding-right: 0.2rem; }
         .brand-name {
-            font-size: clamp(2.2rem, 4vw, 3.5rem);
+            grid-area: brand; pointer-events: auto;
+            font-size: clamp(1.8rem, 4vw, 3.5rem);
             font-weight: 900;
             letter-spacing: 0.32rem;
             color: #d3fcff;
-            margin-bottom: 0.65rem;
             text-shadow: 0 0 30px rgba(120, 243, 255, 0.26);
+            white-space: nowrap;
+            min-width: 0;
         }
-        .location-info { font-size: 1rem; color: #81b3c4; text-transform: uppercase; letter-spacing: 0.32rem; font-weight: 700; }
+        .location-info {
+            grid-area: location; pointer-events: auto;
+            font-size: clamp(0.72rem, 1.8vw, 1rem); color: #81b3c4; text-transform: uppercase;
+            letter-spacing: 0.32rem; font-weight: 700; min-width: 0;
+        }
 
+        /* Icon-only circular reset button (city pattern: stroke="currentColor" inline SVG, no emoji). */
         .hud-button {
+            position: relative;
             pointer-events: auto;
             background: linear-gradient(180deg, rgba(14, 35, 47, 0.9), rgba(6, 16, 26, 0.9));
             border: 1px solid rgba(120, 243, 255, 0.55);
             color: #d8fbff;
-            padding: 1rem 2rem;
+            width: 42px;
+            height: 42px;
+            padding: 0;
             cursor: pointer;
-            border-radius: 999px;
-            font-size: 0.92rem;
-            font-weight: 900;
-            letter-spacing: 0.22rem;
-            transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s cubic-bezier(0.19, 1, 0.22, 1);
             backdrop-filter: blur(14px);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255,255,255,0.04);
-            white-space: nowrap;
+            flex-shrink: 0;
         }
+        .hud-button svg { width: 20px; height: 20px; display: block; }
         .hud-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 16px 50px rgba(10, 184, 216, 0.22), inset 0 0 22px rgba(120, 243, 255, 0.12);
             border-color: rgba(120, 243, 255, 0.9);
+            color: #fff;
+            box-shadow: 0 16px 50px rgba(10, 184, 216, 0.22), inset 0 0 22px rgba(120, 243, 255, 0.12);
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .hud-button[data-tooltip]::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 0;
+                background: var(--panel);
+                border: 1px solid rgba(120, 243, 255, 0.4);
+                color: #eee;
+                font-size: 0.72rem;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
+                padding: 0.4rem 0.7rem;
+                border-radius: 8px;
+                pointer-events: none;
+                opacity: 0;
+                transform: translateY(-4px);
+                transition: opacity 0.2s, transform 0.2s;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+                z-index: 30;
+            }
+            .hud-button[data-tooltip]:hover::after {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .guide-box {
-            position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%);
+            position: fixed; bottom: max(2.4rem, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+            width: min(calc(100vw - 1.5rem), 980px);
             background: linear-gradient(180deg, rgba(5, 20, 32, 0.88), rgba(3, 13, 22, 0.92)); padding: 1rem 1.8rem;
             border: 1px solid var(--line);
             border-radius: 999px;
-            font-size: 0.92rem; display: flex; gap: 2rem; pointer-events: none; letter-spacing: 0.16rem;
-            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255,255,255,0.02); white-space: nowrap; z-index: 20;
+            font-size: 0.92rem; display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+            gap: 0.5rem 2rem; pointer-events: none; letter-spacing: 0.16rem;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255,255,255,0.02);
             backdrop-filter: blur(18px);
+            box-sizing: border-box;
+            z-index: 20;
         }
+        .guide-box span { white-space: nowrap; min-width: 0; }
 
         #modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(1, 7, 14, 0.92); display: none; justify-content: center; align-items: center;
             z-index: 100; backdrop-filter: blur(40px);
+            cursor: pointer;
         }
 
         .modal-content {
@@ -93,6 +147,7 @@
             padding: 3.5rem; position: relative;
             box-shadow: 0 40px 120px rgba(0, 0, 0, 0.65), 0 0 160px rgba(10, 184, 216, 0.08);
             animation: terminalIn 0.5s ease-out;
+            cursor: default;
         }
 
         @keyframes terminalIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
@@ -110,7 +165,7 @@
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
         .modal-media iframe, .modal-media img { width: 100%; height: 100%; border: none; display: block; object-fit: cover; }
-        
+
         .modal-title { font-size: clamp(2.4rem, 5vw, 4rem); margin-bottom: 1rem; color: #d2fbff; font-weight: 900; letter-spacing: -2px; }
         .modal-desc { color: #82aebb; line-height: 1.9; margin-bottom: 2.2rem; font-size: 1.1rem; max-width: 760px; }
         .modal-link {
@@ -120,16 +175,164 @@
         }
         .modal-link:hover { transform: translateY(-2px); filter: brightness(1.08); }
 
-        #loading { position: fixed; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(14, 57, 74, 0.3), rgba(1, 6, 10, 1)); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        #loading {
+            position: fixed; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(14, 57, 74, 0.3), rgba(1, 6, 10, 1)); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 1; transition: opacity 0.6s ease;
+        }
+        #loading.fade-out { opacity: 0; }
         .loading-text { margin-top: 2rem; letter-spacing: 0.5rem; font-size: 1rem; color: var(--accent); font-weight: 900; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* First-reveal fade-up for the HUD/guide box (city pattern). guide-box centers via
+           left:50% + translateX(-50%); every transform state below MUST keep translateX(-50%)
+           bundled in the same transform value, or the pill silently shifts off-center (a real
+           bug city hit — see city/README.md). */
+        #hud {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .guide-box {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #hud.revealed { opacity: 1; transform: translateY(0); }
+        .guide-box.revealed { opacity: 1; transform: translateX(-50%) translateY(0); transition-delay: 0.12s; }
+        .guide-box.hidden-by-timer { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; }
+
+        /* Node tracker: vertical stack of dots on the right edge. */
+        #node-tracker {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.85rem;
+            pointer-events: auto;
+        }
+        .node-dot-row { display: flex; align-items: center; gap: 0.6rem; }
+        .node-dot-label {
+            background: var(--panel);
+            border: 1px solid rgba(120, 243, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 0.68rem;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 0.32rem 0.7rem;
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+        }
+        .node-dot-row:hover .node-dot-label { opacity: 1; transform: translateX(0); }
+        .node-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #355;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            transition: 0.25s;
+            flex-shrink: 0;
+        }
+        .node-dot:hover { background: #6ab; }
+        .node-dot.active {
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px 2px rgba(120, 243, 255, 0.8);
+        }
+
+        /* On-screen zoom buttons (touch discoverability). */
+        #zoom-controls {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            bottom: 5.5rem;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        body.coarse-pointer #zoom-controls { display: flex; }
+        .zoom-btn {
+            pointer-events: auto;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--panel);
+            border: 1px solid rgba(120, 243, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            transition: 0.25s;
+        }
+        .zoom-btn:hover, .zoom-btn:active {
+            border-color: rgba(120, 243, 255, 0.6);
+            color: #fff;
+            box-shadow: 0 0 18px rgba(120, 243, 255, 0.25);
+        }
+
+        /* 3D hover tooltip: follows the cursor near a hovered fortress billboard. */
+        #hover-tip {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            background: var(--panel);
+            border: 1px solid rgba(120, 243, 255, 0.4);
+            backdrop-filter: blur(16px);
+            border-radius: 12px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            display: none;
+            max-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        #hover-tip .tip-title { color: var(--accent); font-weight: 800; letter-spacing: 0.3px; display: block; }
+        #hover-tip .tip-hint { color: #82aebb; font-size: 0.7rem; display: block; margin-top: 0.15rem; }
+
         @media (max-width: 860px) {
-            #hud { padding: 1.2rem 1.2rem 0; }
-            .location-info { font-size: 0.82rem; letter-spacing: 0.2rem; }
-            .guide-box { gap: 1rem; padding: 0.85rem 1.1rem; font-size: 0.76rem; letter-spacing: 0.08rem; }
+            #hud { padding: max(1rem, env(safe-area-inset-top)) 1.2rem 0; }
             .modal-content { padding: 2rem; }
+        }
+
+        @media (max-width: 520px) and (orientation: portrait) {
+            #hud {
+                grid-template-areas:
+                    "brand actions"
+                    "location location";
+            }
+            .brand-name { font-size: clamp(1.5rem, 8vw, 2rem); letter-spacing: 0.18rem; }
+            .location-info { font-size: 0.72rem; letter-spacing: 0.16rem; }
+            .guide-box {
+                width: min(calc(100vw - 1rem), 360px);
+                padding: 0.65rem 0.95rem;
+                border-radius: 18px;
+                align-items: flex-start;
+                gap: 0.28rem;
+                flex-direction: column;
+                letter-spacing: 0.6px;
+                font-size: 0.76rem;
+            }
+            #zoom-controls { right: 0.55rem; bottom: 9.5rem; }
+            #node-tracker { right: 0.55rem; gap: 0.65rem; }
+            .node-dot-label { display: none; }
         }
     </style>
 </head>
@@ -143,19 +346,34 @@
     <canvas id="main-canvas"></canvas>
 
     <div id="hud">
-        <div class="brand-zone">
-            <div class="brand-name">BUNT OCEAN</div>
-            <div class="location-info">The Last Archive / <span id="current-node" style="color: #fff;">Sector 01</span></div>
+        <div class="brand-name">BUNT OCEAN</div>
+        <div class="hud-actions">
+            <button onclick="resetPosition()" class="hud-button" aria-label="시점 초기화" title="시점 초기화" data-tooltip="시점 초기화">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3.2-6.9" />
+                    <polyline points="3 3 3 7 7 7" />
+                </svg>
+            </button>
         </div>
-        <div class="brand-zone">
-            <button onclick="resetPosition()" class="hud-button">RESET CORE</button>
-        </div>
+        <div class="location-info">The Last Archive / <span id="current-node" style="color: #fff;">Sector 01</span></div>
     </div>
 
-    <div class="guide-box">
-        <span>📽 BILLBOARD SCAN</span>
-        <span>🚢 CRUISE CONTROL</span>
-        <span>🔭 SENSORS ADJ.</span>
+    <div class="guide-box" id="guide-box">
+        <span id="guide-move">🚢 CLICK SEA TO SAIL</span>
+        <span id="guide-watch">📽 DBL-CLICK SCREEN TO SCAN</span>
+        <span id="guide-zoom">🎡 ZOOM WHEEL</span>
+    </div>
+
+    <div id="node-tracker"></div>
+
+    <div id="zoom-controls">
+        <button type="button" class="zoom-btn" id="zoom-in-btn" aria-label="확대">+</button>
+        <button type="button" class="zoom-btn" id="zoom-out-btn" aria-label="축소">−</button>
+    </div>
+
+    <div id="hover-tip">
+        <span class="tip-title" id="hover-tip-title"></span>
+        <span class="tip-hint">더블클릭으로 보기</span>
     </div>
 
     <div id="modal">
@@ -180,6 +398,14 @@
                 { id: "n3", pos: [8, 0, -35], label: "Sunken Hub" },
                 { id: "n4", pos: [8, 0, -60], label: "Deep Abyss" }
             ],
+            // C2 (reverted): forts were briefly alternated x=-25/+25 to break up the "corridor" feel,
+            // but the camera rig (CAM_OFFSET is always +x, looking toward -x) meant the +x-side forts
+            // had their screens facing the lane (toward -x, i.e. away from the camera) — the camera
+            // only ever saw the BACK of those screens, and PlaneGeometry+MeshBasicMaterial defaults to
+            // FrontSide, so the raycaster could never hit them: two of four billboards were completely
+            // unselectable. Reverted to all x=-25 (one-sided, screens face +x toward the camera/lane),
+            // keeping the original z stagger. See "해상 마을" (C7) for the +x-side scenery that now
+            // fills the other side instead.
             forts: [
                 { id: "f1", pos: [-25, 0, 15], color: 0x00f2ff, content: { title: "Unity Mega Pack", desc: "해상 문명 재건을 위한 최상위 최적화 에셋 팩입니다. 25년 베테랑의 정수가 담긴 고성능 쉐이더와 시스템 아키텍처를 포함합니다.", media: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=1200", youtubeId: "OgupBsqNHWw", link: "https://shop.buntgames.com/" } },
                 { id: "f2", pos: [-25, 0, -10], color: 0xff4400, content: { title: "Dev Master Class", desc: "포스트 아포칼립스 같은 개발 현장에서 살아남는 법. 56만 유튜버 번트의 실전 코딩과 프로젝트 매니지먼트의 모든 것.", media: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200", youtubeId: "XkWdnyq87Ww", link: "https://www.youtube.com/@textcube" } },
@@ -191,72 +417,183 @@
         let scene, camera, renderer, raycaster;
         let yachtGroup = new THREE.Group();
         let interactiveObjects = [];
-        let currentNodeId = "n1"; 
+        let currentNodeId = "n1";
         let isMoving = false, isInspecting = false;
         const animators = [];
         const mouse = new THREE.Vector2();
-        const originalCamState = { pos: new THREE.Vector3(), rot: new THREE.Euler(), fov: 40 };
-        
-        const CAM_OFFSET = new THREE.Vector3(18, 12, 25); 
+        // rot (Euler) is unused by the tweens now (kept only as a harmless snapshot) — quat is what
+        // focusOnBillboard()/closeModal() actually tween back to. See the quaternion-slerp note near
+        // focusOnBillboard() for why Euler component tweening was replaced.
+        const originalCamState = { pos: new THREE.Vector3(), rot: new THREE.Euler(), quat: new THREE.Quaternion(), fov: 40 };
+
+        const CAM_OFFSET = new THREE.Vector3(18, 12, 25);
         const YACHT_FLOAT_BASE = 2.6;
-        let targetFOV = 40, lastClickTime = 0;
+        let targetFOV = 40;
+        const MIN_FOV = 15;
+        const MAX_FOV = 100;
+
+        // --- UI/UX state (guide auto-hide/idle, node tracker, hover tooltip, touch pinch) ---
+        const GUIDE_HIDE_DELAY_MS = 9000;
+        const GUIDE_IDLE_REVIVE_MS = 45000;
+        let guideHideTimer = null;
+        let guideIdleTimer = null;
+        let guideHiddenByTimer = false;
+        let hasOpenedModalOnce = false;
+        let lastHoveredFort = null;
+        let pinchLastDist = null;
+        // On-screen zoom button step/repeat, declared here near MIN_FOV/MAX_FOV — water uses
+        // window.onload=boot so TDZ risk is lower than city's top-level init() call, but keeping
+        // constants near the top avoids the class of bug entirely (see city/README.md TDZ notes).
+        const ZOOM_BUTTON_STEP = 8;
+        const ZOOM_BUTTON_REPEAT_MS = 120;
+        let zoomButtonInterval = null;
+        let resizeTimer = null;
+
+        // C4: background cargo ship traffic (city traffic pattern: spawn/despawn + dispose).
+        const LIGHTHOUSE_POS = { x: -85, z: -90 };
+        let activeShips = [];
+        let nextShipSpawn = 6000;
+        let lastShipFrameTime = 0;
+
+        function getViewportSize() {
+            const visualViewport = window.visualViewport;
+            const width = Math.max(1, Math.round(
+                (visualViewport && visualViewport.width) ||
+                document.documentElement.clientWidth ||
+                window.innerWidth
+            ));
+            const height = Math.max(1, Math.round(
+                (visualViewport && visualViewport.height) ||
+                document.documentElement.clientHeight ||
+                window.innerHeight
+            ));
+            return { width, height };
+        }
+
+        function getResponsiveFOVBoost() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return 0;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return 4 + portrait * 10;
+        }
+
+        function getEffectiveTargetFOV() {
+            return Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + getResponsiveFOVBoost()));
+        }
+
+        function getResponsiveCamOffset() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return CAM_OFFSET;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return CAM_OFFSET.clone().add(new THREE.Vector3(
+                portrait * 2.4,
+                portrait * 1.2,
+                portrait * 8.0
+            ));
+        }
 
         /**
          * 2. 엔진 초기화
          */
         function boot() {
             const canvas = document.getElementById('main-canvas');
-            const guideItems = document.querySelectorAll('.guide-box span');
-            if (guideItems.length >= 3) {
-                guideItems[0].textContent = '🚀 CLICK LANE TO WARP';
-                guideItems[1].textContent = '☄️ DBL-CLICK PLANET TO SCAN';
-                guideItems[2].textContent = '🤖 ZOOM WHEEL';
-            }
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Cap at 1.5 instead of 2 (city pattern): halves fragment count on hi-DPI screens with
+            // little visible quality loss — this scene is fragment-shader bound.
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
             renderer.outputEncoding = THREE.sRGBEncoding;
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x05111c);
-            // 안개 설정을 조절하여 원경의 가시성을 확보
             scene.fog = new THREE.Fog(0x0a2130, 120, 4200);
 
-            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 50000);
+            camera = new THREE.PerspectiveCamera(getEffectiveTargetFOV(), window.innerWidth / window.innerHeight, 0.1, 50000);
             raycaster = new THREE.Raycaster();
 
             // Lighting: 시네마틱 밤바다
             const moon = new THREE.DirectionalLight(0xbdefff, 1.65);
             moon.position.set(-120, 220, -60);
             scene.add(moon);
-            
-            const fill = new THREE.AmbientLight(0x163142, 1.15);
+
+            // C1: dropped from 1.15 -> 0.62 — at 1.15 the AmbientLight washed the dark sea color
+            // out to a flat bright teal (MeshStandardMaterial adds ambient per-fragment regardless
+            // of depth/fog), so the scene never actually read as "night ocean". 0.62 keeps enough
+            // fill to see the yacht/billboards without flattening the water.
+            const fill = new THREE.AmbientLight(0x163142, 0.62);
             scene.add(fill);
 
+            // Only one dynamic PointLight remains in the whole scene (buoy lights were removed —
+            // see createMarkerBuoys(); MeshStandardMaterial evaluates every light per-fragment, so
+            // fewer lights over the huge ocean/sky planes is the single biggest perf lever here).
             const horizonGlow = new THREE.PointLight(0x34c8ff, 1.8, 1200);
             horizonGlow.position.set(-120, 80, 180);
             scene.add(horizonGlow);
 
             // 월드 생성
             createOcean();
-            createSpaceStars(); // 밀도와 크기가 조절된 별무리
-            createScrapAtolls(); // 고철 기지형 원경 섬
-            createDetailedYacht(); 
-            createFortressBillboards(); 
-            createMarkerBuoys(); 
+            createGlitterPath();
+            createSpaceStars();
+            createScrapAtolls();
+            createDetailedYacht();
+            createFortressBillboards();
+            createMarkerBuoys();
+            createLighthouse();
+            createIsletsAndWreck();
+            createBackgroundLife();
+            createVillage();
 
             const start = WORLD_DATA.nodes.find(n => n.id === currentNodeId);
-            yachtGroup.position.set(0, YACHT_FLOAT_BASE, start.pos[2]); 
-            camera.position.copy(yachtGroup.position).add(CAM_OFFSET);
+            yachtGroup.position.set(0, YACHT_FLOAT_BASE, start.pos[2]);
+            camera.position.copy(yachtGroup.position).add(getResponsiveCamOffset());
             camera.lookAt(yachtGroup.position.clone().add(new THREE.Vector3(-12, 0, -20)));
 
             window.addEventListener('resize', onResize);
+            window.addEventListener('orientationchange', scheduleResize);
+            window.addEventListener('pageshow', scheduleResize);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleResize);
+                window.visualViewport.addEventListener('scroll', scheduleResize);
+            }
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleResize(); });
+
             window.addEventListener('wheel', onWheel, { passive: false });
-            window.addEventListener('mousedown', onPointerDown);
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            renderer.domElement.addEventListener('dblclick', onDoubleClick);
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('keydown', onKey);
+            document.getElementById('modal').addEventListener('click', onModalBackdropClick);
 
-            document.getElementById('loading').style.display = 'none';
+            renderer.domElement.addEventListener('touchstart', onTouchStartPinch, { passive: true });
+            renderer.domElement.addEventListener('touchmove', onTouchMovePinch, { passive: false });
+            renderer.domElement.addEventListener('touchend', onTouchEndPinch, { passive: true });
+
+            // Idle detection for the guide-box revive.
+            window.addEventListener('pointerdown', onUserActivity);
+            window.addEventListener('keydown', onUserActivity);
+            window.addEventListener('wheel', onUserActivity, { passive: true });
+
+            buildNodeTracker();
+            applyTouchAwareGuideText();
+            initZoomButtons();
+
+            // Delay so the opacity transition is actually visible (previously hid #loading
+            // synchronously, which meant the fade-out CSS never had a chance to play).
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                loading.classList.add('fade-out');
+                const onFadeDone = () => { loading.style.display = 'none'; };
+                loading.addEventListener('transitionend', onFadeDone, { once: true });
+                setTimeout(onFadeDone, 700);
+
+                document.getElementById('hud').classList.add('revealed');
+                document.getElementById('guide-box').classList.add('revealed');
+                scheduleGuideHide();
+                resetGuideIdleTimer();
+            }, 800);
+
             animate(0);
         }
 
@@ -264,20 +601,43 @@
          * 3. 오브젝트 생성 함수
          */
 
+        // Ocean vertex deformation used to run on a single 20000x20000 / 128x128 plane (~16.6k
+        // vertices, CPU-deformed every frame) — the single most expensive per-frame cost on this
+        // page. Split into a small detail plane that follows the yacht (gets the wave deformation)
+        // and a huge static outer plane (no per-vertex work, just the horizon color). The outer
+        // plane carries the sea raycast (flat, y=0, fine for click-to-sail); the detail plane is
+        // NOT in interactiveObjects.
+        const DETAIL_PLANE_SIZE = 600;
+        const DETAIL_PLANE_SEGMENTS = 64;
+
         function createOcean() {
-            const geo = new THREE.PlaneGeometry(20000, 20000, 128, 128);
-            const mat = new THREE.MeshStandardMaterial({
-                color: 0x08314a,
+            // C1: darkened slightly (0x08314a -> 0x051f30) to match the lower ambient — with fill
+            // at 0.62 the old color still read a bit too bright/teal at the horizon.
+            const seaColorMat = () => new THREE.MeshStandardMaterial({
+                color: 0x051f30,
                 roughness: 0.18,
                 metalness: 0.42,
                 transparent: true,
                 opacity: 0.96
             });
-            const sea = new THREE.Mesh(geo, mat);
-            sea.rotation.x = -Math.PI / 2;
-            sea.userData = { isSea: true };
-            scene.add(sea);
-            interactiveObjects.push(sea);
+
+            // (a) Small detailed plane, follows the yacht, gets per-frame CPU wave deformation.
+            const detailGeo = new THREE.PlaneGeometry(DETAIL_PLANE_SIZE, DETAIL_PLANE_SIZE, DETAIL_PLANE_SEGMENTS, DETAIL_PLANE_SEGMENTS);
+            const detailMat = seaColorMat();
+            const detailSea = new THREE.Mesh(detailGeo, detailMat);
+            detailSea.rotation.x = -Math.PI / 2;
+            detailSea.renderOrder = 1;
+            scene.add(detailSea);
+
+            // (b) Huge static outer plane for the horizon — no per-vertex deformation, carries the
+            // sea raycast (userData.isSea) since it's flat/y=0 and covers the full clickable area.
+            const outerGeo = new THREE.PlaneGeometry(20000, 20000, 1, 1);
+            const outerMat = seaColorMat();
+            const outerSea = new THREE.Mesh(outerGeo, outerMat);
+            outerSea.rotation.x = -Math.PI / 2;
+            outerSea.userData = { isSea: true };
+            scene.add(outerSea);
+            interactiveObjects.push(outerSea);
 
             const sheen = new THREE.Mesh(
                 new THREE.PlaneGeometry(20000, 20000, 1, 1),
@@ -291,14 +651,21 @@
             sheen.position.y = 0.25;
             scene.add(sheen);
 
-            const pos = geo.attributes.position;
+            const pos = detailGeo.attributes.position;
             animators.push((time) => {
+                // Snap the detail plane's x/z under the yacht every frame so it always covers the
+                // camera's near field. Feed WORLD-space x/z into the sine functions (localX/localY +
+                // plane position) so the wave field is anchored to the world — otherwise the waves
+                // would visibly "swim" relative to the world whenever the plane moves with the yacht.
+                detailSea.position.x = yachtGroup.position.x;
+                detailSea.position.z = yachtGroup.position.z;
+
                 for (let i = 0; i < pos.count; i++) {
-                    const x = pos.getX(i);
-                    const y = pos.getY(i);
-                    const z = Math.sin(x * 0.018 + time * 0.00055) * 1.9 +
-                              Math.cos(y * 0.022 + time * 0.00042) * 1.1 +
-                              Math.sin((x + y) * 0.008 + time * 0.00085) * 1.4;
+                    const worldX = pos.getX(i) + detailSea.position.x;
+                    const worldY = pos.getY(i) + detailSea.position.z;
+                    const z = Math.sin(worldX * 0.018 + time * 0.00055) * 1.9 +
+                              Math.cos(worldY * 0.022 + time * 0.00042) * 1.1 +
+                              Math.sin((worldX + worldY) * 0.008 + time * 0.00085) * 1.4;
                     pos.setZ(i, z);
                 }
                 pos.needsUpdate = true;
@@ -306,37 +673,195 @@
             });
         }
 
+        // C1: moonlight glitter lane — the moon sits at (-900, 820, -2100); from the default camera
+        // (on the +x side of the yacht looking toward -x/-z) that's roughly toward the far -x/-z
+        // horizon. A long additive strip lying flat on the water along that azimuth, with a
+        // shimmering CanvasTexture animated via UV offset + opacity flicker, reads as its reflection.
+        // Banded-scroll rework (see README "구현 이력"): the old approach painted horizontal shimmer
+        // bands into a CanvasTexture and scrolled its y-offset. Even slowed 10x this still read as a
+        // regular, repeating stripe pattern (a "zebra-striped conveyor belt") and any offset animation
+        // at all implied directional flow, which was the user's core complaint ("뭔가 흘러가는 느낌").
+        // Replaced with two independent, non-scrolling pieces: (a) a single soft gradient texture with
+        // NO internal banding — bright only near the centerline, feathered to fully transparent at the
+        // long edges and the two ends, so it reads as a soft glow lane rather than a printed pattern;
+        // and (b) a small twinkling Points field scattered inside the lane footprint. Neither piece ever
+        // animates a texture offset or a position — only per-point/whole-lane opacity breathes.
+        function createGlitterGradientTexture() {
+            const w = 128, h = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, w, h);
+            // Cross-lane falloff: bright centerline feathering to transparent at the long edges.
+            const cross = ctx.createLinearGradient(0, 0, w, 0);
+            cross.addColorStop(0, 'rgba(230,250,255,0)');
+            cross.addColorStop(0.5, 'rgba(230,250,255,1)');
+            cross.addColorStop(1, 'rgba(230,250,255,0)');
+            ctx.fillStyle = cross;
+            ctx.fillRect(0, 0, w, h);
+            // Along-lane falloff: feather the two ends so the plane doesn't end in a hard edge.
+            ctx.globalCompositeOperation = 'destination-in';
+            const along = ctx.createLinearGradient(0, 0, 0, h);
+            along.addColorStop(0, 'rgba(0,0,0,0)');
+            along.addColorStop(0.12, 'rgba(0,0,0,1)');
+            along.addColorStop(0.88, 'rgba(0,0,0,1)');
+            along.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = along;
+            ctx.fillRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'source-over';
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.ClampToEdgeWrapping;
+            tex.wrapT = THREE.ClampToEdgeWrapping;
+            tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        }
+
+        function createGlitterPath() {
+            const glitterTex = createGlitterGradientTexture();
+
+            const geo = new THREE.PlaneGeometry(90, 2600, 1, 1);
+            const mat = new THREE.MeshBasicMaterial({
+                map: glitterTex,
+                color: 0xe8fbff,
+                transparent: true,
+                opacity: 0.24,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            });
+            const lane = new THREE.Mesh(geo, mat);
+            lane.rotation.x = -Math.PI / 2;
+            // renderOrder above the sea planes (both default to 0 except the detail plane at 1) —
+            // without this the huge opaque outer sea plane depth-tested the additive lane away at
+            // long distance even though the lane sits slightly above y=0 (confirmed via preview_eval:
+            // hiding the sea plane made the lane fully visible; bumping renderOrder instead of hiding
+            // fixed it while keeping the sea plane rendering normally).
+            lane.renderOrder = 5;
+            // Stretch the lane along local -z (before the pivot rotation below) out toward the
+            // moon's azimuth in the XZ plane. For a Y-rotation by theta, local (0,0,-1) maps to
+            // world (-sin(theta), 0, -cos(theta)); solving -sin(theta)=dx, -cos(theta)=dz for the
+            // normalized direction toward the moon (dx,dz) gives theta = atan2(-dx, -dz).
+            const moonDirX = -900, moonDirZ = -2100;
+            const azimuth = Math.atan2(-moonDirX, -moonDirZ);
+            const pivot = new THREE.Group();
+            pivot.rotation.y = azimuth;
+            lane.position.set(0, 0.3, -1300);
+            pivot.add(lane);
+            scene.add(pivot);
+
+            animators.push((time) => {
+                // Whole-lane opacity breathing only — no texture offset, no position change, so
+                // nothing about the lane itself can read as "flowing."
+                mat.opacity = 0.2 + Math.sin(time * 0.0009) * 0.06 + Math.sin(time * 0.0031) * 0.03;
+            });
+
+            createGlitterSparkles(pivot);
+        }
+
+        // Sparkle field: small additive Points scattered inside the lane footprint (inside the same
+        // pivot/rotation group as the gradient plane, so they line up with it and share the lane's
+        // moon-facing orientation) covering the stretch of sea near the visible route (roughly
+        // z -80..50 in lane-local space before the pivot rotation). Positions are fixed at creation —
+        // only each point's vertex-color brightness is rewritten per frame, on its own phase/speed, so
+        // sparkles twinkle in place with no shared rhythm and no translation whatsoever.
+        function createGlitterSparkles(pivot) {
+            const count = 120;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const phases = new Float32Array(count);
+            const speeds = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+                // Local space, pre-pivot-rotation: lane runs along -z, cross-lane spread narrower than
+                // the full 90-unit plane width so sparkles cluster near the bright centerline.
+                const lx = (Math.random() - 0.5) * 34;
+                const lz = -80 + Math.random() * -1180; // matches the plane's forward-of-lane stretch
+                positions[i * 3 + 0] = lx;
+                positions[i * 3 + 1] = 0.35 + Math.random() * 0.15;
+                positions[i * 3 + 2] = lz;
+
+                colors[i * 3 + 0] = 0.85 + Math.random() * 0.15;
+                colors[i * 3 + 1] = 0.94 + Math.random() * 0.06;
+                colors[i * 3 + 2] = 1.0;
+
+                phases[i] = Math.random() * Math.PI * 2;
+                speeds[i] = 0.0012 + Math.random() * 0.0018;
+            }
+
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const colorAttr = new THREE.Float32BufferAttribute(colors, 3);
+            colorAttr.setUsage(THREE.DynamicDrawUsage);
+            geo.setAttribute('color', colorAttr);
+
+            const mat = new THREE.PointsMaterial({
+                size: 1.6,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                sizeAttenuation: true,
+                fog: false
+            });
+
+            const points = new THREE.Points(geo, mat);
+            points.renderOrder = 6;
+            pivot.add(points);
+
+            const baseR = new Float32Array(count), baseG = new Float32Array(count), baseB = new Float32Array(count);
+            for (let i = 0; i < count; i++) {
+                baseR[i] = colors[i * 3 + 0];
+                baseG[i] = colors[i * 3 + 1];
+                baseB[i] = colors[i * 3 + 2];
+            }
+
+            animators.push((time) => {
+                // Per-point independent twinkle: each point's own phase/speed drives a brightness
+                // multiplier on its (fixed) base color, written into the color attribute. Only 120
+                // floats*3 touched per frame — cheap — and positions are never rewritten.
+                const arr = colorAttr.array;
+                for (let i = 0; i < count; i++) {
+                    const b = 0.35 + Math.max(0, Math.sin(time * speeds[i] + phases[i])) * 0.85;
+                    arr[i * 3 + 0] = baseR[i] * b;
+                    arr[i * 3 + 1] = baseG[i] * b;
+                    arr[i * 3 + 2] = baseB[i] * b;
+                }
+                colorAttr.needsUpdate = true;
+            });
+        }
+
         function createSpaceStars() {
             const starGeo = new THREE.BufferGeometry();
             const starPos = [];
             const starColors = [];
-            // 밀도를 대폭 축소 (30,000 -> 3,000)
-            const starCount = 1600; 
+            const starCount = 1600;
             for (let i = 0; i < starCount; i++) {
                 const r = 10000 + Math.random() * 5000;
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.acos(2 * Math.random() - 1);
-                
+
                 const x = r * Math.sin(phi) * Math.cos(theta);
-                const y = Math.abs(r * Math.sin(phi) * Math.sin(theta)); 
+                const y = Math.abs(r * Math.sin(phi) * Math.sin(theta));
                 const z = r * Math.cos(phi);
-                
+
                 starPos.push(x, y, z);
-                
+
                 const c = 0.8 + Math.random() * 0.2;
                 starColors.push(c, c, 1.0);
             }
             starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
             starGeo.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
-            
-            // 크기를 줄여(4.5 -> 2.0) 더 자연스러운 원경 표현
+
             const starMat = new THREE.PointsMaterial({
-                size: 2.0, 
+                size: 2.0,
                 vertexColors: true,
                 transparent: true,
                 opacity: 0.9,
                 depthWrite: false,
-                fog: false, 
+                fog: false,
                 sizeAttenuation: true
             });
             scene.add(new THREE.Points(starGeo, starMat));
@@ -360,6 +885,12 @@
             });
         }
 
+        // C6: shared warning-light geometry/materials for atoll towers — cheap since towers are
+        // 3000+ units out; a couple of small emissive dots per tower, some blinking on a square-wave.
+        const atollWarnGeo = new THREE.SphereGeometry(1.2, 6, 6);
+        const atollWarnMatWarm = new THREE.MeshBasicMaterial({ color: 0xffb347 });
+        const atollWarnMatRed = new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true });
+
         function createScrapAtolls() {
             const reefMat = new THREE.MeshStandardMaterial({ color: 0x20383f, roughness: 1, metalness: 0.08 });
             const lightMat = new THREE.MeshBasicMaterial({ color: 0x74eaff });
@@ -367,10 +898,11 @@
             for (let i = 0; i < 20; i++) {
                 const dist = 3000 + Math.random() * 5000;
                 const angle = Math.random() * Math.PI * 2;
-                
+
                 const group = new THREE.Group();
                 group.position.set(Math.cos(angle) * dist, -14, Math.sin(angle) * dist);
 
+                const blinkers = [];
                 const towers = 1 + Math.floor(Math.random() * 3);
                 for(let t=0; t<towers; t++) {
                     const h = 50 + Math.random() * 100;
@@ -383,16 +915,38 @@
                     const l = new THREE.Mesh(new THREE.SphereGeometry(3), lightMat);
                     l.position.set(tower.position.x, h + 5, tower.position.z);
                     group.add(l);
+
+                    // 1-2 tiny warning-light dots per tower; roughly half blink (red, square-wave
+                    // opacity with a random phase), the rest stay steady warm.
+                    const dotCount = 1 + Math.floor(Math.random() * 2);
+                    for (let d = 0; d < dotCount; d++) {
+                        const blinking = Math.random() < 0.5;
+                        const dot = new THREE.Mesh(atollWarnGeo, blinking ? atollWarnMatRed.clone() : atollWarnMatWarm);
+                        dot.position.set(
+                            tower.position.x + (Math.random() - 0.5) * w * 0.4,
+                            h * (0.4 + Math.random() * 0.5),
+                            tower.position.z + (Math.random() - 0.5) * w * 0.4
+                        );
+                        group.add(dot);
+                        if (blinking) blinkers.push({ dot, phase: Math.random() * Math.PI * 2 });
+                    }
                 }
                 scene.add(group);
-                animators.push((time) => { group.position.y = -14 + Math.sin(time * 0.0003 + i) * 2.2; });
+                animators.push((time) => {
+                    group.position.y = -14 + Math.sin(time * 0.0003 + i) * 2.2;
+                    blinkers.forEach(b => {
+                        b.dot.material.opacity = Math.sin(time * 0.004 + b.phase) > 0 ? 1 : 0.08;
+                    });
+                });
             }
         }
 
         function createDetailedYacht() {
             const hullMat = new THREE.MeshStandardMaterial({ color: 0xf7fbff, metalness: 0.42, roughness: 0.2 });
             const lowerHullMat = new THREE.MeshStandardMaterial({ color: 0x163746, metalness: 0.35, roughness: 0.42 });
-            const trimMat = new THREE.MeshStandardMaterial({ color: 0x5defff, emissive: 0x1fc9dd, emissiveIntensity: 0.45, metalness: 0.2, roughness: 0.22 });
+            // C1: emissiveIntensity nudged 0.45 -> 0.62 to compensate for the lower AmbientLight so
+            // the trim still reads clearly against the darker water.
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0x5defff, emissive: 0x1fc9dd, emissiveIntensity: 0.62, metalness: 0.2, roughness: 0.22 });
             const glassMat = new THREE.MeshStandardMaterial({ color: 0x94f8ff, transparent: true, opacity: 0.4, metalness: 0.08, roughness: 0.03 });
             const glowMat = new THREE.MeshBasicMaterial({ color: 0x74f4ff });
             const shadowMat = new THREE.MeshBasicMaterial({ color: 0x03131f, transparent: true, opacity: 0.26 });
@@ -488,6 +1042,69 @@
             wakeRing.position.y = 0.08;
             group.add(wakeRing);
 
+            // C5: V-wake — two elongated additive strips trailing behind the yacht (stern is +z
+            // locally), anchored to yachtGroup so they always trail correctly regardless of heading.
+            // Opacity lerps in/out reading isMoving so the wake fades in on navigateTo() and fades
+            // back out at rest instead of popping.
+            const wakeStripMat = new THREE.MeshBasicMaterial({
+                color: 0x8ff5ff,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            });
+            const wakeStripGeo = new THREE.PlaneGeometry(1.1, 14, 1, 6);
+            // Taper the strip toward the far end by pulling the outer-edge vertices inward, so it
+            // reads as a V-wake fanning out from the stern rather than a uniform rectangle.
+            (function taperWakeStrip(geo) {
+                const p = geo.attributes.position;
+                for (let i = 0; i < p.count; i++) {
+                    const y = p.getY(i); // -7..7 along length before offset below
+                    const t = (y + 7) / 14; // 0 at bow-side end, 1 at stern end
+                    const x = p.getX(i);
+                    p.setX(i, x * (0.15 + t * 0.85));
+                }
+                p.needsUpdate = true;
+            })(wakeStripGeo);
+
+            const wakeStripLeft = new THREE.Mesh(wakeStripGeo, wakeStripMat);
+            wakeStripLeft.rotation.x = -Math.PI / 2;
+            wakeStripLeft.position.set(-1.4, 0.06, 7 + 4.4 + 3);
+            wakeStripLeft.rotation.z = 0.12;
+            group.add(wakeStripLeft);
+
+            const wakeStripRight = new THREE.Mesh(wakeStripGeo, wakeStripMat.clone());
+            wakeStripRight.rotation.x = -Math.PI / 2;
+            wakeStripRight.position.set(1.4, 0.06, 7 + 4.4 + 3);
+            wakeStripRight.rotation.z = -0.12;
+            group.add(wakeStripRight);
+
+            // C5: foam speckles — a small Points system near the yacht, repositioned with the
+            // detail plane each frame so it stays close as the yacht sails. Very low opacity, subtle
+            // drift/twinkle via size/opacity modulation.
+            const foamCount = 200;
+            const foamPositions = new Float32Array(foamCount * 3);
+            for (let i = 0; i < foamCount; i++) {
+                foamPositions[i * 3] = (Math.random() - 0.5) * DETAIL_PLANE_SIZE;
+                foamPositions[i * 3 + 1] = 0.12 + Math.random() * 0.15;
+                foamPositions[i * 3 + 2] = (Math.random() - 0.5) * DETAIL_PLANE_SIZE;
+            }
+            const foamGeo = new THREE.BufferGeometry();
+            foamGeo.setAttribute('position', new THREE.Float32BufferAttribute(foamPositions, 3));
+            const foamMat = new THREE.PointsMaterial({
+                color: 0xdfffff,
+                size: 0.6,
+                transparent: true,
+                opacity: 0.18,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false,
+                sizeAttenuation: true
+            });
+            const foamPoints = new THREE.Points(foamGeo, foamMat);
+            scene.add(foamPoints);
+
             yachtGroup.add(group);
             scene.add(yachtGroup);
 
@@ -501,6 +1118,18 @@
                     shadow.scale.x = 1 + Math.sin(time * 0.0012) * 0.03;
                     shadow.scale.y = 1 + Math.cos(time * 0.0012) * 0.03;
                 }
+
+                const targetWakeOpacity = isMoving ? 0.4 : 0;
+                wakeStripMat.opacity += (targetWakeOpacity - wakeStripMat.opacity) * 0.06;
+                wakeStripRight.material.opacity += (targetWakeOpacity - wakeStripRight.material.opacity) * 0.06;
+
+                // Keep foam near the yacht (same follow trick as the detail plane) and give it a
+                // gentle drift/twinkle.
+                foamPoints.position.x = yachtGroup.position.x;
+                foamPoints.position.z = yachtGroup.position.z;
+                // Calming pass: halved the twinkle rate (0.0017 -> 0.0008) so the speckles don't read
+                // as fast drift/shimmer next to the yacht.
+                foamMat.opacity = 0.12 + Math.sin(time * 0.0008) * 0.06;
             });
         }
 
@@ -511,10 +1140,15 @@
             WORLD_DATA.forts.forEach(f => {
                 const group = new THREE.Group();
                 group.position.set(f.pos[0], 0, f.pos[2]);
+                // C2 (reverted): all forts are back on the -x side, so every screen faces +x (toward
+                // the lane/camera) with a fixed Math.PI/2. focusOnBillboard() itself stays generalized
+                // (normal-based, not hardcoded to one side) since that logic is strictly better and
+                // works fine for a one-sided layout too.
                 group.rotation.y = Math.PI / 2;
 
-                const baseMat = new THREE.MeshStandardMaterial({ color: 0x244958, metalness: 0.32, roughness: 0.72 });
-                
+                // C1: small emissive added so the fort hull stays readable now that ambient is lower.
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x244958, emissive: 0x0c1e26, emissiveIntensity: 0.5, metalness: 0.32, roughness: 0.72 });
+
                 const hull = new THREE.Mesh(new THREE.BoxGeometry(18, 1.6, 10), baseMat);
                 hull.position.y = 0.8;
                 group.add(hull);
@@ -537,14 +1171,18 @@
                 const screenMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true });
                 const screen = new THREE.Mesh(screenGeo, screenMat);
                 screen.position.set(0, 8.8, 0.55);
-                
+
                 loader.load(f.content.media, (tex) => {
                     tex.encoding = THREE.sRGBEncoding;
                     screenMat.map = tex;
                     screenMat.needsUpdate = true;
                 }, undefined, (err) => { screenMat.color.setHex(0x111111); });
 
-                screen.userData = { isContent: true, data: f.content };
+                // Hover hook: neon ring reference + tooltip title stashed on the screen's userData so
+                // onMouseMove can boost brightness / show #hover-tip without touching the flicker math
+                // (there is no flicker loop here yet, so hoverBoost is applied directly to opacity).
+                const neonRef = { hoverBoost: 1 };
+                screen.userData = { isContent: true, data: f.content, neonRef, tooltipTitle: f.content.title };
                 interactiveObjects.push(screen);
                 group.add(screen);
 
@@ -556,6 +1194,8 @@
                 neon.rotation.z = Math.PI / 4;
                 neon.scale.set(1, 0.56, 1);
                 group.add(neon);
+                neonRef.mat = neon.material;
+                neonRef.base = 0.9;
 
                 const glowDeck = new THREE.Mesh(
                     new THREE.CircleGeometry(4.5, 32),
@@ -569,11 +1209,33 @@
                 animators.push((time) => {
                     group.position.y = Math.sin(time * 0.0004 + f.pos[2]) * 0.5;
                     group.rotation.x = Math.sin(time * 0.0003 + f.pos[0]) * 0.05;
+                    neonRef.mat.opacity = Math.min(1, neonRef.base * neonRef.hoverBoost);
                 });
             });
         }
 
+        // C5: shared radial-gradient CanvasTexture for buoy bloom sprites (city's streetlight-halo
+        // pattern) — one texture, one additive SpriteMaterial base, reused across all 5 buoys.
+        function createBuoyHaloTexture() {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+            grad.addColorStop(0, 'rgba(200,250,255,0.9)');
+            grad.addColorStop(0.4, 'rgba(120,243,255,0.4)');
+            grad.addColorStop(1, 'rgba(120,243,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, size, size);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
         function createMarkerBuoys() {
+            const haloTex = createBuoyHaloTexture();
+
             WORLD_DATA.nodes.forEach(n => {
                 const group = new THREE.Group();
                 group.position.set(n.pos[0], 0, n.pos[2]);
@@ -590,9 +1252,22 @@
                 halo.position.y = 5.2;
                 group.add(halo);
 
-                const glow = new THREE.PointLight(0x78f3ff, 4, 45);
-                glow.position.y = 5.2;
-                group.add(glow);
+                // PointLight removed here (5 buoys -> 5 fewer dynamic lights): the bulb (MeshBasic)
+                // + halo already carry the glow via opacity pulse; only the shared horizonGlow
+                // PointLight remains in the whole scene.
+
+                // C5: bloom sprite at bulb height, additive, shared texture across all buoys.
+                const haloSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: haloTex,
+                    color: 0x9df6ff,
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                }));
+                haloSprite.scale.set(3.4, 3.4, 1);
+                haloSprite.position.y = 5.2;
+                group.add(haloSprite);
 
                 const hitbox = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 12), new THREE.MeshBasicMaterial({ visible: false }));
                 hitbox.userData = { isNode: true, id: n.id, label: n.label };
@@ -603,11 +1278,583 @@
                 animators.push((time) => {
                     group.position.y = Math.sin(time * 0.001 + n.pos[2]) * 0.65;
                     group.rotation.z = Math.cos(time * 0.0007) * 0.08;
-                    bulb.material.opacity = 0.3 + Math.sin(time * 0.01) * 0.7;
-                    glow.intensity = 2 + Math.sin(time * 0.01) * 4;
+                    // Calming pass: this was the single biggest offender — time*0.01 is a ~1.6Hz
+                    // strobe at 60fps (a full opacity swing roughly every 0.6s), and the huge 0.3-1.0
+                    // range made it read as a fast flashing light rather than a slow buoy pulse.
+                    // Slowed ~3x (0.01 -> 0.003) and narrowed the range to 0.55 +/- 0.35.
+                    bulb.material.opacity = 0.55 + Math.sin(time * 0.003) * 0.35;
                     halo.scale.setScalar(1 + Math.sin(time * 0.003 + n.pos[2]) * 0.08);
+                    haloSprite.material.opacity = 0.4 + Math.sin(time * 0.003) * 0.2;
                 });
             });
+        }
+
+        // C3: lighthouse — tapered tower w/ color bands + rotating additive beam (no real light).
+        // Relocated from (45, -22) to the far-left background: at +x it sat on the same side of the
+        // lane the camera's view cone never covers (CAM_OFFSET is +x/+z, lookAt biased toward -x/-z —
+        // see the CAM_OFFSET note above WORLD_DATA), so the rotating beam was effectively never seen.
+        // (-85, -90) sits behind/beyond the village clusters on -x, still swinging its beam across a
+        // stretch of sea that's actually in frame.
+        // Village scale-up pass: grown 1.5x to anchor the skyline now that the village clusters in
+        // front of it read much larger (VILLAGE_CLUSTER_SCALE) — at the old size the lighthouse would
+        // have looked undersized relative to its own foreground village.
+        const LIGHTHOUSE_SCALE = 1.5;
+
+        function createLighthouse() {
+            const group = new THREE.Group();
+            group.position.set(LIGHTHOUSE_POS.x, 0, LIGHTHOUSE_POS.z);
+            group.scale.setScalar(LIGHTHOUSE_SCALE);
+
+            const bandMatA = new THREE.MeshStandardMaterial({ color: 0xe6e9e6, roughness: 0.7, metalness: 0.05 });
+            const bandMatB = new THREE.MeshStandardMaterial({ color: 0xb3222c, roughness: 0.7, metalness: 0.05 });
+
+            const bandHeights = [7, 7, 6];
+            let y = 0;
+            bandHeights.forEach((h, i) => {
+                const rBottom = 3.2 - i * 0.55;
+                const rTop = 3.2 - (i + 1) * 0.55;
+                const band = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, 14), i % 2 === 0 ? bandMatA : bandMatB);
+                band.position.y = y + h / 2;
+                group.add(band);
+                y += h;
+            });
+
+            const housing = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.9, 2.4, 12), new THREE.MeshStandardMaterial({ color: 0x1c2630, roughness: 0.5, metalness: 0.3 }));
+            housing.position.y = y + 1.2;
+            group.add(housing);
+
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(2.1, 1.8, 12), new THREE.MeshStandardMaterial({ color: 0x1c2630, roughness: 0.6 }));
+            roof.position.y = y + 2.4 + 0.9;
+            group.add(roof);
+
+            // Rotating beam pivot: two additive cones pointing opposite directions, plus a small
+            // emissive bulb sphere at the housing center. No THREE.Light involved.
+            const beamPivot = new THREE.Group();
+            beamPivot.position.y = y + 1.2;
+            group.add(beamPivot);
+
+            // Sized relative to the yacht (~9 units long) and the lighthouse's own ~20-unit tower
+            // height, not to the km-scale backdrop — a 90-unit beam dwarfed the whole near scene
+            // when first tried (visibly filled most of the sky from typical camera distance).
+            const beamFadeCanvas = document.createElement('canvas');
+            beamFadeCanvas.width = 512;
+            beamFadeCanvas.height = 160;
+            const beamFadeCtx = beamFadeCanvas.getContext('2d');
+            beamFadeCtx.clearRect(0, 0, beamFadeCanvas.width, beamFadeCanvas.height);
+            for (let x = 0; x < beamFadeCanvas.width; x++) {
+                const t = x / (beamFadeCanvas.width - 1);
+                const halfHeight = 6 + t * 66;
+                const alpha = Math.pow(1 - t, 1.7) * 0.62;
+                const y0 = beamFadeCanvas.height / 2 - halfHeight;
+                const y1 = beamFadeCanvas.height / 2 + halfHeight;
+                const grad = beamFadeCtx.createLinearGradient(0, y0, 0, y1);
+                grad.addColorStop(0, 'rgba(255,255,255,0)');
+                grad.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+                grad.addColorStop(1, 'rgba(255,255,255,0)');
+                beamFadeCtx.fillStyle = grad;
+                beamFadeCtx.fillRect(x, y0, 1, y1 - y0);
+            }
+            const beamFadeTex = new THREE.CanvasTexture(beamFadeCanvas);
+            beamFadeTex.encoding = THREE.sRGBEncoding;
+
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0xfff3c2,
+                map: beamFadeTex,
+                transparent: true,
+                opacity: 0.42,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false,
+                side: THREE.DoubleSide
+            });
+            const beamGeo = new THREE.PlaneGeometry(36, 12);
+            const beamA = new THREE.Mesh(beamGeo, beamMat);
+            beamA.rotation.y = -Math.PI / 2;
+            beamA.position.z = 18;
+            beamPivot.add(beamA);
+            const beamB = new THREE.Mesh(beamGeo, beamMat.clone());
+            beamB.material.map = beamFadeTex;
+            beamB.rotation.y = Math.PI / 2;
+            beamB.position.z = -18;
+            beamPivot.add(beamB);
+
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 10), new THREE.MeshBasicMaterial({ color: 0xfff8dc }));
+            beamPivot.add(bulb);
+
+            scene.add(group);
+            // animators[] only receives `time` (ms) here, not dt, so derive an absolute angle from
+            // time directly rather than accumulating a per-frame delta (keeps it framerate-independent).
+            animators.push((time) => {
+                beamPivot.rotation.y = time * 0.0006;
+            });
+        }
+
+        // C3: rocky islets + a half-sunken shipwreck, all static, none in interactiveObjects.
+        // Three extra islets added alongside the -x village clusters (VILLAGE_CLUSTERS, see C7 below,
+        // now at z=-8/-35/-65/-100) so the settlement reads as "built on reefs" rather than floating
+        // in open water — placed just outside each cluster's hut radius (huts spread 6-13 units from
+        // cluster center) so rocks sit beside, not on top of, the huts.
+        function createIsletsAndWreck() {
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x2b2f30, roughness: 0.95, metalness: 0.05 });
+            const foamMat = new THREE.MeshBasicMaterial({ color: 0xbdf3ff, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+
+            const islets = [
+                { x: -45, z: 10 },
+                { x: 40, z: -45 },
+                { x: -70, z: -22 },
+                { x: -68, z: -50 },
+                { x: -42, z: -95 }
+            ];
+            islets.forEach((pos, i) => {
+                const group = new THREE.Group();
+                group.position.set(pos.x, 0, pos.z);
+
+                const rockCount = 2 + Math.floor(Math.random() * 2);
+                for (let r = 0; r < rockCount; r++) {
+                    const scale = 2.2 + Math.random() * 3.2;
+                    const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), rockMat);
+                    rock.scale.set(scale, scale * (0.7 + Math.random() * 0.5), scale);
+                    rock.position.set((Math.random() - 0.5) * 6, scale * 0.35 - 0.6, (Math.random() - 0.5) * 6);
+                    rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                    group.add(rock);
+                }
+
+                const foam = new THREE.Mesh(new THREE.RingGeometry(4.2, 5.6, 24), foamMat);
+                foam.rotation.x = -Math.PI / 2;
+                foam.position.y = 0.15;
+                group.add(foam);
+
+                scene.add(group);
+                animators.push((time) => {
+                    foam.material.opacity = 0.16 + Math.sin(time * 0.0012 + i) * 0.08;
+                });
+            });
+
+            // Half-sunken shipwreck near the first islet: listing hull (rolled boxes, partly below
+            // y=0) + a broken mast. Dark rusted material.
+            const wreckMat = new THREE.MeshStandardMaterial({ color: 0x3a2a22, roughness: 0.9, metalness: 0.2 });
+            const wreckGroup = new THREE.Group();
+            wreckGroup.position.set(-40, 0, 4);
+            wreckGroup.rotation.z = THREE.MathUtils.degToRad(28);
+            wreckGroup.rotation.y = 0.4;
+
+            const hull = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.4, 11), wreckMat);
+            hull.position.y = -0.6;
+            wreckGroup.add(hull);
+
+            const deckBreak = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.6, 4), wreckMat);
+            deckBreak.position.set(0, 0.7, 2.5);
+            wreckGroup.add(deckBreak);
+
+            const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 5, 6), wreckMat);
+            mast.position.set(0.4, 2.2, -2);
+            mast.rotation.z = 0.5;
+            wreckGroup.add(mast);
+
+            scene.add(wreckGroup);
+        }
+
+        // C7: 해상 마을 (marine village) — moved to the -x background behind/around the billboard
+        // forts (still all at x=-25, unmoved — see WORLD_DATA.forts). Stilt-hut clusters + connecting
+        // piers + moored boats + a lantern "village center" fill it out so the sail route reads as
+        // passing a floating settlement. Everything here is static/non-interactive (not pushed into
+        // interactiveObjects) and uses shared geometries/materials across huts — no new PointLights,
+        // only emissive meshes + additive sprites (reusing createBuoyHaloTexture's halo texture for
+        // the lantern cluster).
+        // Relocation history: the first version placed clusters at x=16-22 (near/beyond the +x-side
+        // forts before those were reverted to all-x=-25) reasoning that camera distance would carry
+        // them into frame once "far enough ahead." In practice they read at best as a speck at the far
+        // right screen edge, because CAM_OFFSET(18,12,25) sits the camera at +x/+z relative to the
+        // yacht and lookAt aims toward yacht+(-12,1.5,-18) — i.e. the view cone points toward -x/-z,
+        // and *any* +x-side scenery is on the same side as the camera itself, so it can only ever
+        // appear at the extreme edge of frame or behind the camera, never as a readable background
+        // presence (verified via preview_eval angle-from-lookAt checks in the earlier pass).
+        // The -x background (x=-45..-70), by contrast, sits deep inside the lookAt cone at every node
+        // (the -25 forts prove this — they read as dead-ahead) and is never occluded by the lane or
+        // the buoy hitboxes (both near x=0..8).
+        // z placement was verified numerically, not eyeballed: for each node z in WORLD_DATA.nodes
+        // (40, 15, -10, -35, -60), computed camera.position/lookAt exactly as animate() does, then
+        // projected candidate cluster positions through camera.project() to read off NDC x (in-frame
+        // iff roughly within [-1, 1]). That surfaced the same rule the original comment guessed at —
+        // a cluster only lands on-screen once it's meaningfully AHEAD of the yacht (more negative z)
+        // — and gave concrete numbers instead of "35+ units": at x~=-50..-65, an offset of about
+        // 40-90 units ahead of the yacht's current z keeps a cluster's NDC x inside roughly
+        // [-1.0, 0.4]. z = -8, -35, -65, -100 with this x range gives every one of the 5 nodes at
+        // least two clusters comfortably on-screen (confirmed per-node NDC x below); n4 (z=-60, the
+        // tightest case) was the reason the last cluster sits as far as z=-100 rather than -70 as
+        // first tried — at -70 it projected to NDC x=-1.5..-1.7 (off the left edge) from n4.
+        //   n0(z=40):  clusters@-8,-35,-65,-100 -> ndcX -0.37,-0.17,0.37,0.48
+        //   n1(z=15):  ndcX -0.95,-0.56,0.13,0.30
+        //   n2(z=-10): ndcX -1.92,-1.12,-0.21,0.07
+        //   n3(z=-35): ndcX -3.91,-2.02,-0.72,-0.24
+        //   n4(z=-60): ndcX -10.25,-3.70,-1.55,-0.69
+        // "Barely visible" fix: instead of only bumping individual hut/boat/pier scales, apply one
+        // shared scale multiplier to the whole clusterGroup (huts + piers + boats all grow together,
+        // proportionally, with zero extra per-mesh code). 1.4x (combined with the hut-local range
+        // bump below) turns the previous "specks" into clearly-readable buildings from every node
+        // without needing to move the clusters any closer to the lane (which risked opening up
+        // billboard-occlusion angles — see the occlusion check in the 구현 이력 below). A first attempt
+        // at 2.0x was tried and reverted — screenshots showed huts looming far larger than the
+        // billboards themselves, reading as foreground clutter rather than background village
+        // presence, even though they never actually occluded a billboard raycast. Waterline math in
+        // createStiltHut() is unaffected by this multiplier: waterlineY there is defined relative to
+        // the hut's OWN local origin (pre-scale), and clusterGroup.scale scales that whole local frame
+        // uniformly including y=0 at the cluster's position.y=0 — so the stilt legs still terminate at
+        // the (scaled) waterline plane, which is still the real sea level, just as before.
+        const VILLAGE_CLUSTER_SCALE = 1.4;
+        const VILLAGE_CLUSTERS = [
+            { x: -50, z: -8, count: 4 },
+            { x: -62, z: -35, count: 4 },
+            { x: -48, z: -65, count: 3 },
+            { x: -58, z: -100, count: 4 }
+        ];
+
+        const hutBodyGeo = new THREE.BoxGeometry(4.2, 2.6, 4.2);
+        const hutRoofGeo = new THREE.ConeGeometry(3.4, 2.2, 4);
+        const hutLegGeo = new THREE.CylinderGeometry(0.18, 0.22, 6, 6);
+        const hutBodyMat = new THREE.MeshStandardMaterial({ color: 0x5a4634, roughness: 0.85, metalness: 0.05 });
+        const hutRoofMat = new THREE.MeshStandardMaterial({ color: 0x3a2c1f, roughness: 0.9, metalness: 0.05 });
+        const hutLegMat = new THREE.MeshStandardMaterial({ color: 0x2c2117, roughness: 0.9, metalness: 0.1 });
+        // DoubleSide: huts get a random Y rotation, so a single-sided window would be invisible
+        // whenever the hut happens to rotate its window wall away from the camera.
+        // Brightened 0xffcf8a -> 0xffe0a0 (warmer/lighter) so the windows read clearly against the
+        // night fog at village-scenery viewing distance.
+        const hutWindowMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0, side: THREE.DoubleSide });
+        const pierDeckGeo = new THREE.BoxGeometry(2.2, 0.35, 6);
+        const pierPostGeo = new THREE.CylinderGeometry(0.15, 0.18, 5.6, 6);
+        const boatHullGeo = new THREE.BoxGeometry(1.3, 0.8, 4.2);
+        const boatMat = new THREE.MeshStandardMaterial({ color: 0x6b4a34, roughness: 0.8, metalness: 0.05 });
+        const lanternGeo = new THREE.SphereGeometry(0.35, 8, 8);
+        const lanternMat = new THREE.MeshBasicMaterial({ color: 0xffcf8a });
+
+        function createStiltHut(scale, rotY, waterlineY) {
+            const group = new THREE.Group();
+
+            const legOffsets = [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]];
+            legOffsets.forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(hutLegGeo, hutLegMat);
+                leg.position.set(lx, waterlineY - 2.4, lz);
+                group.add(leg);
+            });
+
+            const body = new THREE.Mesh(hutBodyGeo, hutBodyMat);
+            body.position.y = waterlineY + 1.3;
+            group.add(body);
+
+            const roof = new THREE.Mesh(hutRoofGeo, hutRoofMat);
+            roof.position.y = waterlineY + 2.6 + 1.1;
+            roof.rotation.y = Math.PI / 4;
+            group.add(roof);
+
+            // Windows sit on the +x face so they face the camera/lane side. The village now sits in
+            // the -x background (x=-45..-75) while the camera follows from the yacht's +x/+z side, so
+            // the camera is still on the hut's +x side — the same face placement carries over
+            // unchanged. (The first version put them at x=-2.11 with a +x normal — i.e. on the far
+            // wall facing INTO the hut — so the warm lights were never visible and the village
+            // read as unlit at night.)
+            const windowCount = 1 + Math.floor(Math.random() * 2);
+            for (let w = 0; w < windowCount; w++) {
+                // Enlarged 0.6 -> 1.0 (was reading as a barely-visible dot once village scenery sits
+                // 30-55 units out; this is local/pre-scale size, so VILLAGE_CLUSTER_SCALE multiplies
+                // it again on top).
+                const win = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), hutWindowMat);
+                win.position.set(2.11, waterlineY + 1.3 + (w - 0.2) * 0.3, 1.4 - w * 1.4);
+                win.rotation.y = Math.PI / 2;
+                group.add(win);
+            }
+
+            group.scale.setScalar(scale);
+            group.rotation.y = rotY;
+            return group;
+        }
+
+        function createVillage() {
+            const haloTex = createBuoyHaloTexture();
+
+            VILLAGE_CLUSTERS.forEach((cluster) => {
+                const clusterGroup = new THREE.Group();
+                clusterGroup.position.set(cluster.x, 0, cluster.z);
+                clusterGroup.scale.setScalar(VILLAGE_CLUSTER_SCALE);
+                scene.add(clusterGroup);
+
+                const huts = [];
+                for (let i = 0; i < cluster.count; i++) {
+                    // Half-circle spread biased AWAY from the lane. Cluster centers are now on -x, so
+                    // "away from the lane" is the -x direction (angle centered on PI, not -PI/2 as when
+                    // clusters lived on +x) — this keeps huts from drifting back toward x=0 and
+                    // crowding the fort billboards at x=-25 or the buoy hitboxes near x=0..8.
+                    const angle = Math.PI / 2 + (i / Math.max(1, cluster.count - 1)) * Math.PI + (Math.random() - 0.5) * 0.4;
+                    const radius = 6 + Math.random() * 7;
+                    // Village now sits ~30-55 units out from the lane as background scenery. This
+                    // local per-hut scale (2.1-3.0) is multiplied again by VILLAGE_CLUSTER_SCALE (1.4)
+                    // on the parent clusterGroup, giving an effective hut scale of ~3.0-4.2 — the huts
+                    // that at the old 1.6-2.4 (no cluster multiplier) read as tiny specks now read as
+                    // unmistakable buildings (roof + windows visible at a glance) without the huts
+                    // swamping the whole frame (a first pass at cluster-scale 2.0 did exactly that —
+                    // screenshots showed huts looming far larger than the billboards, reading as
+                    // foreground rather than background scenery, even though they never actually
+                    // occluded the billboard raycasts).
+                    const scale = 2.1 + Math.random() * 0.9;
+                    const waterlineY = 0.6 + Math.random() * 0.5;
+                    const hut = createStiltHut(scale, Math.random() * Math.PI * 2, waterlineY);
+                    hut.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+                    clusterGroup.add(hut);
+                    huts.push({ hut, phase: Math.random() * Math.PI * 2, baseY: 0 });
+                }
+
+                // Connecting piers/walkways between consecutive huts in the cluster.
+                for (let i = 0; i < huts.length; i++) {
+                    const a = huts[i].hut.position;
+                    const b = huts[(i + 1) % huts.length].hut.position;
+                    const mx = (a.x + b.x) / 2;
+                    const mz = (a.z + b.z) / 2;
+                    const dx = b.x - a.x;
+                    const dz = b.z - a.z;
+                    const len = Math.sqrt(dx * dx + dz * dz);
+                    if (len < 4 || len > 26) continue; // skip degenerate/too-far pairs
+
+                    const pierGroup = new THREE.Group();
+                    pierGroup.position.set(mx, 0.55 + Math.random() * 0.3, mz);
+                    pierGroup.rotation.y = Math.atan2(dx, dz) + Math.PI / 2;
+                    // Reuse the shared deck geometry via per-instance scale instead of building a new
+                    // BufferGeometry per pier.
+                    const deck = new THREE.Mesh(pierDeckGeo, hutLegMat);
+                    deck.scale.set(1, 1, len / 6);
+                    pierGroup.add(deck);
+
+                    const post1 = new THREE.Mesh(pierPostGeo, hutLegMat);
+                    post1.position.set(0, -2.6, len / 2 - 1);
+                    pierGroup.add(post1);
+                    const post2 = new THREE.Mesh(pierPostGeo, hutLegMat);
+                    post2.position.set(0, -2.6, -(len / 2 - 1));
+                    pierGroup.add(post2);
+
+                    clusterGroup.add(pierGroup);
+                }
+
+                // Moored small boats bobbing gently near a pier edge.
+                const boatCount = 1 + Math.floor(Math.random() * 2);
+                const boats = [];
+                for (let b = 0; b < boatCount; b++) {
+                    const boat = new THREE.Mesh(boatHullGeo, boatMat);
+                    const ref = huts[Math.floor(Math.random() * huts.length)].hut.position;
+                    boat.position.set(ref.x + 3 + Math.random() * 2, 0.35, ref.z + (Math.random() - 0.5) * 4);
+                    boat.rotation.y = Math.random() * Math.PI * 2;
+                    clusterGroup.add(boat);
+                    boats.push({ boat, phase: Math.random() * Math.PI * 2, baseY: boat.position.y });
+                }
+
+                animators.push((time) => {
+                    huts.forEach(({ hut, phase }) => {
+                        hut.position.y = Math.sin(time * 0.0004 + phase) * 0.18;
+                    });
+                    boats.forEach(({ boat, phase, baseY }) => {
+                        boat.position.y = baseY + Math.sin(time * 0.0006 + phase) * 0.1;
+                        boat.rotation.z = Math.sin(time * 0.0005 + phase) * 0.04;
+                    });
+                });
+            });
+
+            // Village-center focal point(s): a taller platform + warm lantern cluster, with an
+            // additive halo sprite (reusing the buoy halo texture/pattern). Factored into a helper so
+            // two focal points can be placed — one near the z=-5 cluster, one near the z=-70 cluster —
+            // giving the now-longer -x village two separate landmark glows along the route instead of
+            // just one in the middle.
+            function createLanternFocalPoint(x, z) {
+                const centerGroup = new THREE.Group();
+                centerGroup.position.set(x, 0, z);
+                // Scaled up alongside the hut clusters (VILLAGE_CLUSTER_SCALE) so the lantern
+                // landmarks stay proportionate to the now-larger huts around them.
+                centerGroup.scale.setScalar(VILLAGE_CLUSTER_SCALE);
+                scene.add(centerGroup);
+
+                const platform = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 5, 1.2, 10), hutLegMat);
+                platform.position.y = 1.6;
+                centerGroup.add(platform);
+                const platformLegs = [[-3, -3], [3, -3], [-3, 3], [3, 3]];
+                platformLegs.forEach(([lx, lz]) => {
+                    const leg = new THREE.Mesh(hutLegGeo, hutLegMat);
+                    leg.scale.y = 1.4;
+                    leg.position.set(lx, -3.4, lz);
+                    centerGroup.add(leg);
+                });
+
+                const lanternPost = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 4, 6), hutLegMat);
+                lanternPost.position.y = 4.2;
+                centerGroup.add(lanternPost);
+
+                const lanternCluster = [];
+                for (let i = 0; i < 4; i++) {
+                    const a = (i / 4) * Math.PI * 2;
+                    const lantern = new THREE.Mesh(lanternGeo, lanternMat.clone());
+                    lantern.position.set(Math.cos(a) * 1.2, 6.1, Math.sin(a) * 1.2);
+                    centerGroup.add(lantern);
+                    lanternCluster.push({ lantern, phase: Math.random() * Math.PI * 2 });
+                }
+
+                const lanternHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: haloTex,
+                    color: 0xffcf8a,
+                    transparent: true,
+                    opacity: 0.5,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                }));
+                // Enlarged 9 -> 13 so the halo still reads as a clear landmark glow at the new
+                // village scale/distance (it's inside centerGroup, so VILLAGE_CLUSTER_SCALE would
+                // have grown it automatically too, but the base size was bumped as well since a
+                // sprite's on-screen size is what actually needs to read at night, not just its
+                // world-space radius).
+                lanternHalo.scale.set(13, 13, 1);
+                lanternHalo.position.y = 6.1;
+                centerGroup.add(lanternHalo);
+
+                animators.push((time) => {
+                    lanternCluster.forEach(({ lantern, phase }) => {
+                        // Same slow-breathe cadence as the calmed buoy pulse (0.003), not a fast strobe.
+                        lantern.material.opacity = 0.7 + Math.sin(time * 0.003 + phase) * 0.25;
+                    });
+                    lanternHalo.material.opacity = 0.42 + Math.sin(time * 0.003) * 0.12;
+                });
+            }
+
+            createLanternFocalPoint(-58, -35);
+            createLanternFocalPoint(-62, -100);
+        }
+
+        // Ported from city's disposeObject3D — spawned ships build fresh geometries/materials every
+        // time; without this, scene.remove() only detaches them from the graph and the GPU/JS memory
+        // leaks a little more with every ship (city had a real leak from skipping this).
+        function disposeObject3D(root) {
+            root.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+                    materials.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        if (mat.emissiveMap) mat.emissiveMap.dispose();
+                        mat.dispose();
+                    });
+                }
+            });
+        }
+
+        // C4: distant cargo ship silhouette — dark hull + bridge block + a few emissive window dots
+        // + one masthead light dot. Moves parallel to the horizon (along x, at a fixed far z) so it
+        // never nears the play area.
+        function createCargoShip(direction, route) {
+            const group = new THREE.Group();
+            const hullMat = new THREE.MeshBasicMaterial({ color: 0x0a1218 });
+            const windowMat = new THREE.MeshBasicMaterial({ color: 0xffdd88 });
+            const mastLightMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
+
+            const hull = new THREE.Mesh(new THREE.BoxGeometry(20, 3.6, 5.2), hullMat);
+            hull.position.y = 1.8;
+            group.add(hull);
+
+            const bridge = new THREE.Mesh(new THREE.BoxGeometry(4.2, 4.5, 3.8), hullMat);
+            bridge.position.set(direction > 0 ? -6.5 : 6.5, 5.8, 0);
+            group.add(bridge);
+
+            const windowCount = 2 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < windowCount; i++) {
+                const w = new THREE.Mesh(new THREE.SphereGeometry(0.28, 6, 6), windowMat);
+                w.position.set(bridge.position.x + (i - windowCount / 2) * 0.9, 6.5, 2.1);
+                group.add(w);
+            }
+
+            const mastLight = new THREE.Mesh(new THREE.SphereGeometry(0.38, 6, 6), mastLightMat);
+            mastLight.position.set(bridge.position.x, 8.7, 0);
+            group.add(mastLight);
+
+            group.position.set(route.startX, 0, route.z);
+            group.userData.direction = direction;
+            group.userData.speed = 2.4 + Math.random() * 1.6;
+            group.userData.mastLight = mastLight;
+            group.userData.endX = route.endX;
+            return group;
+        }
+
+        function updateShipTraffic(time) {
+            const dt = lastShipFrameTime ? (time - lastShipFrameTime) / 1000 : 0;
+            lastShipFrameTime = time;
+
+            if (time > nextShipSpawn) {
+                const direction = Math.random() < 0.5 ? 1 : -1;
+                const routeCenterX = LIGHTHOUSE_POS.x + 38;
+                const span = 72 + Math.random() * 28;
+                const route = {
+                    startX: routeCenterX + (direction > 0 ? -span : span),
+                    endX: routeCenterX + (direction > 0 ? span : -span),
+                    z: LIGHTHOUSE_POS.z - 38 - Math.random() * 34
+                };
+                const ship = createCargoShip(direction, route);
+                scene.add(ship);
+                activeShips.push(ship);
+                nextShipSpawn = time + 14000 + Math.random() * 16000;
+            }
+
+            activeShips = activeShips.filter(ship => {
+                ship.position.x += ship.userData.direction * ship.userData.speed * dt;
+                ship.userData.mastLight.material.opacity = 1;
+                if ((ship.userData.direction > 0 && ship.position.x > ship.userData.endX) ||
+                    (ship.userData.direction < 0 && ship.position.x < ship.userData.endX)) {
+                    scene.remove(ship);
+                    disposeObject3D(ship);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // C4: seagulls — a handful of tiny 2-triangle "V" shapes circling near the lighthouse/islets,
+        // with a slow flap wobble via scale. Kept as a small group (not worth an InstancedMesh at 5).
+        function createSeagullGeometry() {
+            const shape = new THREE.BufferGeometry();
+            // A shallow "V" — two thin triangles meeting at the center, wingtip up.
+            const verts = new Float32Array([
+                -0.6, 0.15, 0, 0, 0, 0, 0, 0.15, -0.6,
+                0, 0, 0, 0.6, 0.15, 0, 0, 0.15, -0.6
+            ]);
+            shape.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+            shape.computeVertexNormals();
+            return shape;
+        }
+
+        function createBackgroundLife() {
+            const gullGeo = createSeagullGeometry();
+            const gullMat = new THREE.MeshBasicMaterial({ color: 0xc9d8dd, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+
+            const CIRCLE_CENTER = { x: LIGHTHOUSE_POS.x + 14, z: LIGHTHOUSE_POS.z + 8 };
+            const gullCount = 7;
+            const gulls = [];
+            for (let i = 0; i < gullCount; i++) {
+                const gull = new THREE.Mesh(gullGeo, gullMat);
+                gull.userData.angle = (i / gullCount) * Math.PI * 2;
+                gull.userData.radius = 10 + Math.random() * 18;
+                gull.userData.height = 28 + Math.random() * 12;
+                // Calming pass: halved circling angular speed (was 0.00025-0.0004).
+                gull.userData.speed = 0.000125 + Math.random() * 0.000075;
+                scene.add(gull);
+                gulls.push(gull);
+            }
+
+            animators.push((time) => {
+                gulls.forEach((gull, i) => {
+                    const a = gull.userData.angle + time * gull.userData.speed;
+                    gull.position.set(
+                        CIRCLE_CENTER.x + Math.cos(a) * gull.userData.radius,
+                        gull.userData.height + Math.sin(time * 0.002 + i) * 1.2,
+                        CIRCLE_CENTER.z + Math.sin(a) * gull.userData.radius
+                    );
+                    gull.rotation.y = -a + Math.PI / 2;
+                    // Calming pass: halved flap wobble rate (was 0.012).
+                    const flap = 0.7 + Math.abs(Math.sin(time * 0.006 + i * 1.7)) * 0.5;
+                    gull.scale.set(1, 1, flap);
+                });
+            });
+
+            animators.push(updateShipTraffic);
         }
 
         /**
@@ -617,17 +1864,17 @@
         async function navigateTo(targetId) {
             if (isMoving || isInspecting || currentNodeId === targetId) return;
             isMoving = true;
-            
+
             const startIdx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
             const endIdx = WORLD_DATA.nodes.findIndex(n => n.id === targetId);
             const dir = endIdx > startIdx ? 1 : -1;
 
             for (let i = startIdx + dir; dir > 0 ? i <= endIdx : i >= endIdx; i += dir) {
                 const node = WORLD_DATA.nodes[i];
-                const targetX = 0; 
+                const targetX = 0;
                 const targetZ = node.pos[2];
                 const angle = Math.atan2(yachtGroup.position.x - targetX, yachtGroup.position.z - targetZ);
-                
+
                 new TWEEN.Tween(yachtGroup.rotation).to({ y: angle }, 800).easing(TWEEN.Easing.Quadratic.Out).start();
 
                 await new Promise(res => {
@@ -639,39 +1886,77 @@
                 });
                 currentNodeId = node.id;
                 document.getElementById('current-node').innerText = node.label;
+                updateNodeTrackerActive();
             }
             isMoving = false;
         }
 
+        // Split into pointerdown (single-click: node/sea actions) + a dedicated dblclick event
+        // (billboard focus), replacing the old manual lastClickTime timing hack. dblclick fires
+        // natively for double-taps on mobile Chrome/Safari, so touch double-tap keeps working.
         function onPointerDown(e) {
             if (isMoving || isInspecting) return;
-            const now = Date.now();
-            const diff = now - lastClickTime;
-            lastClickTime = now;
 
             updatePointer(e);
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(interactiveObjects, true);
-            
-            if (hits.length > 0) {
-                const obj = hits[0].object;
-                if (diff < 350 && (obj.userData.isContent || obj.parent.userData?.isContent)) {
-                    focusOnBillboard(obj.userData.isContent ? obj : obj.parent);
-                } else if (obj.userData.isNode) {
-                    navigateTo(obj.userData.id);
-                } else if (obj.userData.isSea) {
-                    const pt = hits[0].point;
-                    const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
-                    if (pt.z < yachtGroup.position.z - 8 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
-                    else if (pt.z > yachtGroup.position.z + 8 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
-                }
+            if (hits.length === 0) return;
+
+            const obj = hits[0].object;
+            if (obj.userData.isNode) {
+                navigateTo(obj.userData.id);
+            } else if (obj.userData.isSea) {
+                const pt = hits[0].point;
+                const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+                if (pt.z < yachtGroup.position.z - 8 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+                else if (pt.z > yachtGroup.position.z + 8 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
             }
         }
 
+        function onDoubleClick(e) {
+            if (isMoving || isInspecting) return;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(interactiveObjects, true);
+            if (hits.length === 0) return;
+
+            const obj = hits[0].object;
+            if (obj.userData.isContent) {
+                focusOnBillboard(obj);
+            }
+        }
+
+        // C2: generalized from the old hardcoded worldPos.x+22 / rotation.y=PI/2 (which only worked
+        // when every billboard sat on the -x side facing +x). Now derives the camera focus position
+        // from the screen's actual world position + world-space normal (via getWorldDirection, since
+        // the PlaneGeometry's local +z is the screen's forward/normal axis), so it works for a
+        // billboard facing either direction. Camera rotation target is computed the same "temp
+        // object lookAt -> read quaternion" way the rest of the file already used for Euler tweens —
+        // but the tween itself now slerps the quaternion instead of lerping Euler components.
+        //
+        // Euler component-tween bug (found via user report — camera visibly spun the "long way"
+        // before settling): TWEEN.Tween(camera.rotation).to({x,y,z}, ...) lerps each of x/y/z
+        // independently and in isolation, which breaks for two separate reasons:
+        //  (a) +/-2*PI wrap — e.g. current y=-3.0 rad, target y=+1.6 rad lerps straight from -3.0 to
+        //      +1.6 (a 4.6 rad sweep) instead of recognizing that -3.0 and +1.6 are ~1.68 rad apart
+        //      the OTHER way around the circle. Euler numbers alone don't know they're angles on a
+        //      circle, so the component lerp always takes whichever raw-number path is longer half
+        //      the time.
+        //  (b) gimbal-equivalent representations — lookAt() can return an Euler like (x~=PI, y',
+        //      z~=PI) that represents the EXACT SAME orientation as some other (x~=0, y'', z~=0).
+        //      Component-tweening between two Eulers that both describe similar orientations but via
+        //      wildly different x/y/z numbers swings the camera through orientations neither the
+        //      start nor the end actually had.
+        // Quaternions don't have either failure mode: a quaternion slerp always interpolates along
+        // the shortest arc on the rotation manifold, regardless of how the start/end Eulers happened
+        // to be numbered.
+        // Current focus behavior mirrors city: move to the +x side and face straight back toward the content.
         function focusOnBillboard(obj) {
             isInspecting = true;
             originalCamState.pos.copy(camera.position);
             originalCamState.rot.copy(camera.rotation);
+            originalCamState.quat.copy(camera.quaternion);
             originalCamState.fov = camera.fov;
 
             const data = obj.userData.data;
@@ -680,10 +1965,17 @@
             const worldPos = new THREE.Vector3();
             obj.getWorldPosition(worldPos);
 
-            new TWEEN.Tween(camera.position).to({ x: worldPos.x + 22, y: worldPos.y, z: worldPos.z }, 1800).easing(TWEEN.Easing.Cubic.Out).start();
-            new TWEEN.Tween(camera.rotation).to({ y: Math.PI / 2, x: 0, z: 0 }, 1800).easing(TWEEN.Easing.Cubic.Out).onComplete(() => {
-                document.getElementById('modal').style.display = 'flex';
-            }).start();
+            const camTarget = { x: worldPos.x + 22, y: worldPos.y, z: worldPos.z };
+
+            // Match city: use a fixed +x inspection angle instead of deriving a per-object rotation.
+            // planned camera position back at the screen and read its quaternion (not Euler — see
+            // note above) as the slerp target.
+            new TWEEN.Tween(camera.position).to(camTarget, 900).easing(TWEEN.Easing.Cubic.Out).start();
+            new TWEEN.Tween(camera.rotation).to({ y: Math.PI / 2, x: 0, z: 0 }, 900).easing(TWEEN.Easing.Cubic.Out)
+                .onComplete(() => {
+                    document.getElementById('modal').style.display = 'flex';
+                    onFirstModalOpen();
+                }).start();
         }
 
         function primeModalMedia(data) {
@@ -701,9 +1993,16 @@
 
         function closeModal() {
             document.getElementById('modal').style.display = 'none';
-            document.getElementById('modal-media').innerHTML = ""; 
+            document.getElementById('modal-media').innerHTML = "";
+            const startQuat = camera.quaternion.clone();
+            const endQuat = originalCamState.quat.clone();
             new TWEEN.Tween(camera.position).to({ x: originalCamState.pos.x, y: originalCamState.pos.y, z: originalCamState.pos.z }, 1200).easing(TWEEN.Easing.Cubic.InOut).start();
-            new TWEEN.Tween(camera.rotation).to({ x: originalCamState.rot.x, y: originalCamState.rot.y, z: originalCamState.rot.z }, 1200).easing(TWEEN.Easing.Cubic.InOut).onComplete(() => { isInspecting = false; }).start();
+            new TWEEN.Tween({ t: 0 }).to({ t: 1 }, 1200).easing(TWEEN.Easing.Cubic.InOut)
+                .onUpdate((o) => { camera.quaternion.slerpQuaternions(startQuat, endQuat, o.t); })
+                .onComplete(() => {
+                    camera.quaternion.copy(endQuat);
+                    isInspecting = false;
+                }).start();
         }
 
         function updatePointer(e) {
@@ -717,18 +2016,245 @@
             raycaster.setFromCamera(mouse, camera);
             const hits = raycaster.intersectObjects(interactiveObjects, true);
             document.body.style.cursor = (hits.length > 0) ? 'pointer' : 'default';
+
+            // Billboard hover feedback: boost neon ring + show tooltip. Skipped on coarse pointers
+            // (no true hover on touch).
+            if (isCoarsePointer()) return;
+            const hit = hits.find(h => h.object.userData && h.object.userData.isContent);
+            if (hit) {
+                setHoveredFort(hit.object.userData.neonRef || null);
+                showHoverTip(e.clientX, e.clientY, hit.object.userData.tooltipTitle || '');
+            } else {
+                setHoveredFort(null);
+                hideHoverTip();
+            }
         }
 
-        function onResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-        function onWheel(e) { if (e.cancelable) e.preventDefault(); targetFOV = Math.max(15, Math.min(100, targetFOV + e.deltaY * 0.08)); }
+        function onResize() { scheduleResize(); }
+
+        function resizeRendererToViewport() {
+            if (!camera || !renderer) return;
+            const { width, height } = getViewportSize();
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+            renderer.setSize(width, height, false);
+            renderer.domElement.style.width = `${width}px`;
+            renderer.domElement.style.height = `${height}px`;
+        }
+
+        function scheduleResize() {
+            resizeRendererToViewport();
+            if (resizeTimer) clearTimeout(resizeTimer);
+            requestAnimationFrame(resizeRendererToViewport);
+            resizeTimer = setTimeout(resizeRendererToViewport, 120);
+            setTimeout(resizeRendererToViewport, 350);
+            setTimeout(resizeRendererToViewport, 700);
+        }
+
+        function onWheel(e) { if (e.cancelable) e.preventDefault(); targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + e.deltaY * 0.08)); }
+
+        // Escape must close the modal even though modal-open state IS isInspecting — handled
+        // BEFORE the isMoving||isInspecting early-return that every other key uses.
         function onKey(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal');
+                if (modal.style.display === 'flex') closeModal();
+                return;
+            }
             if (isMoving || isInspecting) return;
             const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
             if ((e.key === 'w' || e.key === 'ArrowUp') && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
             if ((e.key === 's' || e.key === 'ArrowDown') && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
         }
 
+        // Backdrop click closes the modal — e.target === e.currentTarget means the click landed on
+        // the dark #modal backdrop itself, not inside .modal-content.
+        function onModalBackdropClick(e) {
+            if (e.target === e.currentTarget) closeModal();
+        }
+
         function resetPosition() { targetFOV = 40; navigateTo("n1"); }
+
+        /**
+         * 4b. UI/UX: node tracker, guide auto-hide/idle, hover tooltip, touch guide text, zoom buttons, pinch
+         */
+        function buildNodeTracker() {
+            const container = document.getElementById('node-tracker');
+            container.innerHTML = '';
+            WORLD_DATA.nodes.forEach(n => {
+                const row = document.createElement('div');
+                row.className = 'node-dot-row';
+
+                const label = document.createElement('span');
+                label.className = 'node-dot-label';
+                label.innerText = n.label;
+                row.appendChild(label);
+
+                const dot = document.createElement('span');
+                dot.className = 'node-dot';
+                dot.dataset.nodeId = n.id;
+                dot.addEventListener('click', () => navigateTo(n.id));
+                row.appendChild(dot);
+
+                container.appendChild(row);
+            });
+            updateNodeTrackerActive();
+        }
+
+        function updateNodeTrackerActive() {
+            const dots = document.querySelectorAll('#node-tracker .node-dot');
+            dots.forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.nodeId === currentNodeId);
+            });
+        }
+
+        // --- Guide box auto-hide + idle revive ---
+        function hideGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.add('hidden-by-timer');
+            guideHiddenByTimer = true;
+        }
+
+        function showGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.remove('hidden-by-timer');
+            guideHiddenByTimer = false;
+        }
+
+        function scheduleGuideHide() {
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            guideHideTimer = setTimeout(hideGuideBox, GUIDE_HIDE_DELAY_MS);
+        }
+
+        function resetGuideIdleTimer() {
+            if (guideIdleTimer) clearTimeout(guideIdleTimer);
+            guideIdleTimer = setTimeout(() => {
+                if (!isInspecting) {
+                    showGuideBox();
+                    scheduleGuideHide();
+                }
+            }, GUIDE_IDLE_REVIVE_MS);
+        }
+
+        function onFirstModalOpen() {
+            if (hasOpenedModalOnce) return;
+            hasOpenedModalOnce = true;
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            hideGuideBox();
+        }
+
+        function onUserActivity() {
+            resetGuideIdleTimer();
+        }
+
+        // --- Hover tooltip + neon hover boost ---
+        function showHoverTip(clientX, clientY, title) {
+            const tip = document.getElementById('hover-tip');
+            document.getElementById('hover-tip-title').innerText = title;
+            tip.style.display = 'block';
+            const offsetX = 18, offsetY = 18;
+            let x = clientX + offsetX;
+            let y = clientY + offsetY;
+            const maxX = window.innerWidth - 280;
+            const maxY = window.innerHeight - 80;
+            if (x > maxX) x = clientX - offsetX - 240;
+            if (y > maxY) y = clientY - offsetY - 60;
+            tip.style.left = `${x}px`;
+            tip.style.top = `${y}px`;
+        }
+
+        function hideHoverTip() {
+            document.getElementById('hover-tip').style.display = 'none';
+        }
+
+        function setHoveredFort(neonRef) {
+            if (lastHoveredFort === neonRef) return;
+            if (lastHoveredFort) lastHoveredFort.hoverBoost = 1;
+            lastHoveredFort = neonRef;
+            if (lastHoveredFort) lastHoveredFort.hoverBoost = 1.6;
+        }
+
+        // --- Touch-aware guide text ---
+        function isCoarsePointer() {
+            return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        }
+
+        function applyTouchAwareGuideText() {
+            document.body.classList.toggle('coarse-pointer', isCoarsePointer());
+            if (!isCoarsePointer()) return;
+            document.getElementById('guide-move').innerText = '🚢 탭해서 항해';
+            document.getElementById('guide-watch').innerText = '📽 두 번 탭해서 보기';
+            document.getElementById('guide-zoom').innerText = '🤏 핀치 줌';
+        }
+
+        // --- On-screen zoom buttons ---
+        function stepTargetFOV(delta) {
+            targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta));
+        }
+
+        function stopZoomButtonRepeat() {
+            if (zoomButtonInterval !== null) {
+                clearInterval(zoomButtonInterval);
+                zoomButtonInterval = null;
+            }
+        }
+
+        function startZoomButtonRepeat(delta) {
+            stopZoomButtonRepeat();
+            stepTargetFOV(delta);
+            zoomButtonInterval = setInterval(() => stepTargetFOV(delta), ZOOM_BUTTON_REPEAT_MS);
+        }
+
+        function initZoomButtons() {
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            if (!zoomInBtn || !zoomOutBtn) return;
+
+            const wire = (btn, delta) => {
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    startZoomButtonRepeat(delta);
+                });
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
+            };
+            wire(zoomInBtn, -ZOOM_BUTTON_STEP);
+            wire(zoomOutBtn, ZOOM_BUTTON_STEP);
+
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+                zoomInBtn.addEventListener(evt, stopZoomButtonRepeat);
+                zoomOutBtn.addEventListener(evt, stopZoomButtonRepeat);
+            });
+            window.addEventListener('blur', stopZoomButtonRepeat);
+        }
+
+        // --- Minimal two-finger pinch -> targetFOV ---
+        function onTouchStartPinch(e) {
+            if (e.touches.length === 2) {
+                pinchLastDist = getTouchDistance(e.touches);
+            }
+        }
+
+        function onTouchMovePinch(e) {
+            if (e.touches.length !== 2) return;
+            const dist = getTouchDistance(e.touches);
+            if (pinchLastDist !== null) {
+                const delta = pinchLastDist - dist;
+                targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta * 0.15));
+                if (e.cancelable) e.preventDefault();
+            }
+            pinchLastDist = dist;
+        }
+
+        function onTouchEndPinch(e) {
+            if (e.touches.length < 2) pinchLastDist = null;
+        }
+
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
 
         function animate(time) {
             requestAnimationFrame(animate);
@@ -736,13 +2262,14 @@
             animators.forEach(fn => fn(time));
 
             if (!isInspecting && yachtGroup) {
-                const desired = yachtGroup.position.clone().add(CAM_OFFSET);
+                const desired = yachtGroup.position.clone().add(getResponsiveCamOffset());
                 camera.position.lerp(desired, 0.07);
                 camera.lookAt(yachtGroup.position.clone().add(new THREE.Vector3(-12, 1.5, -18)));
             }
 
-            if (Math.abs(camera.fov - targetFOV) > 0.01) {
-                camera.fov += (targetFOV - camera.fov) * 0.1;
+            const effectiveTargetFOV = getEffectiveTargetFOV();
+            if (Math.abs(camera.fov - effectiveTargetFOV) > 0.01) {
+                camera.fov += (effectiveTargetFOV - camera.fov) * 0.1;
                 camera.updateProjectionMatrix();
             }
             renderer.render(scene, camera);

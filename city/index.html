@@ -20,36 +20,74 @@
             color: white;
         }
 
-        canvas { display: block; outline: none; }
-
-        #hud {
-            position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;
-            padding: 1.75rem 1.75rem 0; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10;
-            box-sizing: border-box;
-            gap: 1.25rem;
+        canvas {
+            display: block;
+            outline: none;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            z-index: 0;
         }
 
-        .brand-zone { pointer-events: auto; }
+        /* #hud is a CSS Grid for every viewport size (not just mobile). Older versions of this file
+           kept the desktop layout as flex and only switched to grid + `display: contents` on the
+           .brand-zone wrapper for narrow portrait screens, so .brand-name/.location-info could jump
+           into named grid areas of the parent. `display: contents` on a flex/grid child has long had
+           WebKit bugs around intrinsic-size computation for its children — Mobile Safari and Chrome
+           for iOS ship different WebKit builds, and Chrome-for-iOS hit a case where the text's
+           available inline size collapsed to near nothing, so ordinary word-wrapping ended up
+           breaking mid-word. Using one grid unconditionally removes the need for `display: contents`
+           entirely, so there's nothing left for that bug to trigger on. */
+        #hud {
+            position: fixed; top: 0; left: 0; width: 100%; pointer-events: none;
+            padding: max(1.1rem, env(safe-area-inset-top)) 1.75rem 0; z-index: 20;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "brand actions"
+                "location actions";
+            column-gap: 1.25rem;
+            row-gap: 0.35rem;
+            align-items: start;
+        }
+
         .hud-actions {
+            grid-area: actions;
             pointer-events: auto;
-            flex-shrink: 0;
             padding-right: 0.4rem;
         }
-        .brand-name { font-size: 1.6rem; font-weight: 900; letter-spacing: 3px; color: var(--accent); margin-bottom: 0.5rem; text-shadow: 0 0 10px var(--accent); }
-        .location-info { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .brand-name { grid-area: brand; pointer-events: auto; font-size: clamp(1.55rem, 4.4vw, 2.3rem); font-weight: 900; letter-spacing: 3px; color: var(--accent); text-shadow: 0 0 10px var(--accent); white-space: nowrap; min-width: 0; }
+        .location-info { grid-area: location; pointer-events: auto; font-size: clamp(0.72rem, 1.8vw, 0.9rem); color: #888; text-transform: uppercase; letter-spacing: 1px; line-height: 1.35; min-width: 0; }
+        /* Icon-only circular reset button (item: HUD declutter). Was a text "RESET VIEW" button;
+           an emoji glyph was considered but rejected — emoji carry their own baked-in font color
+           and ignore CSS `color`, so a hover color change would visually do nothing (see
+           ../rogue/README.md for the same lesson with the old 🏠/📺/🔇 icons). Using an inline SVG
+           with stroke="currentColor" instead lets the existing #aaa -> #fff hover rule actually
+           reach the icon. */
         .hud-button {
+            position: relative;
             pointer-events: auto;
             background: rgba(255,255,255,0.06);
             border: 1px solid #333;
             color: #aaa;
-            padding: 0.8rem 1.8rem;
+            width: 42px;
+            height: 42px;
+            padding: 0;
             cursor: pointer;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            letter-spacing: 1px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: 0.3s;
-            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .hud-button svg {
+            width: 20px;
+            height: 20px;
+            display: block;
         }
         .hud-button:hover {
             border-color: rgba(0, 242, 255, 0.45);
@@ -57,24 +95,117 @@
             box-shadow: 0 0 24px rgba(0, 242, 255, 0.14);
         }
 
+        /* Hover tooltip (fine-pointer/desktop only — coarse-pointer devices get no hover, so no
+           tooltip there). CSS-only ::after, reusing the same glass-chip visual language as
+           #hover-tip/the node tracker labels (var(--glass) bg, cyan-tinted border, blur, small
+           radius) rather than wiring up the JS-driven #hover-tip element for a static label. */
+        @media (hover: hover) and (pointer: fine) {
+            .hud-button[data-tooltip]::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 0;
+                background: var(--glass);
+                border: 1px solid rgba(0, 242, 255, 0.4);
+                color: #eee;
+                font-size: 0.72rem;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
+                padding: 0.4rem 0.7rem;
+                border-radius: 8px;
+                pointer-events: none;
+                opacity: 0;
+                transform: translateY(-4px);
+                transition: opacity 0.2s, transform 0.2s;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+                z-index: 30;
+            }
+            .hud-button[data-tooltip]:hover::after {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media (max-width: 700px) {
             #hud {
-                padding: 1rem 1rem 0;
+                padding: max(0.9rem, env(safe-area-inset-top)) 1rem 0;
                 gap: 0.75rem;
-            }
-
-            .hud-button {
-                padding: 0.72rem 1.15rem;
-                font-size: 0.74rem;
             }
         }
 
         .guide-box {
-            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
-            background: var(--glass); padding: 0.8rem 2.2rem; border-radius: 50px;
+            position: fixed;
+            left: 50%;
+            right: auto;
+            width: min(calc(100vw - 1.5rem), 980px);
+            bottom: max(0.75rem, env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            background: var(--glass); padding: 0.72rem clamp(0.8rem, 4vw, 2.2rem); border-radius: 50px;
             border: 1px solid rgba(0, 242, 255, 0.3); backdrop-filter: blur(20px);
-            font-size: 0.85rem; display: flex; gap: 2rem; pointer-events: none; letter-spacing: 1px;
-            box-shadow: 0 15px 50px rgba(0,0,0,1); white-space: nowrap;
+            font-size: clamp(0.66rem, 1.45vw, 0.86rem); display: flex; justify-content: center; align-items: center;
+            flex-wrap: wrap; gap: 0.45rem clamp(0.75rem, 3.5vw, 2rem); pointer-events: none; letter-spacing: 1px;
+            box-shadow: 0 15px 50px rgba(0,0,0,1);
+            line-height: 1.35;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+        .guide-box span {
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        @media (max-width: 520px) and (orientation: portrait) {
+            #hud {
+                /* Let the location line span the full width on narrow phones instead of sharing
+                   the column with the (now stacked) action button. */
+                grid-template-areas:
+                    "brand actions"
+                    "location location";
+            }
+
+            .brand-name {
+                font-size: clamp(1.8rem, 8vw, 2.1rem);
+                letter-spacing: 2px;
+            }
+
+            .location-info {
+                font-size: 0.78rem;
+                max-width: calc(100vw - 2rem);
+            }
+
+            .hud-actions {
+                padding-right: 0;
+            }
+
+            .guide-box {
+                width: min(calc(100vw - 1rem), 360px);
+                padding: 0.65rem 0.95rem;
+                border-radius: 18px;
+                align-items: flex-start;
+                gap: 0.28rem;
+                flex-direction: column;
+                letter-spacing: 0.6px;
+            }
+        }
+
+        @media (max-height: 520px) and (orientation: landscape) {
+            #hud {
+                padding: max(0.7rem, env(safe-area-inset-top)) 1.2rem 0;
+            }
+
+            .brand-name {
+                font-size: clamp(1.35rem, 4.8vw, 2rem);
+                margin-bottom: 0.25rem;
+            }
+
+            .location-info {
+                font-size: 0.72rem;
+            }
+
+            .guide-box {
+                padding: 0.58rem 1rem;
+            }
         }
 
         /* Cinematic Modal */
@@ -115,9 +246,237 @@
         }
         .modal-link:hover { filter: brightness(1.25); transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4); }
 
-        #loading { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        @media (max-width: 700px), (max-height: 720px) {
+            #modal {
+                position: fixed;
+                align-items: flex-start;
+                overflow-y: auto;
+                padding: max(16px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
+                box-sizing: border-box;
+            }
+
+            .modal-content {
+                width: min(100%, 860px);
+                max-height: none;
+                margin: 0 auto;
+                padding: 1.25rem;
+                border-radius: 18px;
+            }
+
+            .close-btn {
+                position: sticky;
+                top: 0;
+                float: right;
+                margin: -0.7rem -0.45rem 0.2rem 0.5rem;
+                font-size: 2.6rem;
+            }
+
+            .modal-media {
+                clear: both;
+                margin-bottom: 1.25rem;
+                border-radius: 12px;
+            }
+
+            .modal-title {
+                font-size: clamp(1.45rem, 7vw, 2rem);
+                margin-bottom: 0.8rem;
+            }
+
+            .modal-desc {
+                font-size: 0.95rem;
+                line-height: 1.65;
+                margin-bottom: 1.5rem;
+            }
+
+            .modal-link {
+                padding: 1rem;
+                border-radius: 12px;
+                font-size: 0.95rem;
+            }
+        }
+
+        #loading {
+            position: fixed; inset: 0; background: #000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
+            opacity: 1; transition: opacity 0.6s ease;
+        }
+        #loading.fade-out { opacity: 0; }
         .spinner { width: 64px; height: 64px; border: 6px solid rgba(0, 242, 255, 0.1); border-top: 6px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* First-reveal fade-up for the HUD and guide pill, staggered slightly so the UI feels
+           composed rather than popping in all at once right after the loading overlay clears. */
+        #hud {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        /* .guide-box is horizontally centered via left:50% + translateX(-50%) (see .guide-box rule
+           above). Every transform state below MUST keep translateX(-50%) as part of the same
+           transform value — transform is a single property, so a rule that "just adds translateY"
+           would silently replace the centering and shove the pill to one side. */
+        .guide-box {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #hud.revealed { opacity: 1; transform: translateY(0); }
+        .guide-box.revealed { opacity: 1; transform: translateX(-50%) translateY(0); transition-delay: 0.12s; }
+        /* Once revealed, the auto-hide feature (item 2) takes over opacity/transform on .guide-box;
+           this shares the same transition so both paths animate identically. */
+        .guide-box.hidden-by-timer { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; }
+
+        /* Modal backdrop: clicking outside .modal-content closes the modal (item 1b). */
+        #modal { cursor: pointer; }
+        .modal-content { cursor: default; }
+
+        /* Node tracker (item 3): vertical stack of dots on the right edge. */
+        #node-tracker {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.85rem;
+            pointer-events: auto;
+        }
+        .node-dot-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .node-dot-label {
+            background: var(--glass);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 0.68rem;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 0.32rem 0.7rem;
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+        }
+        .node-dot-row:hover .node-dot-label {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .node-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #555;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            transition: 0.25s;
+            flex-shrink: 0;
+        }
+        .node-dot:hover {
+            background: #888;
+        }
+        .node-dot.active {
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px 2px rgba(0, 242, 255, 0.8);
+        }
+
+        /* On-screen zoom buttons (touch discoverability): mirrors wheel zoom via targetFOV.
+           Hidden by default; shown only for coarse-pointer (touch) devices via body.coarse-pointer,
+           toggled by the same isCoarsePointer() detection used for the touch guide text. */
+        #zoom-controls {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            bottom: 5.5rem;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        body.coarse-pointer #zoom-controls {
+            display: flex;
+        }
+        .zoom-btn {
+            pointer-events: auto;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            transition: 0.25s;
+        }
+        .zoom-btn:hover, .zoom-btn:active {
+            border-color: rgba(0, 242, 255, 0.6);
+            color: #fff;
+            box-shadow: 0 0 18px rgba(0, 242, 255, 0.25);
+        }
+
+        @media (max-width: 520px) and (orientation: portrait) {
+            #zoom-controls {
+                right: 0.55rem;
+                /* guide-box stacks to 3 lines in this layout (see its portrait rule below) and
+                   grows taller than the desktop pill, so push the buttons up further to keep
+                   clearance from it. */
+                bottom: 7rem;
+            }
+        }
+
+        @media (max-width: 520px) and (orientation: portrait) {
+            #node-tracker {
+                right: 0.55rem;
+                gap: 0.65rem;
+            }
+            .node-dot-label {
+                display: none;
+            }
+        }
+
+        /* 3D hover tooltip (item 5): follows the cursor near a hovered shop window. */
+        #hover-tip {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            background: var(--glass);
+            border: 1px solid rgba(0, 242, 255, 0.4);
+            backdrop-filter: blur(16px);
+            border-radius: 12px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            display: none;
+            max-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        #hover-tip .tip-title {
+            color: var(--accent);
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            display: block;
+        }
+        #hover-tip .tip-hint {
+            color: #999;
+            font-size: 0.7rem;
+            display: block;
+            margin-top: 0.15rem;
+        }
     </style>
 </head>
 <body>
@@ -128,19 +487,34 @@
     </div>
 
     <div id="hud">
-        <div class="brand-zone">
-            <div class="brand-name">BUNT GAMES</div>
-            <div class="location-info">Cinematic District / <span id="current-node" style="color: #fff;">Asset Lab Area</span></div>
-        </div>
+        <div class="brand-name">BUNT GAMES</div>
         <div class="hud-actions">
-            <button onclick="resetPosition()" class="hud-button">RESET VIEW</button>
+            <button onclick="resetPosition()" class="hud-button" aria-label="시점 초기화" title="시점 초기화" data-tooltip="시점 초기화">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3.2-6.9" />
+                    <polyline points="3 3 3 7 7 7" />
+                </svg>
+            </button>
         </div>
+        <div class="location-info">Cinematic District / <span id="current-node" style="color: #fff;">Asset Lab Area</span></div>
     </div>
 
-    <div class="guide-box">
-        <span>🚶 CLICK ROAD TO MOVE</span>
-        <span>✨ DBL-CLICK WINDOW TO WATCH</span>
-        <span>🎡 ZOOM WHEEL</span>
+    <div class="guide-box" id="guide-box">
+        <span id="guide-move">🚶 CLICK ROAD TO MOVE</span>
+        <span id="guide-watch">✨ DBL-CLICK WINDOW TO WATCH</span>
+        <span id="guide-zoom">🎡 ZOOM WHEEL</span>
+    </div>
+
+    <div id="node-tracker"></div>
+
+    <div id="zoom-controls">
+        <button type="button" class="zoom-btn" id="zoom-in-btn" aria-label="확대">+</button>
+        <button type="button" class="zoom-btn" id="zoom-out-btn" aria-label="축소">−</button>
+    </div>
+
+    <div id="hover-tip">
+        <span class="tip-title" id="hover-tip-title"></span>
+        <span class="tip-hint">더블클릭으로 보기</span>
     </div>
 
     <div id="modal">
@@ -204,6 +578,13 @@
                         link: "https://patreon.com/BuntGames" 
                     }
                 }
+            ],
+            buildings: [
+                { pos: [8.9, 0, 9], width: 8, height: 10, depth: 6, type: "facade" },
+                { pos: [8.9, 0, 1], width: 8, height: 13, depth: 6, type: "shutter" },
+                { pos: [8.9, 0, -7], width: 8, height: 9, depth: 6, type: "facade" },
+                { pos: [8.9, 0, -15], width: 8, height: 12, depth: 6, type: "shutter" },
+                { pos: [8.9, 0, -23], width: 8, height: 10, depth: 6, type: "facade" }
             ]
         };
 
@@ -212,9 +593,13 @@
          */
         let scene, camera, renderer, raycaster;
         let interactiveObjects = [];
-        let nodes = [], currentNodeId = "n1"; 
+        let nodes = [], currentNodeId = "n1";
+        let neonSigns = [];
         let isMoving = false, isInspecting = false;
         let playerGroup, floor;
+        let activeCars = [], nextCarSpawn = 4000, lastFrameTime = 0;
+        let dustPoints = null, dustBasePositions = null, dustSeeds = null;
+        let neonFloorReflections = []; // parallel array: {mat, seed} strips that flicker in sync with a sign/frame
         const mouse = new THREE.Vector2();
 
         const originalCamState = { 
@@ -223,52 +608,287 @@
             fov: 55
         };
 
-        const CAM_OFFSET = new THREE.Vector3(4.5, 1.8, 6.8); 
+        // --- UI/UX state (guide auto-hide/idle, node tracker, hover tooltip, touch pinch) ---
+        const GUIDE_HIDE_DELAY_MS = 9000; // fade the guide pill after 9s, or sooner if a modal opens first
+        const GUIDE_IDLE_REVIVE_MS = 45000; // re-show the guide after 45s of no input while not inspecting
+        let guideHideTimer = null;
+        let guideIdleTimer = null;
+        let guideHiddenByTimer = false;
+        let hasOpenedModalOnce = false;
+        let lastHoveredFrameSign = null;
+        let pinchLastDist = null;
+
+        const CAM_OFFSET = new THREE.Vector3(4.5, 1.8, 6.8);
         let targetFOV = 55;
         const MIN_FOV = 15;
         const MAX_FOV = 85;
+        // On-screen zoom buttons: step size per tap and repeat interval while held (see
+        // initZoomButtons()/stepTargetFOV() below). Declared here, ahead of init()/animate(), because
+        // initZoomButtons() is called synchronously from inside init() — a const declared further
+        // down the file would still be in its temporal dead zone at that point in execution.
+        const ZOOM_BUTTON_STEP = 8;
+        const ZOOM_BUTTON_REPEAT_MS = 120;
+        // Deliberately excludes cyan (and cyan-adjacent mint green): every shop window neon frame is
+        // cyan (0x00f2ff), so a cyan title sign blended into the frames and became unreadable. These
+        // four hues (magenta / amber / orange / violet) all contrast strongly against the cyan frames
+        // and against each other.
+        const SIGN_COLORS = [0xff2ecb, 0xffc61a, 0xff6a2b, 0xb45cff];
+        let resizeTimer = null;
+
+        function getViewportSize() {
+            const visualViewport = window.visualViewport;
+            const width = Math.max(1, Math.round(
+                (visualViewport && visualViewport.width) ||
+                document.documentElement.clientWidth ||
+                window.innerWidth
+            ));
+            const height = Math.max(1, Math.round(
+                (visualViewport && visualViewport.height) ||
+                document.documentElement.clientHeight ||
+                window.innerHeight
+            ));
+            return { width, height };
+        }
+
+        function getResponsiveFOVBoost() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return 0;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return 4 + portrait * 10;
+        }
+
+        function getEffectiveTargetFOV() {
+            return Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + getResponsiveFOVBoost()));
+        }
+
+        function getResponsiveCamOffset() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return CAM_OFFSET;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return CAM_OFFSET.clone().add(new THREE.Vector3(
+                portrait * 1.8,
+                portrait * 0.55,
+                portrait * 6.4
+            ));
+        }
 
         init();
         animate();
 
+        function createSkyTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#050512');
+            gradient.addColorStop(0.55, '#120a28');
+            gradient.addColorStop(1, '#2a1440');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createWallPanelTexture(baseColorHex) {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            const base = new THREE.Color(baseColorHex);
+            const TILE = 32;
+            const GROUT = 2;
+
+            // Individual tiles with a slight per-tile brightness/tint variance, like real cladding panels
+            for (let ty = 0; ty < size; ty += TILE) {
+                for (let tx = 0; tx < size; tx += TILE) {
+                    const shade = 0.85 + Math.random() * 0.3;
+                    ctx.fillStyle = `rgb(${Math.min(255, Math.round(base.r * 255 * shade))},${Math.min(255, Math.round(base.g * 255 * shade))},${Math.min(255, Math.round(base.b * 255 * shade))})`;
+                    ctx.fillRect(tx, ty, TILE, TILE);
+
+                    // A faint diagonal highlight on some tiles so they don't all read as flat squares
+                    if (Math.random() < 0.3) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                        ctx.fillRect(tx, ty, TILE, TILE / 2);
+                    }
+                }
+            }
+
+            // Grout lines
+            ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+            ctx.lineWidth = GROUT;
+            for (let y = 0; y <= size; y += TILE) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+            }
+            for (let x = 0; x <= size; x += TILE) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
+            }
+
+            // Vertical grime/weather streaks running across several tiles
+            for (let i = 0; i < 10; i++) {
+                const x = Math.random() * size;
+                const w = 4 + Math.random() * 10;
+                const grad = ctx.createLinearGradient(x, 0, x, size);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, `rgba(0,0,0,${0.08 + Math.random() * 0.12})`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(x, 0, w, size);
+            }
+
+            for (let i = 0; i < 400; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.03})`;
+                ctx.fillRect(Math.random() * size, Math.random() * size, 1, 1);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createRoadTexture(roadWidth, curbX) {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0b0b0e';
+            ctx.fillRect(0, 0, size, size);
+
+            for (let i = 0; i < 250; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`;
+                ctx.fillRect(Math.random() * size, Math.random() * size, 1, 1);
+            }
+
+            // Dashed lane line aligned with the player's walking path (world x = 0)
+            const laneX = ((0 - curbX) / roadWidth) * size;
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.fillRect(laneX - 1, size * 0.15, 2, size * 0.55);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 300 / 6);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createSidewalkTexture() {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#2c2c32';
+            ctx.fillRect(0, 0, size, size);
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, size - 1);
+            ctx.lineTo(size, size - 1);
+            ctx.stroke();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 300 / 3);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x010101);
-            scene.fog = new THREE.FogExp2(0x010101, 0.08);
+            scene.background = createSkyTexture();
+            scene.fog = new THREE.FogExp2(0x1a0f30, 0.045);
 
-            camera = new THREE.PerspectiveCamera(targetFOV, window.innerWidth / window.innerHeight, 0.1, 1000);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // near plane raised from 0.1 to 0.5 so a plain depth buffer has enough precision for this
+            // small scene — that lets us drop logarithmicDepthBuffer, which forced per-fragment
+            // gl_FragDepth writes (disabling early-Z) and was a major fill-rate cost on the big planes.
+            const initialViewport = getViewportSize();
+            camera = new THREE.PerspectiveCamera(getEffectiveTargetFOV(), initialViewport.width / initialViewport.height, 0.5, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // Cap at 1.5 instead of 2: on hi-DPI displays a 2x buffer is 4x the fragments, and the
+            // scene is fragment-shader bound (many point lights over large planes), so this is the
+            // single biggest perf lever with little visible quality loss.
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
+            resizeRendererToViewport();
 
             raycaster = new THREE.Raycaster();
 
             // Balanced Scene Light
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-            // Road Mesh
-            const floorGeo = new THREE.PlaneGeometry(300, 300);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.12, metalness: 0.8 });
-            floor = new THREE.Mesh(floorGeo, floorMat);
+            // Road + Sidewalk cross-section
+            const HALF_SPAN = 150;
+            const CURB_X = -1.8;
+            const roadWidth = HALF_SPAN - CURB_X;
+            const sidewalkWidth = HALF_SPAN + CURB_X;
+
+            const roadMat = new THREE.MeshStandardMaterial({
+                roughness: 0.15,
+                metalness: 0.65,
+                map: createRoadTexture(roadWidth, CURB_X)
+            });
+            floor = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, 300), roadMat);
             floor.rotation.x = -Math.PI / 2;
+            floor.position.set(CURB_X + roadWidth / 2, 0, 0);
             floor.userData = { isFloor: true };
             scene.add(floor);
             interactiveObjects.push(floor);
-            
-            scene.add(new THREE.GridHelper(300, 100, 0x111111, 0x050505));
+
+            const sidewalkMat = new THREE.MeshStandardMaterial({
+                roughness: 0.85,
+                metalness: 0.05,
+                map: createSidewalkTexture()
+            });
+            // Raised well above the 0.08 the first pass used — that was too subtle a step to read
+            // as an actual curb at normal viewing scale, so sidewalk and road just looked like two
+            // flat, differently-colored planes rather than distinct road/sidewalk geometry.
+            const SIDEWALK_HEIGHT = 0.22;
+            const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(sidewalkWidth, 300), sidewalkMat);
+            sidewalk.rotation.x = -Math.PI / 2;
+            sidewalk.position.set(CURB_X - sidewalkWidth / 2, SIDEWALK_HEIGHT, 0);
+            scene.add(sidewalk);
+
+            const curb = new THREE.Mesh(
+                new THREE.BoxGeometry(0.28, SIDEWALK_HEIGHT, 300),
+                new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.7 })
+            );
+            curb.position.set(CURB_X, SIDEWALK_HEIGHT / 2, 0);
+            scene.add(curb);
+
+            const curbEdge = new THREE.Mesh(
+                new THREE.BoxGeometry(0.3, 0.02, 300),
+                new THREE.MeshStandardMaterial({ color: 0xd4d8dc, roughness: 0.5 })
+            );
+            curbEdge.position.set(CURB_X, SIDEWALK_HEIGHT + 0.01, 0);
+            scene.add(curbEdge);
 
             createPlayer();
             createArcadeAlley();
+            createLeftWallFillers();
+            createOppositeBuildings();
             createNodes();
             createStreetlights();
+            createStreetProps(CURB_X, SIDEWALK_HEIGHT);
+            createSkylineBackdrop();
+            createDustParticles();
+            createNeonFloorReflections();
+            createVerticalSigns();
+            createStreetlightHalos();
 
             // Set Initial Node (n1)
             const startNode = WORLD_DATA.nodes.find(n => n.id === currentNodeId);
             playerGroup.position.set(startNode.pos[0], 0, startNode.pos[2]);
-            camera.position.copy(playerGroup.position).add(CAM_OFFSET);
+            camera.position.copy(playerGroup.position).add(getResponsiveCamOffset());
             camera.lookAt(playerGroup.position.clone().add(new THREE.Vector3(-2, 1.8, -3)));
 
             // High-fidelity Event Listeners
@@ -276,10 +896,46 @@
             renderer.domElement.addEventListener('pointerdown', handlePointerDown);
             renderer.domElement.addEventListener('dblclick', onDoubleClick);
             window.addEventListener('resize', onWindowResize);
+            window.addEventListener('orientationchange', scheduleResize);
+            window.addEventListener('pageshow', scheduleResize);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleResize);
+                window.visualViewport.addEventListener('scroll', scheduleResize);
+            }
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) scheduleResize();
+            });
             window.addEventListener('wheel', onWheel, { passive: false });
             window.addEventListener('keydown', onKeyDown);
 
-            setTimeout(() => document.getElementById('loading').style.display = 'none', 1500);
+            document.getElementById('modal').addEventListener('click', onModalBackdropClick);
+
+            renderer.domElement.addEventListener('touchstart', onTouchStartPinch, { passive: true });
+            renderer.domElement.addEventListener('touchmove', onTouchMovePinch, { passive: false });
+            renderer.domElement.addEventListener('touchend', onTouchEndPinch, { passive: true });
+
+            // Idle detection for the guide-box revive (item 2): any of these count as "activity".
+            window.addEventListener('pointerdown', onUserActivity);
+            window.addEventListener('keydown', onUserActivity);
+            window.addEventListener('wheel', onUserActivity, { passive: true });
+
+            buildNodeTracker();
+            applyTouchAwareGuideText();
+            initZoomButtons();
+
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                loading.classList.add('fade-out');
+                const onFadeDone = () => { loading.style.display = 'none'; };
+                loading.addEventListener('transitionend', onFadeDone, { once: true });
+                setTimeout(onFadeDone, 700); // fallback in case transitionend doesn't fire
+
+                // First-reveal fade-up for HUD/guide-box, timed to start as the loading overlay clears.
+                document.getElementById('hud').classList.add('revealed');
+                document.getElementById('guide-box').classList.add('revealed');
+                scheduleGuideHide();
+                resetGuideIdleTimer();
+            }, 1500);
         }
 
         function createStreetlights() {
@@ -356,9 +1012,9 @@
                 light.position.copy(bulb.position);
                 group.add(light);
 
-                const cyanFill = new THREE.PointLight(0x00f2ff, 0.55, 6, 2);
-                cyanFill.position.set(config.reach + 0.15, config.height - 0.55, 0);
-                group.add(cyanFill);
+                // The subtle cyan fill PointLight per lamp was dropped: 5 extra dynamic lights that
+                // every MeshStandardMaterial fragment had to evaluate, for a barely-visible tint.
+                // The cyan accent meshes (baseRing/spine, emissive) keep the color cue for free.
 
                 const groundPool = new THREE.Mesh(
                     new THREE.CircleGeometry(0.72 + index * 0.05, 32),
@@ -387,6 +1043,540 @@
                 group.add(innerPool);
 
                 scene.add(group);
+            });
+        }
+
+        function createStreetProps(curbX, groundY) {
+            const dummy = new THREE.Object3D();
+            const Z_FROM = 16, Z_TO = -28;
+
+            // Bollards along the curb, one InstancedMesh per part (draw call count stays constant regardless of prop count)
+            const bollardZs = [];
+            for (let z = Z_FROM; z >= Z_TO; z -= 4) bollardZs.push(z);
+
+            const bollardBody = new THREE.InstancedMesh(
+                new THREE.CylinderGeometry(0.06, 0.07, 0.5, 10),
+                new THREE.MeshStandardMaterial({ color: 0x151515, metalness: 0.6, roughness: 0.4 }),
+                bollardZs.length
+            );
+            const bollardCap = new THREE.InstancedMesh(
+                new THREE.CylinderGeometry(0.075, 0.075, 0.05, 10),
+                new THREE.MeshStandardMaterial({ color: 0x00f2ff, emissive: 0x00f2ff, emissiveIntensity: 1.4 }),
+                bollardZs.length
+            );
+
+            bollardZs.forEach((z, i) => {
+                dummy.position.set(curbX - 0.35, groundY + 0.25, z);
+                dummy.updateMatrix();
+                bollardBody.setMatrixAt(i, dummy.matrix);
+
+                dummy.position.set(curbX - 0.35, groundY + 0.52, z);
+                dummy.updateMatrix();
+                bollardCap.setMatrixAt(i, dummy.matrix);
+            });
+            scene.add(bollardBody, bollardCap);
+
+            // Palm-style street trees placed IN the streetlight row: same road-side x as the lamps
+            // (~1.75) and at the z-midpoints between neighboring lamps (lamps at z=12,4,-4,-12,-20 →
+            // trees at 8,0,-8,-16), so lamp/palm/lamp/palm alternate along one line. They stand on the
+            // road (y=0), not the raised sidewalk, so their base uses treeBaseY=0.
+            const treeZs = [8, 0, -8, -16];
+            const treeX = 1.75;
+            const treeBaseY = 0;
+            // Frond crown sits at the streetlight-top height (tallest lamp head ≈ 5.2), keeping the
+            // canopy level with the lamps and safely below the shop signage band (world y ≈ 6.9+).
+            const LAMP_TOP = 5.2;
+            const TRUNK_HEIGHT = LAMP_TOP;
+            const FROND_COUNT = 6;
+            const FROND_LEN = 1.3;
+
+            // Slim, dark trunk so the tree standing in the camera-side lamp row reads as a slender
+            // palm (visual weight close to a lamp pole) rather than a fat bar blocking the foreground.
+            const trunk = new THREE.InstancedMesh(
+                new THREE.CylinderGeometry(0.06, 0.1, TRUNK_HEIGHT, 8),
+                new THREE.MeshStandardMaterial({ color: 0x241a10, roughness: 0.9 }),
+                treeZs.length
+            );
+            const crown = new THREE.InstancedMesh(
+                new THREE.ConeGeometry(0.22, 0.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0x2a5c3a, roughness: 0.7 }),
+                treeZs.length
+            );
+            const frondGeo = new THREE.BoxGeometry(0.22, 0.04, FROND_LEN);
+            frondGeo.translate(0, 0, FROND_LEN / 2); // base stays at the origin so it attaches cleanly to the trunk top
+            const frondMat = new THREE.MeshStandardMaterial({ color: 0x1c5c3a, roughness: 0.75 });
+            const fronds = new THREE.InstancedMesh(frondGeo, frondMat, treeZs.length * FROND_COUNT);
+            const shadow = new THREE.InstancedMesh(
+                new THREE.CircleGeometry(0.9, 20),
+                new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, side: THREE.DoubleSide }),
+                treeZs.length
+            );
+
+            treeZs.forEach((z, i) => {
+                dummy.rotation.set(0, 0, 0);
+                dummy.position.set(treeX, treeBaseY + TRUNK_HEIGHT / 2, z);
+                dummy.updateMatrix();
+                trunk.setMatrixAt(i, dummy.matrix);
+
+                dummy.position.set(treeX, treeBaseY + TRUNK_HEIGHT + 0.15, z);
+                dummy.updateMatrix();
+                crown.setMatrixAt(i, dummy.matrix);
+
+                // Fronds fan out from the crown and droop downward, staying well above the shop signage
+                for (let f = 0; f < FROND_COUNT; f++) {
+                    const angle = (f / FROND_COUNT) * Math.PI * 2 + i * 0.4;
+                    dummy.position.set(treeX, treeBaseY + TRUNK_HEIGHT, z);
+                    dummy.rotation.set(-0.55, angle, 0);
+                    dummy.updateMatrix();
+                    fronds.setMatrixAt(i * FROND_COUNT + f, dummy.matrix);
+                }
+
+                dummy.rotation.set(-Math.PI / 2, 0, 0);
+                dummy.position.set(treeX, treeBaseY + 0.02, z);
+                dummy.updateMatrix();
+                shadow.setMatrixAt(i, dummy.matrix);
+            });
+            scene.add(trunk, crown, fronds, shadow);
+        }
+
+        function createSkylineSilhouetteTexture(darkness, accentChance) {
+            // Rows of flat dark building rectangles of varying width/height with a sparse scatter of
+            // lit-window dots. Kept intentionally low-detail (this reads only as a silhouette against
+            // fog) so it stays cheap and doesn't compete with the foreground shops/buildings.
+            const width = 1024, height = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, width, height);
+
+            let x = 0;
+            while (x < width) {
+                const w = 40 + Math.random() * 90;
+                const h = height * (0.35 + Math.random() * 0.55);
+                const shade = darkness * (0.7 + Math.random() * 0.3);
+                ctx.fillStyle = `rgba(${Math.round(10 * shade)},${Math.round(8 * shade)},${Math.round(20 * shade)},1)`;
+                ctx.fillRect(x, height - h, w, h);
+
+                // Sparse lit windows: mostly warm yellow, occasional cyan/magenta accent
+                const cols = Math.max(1, Math.floor(w / 10));
+                const rows = Math.max(1, Math.floor(h / 14));
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (Math.random() < 0.2) { // ~15-25% lit, biased slightly low so silhouettes stay dark
+                            let color = 'rgba(255,205,120,0.85)';
+                            if (Math.random() < accentChance) {
+                                color = Math.random() < 0.5 ? 'rgba(0,242,255,0.8)' : 'rgba(255,60,220,0.8)';
+                            }
+                            ctx.fillStyle = color;
+                            ctx.fillRect(x + 4 + c * 10, height - h + 6 + r * 14, 4, 6);
+                        }
+                    }
+                }
+                x += w + 2 + Math.random() * 6;
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createSkylineBackdrop() {
+            // Large MeshBasicMaterial planes far past both alley ends and behind the right building
+            // row, so the silhouette reads through/blends with the fog instead of the empty sky
+            // gradient. Not added to interactiveObjects — must never intercept road/window raycasts.
+            // fog:false is used here on purpose: at the configured FogExp2 density (0.045) these
+            // planes sit far enough out (z/x 55-80) that fog:true washed them out to nearly invisible
+            // flat purple, which read as "nothing there." Turning fog off keeps a faint dark silhouette
+            // visible against the sky gradient while still sitting comfortably behind all foreground
+            // geometry, which looked far better in-scene than the fog-correct version.
+            const layers = [
+                { z: 62, darkness: 1.3, accent: 0.05, width: 140, height: 46, y: 21 },
+                { z: 78, darkness: 0.9, accent: 0.08, width: 170, height: 40, y: 18 },
+                { z: -66, darkness: 1.25, accent: 0.05, width: 140, height: 46, y: 21 },
+                { z: -82, darkness: 0.85, accent: 0.08, width: 170, height: 40, y: 18 }
+            ];
+
+            layers.forEach(cfg => {
+                const tex = createSkylineSilhouetteTexture(cfg.darkness, cfg.accent);
+                const mat = new THREE.MeshBasicMaterial({
+                    map: tex,
+                    transparent: true,
+                    fog: false,
+                    depthWrite: false,
+                    // DoubleSide: the camera always sits between the two z=+/- backdrop layers looking
+                    // outward, so whichever face a default PlaneGeometry happens to wind toward would be
+                    // the *back* face for one of the two directions — double-siding sidesteps having to
+                    // reason about winding/rotation per layer.
+                    side: THREE.DoubleSide
+                });
+                const plane = new THREE.Mesh(new THREE.PlaneGeometry(cfg.width, cfg.height), mat);
+                plane.position.set(0, cfg.y, cfg.z);
+                scene.add(plane);
+            });
+
+            // One extra-wide plane behind the right building row, facing the street (facing -x).
+            const rightTex = createSkylineSilhouetteTexture(1.0, 0.06);
+            const rightMat = new THREE.MeshBasicMaterial({
+                map: rightTex,
+                transparent: true,
+                fog: false,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            const rightPlane = new THREE.Mesh(new THREE.PlaneGeometry(120, 42), rightMat);
+            rightPlane.position.set(50, 19, -4);
+            rightPlane.rotation.y = -Math.PI / 2;
+            scene.add(rightPlane);
+        }
+
+        function createDustParticles() {
+            // One shared Points system for the whole walkable corridor. Positions are generated once
+            // into a Float32Array and mutated in place every frame (no per-frame allocation) — see
+            // the dust update block in animate().
+            const COUNT = 150;
+            const positions = new Float32Array(COUNT * 3);
+            dustBasePositions = new Float32Array(COUNT * 3);
+            dustSeeds = new Float32Array(COUNT);
+
+            for (let i = 0; i < COUNT; i++) {
+                const x = -4 + Math.random() * 10;      // -4..6
+                const y = 0.3 + Math.random() * 5.7;     // 0.3..6
+                const z = -30 + Math.random() * 48;      // -30..18
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+                dustBasePositions[i * 3] = x;
+                dustBasePositions[i * 3 + 1] = y;
+                dustBasePositions[i * 3 + 2] = z;
+                dustSeeds[i] = Math.random() * Math.PI * 2;
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const mat = new THREE.PointsMaterial({
+                color: 0xfff2df,
+                size: 0.05,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.35,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            dustPoints = new THREE.Points(geo, mat);
+            scene.add(dustPoints);
+        }
+
+        function createNeonFloorReflections() {
+            // Thin additive-blended ground strips under each shop window (cyan, matching the frame)
+            // plus one smaller strip per title sign (colored to match that sign). The sign-colored
+            // strips are pushed into their own parallel array (not the mutating neonSigns array) and
+            // modulated with the SAME phase math/seed as their sign so reflection and sign breathe
+            // together without touching the existing neonSigns emissiveIntensity logic.
+            WORLD_DATA.arcadeSlots.forEach((s, slotIndex) => {
+                const z = s.pos[2];
+
+                const cyanStrip = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1.0, 5.6),
+                    new THREE.MeshBasicMaterial({
+                        color: 0x00f2ff,
+                        transparent: true,
+                        opacity: 0.13,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        side: THREE.DoubleSide
+                    })
+                );
+                cyanStrip.rotation.x = -Math.PI / 2;
+                cyanStrip.position.set(-0.7, 0.02, z);
+                scene.add(cyanStrip);
+
+                const signColor = SIGN_COLORS[slotIndex % SIGN_COLORS.length];
+                const signStrip = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.55, 3.4),
+                    new THREE.MeshBasicMaterial({
+                        color: signColor,
+                        transparent: true,
+                        opacity: 0.1,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false,
+                        side: THREE.DoubleSide
+                    })
+                );
+                signStrip.rotation.x = -Math.PI / 2;
+                signStrip.position.set(-1.15, 0.03, z);
+                scene.add(signStrip);
+
+                // Same seed formula as the matching title sign (slotIndex*2.3+4) so the flicker phase
+                // matches exactly; base opacity used instead of emissiveIntensity.
+                neonFloorReflections.push({ mat: signStrip.material, seed: slotIndex * 2.3 + 4, base: 0.1 });
+            });
+        }
+
+        function createVerticalSignTexture(text, colorHex) {
+            // One character per row, read top-to-bottom, like Korean street vertical signage.
+            const width = 128, rowH = 96;
+            const chars = Array.from(text);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = rowH * chars.length;
+            const ctx = canvas.getContext('2d');
+
+            const color = new THREE.Color(colorHex);
+            const css = `rgb(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)})`;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '900 60px Pretendard, sans-serif';
+            ctx.shadowColor = css;
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = css;
+            chars.forEach((ch, i) => {
+                const cy = rowH * i + rowH / 2;
+                ctx.fillText(ch, width / 2, cy);
+            });
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.85;
+            chars.forEach((ch, i) => {
+                const cy = rowH * i + rowH / 2;
+                ctx.fillText(ch, width / 2, cy);
+            });
+            ctx.globalAlpha = 1;
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createVerticalSigns() {
+            // Narrow vertical sign boxes mounted just in front of a few right-building street-facing
+            // faces (x ~ 4.97), so that uniform wall stops reading as flat and repetitive.
+            const configs = [
+                { text: "HOTEL", color: 0xff2ecb, z: 9, y: 4.6, w: 0.6, h: 3.2 },
+                { text: "24H", color: 0x66ff66, z: -7, y: 3.8, w: 0.55, h: 2.1 },
+                { text: "GAME", color: 0xffc61a, z: -15, y: 5.6, w: 0.6, h: 3.4 }
+            ];
+
+            configs.forEach(cfg => {
+                const tex = createVerticalSignTexture(cfg.text, cfg.color);
+                const mat = new THREE.MeshBasicMaterial({
+                    map: tex,
+                    color: 0xffffff,
+                    side: THREE.DoubleSide
+                });
+                // Right building front face is at x~4.98 facing the street (camera sits at smaller x
+                // looking toward +x), so "in front of" the wall means a smaller x than the backing box
+                // — sign closer to the street, backing box behind it flush against the wall.
+                const sign = new THREE.Mesh(new THREE.PlaneGeometry(cfg.w, cfg.h), mat);
+                sign.position.set(4.88, cfg.y, cfg.z);
+                sign.rotation.y = Math.PI / 2;
+                scene.add(sign);
+
+                // Thin backing box so the sign reads as a mounted box, not a decal floating in air.
+                const backing = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.06, cfg.h + 0.1, cfg.w + 0.1),
+                    new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.6 })
+                );
+                backing.position.set(4.96, cfg.y, cfg.z);
+                scene.add(backing);
+            });
+        }
+
+        function createStreetlightHaloTexture() {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+            grad.addColorStop(0, 'rgba(255,235,200,0.9)');
+            grad.addColorStop(0.4, 'rgba(255,210,150,0.4)');
+            grad.addColorStop(1, 'rgba(255,200,140,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, size, size);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createStreetlightHalos() {
+            // Fakes bulb bloom without postprocessing: one shared radial-gradient CanvasTexture,
+            // reused across all 5 streetlight sprites via one additive-blended SpriteMaterial base.
+            const streetlights = [
+                { z: 12, x: 1.6, height: 4.8, reach: -0.45, warm: 0xffc78a },
+                { z: 4, x: 1.85, height: 5.2, reach: -0.5, warm: 0xffbc73 },
+                { z: -4, x: 1.55, height: 4.7, reach: -0.42, warm: 0xffd2a6 },
+                { z: -12, x: 1.95, height: 5.4, reach: -0.58, warm: 0xffb15c },
+                { z: -20, x: 1.7, height: 4.9, reach: -0.48, warm: 0xffca8f }
+            ];
+            const haloTex = createStreetlightHaloTexture();
+
+            streetlights.forEach((config, index) => {
+                const mat = new THREE.SpriteMaterial({
+                    map: haloTex,
+                    color: config.warm,
+                    transparent: true,
+                    opacity: 0.55,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+                const sprite = new THREE.Sprite(mat);
+                const scale = 1.6 + (index % 3) * 0.3; // 1.6-2.2 range, slight variety per lamp
+                sprite.scale.set(scale, scale, 1);
+                sprite.position.set(
+                    config.x + config.reach - 0.3,
+                    config.height - 0.23,
+                    config.z
+                );
+                scene.add(sprite);
+            });
+        }
+
+        function createCar(direction) {
+            const group = new THREE.Group();
+            const CAR_COLORS = [0x14141a, 0x2a2f38, 0x7a1f24, 0x1a3a52, 0x9a9a9e, 0x4a1f5c];
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+                roughness: 0.32,
+                metalness: 0.65
+            });
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.5, metalness: 0.4 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x0a1420, roughness: 0.15, metalness: 0.3 });
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x030303, roughness: 0.85 });
+            const hubcapMat = new THREE.MeshStandardMaterial({ color: 0x777a80, roughness: 0.3, metalness: 0.8 });
+
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 3.6), bodyMat);
+            body.position.y = 0.36;
+            group.add(body);
+
+            // Front/rear bumpers so the body doesn't read as a single flat block
+            [1.78, -1.78].forEach(z => {
+                const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.22, 0.22), trimMat);
+                bumper.position.set(0, 0.22, z);
+                group.add(bumper);
+            });
+
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.42, 1.7), bodyMat);
+            cabin.position.set(0, 0.76, -0.2);
+            group.add(cabin);
+
+            // Cabin glass on all four sides
+            const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.34, 0.06), glassMat);
+            windshield.position.set(0, 0.78, 0.65);
+            group.add(windshield);
+            const rearGlass = windshield.clone();
+            rearGlass.position.z = -1.05;
+            group.add(rearGlass);
+            [-0.66, 0.66].forEach(x => {
+                const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 1.3), glassMat);
+                sideGlass.position.set(x, 0.78, -0.2);
+                group.add(sideGlass);
+            });
+
+            // Side mirrors
+            [-0.88, 0.88].forEach(x => {
+                const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.16), trimMat);
+                mirror.position.set(x, 0.68, 0.5);
+                group.add(mirror);
+            });
+
+            const wheels = [];
+            [[-0.78, 1.15], [0.78, 1.15], [-0.78, -1.15], [0.78, -1.15]].forEach(([x, z]) => {
+                const wheelGroup = new THREE.Group();
+                const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12), wheelMat);
+                tire.rotation.z = Math.PI / 2;
+                wheelGroup.add(tire);
+                const hubcap = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.23, 10), hubcapMat);
+                hubcap.rotation.z = Math.PI / 2;
+                wheelGroup.add(hubcap);
+                wheelGroup.position.set(x, 0.28, z);
+                group.add(wheelGroup);
+                wheels.push(wheelGroup);
+            });
+
+            const frontZ = direction > 0 ? 1.85 : -1.85;
+            const backZ = direction > 0 ? -1.85 : 1.85;
+            const headlightMat = new THREE.MeshBasicMaterial({ color: 0xfff2c9 });
+            const taillightMat = new THREE.MeshBasicMaterial({ color: 0xff2b2b });
+            [-0.55, 0.55].forEach(x => {
+                const headlight = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), headlightMat);
+                headlight.position.set(x, 0.4, frontZ);
+                group.add(headlight);
+
+                const taillight = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), taillightMat);
+                taillight.position.set(x, 0.4, backZ);
+                group.add(taillight);
+            });
+
+            const headlightGlow = new THREE.PointLight(0xfff2c9, 1.2, 6, 2);
+            headlightGlow.position.set(0, 0.4, frontZ);
+            group.add(headlightGlow);
+
+            const shadow = new THREE.Mesh(
+                new THREE.CircleGeometry(1.4, 20),
+                new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+            );
+            shadow.rotation.x = -Math.PI / 2;
+            shadow.position.y = 0.02;
+            group.add(shadow);
+
+            group.userData.wheels = wheels;
+            return group;
+        }
+
+        function updateTraffic(time) {
+            const dt = lastFrameTime ? (time - lastFrameTime) / 1000 : 0;
+            lastFrameTime = time;
+
+            if (time > nextCarSpawn) {
+                const direction = Math.random() < 0.5 ? 1 : -1;
+                // Keep traffic closer to the building side so cars do not crowd the lamp/palm row
+                // (streetlight poles top out around x ~1.95, building face starts near x ~5.88).
+                const lane = direction > 0 ? 3.55 : 4.05;
+                const car = createCar(direction);
+                car.position.set(lane, 0, direction > 0 ? -42 : 42);
+                car.userData.direction = direction;
+                car.userData.speed = 6 + Math.random() * 3;
+                scene.add(car);
+                activeCars.push(car);
+                nextCarSpawn = time + 9000 + Math.random() * 9000;
+            }
+
+            activeCars = activeCars.filter(car => {
+                const travel = car.userData.direction * car.userData.speed * dt;
+                car.position.z += travel;
+                const wheelSpin = travel / 0.28;
+                car.userData.wheels.forEach(w => { w.rotation.x += wheelSpin; });
+                if (Math.abs(car.position.z) > 44) {
+                    scene.remove(car);
+                    disposeObject3D(car);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function disposeObject3D(root) {
+            // createCar() builds fresh geometries/materials/lights on every spawn; without this,
+            // scene.remove() only detaches them from the graph and the GPU/JS memory they hold
+            // (and the renderer's per-material program cache) leaks a little more with every car,
+            // which is what made the scene keep getting slower the longer the page stayed open.
+            root.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+                    materials.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        if (mat.emissiveMap) mat.emissiveMap.dispose();
+                        mat.dispose();
+                    });
+                }
             });
         }
 
@@ -495,11 +1685,16 @@
             const loader = new THREE.TextureLoader();
             loader.setCrossOrigin('anonymous');
 
-            WORLD_DATA.arcadeSlots.forEach(s => {
+            WORLD_DATA.arcadeSlots.forEach((s, slotIndex) => {
                 const group = new THREE.Group();
                 group.position.set(s.pos[0], 6, s.pos[2]);
 
-                const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 12, 8), new THREE.MeshStandardMaterial({ color: s.color, roughness: 1 }));
+                const wallMat = new THREE.MeshStandardMaterial({
+                    map: createWallPanelTexture(s.color),
+                    roughness: 0.9
+                });
+                wallMat.map.repeat.set(2, 3);
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 12, 8), wallMat);
                 group.add(wall);
 
                 // Shop Window Mesh - 핵심 수정: MeshBasicMaterial 사용하여 텍스처 순수 출력
@@ -519,7 +1714,7 @@
                 shopWindow.rotation.y = Math.PI/2;
                 
                 shopWindow.userData = { isContent: true, data: s.content };
-                interactiveObjects.push(shopWindow); 
+                interactiveObjects.push(shopWindow);
                 group.add(shopWindow);
 
                 const clickZone = new THREE.Mesh(
@@ -530,6 +1725,12 @@
                 clickZone.userData = { isContent: true, data: s.content, focusTarget: shopWindow };
                 interactiveObjects.push(clickZone);
                 group.add(clickZone);
+
+                // Hover hook (item 5): both the window and its clickzone point at the same
+                // neonSigns entry (pushed just below) so the flicker loop can read a per-entry
+                // hoverBoost multiplier instead of the mousemove handler fighting the flicker
+                // loop's per-frame assignment directly.
+                const frameSignRef = { hoverBoost: 1 };
 
                 // Neon frame built from four bars so it doesn't cover the texture surface
                 const frameMat = new THREE.MeshStandardMaterial({
@@ -561,8 +1762,175 @@
                 frameRight.position.set(frameX, -3, frameWidth / 2);
                 group.add(frameRight);
 
+                const frameSignEntry = { mat: frameMat, seed: slotIndex * 2.3 + 1, hoverBoost: frameSignRef };
+                neonSigns.push(frameSignEntry);
+                shopWindow.userData.frameSign = frameSignRef;
+                clickZone.userData.frameSign = frameSignRef;
+                shopWindow.userData.tooltipTitle = s.content.title;
+                clickZone.userData.tooltipTitle = s.content.title;
+
+                // Title neon sign mounted in the blank wall strip above the window
+                const signColor = SIGN_COLORS[slotIndex % SIGN_COLORS.length];
+                const signMat = new THREE.MeshStandardMaterial({
+                    color: 0x000000,
+                    emissive: signColor,
+                    emissiveMap: createSignTexture(s.content.title, signColor),
+                    emissiveIntensity: 4.5,
+                    roughness: 0.4
+                });
+                const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 1.3), signMat);
+                sign.position.set(frameX + 0.01, 1.55, 0);
+                sign.rotation.y = Math.PI / 2;
+                group.add(sign);
+
+                // isText: skip the harsh glitch-off drop so the title stays readable at all times;
+                // it only breathes gently instead of blinking near-dark like the frame borders.
+                neonSigns.push({ mat: signMat, seed: slotIndex * 2.3 + 4, base: 4.5, isText: true });
+
                 scene.add(group);
             });
+        }
+
+        function createSignTexture(title, colorHex) {
+            // Higher-res canvas than before (2048 wide) so the letters stay sharp; the sign is read
+            // from below at a grazing angle, where a low-res / isotropically-filtered texture blurs out.
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048;
+            canvas.height = 384;
+            const ctx = canvas.getContext('2d');
+
+            const color = new THREE.Color(colorHex);
+            const cssColor = `rgb(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)})`;
+            const text = title.toUpperCase();
+            const maxWidth = canvas.width - 160;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // Shrink the font until the title actually fits, so it never gets clipped or squashed
+            let fontSize = 190;
+            ctx.font = `900 ${fontSize}px Pretendard, sans-serif`;
+            while (ctx.measureText(text).width > maxWidth && fontSize > 60) {
+                fontSize -= 6;
+                ctx.font = `900 ${fontSize}px Pretendard, sans-serif`;
+            }
+
+            // Colored soft glow (radius scales with font size so long/short titles glow proportionally),
+            // then a colored tube stroke, then a crisp white core — three layers give a readable neon
+            // look where the white core always stays legible against the glow.
+            ctx.shadowColor = cssColor;
+            ctx.shadowBlur = Math.max(10, fontSize * 0.18);
+            ctx.fillStyle = cssColor;
+            ctx.fillText(text, cx, cy);
+            ctx.fillText(text, cx, cy);
+
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = Math.max(3, fontSize * 0.05);
+            ctx.strokeStyle = cssColor;
+            ctx.strokeText(text, cx, cy);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, cx, cy);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            return texture;
+        }
+
+        function createLeftWallFillers() {
+            // Plain windowless wall segments that continue the shop row at both ends,
+            // so the alley reaches roughly the same length as the opposite building row
+            // and the horizon doesn't peek through the gap past the last shop.
+            [12, -28].forEach(z => {
+                const group = new THREE.Group();
+                group.position.set(-5.5, 6, z);
+
+                const wallMat = new THREE.MeshStandardMaterial({
+                    map: createWallPanelTexture(0x040404),
+                    roughness: 0.9
+                });
+                wallMat.map.repeat.set(2, 3);
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(4, 12, 8), wallMat);
+                group.add(wall);
+
+                scene.add(group);
+            });
+        }
+
+        function createOppositeBuildings() {
+            WORLD_DATA.buildings.forEach(b => {
+                const group = new THREE.Group();
+                group.position.set(b.pos[0], b.height / 2, b.pos[2]);
+
+                const wallMat = new THREE.MeshStandardMaterial({
+                    map: createWallPanelTexture(0x0d0d10),
+                    roughness: 0.95
+                });
+                wallMat.map.repeat.set(2, Math.max(1, Math.round(b.height / 4)));
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(b.depth, b.height, b.width), wallMat);
+                group.add(wall);
+
+                const faceTexture = b.type === 'shutter' ? createShutterTexture() : createFacadeTexture();
+                const face = new THREE.Mesh(
+                    new THREE.PlaneGeometry(b.width - 0.4, b.height - 0.6),
+                    new THREE.MeshStandardMaterial({ map: faceTexture, roughness: 0.85 })
+                );
+                face.position.set(-b.depth / 2 - 0.02, 0, 0);
+                face.rotation.y = -Math.PI / 2;
+                group.add(face);
+
+                scene.add(group);
+            });
+        }
+
+        function createFacadeTexture() {
+            const cols = 5, rows = 6, cell = 48;
+            const canvas = document.createElement('canvas');
+            canvas.width = cols * cell;
+            canvas.height = rows * cell;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0a0a0d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const lit = Math.random() < 0.22;
+                    ctx.fillStyle = lit ? 'rgba(255,190,110,0.9)' : 'rgba(40,45,55,0.6)';
+                    const pad = 10;
+                    ctx.fillRect(c * cell + pad, r * cell + pad, cell - pad * 2, cell - pad * 2);
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createShutterTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#141416';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.lineWidth = 3;
+            for (let y = 12; y < canvas.height; y += 14) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
         }
 
         function applyWindowTexture(loader, material, content) {
@@ -659,6 +2027,195 @@
         }
 
         /**
+         * 2b. UI/UX: node tracker, guide auto-hide/idle, hover tooltip, touch guide text
+         */
+        function buildNodeTracker() {
+            const container = document.getElementById('node-tracker');
+            container.innerHTML = '';
+            WORLD_DATA.nodes.forEach(n => {
+                const row = document.createElement('div');
+                row.className = 'node-dot-row';
+
+                const label = document.createElement('span');
+                label.className = 'node-dot-label';
+                label.innerText = n.label;
+                row.appendChild(label);
+
+                const dot = document.createElement('span');
+                dot.className = 'node-dot';
+                dot.dataset.nodeId = n.id;
+                dot.addEventListener('click', () => navigateTo(n.id));
+                row.appendChild(dot);
+
+                container.appendChild(row);
+            });
+            updateNodeTrackerActive();
+        }
+
+        function updateNodeTrackerActive() {
+            const dots = document.querySelectorAll('#node-tracker .node-dot');
+            dots.forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.nodeId === currentNodeId);
+            });
+        }
+
+        // --- Guide box auto-hide + idle revive (item 2) ---
+        function hideGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.add('hidden-by-timer');
+            guideHiddenByTimer = true;
+        }
+
+        function showGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.remove('hidden-by-timer');
+            guideHiddenByTimer = false;
+        }
+
+        function scheduleGuideHide() {
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            guideHideTimer = setTimeout(hideGuideBox, GUIDE_HIDE_DELAY_MS);
+        }
+
+        function resetGuideIdleTimer() {
+            if (guideIdleTimer) clearTimeout(guideIdleTimer);
+            guideIdleTimer = setTimeout(() => {
+                if (!isInspecting) {
+                    showGuideBox();
+                    scheduleGuideHide();
+                }
+            }, GUIDE_IDLE_REVIVE_MS);
+        }
+
+        function onFirstModalOpen() {
+            if (hasOpenedModalOnce) return;
+            hasOpenedModalOnce = true;
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            hideGuideBox();
+        }
+
+        function onUserActivity() {
+            resetGuideIdleTimer();
+        }
+
+        // --- Hover tooltip + neon hover boost (item 5) ---
+        function showHoverTip(clientX, clientY, title) {
+            const tip = document.getElementById('hover-tip');
+            document.getElementById('hover-tip-title').innerText = title;
+            tip.style.display = 'block';
+            const offsetX = 18, offsetY = 18;
+            let x = clientX + offsetX;
+            let y = clientY + offsetY;
+            const maxX = window.innerWidth - 280;
+            const maxY = window.innerHeight - 80;
+            if (x > maxX) x = clientX - offsetX - 240;
+            if (y > maxY) y = clientY - offsetY - 60;
+            tip.style.left = `${x}px`;
+            tip.style.top = `${y}px`;
+        }
+
+        function hideHoverTip() {
+            document.getElementById('hover-tip').style.display = 'none';
+        }
+
+        function setHoveredFrameSign(frameSign) {
+            if (lastHoveredFrameSign === frameSign) return;
+            if (lastHoveredFrameSign) lastHoveredFrameSign.hoverBoost = 1;
+            lastHoveredFrameSign = frameSign;
+            if (lastHoveredFrameSign) lastHoveredFrameSign.hoverBoost = 1.6;
+        }
+
+        // --- Touch-aware guide text (item 6) ---
+        function isCoarsePointer() {
+            return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        }
+
+        function applyTouchAwareGuideText() {
+            // Reused by the on-screen zoom buttons too, so coarse-pointer detection lives in one
+            // place: toggling body.coarse-pointer here shows #zoom-controls via CSS (see rule).
+            document.body.classList.toggle('coarse-pointer', isCoarsePointer());
+            if (!isCoarsePointer()) return;
+            document.getElementById('guide-move').innerText = '🚶 탭해서 이동';
+            document.getElementById('guide-watch').innerText = '✨ 두 번 탭해서 보기';
+            document.getElementById('guide-zoom').innerText = '🤏 핀치 줌';
+        }
+
+        // --- On-screen zoom buttons (touch discoverability for the wheel/pinch zoom) ---
+        // ZOOM_BUTTON_STEP/_REPEAT_MS live up near MIN_FOV/MAX_FOV (not here) because initZoomButtons()
+        // is invoked synchronously from inside init(), which runs (via the init(); call) before the
+        // script's top-to-bottom execution ever reaches this point in the file — a const/let declared
+        // here would still be in its temporal dead zone when initZoomButtons() first reads it.
+        let zoomButtonInterval = null;
+
+        function stepTargetFOV(delta) {
+            targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta));
+        }
+
+        function stopZoomButtonRepeat() {
+            if (zoomButtonInterval !== null) {
+                clearInterval(zoomButtonInterval);
+                zoomButtonInterval = null;
+            }
+        }
+
+        function startZoomButtonRepeat(delta) {
+            stopZoomButtonRepeat(); // guard: never stack more than one interval
+            stepTargetFOV(delta); // immediate step on tap, then repeat while held
+            zoomButtonInterval = setInterval(() => stepTargetFOV(delta), ZOOM_BUTTON_REPEAT_MS);
+        }
+
+        function initZoomButtons() {
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            if (!zoomInBtn || !zoomOutBtn) return;
+
+            const wire = (btn, delta) => {
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation(); // keep this off the canvas/window nav & pinch handlers
+                    startZoomButtonRepeat(delta);
+                });
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
+            };
+            wire(zoomInBtn, -ZOOM_BUTTON_STEP);
+            wire(zoomOutBtn, ZOOM_BUTTON_STEP);
+
+            // Stop repeating on release no matter where the pointer lets go or leaves the button.
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+                zoomInBtn.addEventListener(evt, stopZoomButtonRepeat);
+                zoomOutBtn.addEventListener(evt, stopZoomButtonRepeat);
+            });
+            window.addEventListener('blur', stopZoomButtonRepeat);
+        }
+
+        // --- Minimal two-finger pinch → targetFOV, mirroring the wheel handler's deltaY mapping ---
+        function onTouchStartPinch(e) {
+            if (e.touches.length === 2) {
+                pinchLastDist = getTouchDistance(e.touches);
+            }
+        }
+
+        function onTouchMovePinch(e) {
+            if (e.touches.length !== 2) return;
+            const dist = getTouchDistance(e.touches);
+            if (pinchLastDist !== null) {
+                const delta = pinchLastDist - dist; // fingers spreading (zoom in) -> negative delta
+                targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta * 0.15));
+                if (e.cancelable) e.preventDefault();
+            }
+            pinchLastDist = dist;
+        }
+
+        function onTouchEndPinch(e) {
+            if (e.touches.length < 2) pinchLastDist = null;
+        }
+
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        /**
          * 3. NAVIGATION & LOGIC
          */
         function findPath(startId, endId) {
@@ -693,6 +2250,7 @@
                 });
                 currentNodeId = path[i];
                 document.getElementById('current-node').innerText = nextNode.label;
+                updateNodeTrackerActive();
             }
             isMoving = false;
         }
@@ -733,36 +2291,6 @@
 
             const focusTarget = hitObject.userData.focusTarget || hitObject;
             focusOnWindow(focusTarget);
-        }
-
-        function onPointerDown(e) {
-            return handlePointerDown(e);
-
-            if (isMoving || isInspecting) return;
-
-            updatePointer(e);
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(interactiveObjects, true);
-            
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                const obj = hit.object;
-
-                // 1. 더블 클릭 감지 (300ms 이내) -> 쇼윈도우 상세 보기
-                if (timeDiff < 300) {
-                    if (obj.userData.isContent) {
-                        focusOnWindow(obj);
-                        return;
-                    }
-                }
-
-                // 2. 단일 클릭 -> 이동
-                if (obj.userData.isNode) {
-                    navigateTo(obj.userData.id);
-                } else if (obj.userData.isFloor) {
-                    handleRoadClick(hit.point);
-                }
-            }
         }
 
         function updatePointer(e) {
@@ -807,6 +2335,7 @@
                 mediaBox.innerHTML = `<img src="${data.media}" alt="Project Detail Image">`;
             }
             document.getElementById('modal').style.display = 'flex';
+            onFirstModalOpen();
         }
 
         function closeModal() {
@@ -840,13 +2369,43 @@
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(interactiveObjects, true);
             document.body.style.cursor = (intersects.length > 0) ? 'pointer' : 'default';
+
+            // Item 5: brighten the hovered shop's neon frame + show a floating tooltip near the
+            // cursor. Skipped on touch devices (no true hover), per spec.
+            if (isCoarsePointer()) return;
+            const hit = intersects.find(i => i.object.userData && i.object.userData.isContent);
+            if (hit) {
+                setHoveredFrameSign(hit.object.userData.frameSign || null);
+                showHoverTip(e.clientX, e.clientY, hit.object.userData.tooltipTitle || '');
+            } else {
+                setHoveredFrameSign(null);
+                hideHoverTip();
+            }
         }
 
+        // Escape must close the modal even though modal-open state IS isInspecting (which every
+        // other key handler below early-returns on) — so it is checked first, before that guard.
         function onKeyDown(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal');
+                if (modal.style.display === 'flex') {
+                    closeModal();
+                }
+                return;
+            }
             if (isMoving || isInspecting) return;
             const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
             if ((e.key === 'w' || e.key === 'ArrowUp') && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
             if ((e.key === 's' || e.key === 'ArrowDown') && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
+        }
+
+        // Backdrop click closes the modal (item 1b). e.target === the #modal element itself means
+        // the click landed on the dark backdrop, not inside .modal-content (clicks there stop
+        // propagating to #modal because .modal-content sits on top / is a distinct element).
+        function onModalBackdropClick(e) {
+            if (e.target === e.currentTarget) {
+                closeModal();
+            }
         }
 
         function onWheel(e) {
@@ -856,9 +2415,28 @@
 
         function resetPosition() { targetFOV = 55; navigateTo("n1"); }
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+            scheduleResize();
+        }
+
+        function resizeRendererToViewport() {
+            if (!camera || !renderer) return;
+            const { width, height } = getViewportSize();
+            camera.aspect = width / height;
+            camera.fov = getEffectiveTargetFOV();
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+            renderer.setSize(width, height, false);
+            renderer.domElement.style.width = `${width}px`;
+            renderer.domElement.style.height = `${height}px`;
+        }
+
+        function scheduleResize() {
+            resizeRendererToViewport();
+            if (resizeTimer) clearTimeout(resizeTimer);
+            requestAnimationFrame(resizeRendererToViewport);
+            resizeTimer = setTimeout(resizeRendererToViewport, 120);
+            setTimeout(resizeRendererToViewport, 350);
+            setTimeout(resizeRendererToViewport, 700);
         }
 
         /**
@@ -866,25 +2444,71 @@
          */
         function animate(time) {
             requestAnimationFrame(animate);
+            time = time || 0; // first call from the top-level animate(); has no rAF timestamp yet
             TWEEN.update(time);
 
             if (!isInspecting) {
-                const desiredPos = playerGroup.position.clone().add(CAM_OFFSET);
+                const desiredPos = playerGroup.position.clone().add(getResponsiveCamOffset());
                 camera.position.lerp(desiredPos, 0.08);
                 const lookTarget = playerGroup.position.clone().add(new THREE.Vector3(-2, 1.8, -3));
                 camera.lookAt(lookTarget);
             }
 
-            if (Math.abs(camera.fov - targetFOV) > 0.01) {
-                camera.fov += (targetFOV - camera.fov) * 0.1;
+            const effectiveTargetFOV = getEffectiveTargetFOV();
+            if (Math.abs(camera.fov - effectiveTargetFOV) > 0.01) {
+                camera.fov += (effectiveTargetFOV - camera.fov) * 0.1;
                 camera.updateProjectionMatrix();
             }
 
-            nodes.forEach((n, i) => { 
+            nodes.forEach((n, i) => {
                 const isAhead = WORLD_DATA.nodes[i].pos[2] < playerGroup.position.z - 0.5;
-                n.material.opacity = (isAhead ? 0.45 : 0.2) + Math.sin(time * 0.005) * 0.1; 
+                n.material.opacity = (isAhead ? 0.45 : 0.2) + Math.sin(time * 0.005) * 0.1;
             });
-            
+
+            const t = time * 0.001;
+            neonSigns.forEach(sign => {
+                const wobble = Math.sin(t * 1.3 + sign.seed) * Math.sin(t * 0.7 + sign.seed * 2);
+                if (sign.isText) {
+                    // Gentle breathing only (never below ~0.9× base) so the title never becomes unreadable.
+                    sign.mat.emissiveIntensity = sign.base * (0.94 + 0.06 * wobble);
+                } else {
+                    let intensity = (sign.base || 5) * (0.85 + 0.15 * wobble);
+                    if (Math.random() < 0.003) intensity *= 0.2;
+                    // hoverBoost is an object reference ({hoverBoost: 1|~1.6}) shared with the
+                    // shop window/clickzone userData so onMouseMove can flip it without touching
+                    // this loop's own per-frame intensity math.
+                    if (sign.hoverBoost) intensity *= sign.hoverBoost.hoverBoost;
+                    sign.mat.emissiveIntensity = intensity;
+                }
+            });
+
+            updateTraffic(time);
+
+            neonFloorReflections.forEach(strip => {
+                const wobble = Math.sin(t * 1.3 + strip.seed) * Math.sin(t * 0.7 + strip.seed * 2);
+                strip.mat.opacity = strip.base * (0.94 + 0.06 * wobble);
+            });
+
+            if (dustPoints) {
+                const posAttr = dustPoints.geometry.attributes.position;
+                const arr = posAttr.array;
+                for (let i = 0; i < dustSeeds.length; i++) {
+                    const seed = dustSeeds[i];
+                    const bx = dustBasePositions[i * 3];
+                    const by = dustBasePositions[i * 3 + 1];
+                    const bz = dustBasePositions[i * 3 + 2];
+                    // Slow sine wobble on x/z plus a very slow upward drift that wraps back to the
+                    // bottom of the y range once a particle rises past it, so the corridor never runs
+                    // out of dust up top.
+                    arr[i * 3] = bx + Math.sin(t * 0.15 + seed) * 0.4;
+                    arr[i * 3 + 2] = bz + Math.cos(t * 0.12 + seed * 1.7) * 0.4;
+                    let y = by + ((t * 0.05 + seed) % 5.7);
+                    if (y > 6) y -= 5.7;
+                    arr[i * 3 + 1] = y;
+                }
+                posAttr.needsUpdate = true;
+            }
+
             renderer.render(scene, camera);
         }
     </script>

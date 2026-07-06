@@ -11,6 +11,8 @@
             --accent: #00f2ff;
             --bg: #000108;
             --glass: rgba(0, 10, 30, 0.95);
+            --panel: rgba(0, 10, 30, 0.82);
+            --line: rgba(0, 242, 255, 0.28);
         }
 
         body, html {
@@ -26,100 +28,296 @@
             display: block; z-index: 1;
         }
 
+        /* HUD as a CSS Grid, named areas, direct children only (city/water pattern — no
+           display:contents, see city/README.md for the iOS Chrome WebKit bug that used to cause). */
         #hud {
-            position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;
-            padding: 1.75rem 1.75rem 0; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10;
+            position: fixed; top: 0; left: 0; width: 100%; pointer-events: none;
+            padding: max(1.75rem, env(safe-area-inset-top)) 1.75rem 0; z-index: 10;
             box-sizing: border-box;
-            gap: 1.25rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "brand actions"
+                "location actions";
+            column-gap: 1.25rem;
+            row-gap: 0.5rem;
+            align-items: start;
         }
 
-        .brand-zone { pointer-events: auto; }
-        .hud-actions {
-            pointer-events: auto;
-            flex-shrink: 0;
-            padding-right: 0.45rem;
+        .hud-actions { grid-area: actions; pointer-events: auto; flex-shrink: 0; padding-right: 0.45rem; }
+        .brand-name {
+            grid-area: brand; pointer-events: auto;
+            font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 900; letter-spacing: 8px; color: var(--accent);
+            text-shadow: 0 0 25px var(--accent); white-space: nowrap; min-width: 0;
         }
-        .brand-name { font-size: 2.2rem; font-weight: 900; letter-spacing: 8px; color: var(--accent); margin-bottom: 0.5rem; text-shadow: 0 0 25px var(--accent); }
-        .location-info { font-size: 1rem; color: #558; text-transform: uppercase; letter-spacing: 3px; }
+        .location-info {
+            grid-area: location; pointer-events: auto;
+            font-size: clamp(0.72rem, 1.8vw, 1rem); color: #558; text-transform: uppercase;
+            letter-spacing: 3px; min-width: 0;
+        }
+
+        /* Icon-only circular reset button (city/water pattern: stroke="currentColor" inline SVG, no emoji). */
         .hud-button {
+            position: relative;
             pointer-events: auto;
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--accent);
             color: var(--accent);
-            padding: 0.8rem 1.8rem;
+            width: 42px;
+            height: 42px;
+            padding: 0;
             cursor: pointer;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: 900;
-            letter-spacing: 2px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: 0.3s;
-            white-space: nowrap;
+            flex-shrink: 0;
         }
+        .hud-button svg { width: 20px; height: 20px; display: block; }
         .hud-button:hover {
             background: rgba(0, 242, 255, 0.16);
             box-shadow: 0 0 26px rgba(0, 242, 255, 0.16);
         }
 
-        @media (max-width: 720px) {
-            #hud {
-                padding: 1rem 1rem 0;
-                gap: 0.75rem;
+        @media (hover: hover) and (pointer: fine) {
+            .hud-button[data-tooltip]::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                top: calc(100% + 10px);
+                right: 0;
+                background: var(--panel);
+                border: 1px solid rgba(0, 242, 255, 0.4);
+                color: #eee;
+                font-size: 0.72rem;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                white-space: nowrap;
+                padding: 0.4rem 0.7rem;
+                border-radius: 8px;
+                pointer-events: none;
+                opacity: 0;
+                transform: translateY(-4px);
+                transition: opacity 0.2s, transform 0.2s;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+                z-index: 30;
             }
+            .hud-button[data-tooltip]:hover::after {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-            .hud-button {
-                padding: 0.72rem 1.15rem;
-                font-size: 0.74rem;
-                letter-spacing: 1.4px;
-            }
+        @media (max-width: 720px) {
+            #hud { padding: max(1rem, env(safe-area-inset-top)) 1rem 0; }
         }
 
         .guide-box {
-            position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+            position: fixed; bottom: max(2.5rem, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+            width: min(calc(100vw - 1.5rem), 980px);
             background: var(--glass); padding: 1rem 2.5rem; border-radius: 50px;
             border: 1px solid rgba(0, 242, 255, 0.5); backdrop-filter: blur(20px);
-            font-size: 0.9rem; display: flex; gap: 2rem; pointer-events: none; letter-spacing: 1.5px;
-            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); white-space: nowrap; z-index: 20;
+            font-size: 0.9rem; display: flex; justify-content: center; align-items: center; flex-wrap: wrap;
+            gap: 0.5rem 2rem; pointer-events: none; letter-spacing: 1.5px;
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); box-sizing: border-box; z-index: 20;
         }
+        .guide-box span { white-space: nowrap; min-width: 0; }
 
         #modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.96); display: none; justify-content: center; align-items: center;
             z-index: 100; backdrop-filter: blur(35px);
+            cursor: pointer;
         }
 
         .modal-content {
             background: #010408; width: 92%; max-width: 850px; border: 1px solid var(--accent);
-            border-radius: 32px; padding: 3rem; position: relative; 
+            border-radius: 32px; padding: 3rem; position: relative;
             box-shadow: 0 0 150px rgba(0, 242, 255, 0.3);
             animation: spaceIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: default;
         }
 
         @keyframes spaceIn { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .close-btn { 
-            position: absolute; top: 1.5rem; right: 2rem; font-size: 4rem; cursor: pointer; 
-            color: #444; transition: 0.3s; z-index: 130; line-height: 1; border: none; background: none; 
+        .close-btn {
+            position: absolute; top: 1.5rem; right: 2rem; font-size: 4rem; cursor: pointer;
+            color: #444; transition: 0.3s; z-index: 130; line-height: 1; border: none; background: none;
         }
         .close-btn:hover { color: var(--accent); transform: rotate(90deg); }
 
-        .modal-media { 
-            width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 16px; 
-            margin-bottom: 2.5rem; overflow: hidden; border: 1px solid #1a1a1a; 
+        .modal-media {
+            width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 16px;
+            margin-bottom: 2.5rem; overflow: hidden; border: 1px solid #1a1a1a;
         }
         .modal-media iframe, .modal-media img { width: 100%; height: 100%; border: none; display: block; object-fit: cover; }
-        
+
         .modal-title { font-size: 2.5rem; margin-bottom: 1rem; color: var(--accent); font-weight: 900; }
         .modal-desc { color: #88a; line-height: 1.8; margin-bottom: 3rem; font-size: 1.15rem; }
-        .modal-link { 
-            display: block; text-align: center; background: var(--accent); color: #000; 
-            padding: 1.4rem; border-radius: 16px; text-decoration: none; font-weight: 900; 
+        .modal-link {
+            display: block; text-align: center; background: var(--accent); color: #000;
+            padding: 1.4rem; border-radius: 16px; text-decoration: none; font-weight: 900;
             transition: 0.3s; font-size: 1.2rem;
         }
         .modal-link:hover { filter: brightness(1.25); transform: translateY(-5px); }
 
-        #loading { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        #loading {
+            position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 1; transition: opacity 0.6s ease;
+        }
+        #loading.fade-out { opacity: 0; }
         .spinner { width: 60px; height: 60px; border: 6px solid rgba(0, 242, 255, 0.1); border-top: 6px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* First-reveal fade-up for the HUD/guide box (city/water pattern). guide-box centers via
+           left:50% + translateX(-50%); every transform state below MUST keep translateX(-50%)
+           bundled in the same transform value, or the pill silently shifts off-center (a real
+           bug city hit — see city/README.md). */
+        #hud {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .guide-box {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #hud.revealed { opacity: 1; transform: translateY(0); }
+        .guide-box.revealed { opacity: 1; transform: translateX(-50%) translateY(0); transition-delay: 0.12s; }
+        .guide-box.hidden-by-timer { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; }
+
+        /* Node tracker: vertical stack of dots on the right edge. */
+        #node-tracker {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.85rem;
+            pointer-events: auto;
+        }
+        .node-dot-row { display: flex; align-items: center; gap: 0.6rem; }
+        .node-dot-label {
+            background: var(--panel);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 0.68rem;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 0.32rem 0.7rem;
+            border-radius: 20px;
+            opacity: 0;
+            transform: translateX(6px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+        }
+        .node-dot-row:hover .node-dot-label { opacity: 1; transform: translateX(0); }
+        .node-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #335;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            transition: 0.25s;
+            flex-shrink: 0;
+        }
+        .node-dot:hover { background: #6ab; }
+        .node-dot.active {
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px 2px rgba(0, 242, 255, 0.8);
+        }
+
+        /* On-screen zoom buttons (touch discoverability). */
+        #zoom-controls {
+            position: fixed;
+            right: max(0.9rem, env(safe-area-inset-right));
+            bottom: 6.75rem;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        body.coarse-pointer #zoom-controls { display: flex; }
+        .zoom-btn {
+            pointer-events: auto;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--panel);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            backdrop-filter: blur(20px);
+            color: #ddd;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            transition: 0.25s;
+        }
+        .zoom-btn:hover, .zoom-btn:active {
+            border-color: rgba(0, 242, 255, 0.6);
+            color: #fff;
+            box-shadow: 0 0 18px rgba(0, 242, 255, 0.25);
+        }
+
+        /* Hover tooltip: follows the cursor near a hovered planet. */
+        #hover-tip {
+            position: fixed;
+            z-index: 30;
+            pointer-events: none;
+            background: var(--panel);
+            border: 1px solid rgba(0, 242, 255, 0.4);
+            backdrop-filter: blur(16px);
+            border-radius: 12px;
+            padding: 0.55rem 0.9rem;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            display: none;
+            max-width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        #hover-tip .tip-title { color: var(--accent); font-weight: 800; letter-spacing: 0.3px; display: block; }
+        #hover-tip .tip-hint { color: #88a; font-size: 0.7rem; display: block; margin-top: 0.15rem; }
+
+        @media (max-width: 860px) {
+            .modal-content { padding: 2rem; }
+        }
+
+        @media (max-width: 520px) and (orientation: portrait) {
+            #hud {
+                grid-template-areas:
+                    "brand actions"
+                    "location location";
+            }
+            .brand-name { font-size: clamp(1.2rem, 8vw, 1.6rem); letter-spacing: 4px; }
+            .location-info { font-size: 0.72rem; letter-spacing: 2px; }
+            .guide-box {
+                width: min(calc(100vw - 1rem), 360px);
+                padding: 0.65rem 0.95rem;
+                border-radius: 18px;
+                align-items: flex-start;
+                gap: 0.28rem;
+                flex-direction: column;
+                letter-spacing: 0.6px;
+                font-size: 0.76rem;
+            }
+            #zoom-controls { right: 0.55rem; bottom: 10.5rem; }
+            #node-tracker { right: 0.55rem; gap: 0.65rem; }
+            .node-dot-label { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -132,19 +330,34 @@
     <canvas id="main-canvas"></canvas>
 
     <div id="hud">
-        <div class="brand-zone">
-            <div class="brand-name">BUNT SPACE</div>
-            <div class="location-info">System Discovery / <span id="current-node" style="color: #fff;">Sector 01</span></div>
-        </div>
+        <div class="brand-name">BUNT SPACE</div>
         <div class="hud-actions">
-            <button onclick="resetPosition()" class="hud-button">RE-SYNC ORBIT</button>
+            <button onclick="resetPosition()" class="hud-button" aria-label="궤도 재동기화" title="궤도 재동기화" data-tooltip="궤도 재동기화">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3.2-6.9" />
+                    <polyline points="3 3 3 7 7 7" />
+                </svg>
+            </button>
         </div>
+        <div class="location-info">System Discovery / <span id="current-node" style="color: #fff;">Sector 01</span></div>
     </div>
 
-    <div class="guide-box">
-        <span>🚀 CLICK LANE TO WARP</span>
-        <span>🌌 DBL-CLICK PLANET TO SCAN</span>
-        <span>🎡 ZOOM WHEEL</span>
+    <div class="guide-box" id="guide-box">
+        <span id="guide-move">🚀 CLICK LANE TO WARP</span>
+        <span id="guide-watch">🌌 DBL-CLICK PLANET TO SCAN</span>
+        <span id="guide-zoom">🎡 ZOOM WHEEL</span>
+    </div>
+
+    <div id="node-tracker"></div>
+
+    <div id="zoom-controls">
+        <button type="button" class="zoom-btn" id="zoom-in-btn" aria-label="확대">+</button>
+        <button type="button" class="zoom-btn" id="zoom-out-btn" aria-label="축소">−</button>
+    </div>
+
+    <div id="hover-tip">
+        <span class="tip-title" id="hover-tip-title"></span>
+        <span class="tip-hint">더블클릭으로 보기</span>
     </div>
 
     <div id="modal">
@@ -182,29 +395,102 @@
         let shuttleGroup = new THREE.Group();
         let spaceLane;
         let interactiveObjects = [];
-        let nodes = [], currentNodeId = "n1"; 
+        let nodes = [], currentNodeId = "n1";
         let isMoving = false, isInspecting = false;
         const n_animators = [];
         const mouse = new THREE.Vector2();
+        // rot (Euler) is kept only as a harmless snapshot — quat is what focusOnPlanet()/closeModal()
+        // actually tween back to (see the quaternion-slerp note near focusOnPlanet()).
         const originalCamState = {
             pos: new THREE.Vector3(),
             rot: new THREE.Euler(),
+            quat: new THREE.Quaternion(),
             fov: 55
         };
-        
-        const CAM_OFFSET = new THREE.Vector3(7.5, 5, 12); 
-        let targetFOV = 55, lastClickTime = 0;
+
+        const CAM_OFFSET = new THREE.Vector3(7.5, 5, 12);
+        let targetFOV = 55;
+        const MIN_FOV = 15;
+        const MAX_FOV = 100;
+
+        // --- UI/UX state (guide auto-hide/idle, node tracker, hover tooltip, touch pinch) ---
+        // All new constants live here, near CAM_OFFSET, BEFORE the bootEngine() call at the bottom
+        // of the script — star calls bootEngine() immediately (no window.onload wrapper), so any
+        // constant referenced inside bootEngine()/its helpers before it is declared here would be a
+        // real TDZ crash (city broke twice on exactly this).
+        const GUIDE_HIDE_DELAY_MS = 9000;
+        const GUIDE_IDLE_REVIVE_MS = 45000;
+        let guideHideTimer = null;
+        let guideIdleTimer = null;
+        let guideHiddenByTimer = false;
+        let hasOpenedModalOnce = false;
+        let lastHoveredPlanet = null;
+        let pinchLastDist = null;
+        const ZOOM_BUTTON_STEP = 8;
+        const ZOOM_BUTTON_REPEAT_MS = 120;
+        let zoomButtonInterval = null;
+        let resizeTimer = null;
+
+        // --- C1-C7 graphics-pass constants (all declared here, before bootEngine(), per the TDZ
+        // pitfall noted above — star calls bootEngine() immediately at the bottom of the script). ---
+        // C7: comet traffic timing/spawn bounds.
+        const COMET_SPAWN_MIN_MS = 60000;
+        const COMET_SPAWN_MAX_MS = 60000; // spawn window is MIN..MIN+MAX below (60-120s)
+        let nextCometSpawn = COMET_SPAWN_MIN_MS + Math.random() * COMET_SPAWN_MAX_MS;
+        let activeComets = [];
+        let lastCometFrameTime = 0;
+
+        function getViewportSize() {
+            const visualViewport = window.visualViewport;
+            const width = Math.max(1, Math.round(
+                (visualViewport && visualViewport.width) ||
+                document.documentElement.clientWidth ||
+                window.innerWidth
+            ));
+            const height = Math.max(1, Math.round(
+                (visualViewport && visualViewport.height) ||
+                document.documentElement.clientHeight ||
+                window.innerHeight
+            ));
+            return { width, height };
+        }
+
+        function getResponsiveFOVBoost() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return 0;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return 4 + portrait * 10;
+        }
+
+        function getEffectiveTargetFOV() {
+            return Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + getResponsiveFOVBoost()));
+        }
+
+        function getResponsiveCamOffset() {
+            const { width, height } = getViewportSize();
+            const aspect = width / Math.max(1, height);
+            if (aspect >= 1) return CAM_OFFSET;
+            const portrait = Math.min(1, (1 - aspect) / 0.45);
+            return CAM_OFFSET.clone().add(new THREE.Vector3(
+                portrait * 1.5,
+                portrait * 1.0,
+                portrait * 4.5
+            ));
+        }
 
         /**
          * 2. 엔진 시동 (DOM 로드 즉시)
          */
         function bootEngine() {
             const canvas = document.getElementById('main-canvas');
-            
+
             // Renderer Setup
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Cap at 1.5 instead of 2 (city/water pattern): halves fragment count on hi-DPI screens
+            // with little visible quality loss.
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
             renderer.outputEncoding = THREE.sRGBEncoding;
 
             // Scene Setup
@@ -213,14 +499,14 @@
             scene.fog = new THREE.FogExp2(0x02040b, 0.022);
 
             // Camera Setup
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 4000);
-            
+            camera = new THREE.PerspectiveCamera(getEffectiveTargetFOV(), window.innerWidth / window.innerHeight, 0.1, 4000);
+
             raycaster = new THREE.Raycaster();
 
             // Lighting: 가시성을 위해 강력하게 설정
             scene.add(new THREE.AmbientLight(0x8fb6ff, 0.55));
             scene.add(new THREE.HemisphereLight(0x2c3f88, 0x04050c, 1.7));
-            
+
             const direct = new THREE.DirectionalLight(0xcfe6ff, 1.65);
             direct.position.set(28, 36, 18);
             scene.add(direct);
@@ -239,6 +525,7 @@
             createSpacePlanets();
             createWarpNodes();
             createVisualBeacons();
+            n_animators.push(updateCometTraffic);
 
             // Road Grid
             const grid = new THREE.GridHelper(1000, 100, 0x00f2ff, 0x000510);
@@ -258,19 +545,55 @@
             // Set Start Pos
             const startNode = WORLD_DATA.nodes.find(n => n.id === currentNodeId);
             shuttleGroup.position.set(startNode.pos[0], 0.5, startNode.pos[2]);
-            camera.position.copy(shuttleGroup.position).add(CAM_OFFSET);
+            camera.position.copy(shuttleGroup.position).add(getResponsiveCamOffset());
             camera.lookAt(shuttleGroup.position.clone().add(new THREE.Vector3(-4, 1.5, -6)));
 
-            // Events
+            // Events — mousedown/mousemove/dblclick attach to the canvas (not window) so HUD/tracker
+            // clicks don't leak into the 3D raycast (city/water pattern).
             window.addEventListener('resize', onResize);
-            window.addEventListener('wheel', onWheel, { passive: false });
-            window.addEventListener('mousedown', onPointerDown);
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('keydown', onKey);
+            window.addEventListener('orientationchange', scheduleResize);
+            window.addEventListener('pageshow', scheduleResize);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleResize);
+                window.visualViewport.addEventListener('scroll', scheduleResize);
+            }
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleResize(); });
 
-            // Release Loading
-            document.getElementById('loading').style.display = 'none';
-            
+            window.addEventListener('wheel', onWheel, { passive: false });
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            renderer.domElement.addEventListener('dblclick', onDoubleClick);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('keydown', onKey);
+            document.getElementById('modal').addEventListener('click', onModalBackdropClick);
+
+            renderer.domElement.addEventListener('touchstart', onTouchStartPinch, { passive: true });
+            renderer.domElement.addEventListener('touchmove', onTouchMovePinch, { passive: false });
+            renderer.domElement.addEventListener('touchend', onTouchEndPinch, { passive: true });
+
+            // Idle detection for the guide-box revive.
+            window.addEventListener('pointerdown', onUserActivity);
+            window.addEventListener('keydown', onUserActivity);
+            window.addEventListener('wheel', onUserActivity, { passive: true });
+
+            buildNodeTracker();
+            applyTouchAwareGuideText();
+            initZoomButtons();
+
+            // Delay so the opacity transition is actually visible (previously hid #loading
+            // synchronously, which meant the fade-out CSS never had a chance to play).
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                loading.classList.add('fade-out');
+                const onFadeDone = () => { loading.style.display = 'none'; };
+                loading.addEventListener('transitionend', onFadeDone, { once: true });
+                setTimeout(onFadeDone, 700);
+
+                document.getElementById('hud').classList.add('revealed');
+                document.getElementById('guide-box').classList.add('revealed');
+                scheduleGuideHide();
+                resetGuideIdleTimer();
+            }, 800);
+
             animate(0);
         }
 
@@ -298,16 +621,27 @@
                 new THREE.PointsMaterial({ size: 1.35, vertexColors: true, transparent: true, opacity: 0.9 })
             ));
 
-            const nearField = new THREE.BufferGeometry();
-            const nearPositions = [];
-            for (let i = 0; i < 1800; i++) {
-                nearPositions.push((Math.random() - 0.5) * 600, Math.random() * 280 + 10, (Math.random() - 0.5) * 900);
+            // C4: nearField split into 3 groups (~600 each) so each group's material opacity can
+            // breathe on its own slow sine phase (twinkle "in place" — positions never change,
+            // deepField stays fully static as before).
+            const NEAR_FIELD_TOTAL = 1800;
+            const NEAR_FIELD_GROUPS = 3;
+            const perGroup = Math.ceil(NEAR_FIELD_TOTAL / NEAR_FIELD_GROUPS);
+            for (let g = 0; g < NEAR_FIELD_GROUPS; g++) {
+                const nearField = new THREE.BufferGeometry();
+                const nearPositions = [];
+                for (let i = 0; i < perGroup; i++) {
+                    nearPositions.push((Math.random() - 0.5) * 600, Math.random() * 280 + 10, (Math.random() - 0.5) * 900);
+                }
+                nearField.setAttribute('position', new THREE.Float32BufferAttribute(nearPositions, 3));
+                const nearMat = new THREE.PointsMaterial({ color: 0xe7fbff, size: 2.1, transparent: true, opacity: 0.9 });
+                scene.add(new THREE.Points(nearField, nearMat));
+
+                const phase = g * 2.1;
+                n_animators.push((time) => {
+                    nearMat.opacity = 0.55 + 0.35 * Math.sin(time * 0.0004 + phase);
+                });
             }
-            nearField.setAttribute('position', new THREE.Float32BufferAttribute(nearPositions, 3));
-            scene.add(new THREE.Points(
-                nearField,
-                new THREE.PointsMaterial({ color: 0xe7fbff, size: 2.1, transparent: true, opacity: 0.95 })
-            ));
 
             const nebulaTexture = createNebulaTexture();
             [
@@ -324,6 +658,106 @@
                 }));
                 sprite.position.set(cloud.pos[0], cloud.pos[1], cloud.pos[2]);
                 sprite.scale.set(cloud.scale[0], cloud.scale[1], cloud.scale[2]);
+                scene.add(sprite);
+            });
+
+            createMilkyWayBand();
+        }
+
+        // C5: Milky Way band — an elongated soft gradient CanvasTexture (star dots + darker dust
+        // blotches along its length), applied to a couple of huge Sprite backdrops far away, rotated
+        // diagonally across the sky. fog:false + depthWrite:false, heavily feathered edges (city's
+        // "stage backdrop" approach) so it reads as a distant galaxy band, not a stripe.
+        function createMilkyWayBandTexture() {
+            const w = 1024, h = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, w, h);
+
+            // Base band: bright core fading heavily along both the vertical (thickness) axis and
+            // horizontal ends, so there's no hard edge anywhere.
+            for (let x = 0; x < w; x++) {
+                const t = x / (w - 1);
+                const endFade = Math.sin(Math.PI * t);
+                const center = h * (0.5 + Math.sin(t * Math.PI * 2.1) * 0.045 + Math.sin(t * Math.PI * 5.2) * 0.018);
+                const halfWidth = h * (0.1 + 0.13 * endFade + 0.035 * Math.sin(t * Math.PI * 3.4 + 0.7));
+                const coreAlpha = 0.34 * Math.pow(Math.max(0, endFade), 1.7);
+                const y0 = Math.max(0, center - halfWidth * 2.2);
+                const y1 = Math.min(h, center + halfWidth * 2.2);
+                const grad = ctx.createLinearGradient(0, y0, 0, y1);
+                grad.addColorStop(0, 'rgba(180,200,255,0)');
+                grad.addColorStop(0.42, `rgba(190,210,255,${coreAlpha * 0.55})`);
+                grad.addColorStop(0.5, `rgba(235,240,255,${coreAlpha})`);
+                grad.addColorStop(0.58, `rgba(190,210,255,${coreAlpha * 0.55})`);
+                grad.addColorStop(1, 'rgba(180,200,255,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(x, y0, 1, y1 - y0);
+            }
+
+            // Scattered star dots along the band.
+            for (let i = 0; i < 520; i++) {
+                const x = Math.random() * w;
+                const t = x / (w - 1);
+                const endFade = Math.sin(Math.PI * t);
+                if (Math.random() > endFade) continue;
+                const center = h * (0.5 + Math.sin(t * Math.PI * 2.1) * 0.045 + Math.sin(t * Math.PI * 5.2) * 0.018);
+                const y = center + (Math.random() - 0.5) * h * (0.12 + 0.36 * endFade);
+                const r = Math.random() * 1.1 + 0.2;
+                ctx.globalAlpha = (0.22 + Math.random() * 0.55) * endFade;
+                ctx.fillStyle = Math.random() < 0.7 ? '#ffffff' : '#bcd6ff';
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Darker dust blotches breaking up the band for texture.
+            for (let i = 0; i < 14; i++) {
+                const x = Math.random() * w;
+                const t = x / (w - 1);
+                const y = h * (0.5 + Math.sin(t * Math.PI * 2.1) * 0.045) + (Math.random() - 0.5) * h * 0.35;
+                const rx = 40 + Math.random() * 90;
+                const ry = 14 + Math.random() * 30;
+                const dustGrad = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
+                dustGrad.addColorStop(0, 'rgba(4,6,14,0.28)');
+                dustGrad.addColorStop(1, 'rgba(4,6,14,0)');
+                ctx.fillStyle = dustGrad;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.max(rx, ry), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        function createMilkyWayBand() {
+            const bandTex = createMilkyWayBandTexture();
+            [
+                { pos: [-260, 250, -1500], scale: [2400, 540, 1], rot: 0.55, opacity: 0.32 },
+                { pos: [360, -170, -1650], scale: [1700, 360, 1], rot: 0.62, opacity: 0.16 }
+            ].forEach((band) => {
+                const mat = new THREE.SpriteMaterial({
+                    map: bandTex,
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: band.opacity,
+                    depthWrite: false,
+                    fog: false
+                });
+                const sprite = new THREE.Sprite(mat);
+                sprite.position.set(band.pos[0], band.pos[1], band.pos[2]);
+                sprite.scale.set(band.scale[0], band.scale[1], band.scale[2]);
+                // THREE.Sprite has no z-rotation property pre-r140 exposed simply, but material.rotation
+                // (radians, applied to the sprite's texture in screen space) gives the diagonal tilt.
+                mat.rotation = band.rot;
                 scene.add(sprite);
             });
         }
@@ -381,6 +815,29 @@
             wingRight.rotation.z = -0.08;
             shuttleGroup.add(wingRight);
 
+            // C6: wingtip nav lights — small emissive spheres, red (left/port) / green (right/
+            // starboard), aviation convention. Slow smooth alternating blink via a sine (not a
+            // square-wave strobe), floor ~0.2 so they never fully vanish.
+            const navLightGeo = new THREE.SphereGeometry(0.055, 10, 10);
+            const navLightLeftMat = new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 1 });
+            const navLightRightMat = new THREE.MeshBasicMaterial({ color: 0x33ff66, transparent: true, opacity: 1 });
+
+            const navLightLeft = new THREE.Mesh(navLightGeo, navLightLeftMat);
+            navLightLeft.position.set(-1.97, -0.08, 0.3);
+            shuttleGroup.add(navLightLeft);
+
+            const navLightRight = new THREE.Mesh(navLightGeo, navLightRightMat);
+            navLightRight.position.set(1.97, -0.08, 0.3);
+            shuttleGroup.add(navLightRight);
+
+            n_animators.push((time) => {
+                const NAV_BLINK_PERIOD_MS = 2500;
+                const w = time * (2 * Math.PI / NAV_BLINK_PERIOD_MS);
+                // Alternating: left and right are exactly out of phase.
+                navLightLeftMat.opacity = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(w));
+                navLightRightMat.opacity = 0.2 + 0.8 * (0.5 + 0.5 * Math.sin(w + Math.PI));
+            });
+
             const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.86, 0.8), hullMat);
             fin.position.set(0, 0.52, 1.02);
             shuttleGroup.add(fin);
@@ -410,12 +867,70 @@
             thrusterLight.position.set(0, -0.04, 1.74);
             shuttleGroup.add(thrusterLight);
 
+            // C1: engine exhaust trail — one shared cone geometry+material (additive, depthWrite
+            // false) reused for both engines, tip pointing backward (+z, away from travel). Scale.z
+            // (and opacity) lerp between an idle/short state and a moving/long+bright state in the
+            // animator below, reading the existing isMoving flag — no new lights, reuses the existing
+            // thrusterLight PointLight for actual illumination.
+            const trailGeo = new THREE.ConeGeometry(0.11, 1, 14, 1, true);
+            trailGeo.translate(0, -0.5, 0); // base at origin, tip extends toward -y before rotation
+            const trailMat = new THREE.MeshBasicMaterial({
+                color: 0x8ff5ff,
+                transparent: true,
+                opacity: 0.25,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide,
+                fog: false
+            });
+
+            const trailLeft = new THREE.Mesh(trailGeo, trailMat);
+            trailLeft.rotation.x = -Math.PI / 2; // cone tip now points toward +z (backward)
+            trailLeft.position.set(-0.34, -0.12, 1.7);
+            trailLeft.scale.z = 0.5;
+            shuttleGroup.add(trailLeft);
+
+            const trailRight = new THREE.Mesh(trailGeo, trailMat.clone());
+            trailRight.rotation.x = -Math.PI / 2;
+            trailRight.position.set(0.34, -0.12, 1.7);
+            trailRight.scale.z = 0.5;
+            shuttleGroup.add(trailRight);
+
+            n_animators.push(() => {
+                const targetScale = isMoving ? 2.5 : 0.5;
+                const targetOpacity = isMoving ? 0.7 : 0.25;
+                trailLeft.scale.z += (targetScale - trailLeft.scale.z) * 0.06;
+                trailRight.scale.z += (targetScale - trailRight.scale.z) * 0.06;
+                trailLeft.material.opacity += (targetOpacity - trailLeft.material.opacity) * 0.06;
+                trailRight.material.opacity += (targetOpacity - trailRight.material.opacity) * 0.06;
+            });
+
             scene.add(shuttleGroup);
+        }
+
+        // C3: shared radial-gradient CanvasTexture for planet back-glow halos (ported from water's
+        // createBuoyHaloTexture pattern) — one texture, tinted per planet via SpriteMaterial.color.
+        function createHaloTexture() {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+            grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+            grad.addColorStop(0.4, 'rgba(255,255,255,0.35)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, size, size);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
         }
 
         function createSpacePlanets() {
             const loader = new THREE.TextureLoader();
             loader.setCrossOrigin('anonymous');
+            const haloTex = createHaloTexture();
 
             WORLD_DATA.planets.forEach(s => {
                 const group = new THREE.Group();
@@ -429,20 +944,23 @@
                     roughness: 0.85
                 });
                 const core = new THREE.Mesh(coreGeo, coreMat);
-                
+
                 coreMat.map = createPlanetFallbackTexture(s.color, s.content.title);
                 coreMat.needsUpdate = true;
 
-                loader.load(s.content.media, (tex) => { 
+                loader.load(s.content.media, (tex) => {
                     tex.encoding = THREE.sRGBEncoding;
                     tex.wrapS = THREE.RepeatWrapping;
                     tex.wrapT = THREE.RepeatWrapping;
-                    coreMat.map = tex; 
-                    coreMat.needsUpdate = true; 
+                    coreMat.map = tex;
+                    coreMat.needsUpdate = true;
                 });
 
-                core.userData = { isContent: true, data: s.content };
-                interactiveObjects.push(core); 
+                // Hover hook: neon ring reference + tooltip title stashed on the core's userData so
+                // onMouseMove can boost ring emissiveIntensity / show #hover-tip.
+                const neonRef = { hoverBoost: 1 };
+                core.userData = { isContent: true, data: s.content, neonRef, tooltipTitle: s.content.title };
+                interactiveObjects.push(core);
                 group.add(core);
 
                 const atmosphere = new THREE.Mesh(
@@ -456,6 +974,20 @@
                 );
                 group.add(atmosphere);
 
+                // C3: back-glow halo sprite, tinted per planet color, positioned at the group center
+                // (slightly behind reads fine since sprites always face the camera). Subtle opacity.
+                const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: haloTex,
+                    color: s.color,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                }));
+                halo.position.set(0, 0, -1.5);
+                halo.scale.set(9.5, 9.5, 1);
+                group.add(halo);
+
                 const ring = new THREE.Mesh(
                     new THREE.TorusGeometry(4.35, 0.08, 18, 120),
                     new THREE.MeshStandardMaterial({
@@ -468,6 +1000,8 @@
                 );
                 ring.rotation.set(Math.PI / 2.5, Math.PI / 2, 0.22);
                 group.add(ring);
+                neonRef.mat = ring.material;
+                neonRef.base = 3.2;
 
                 const outerRing = new THREE.Mesh(
                     new THREE.TorusGeometry(5.1, 0.03, 12, 120),
@@ -496,14 +1030,18 @@
 
                 scene.add(group);
                 const baseY = group.position.y;
-                n_animators.push(() => { 
-                    core.rotation.y += 0.005; 
+                // A4: animator now receives animate(time)'s elapsed value as a parameter instead of
+                // calling Date.now() per frame (matches the render loop's existing safe `elapsed`).
+                n_animators.push((time) => {
+                    core.rotation.y += 0.005;
                     atmosphere.rotation.y -= 0.0025;
-                    ring.rotation.z += 0.008; 
+                    ring.rotation.z += 0.008;
                     outerRing.rotation.z -= 0.004;
-                    moon.position.x = Math.cos(Date.now() * 0.00055 + s.pos[2] * 0.03) * 4.9;
-                    moon.position.z = Math.sin(Date.now() * 0.00055 + s.pos[2] * 0.03) * 4.9;
-                    group.position.y = baseY + Math.sin(Date.now() * 0.001 + s.pos[2] * 0.08) * 0.35;
+                    moon.position.x = Math.cos(time * 0.00055 + s.pos[2] * 0.03) * 4.9;
+                    moon.position.z = Math.sin(time * 0.00055 + s.pos[2] * 0.03) * 4.9;
+                    group.position.y = baseY + Math.sin(time * 0.001 + s.pos[2] * 0.08) * 0.35;
+                    // B6: boost ring emissiveIntensity ~1.6x while hovered.
+                    neonRef.mat.emissiveIntensity = neonRef.base * neonRef.hoverBoost;
                 });
             });
         }
@@ -559,23 +1097,75 @@
             return texture;
         }
 
+        // C2: shared vertical alpha-gradient texture for warp-node light pillars — opaque-ish at the
+        // bottom, fading to fully transparent at the top, so a plain open-ended cylinder reads as a
+        // soft light column instead of a hard-edged tube.
+        function createPillarGradientTexture() {
+            const w = 32, h = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createLinearGradient(0, h, 0, 0);
+            grad.addColorStop(0, 'rgba(180,245,255,0.55)');
+            grad.addColorStop(0.35, 'rgba(140,230,255,0.28)');
+            grad.addColorStop(0.75, 'rgba(100,200,255,0.08)');
+            grad.addColorStop(1, 'rgba(80,180,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
         function createWarpNodes() {
-            WORLD_DATA.nodes.forEach(n => {
+            const pillarTex = createPillarGradientTexture();
+            const pillarGeo = new THREE.CylinderGeometry(1.3, 1.3, 6, 24, 1, true);
+            pillarGeo.translate(0, 3, 0); // base at y=0 so it rises up from the ring
+
+            WORLD_DATA.nodes.forEach((n, i) => {
                 const ring = new THREE.Mesh(
                     new THREE.TorusGeometry(1.6, 0.1, 8, 48),
                     new THREE.MeshBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.4 })
                 );
                 ring.rotation.x = -Math.PI/2;
                 ring.position.set(n.pos[0], 0.2, n.pos[2]);
-                
+
                 const hitbox = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.0, 1.2, 16), new THREE.MeshBasicMaterial({ visible: false }));
                 hitbox.position.copy(ring.position);
                 hitbox.userData = { isNode: true, id: n.id, label: n.label };
-                
+
                 interactiveObjects.push(hitbox);
                 scene.add(ring);
                 scene.add(hitbox);
                 nodes.push(ring);
+
+                // C2: light pillar rising from the ring. Slow breathing opacity (sine, ~4-6s period,
+                // small amplitude) — no fast pulsing (water buoy-strobe lesson). Current node reads
+                // brighter, checked per-frame against currentNodeId rather than hooked into
+                // navigateTo() so it stays correct even when navigateTo() is mid-transition.
+                const pillarMat = new THREE.MeshBasicMaterial({
+                    map: pillarTex,
+                    color: 0x00f2ff,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.DoubleSide,
+                    fog: false
+                });
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.set(n.pos[0], 0.2, n.pos[2]);
+                scene.add(pillar);
+
+                const phase = i * 1.7;
+                const periodMs = 4500 + (i % 3) * 500; // 4-6s range, varied per node
+                n_animators.push((time) => {
+                    const isCurrent = n.id === currentNodeId;
+                    const base = isCurrent ? 0.55 : 0.28;
+                    const amp = isCurrent ? 0.12 : 0.06;
+                    pillarMat.opacity = base + Math.sin(time * (2 * Math.PI / periodMs) + phase) * amp;
+                });
             });
         }
 
@@ -592,10 +1182,118 @@
                 group.add(crystal);
                 scene.add(group);
                 const baseY = crystal.position.y;
-                n_animators.push(() => { 
-                    crystal.rotation.y += 0.05; 
-                    crystal.position.y = baseY + Math.sin(Date.now() * 0.002 + z * 0.05) * 0.4; 
+                // A4: use animate(time)'s elapsed value instead of Date.now().
+                n_animators.push((time) => {
+                    crystal.rotation.y += 0.05;
+                    crystal.position.y = baseY + Math.sin(time * 0.002 + z * 0.05) * 0.4;
                 });
+            });
+        }
+
+        // C7 (stretch): passing comet — ported from water's cargo-ship traffic pattern
+        // (spawn/despawn + disposeObject3D). Comets stay far in the background (distance ~400-800)
+        // and cross diagonally VERY slowly (~30-45s to cross), so they never enter the play area or
+        // draw the eye with speed — the "no fast motion anywhere" rule from water's strobe/scroll
+        // complaints applies just as much to travel speed as to opacity pulsing.
+        //
+        // disposeObject3D: star didn't have one yet (nothing was previously spawned/despawned at
+        // runtime); ported verbatim from water/index.html so the comet's geometries/materials/
+        // textures actually get freed instead of just detached from the scene graph.
+        function disposeObject3D(root) {
+            root.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+                    materials.forEach(mat => {
+                        if (mat.map) mat.map.dispose();
+                        if (mat.emissiveMap) mat.emissiveMap.dispose();
+                        mat.dispose();
+                    });
+                }
+            });
+        }
+
+        function createCometTailTexture() {
+            const w = 128, h = 32;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0, 'rgba(255,255,255,0.85)');
+            grad.addColorStop(0.3, 'rgba(180,220,255,0.45)');
+            grad.addColorStop(1, 'rgba(180,220,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            return texture;
+        }
+
+        let _cometTailTex = null;
+
+        function createComet() {
+            if (!_cometTailTex) _cometTailTex = createCometTailTexture();
+
+            const group = new THREE.Group();
+
+            const core = new THREE.Mesh(
+                new THREE.SphereGeometry(2.2, 12, 12),
+                new THREE.MeshBasicMaterial({ color: 0xdfffff })
+            );
+            group.add(core);
+
+            const tail = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: _cometTailTex,
+                color: 0xaee0ff,
+                transparent: true,
+                opacity: 0.55,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                fog: false
+            }));
+            tail.scale.set(60, 15, 1);
+            group.add(tail);
+
+            // Pick a distant diagonal path: start far on one side, drift slowly to the far other
+            // side, staying well beyond the play area the whole time.
+            const distance = 400 + Math.random() * 400; // 400-800
+            const startAngle = Math.random() * Math.PI * 2;
+            const start = new THREE.Vector3(Math.cos(startAngle) * distance, 120 + Math.random() * 160, Math.sin(startAngle) * distance);
+            const endAngle = startAngle + Math.PI * (0.6 + Math.random() * 0.4); // roughly across the sky
+            const end = new THREE.Vector3(Math.cos(endAngle) * distance, start.y - 60 + Math.random() * 120, Math.sin(endAngle) * distance);
+
+            group.position.copy(start);
+            const dir = end.clone().sub(start);
+            // Orient the tail to point away from the travel direction.
+            tail.material.rotation = Math.atan2(dir.y, dir.x) + Math.PI;
+
+            const crossMs = 30000 + Math.random() * 15000; // 30-45s to cross
+            group.userData = { start, dir, crossMs, elapsedMs: 0 };
+            return group;
+        }
+
+        function updateCometTraffic(time) {
+            const dt = lastCometFrameTime ? (time - lastCometFrameTime) : 0;
+            lastCometFrameTime = time;
+
+            if (time > nextCometSpawn) {
+                const comet = createComet();
+                scene.add(comet);
+                activeComets.push(comet);
+                nextCometSpawn = time + COMET_SPAWN_MIN_MS + Math.random() * COMET_SPAWN_MAX_MS;
+            }
+
+            activeComets = activeComets.filter(comet => {
+                comet.userData.elapsedMs += dt;
+                const t = comet.userData.elapsedMs / comet.userData.crossMs;
+                comet.position.copy(comet.userData.start).addScaledVector(comet.userData.dir, Math.min(1, t));
+                if (t >= 1) {
+                    scene.remove(comet);
+                    disposeObject3D(comet);
+                    return false;
+                }
+                return true;
             });
         }
 
@@ -605,7 +1303,7 @@
         async function navigateTo(targetId) {
             if (isMoving || isInspecting || currentNodeId === targetId) return;
             isMoving = true;
-            
+
             const startIdx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
             const endIdx = WORLD_DATA.nodes.findIndex(n => n.id === targetId);
             const dir = endIdx > startIdx ? 1 : -1;
@@ -621,62 +1319,99 @@
                 });
                 currentNodeId = nextNode.id;
                 document.getElementById('current-node').innerText = nextNode.label;
+                updateNodeTrackerActive();
             }
             isMoving = false;
         }
 
+        // Split into pointerdown (single-click: node/floor) + a dedicated dblclick event (planet
+        // focus), replacing the old manual lastClickTime timing hack. dblclick fires natively for
+        // double-taps on mobile Chrome/Safari, so touch double-tap keeps working.
         function onPointerDown(e) {
             if (isMoving || isInspecting) return;
-            const now = Date.now();
-            const diff = now - lastClickTime;
-            lastClickTime = now;
 
             updatePointer(e);
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(interactiveObjects, true);
-            
-            if (intersects.length > 0) {
-                const obj = intersects[0].object;
-                if (diff < 350 && (obj.userData.isContent || obj.parent.userData?.isContent)) {
-                    focusOnPlanet(obj.userData.isContent ? obj : obj.parent);
-                } else if (obj.userData.isNode) {
-                    navigateTo(obj.userData.id);
-                } else if (obj.userData.isFloor) {
-                    const pt = intersects[0].point;
-                    const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
-                    if (pt.z < shuttleGroup.position.z - 2.5 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
-                    else if (pt.z > shuttleGroup.position.z + 2.5 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
-                }
+            if (intersects.length === 0) return;
+
+            const obj = intersects[0].object;
+            if (obj.userData.isNode) {
+                navigateTo(obj.userData.id);
+            } else if (obj.userData.isFloor) {
+                const pt = intersects[0].point;
+                const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
+                if (pt.z < shuttleGroup.position.z - 2.5 && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
+                else if (pt.z > shuttleGroup.position.z + 2.5 && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
             }
         }
 
+        function onDoubleClick(e) {
+            if (isMoving || isInspecting) return;
+
+            updatePointer(e);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+            if (intersects.length === 0) return;
+
+            const obj = intersects[0].object;
+            if (obj.userData.isContent) {
+                focusOnPlanet(obj);
+            }
+        }
+
+        // A1: replaced the old Euler-component tween (TWEEN.Tween(camera.rotation).to({x,y,z}, ...))
+        // with a quaternion slerp — the exact fix water shipped after a user-visible "camera rotates
+        // the wrong way" bug. Euler component tweening breaks for two reasons: (a) +/-2*PI wrap (the
+        // component lerp always takes whichever raw-number path is longer, not the shortest arc), and
+        // (b) gimbal-equivalent representations (two Eulers can describe near-identical orientations
+        // via wildly different x/y/z numbers, so tweening between them swings through orientations
+        // neither endpoint had). A quaternion slerp always interpolates along the shortest arc,
+        // regardless of how the start/end Eulers happened to be numbered.
+        // Current focus behavior mirrors city: move to the +x side and face straight back toward the content.
         function focusOnPlanet(obj) {
             isInspecting = true;
             originalCamState.pos.copy(camera.position);
             originalCamState.rot.copy(camera.rotation);
+            originalCamState.quat.copy(camera.quaternion);
             originalCamState.fov = camera.fov;
 
             const worldPos = new THREE.Vector3();
             obj.getWorldPosition(worldPos);
 
-            new TWEEN.Tween(camera.position).to({ x: worldPos.x + 9, y: worldPos.y, z: worldPos.z }, 1400).easing(TWEEN.Easing.Cubic.Out).start();
-            new TWEEN.Tween(camera.rotation).to({ y: Math.PI / 2, x: 0, z: 0 }, 1400).easing(TWEEN.Easing.Cubic.Out).onComplete(() => {
-                const data = obj.userData.data;
-                document.getElementById('modal-title').innerText = data.title;
-                document.getElementById('modal-desc').innerText = data.desc;
-                document.getElementById('modal-link').href = data.link;
-                const mediaBox = document.getElementById('modal-media');
-                if (data.youtubeId) mediaBox.innerHTML = `<iframe src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-                else mediaBox.innerHTML = `<img src="${data.media}" alt="Planet Resource">`;
-                document.getElementById('modal').style.display = 'flex';
-            }).start();
+            // Planets sit at x=-8 and are always viewed from the +x side, so the camera lands at
+            // worldPos + (+9 on x) as before — kept exactly, just computed toward the camera side for
+            // cleanliness instead of a bare hardcoded worldPos.x + 9.
+            const camTarget = { x: worldPos.x + 9, y: worldPos.y, z: worldPos.z };
+
+            // Match city: use a fixed +x inspection angle instead of deriving a per-object rotation.
+            new TWEEN.Tween(camera.position).to(camTarget, 900).easing(TWEEN.Easing.Cubic.Out).start();
+            new TWEEN.Tween(camera.rotation).to({ y: Math.PI / 2, x: 0, z: 0 }, 900).easing(TWEEN.Easing.Cubic.Out)
+                .onComplete(() => {
+                    const data = obj.userData.data;
+                    document.getElementById('modal-title').innerText = data.title;
+                    document.getElementById('modal-desc').innerText = data.desc;
+                    document.getElementById('modal-link').href = data.link;
+                    const mediaBox = document.getElementById('modal-media');
+                    if (data.youtubeId) mediaBox.innerHTML = `<iframe src="https://www.youtube.com/embed/${data.youtubeId}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+                    else mediaBox.innerHTML = `<img src="${data.media}" alt="Planet Resource">`;
+                    document.getElementById('modal').style.display = 'flex';
+                    onFirstModalOpen();
+                }).start();
         }
 
         function closeModal() {
             document.getElementById('modal').style.display = 'none';
-            document.getElementById('modal-media').innerHTML = ""; 
+            document.getElementById('modal-media').innerHTML = "";
+            const startQuat = camera.quaternion.clone();
+            const endQuat = originalCamState.quat.clone();
             new TWEEN.Tween(camera.position).to({ x: originalCamState.pos.x, y: originalCamState.pos.y, z: originalCamState.pos.z }, 900).easing(TWEEN.Easing.Cubic.InOut).start();
-            new TWEEN.Tween(camera.rotation).to({ x: originalCamState.rot.x, y: originalCamState.rot.y, z: originalCamState.rot.z }, 900).easing(TWEEN.Easing.Cubic.InOut).onComplete(() => { isInspecting = false; }).start();
+            new TWEEN.Tween({ t: 0 }).to({ t: 1 }, 900).easing(TWEEN.Easing.Cubic.InOut)
+                .onUpdate((o) => { camera.quaternion.slerpQuaternions(startQuat, endQuat, o.t); })
+                .onComplete(() => {
+                    camera.quaternion.copy(endQuat);
+                    isInspecting = false;
+                }).start();
             targetFOV = originalCamState.fov;
         }
 
@@ -691,27 +1426,248 @@
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(interactiveObjects, true);
             document.body.style.cursor = (intersects.length > 0) ? 'pointer' : 'default';
+
+            // B6: planet hover feedback — boost neon ring + show tooltip. Skipped on coarse pointers
+            // (no true hover on touch).
+            if (isCoarsePointer()) return;
+            const hit = intersects.find(h => h.object.userData && h.object.userData.isContent);
+            if (hit) {
+                setHoveredPlanet(hit.object.userData.neonRef || null);
+                showHoverTip(e.clientX, e.clientY, hit.object.userData.tooltipTitle || '');
+            } else {
+                setHoveredPlanet(null);
+                hideHoverTip();
+            }
         }
 
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+        function onResize() { scheduleResize(); }
+
+        function resizeRendererToViewport() {
+            if (!camera || !renderer) return;
+            const { width, height } = getViewportSize();
+            camera.aspect = width / height;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+            renderer.setSize(width, height, false);
+            renderer.domElement.style.width = `${width}px`;
+            renderer.domElement.style.height = `${height}px`;
+        }
+
+        function scheduleResize() {
+            resizeRendererToViewport();
+            if (resizeTimer) clearTimeout(resizeTimer);
+            requestAnimationFrame(resizeRendererToViewport);
+            resizeTimer = setTimeout(resizeRendererToViewport, 120);
+            setTimeout(resizeRendererToViewport, 350);
+            setTimeout(resizeRendererToViewport, 700);
         }
 
         function onWheel(e) {
             if (e.cancelable) e.preventDefault();
-            targetFOV = Math.max(15, Math.min(100, targetFOV + e.deltaY * 0.08));
+            targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + e.deltaY * 0.08));
         }
 
+        // Escape must close the modal even though modal-open state IS isInspecting — handled BEFORE
+        // the isMoving||isInspecting early-return that every other key uses.
         function onKey(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal');
+                if (modal.style.display === 'flex') closeModal();
+                return;
+            }
             if (isMoving || isInspecting) return;
             const idx = WORLD_DATA.nodes.findIndex(n => n.id === currentNodeId);
             if ((e.key === 'w' || e.key === 'ArrowUp') && idx < WORLD_DATA.nodes.length - 1) navigateTo(WORLD_DATA.nodes[idx+1].id);
             if ((e.key === 's' || e.key === 'ArrowDown') && idx > 0) navigateTo(WORLD_DATA.nodes[idx-1].id);
         }
 
+        // Backdrop click closes the modal — e.target === e.currentTarget means the click landed on
+        // the dark #modal backdrop itself, not inside .modal-content.
+        function onModalBackdropClick(e) {
+            if (e.target === e.currentTarget) closeModal();
+        }
+
         function resetPosition() { targetFOV = 55; navigateTo("n1"); }
+
+        /**
+         * 3b. UI/UX: node tracker, guide auto-hide/idle, hover tooltip, touch guide text, zoom buttons, pinch
+         */
+        function buildNodeTracker() {
+            const container = document.getElementById('node-tracker');
+            container.innerHTML = '';
+            WORLD_DATA.nodes.forEach(n => {
+                const row = document.createElement('div');
+                row.className = 'node-dot-row';
+
+                const label = document.createElement('span');
+                label.className = 'node-dot-label';
+                label.innerText = n.label;
+                row.appendChild(label);
+
+                const dot = document.createElement('span');
+                dot.className = 'node-dot';
+                dot.dataset.nodeId = n.id;
+                dot.addEventListener('click', () => navigateTo(n.id));
+                row.appendChild(dot);
+
+                container.appendChild(row);
+            });
+            updateNodeTrackerActive();
+        }
+
+        function updateNodeTrackerActive() {
+            const dots = document.querySelectorAll('#node-tracker .node-dot');
+            dots.forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.nodeId === currentNodeId);
+            });
+        }
+
+        // --- Guide box auto-hide + idle revive ---
+        function hideGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.add('hidden-by-timer');
+            guideHiddenByTimer = true;
+        }
+
+        function showGuideBox() {
+            const guide = document.getElementById('guide-box');
+            guide.classList.remove('hidden-by-timer');
+            guideHiddenByTimer = false;
+        }
+
+        function scheduleGuideHide() {
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            guideHideTimer = setTimeout(hideGuideBox, GUIDE_HIDE_DELAY_MS);
+        }
+
+        function resetGuideIdleTimer() {
+            if (guideIdleTimer) clearTimeout(guideIdleTimer);
+            guideIdleTimer = setTimeout(() => {
+                if (!isInspecting) {
+                    showGuideBox();
+                    scheduleGuideHide();
+                }
+            }, GUIDE_IDLE_REVIVE_MS);
+        }
+
+        function onFirstModalOpen() {
+            if (hasOpenedModalOnce) return;
+            hasOpenedModalOnce = true;
+            if (guideHideTimer) clearTimeout(guideHideTimer);
+            hideGuideBox();
+        }
+
+        function onUserActivity() {
+            resetGuideIdleTimer();
+        }
+
+        // --- Hover tooltip + neon hover boost ---
+        function showHoverTip(clientX, clientY, title) {
+            const tip = document.getElementById('hover-tip');
+            document.getElementById('hover-tip-title').innerText = title;
+            tip.style.display = 'block';
+            const offsetX = 18, offsetY = 18;
+            let x = clientX + offsetX;
+            let y = clientY + offsetY;
+            const maxX = window.innerWidth - 280;
+            const maxY = window.innerHeight - 80;
+            if (x > maxX) x = clientX - offsetX - 240;
+            if (y > maxY) y = clientY - offsetY - 60;
+            tip.style.left = `${x}px`;
+            tip.style.top = `${y}px`;
+        }
+
+        function hideHoverTip() {
+            document.getElementById('hover-tip').style.display = 'none';
+        }
+
+        function setHoveredPlanet(neonRef) {
+            if (lastHoveredPlanet === neonRef) return;
+            if (lastHoveredPlanet) lastHoveredPlanet.hoverBoost = 1;
+            lastHoveredPlanet = neonRef;
+            if (lastHoveredPlanet) lastHoveredPlanet.hoverBoost = 1.6;
+        }
+
+        // --- Touch-aware guide text ---
+        function isCoarsePointer() {
+            return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        }
+
+        function applyTouchAwareGuideText() {
+            document.body.classList.toggle('coarse-pointer', isCoarsePointer());
+            if (!isCoarsePointer()) return;
+            document.getElementById('guide-move').innerText = '🚀 탭해서 워프';
+            document.getElementById('guide-watch').innerText = '🌌 두 번 탭해서 보기';
+            document.getElementById('guide-zoom').innerText = '🤏 핀치 줌';
+        }
+
+        // --- On-screen zoom buttons ---
+        function stepTargetFOV(delta) {
+            targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta));
+        }
+
+        function stopZoomButtonRepeat() {
+            if (zoomButtonInterval !== null) {
+                clearInterval(zoomButtonInterval);
+                zoomButtonInterval = null;
+            }
+        }
+
+        function startZoomButtonRepeat(delta) {
+            stopZoomButtonRepeat();
+            stepTargetFOV(delta);
+            zoomButtonInterval = setInterval(() => stepTargetFOV(delta), ZOOM_BUTTON_REPEAT_MS);
+        }
+
+        function initZoomButtons() {
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            if (!zoomInBtn || !zoomOutBtn) return;
+
+            const wire = (btn, delta) => {
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    startZoomButtonRepeat(delta);
+                });
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
+            };
+            wire(zoomInBtn, -ZOOM_BUTTON_STEP);
+            wire(zoomOutBtn, ZOOM_BUTTON_STEP);
+
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt => {
+                zoomInBtn.addEventListener(evt, stopZoomButtonRepeat);
+                zoomOutBtn.addEventListener(evt, stopZoomButtonRepeat);
+            });
+            window.addEventListener('blur', stopZoomButtonRepeat);
+        }
+
+        // --- Minimal two-finger pinch -> targetFOV ---
+        function onTouchStartPinch(e) {
+            if (e.touches.length === 2) {
+                pinchLastDist = getTouchDistance(e.touches);
+            }
+        }
+
+        function onTouchMovePinch(e) {
+            if (e.touches.length !== 2) return;
+            const dist = getTouchDistance(e.touches);
+            if (pinchLastDist !== null) {
+                const delta = pinchLastDist - dist;
+                targetFOV = Math.max(MIN_FOV, Math.min(MAX_FOV, targetFOV + delta * 0.15));
+                if (e.cancelable) e.preventDefault();
+            }
+            pinchLastDist = dist;
+        }
+
+        function onTouchEndPinch(e) {
+            if (e.touches.length < 2) pinchLastDist = null;
+        }
+
+        function getTouchDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
 
         /**
          * 4. RENDER LOOP
@@ -721,10 +1677,10 @@
             requestAnimationFrame(animate);
             TWEEN.update(elapsed);
 
-            n_animators.forEach(fn => fn());
+            n_animators.forEach(fn => fn(elapsed));
 
             if (!isInspecting && shuttleGroup) {
-                const desiredPos = shuttleGroup.position.clone().add(CAM_OFFSET);
+                const desiredPos = shuttleGroup.position.clone().add(getResponsiveCamOffset());
                 camera.position.lerp(desiredPos, 0.1);
                 camera.lookAt(shuttleGroup.position.clone().add(new THREE.Vector3(-4.5, 1.5, -6.5)));
 
@@ -732,16 +1688,17 @@
                 shuttleGroup.rotation.z = Math.sin(elapsed * 0.001) * 0.15;
             }
 
-            if (Math.abs(camera.fov - targetFOV) > 0.01) {
-                camera.fov += (targetFOV - camera.fov) * 0.15;
+            const effectiveTargetFOV = getEffectiveTargetFOV();
+            if (Math.abs(camera.fov - effectiveTargetFOV) > 0.01) {
+                camera.fov += (effectiveTargetFOV - camera.fov) * 0.15;
                 camera.updateProjectionMatrix();
             }
 
-            nodes.forEach((n, i) => { 
+            nodes.forEach((n, i) => {
                 const isAhead = WORLD_DATA.nodes[i].pos[2] < shuttleGroup.position.z - 1.5;
-                n.material.opacity = (isAhead ? 0.9 : 0.4) + Math.sin(elapsed * 0.007) * 0.25; 
+                n.material.opacity = (isAhead ? 0.9 : 0.4) + Math.sin(elapsed * 0.007) * 0.25;
             });
-            
+
             renderer.render(scene, camera);
         }
 
