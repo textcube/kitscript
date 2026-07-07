@@ -8,54 +8,245 @@
     :root { color-scheme: dark; }
     * { box-sizing: border-box; margin: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #05070f; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    canvas { display: block; width: 100vw; height: 100vh; }
-    #topbar { position: fixed; top: 0; left: 0; right: 0; height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: linear-gradient(180deg, rgba(9,14,29,.95), rgba(9,14,29,.65)); border-bottom: 1px solid rgba(126,162,255,.32); z-index: 4; }
-    .brand { display: flex; flex-direction: column; gap: 1px; }
-    .game-title { font-size: 18px; font-weight: 800; color: #e6efff; letter-spacing: .2px; }
-    .studio { font-size: 12px; font-weight: 700; color: #8cb0ff; letter-spacing: .3px; text-transform: uppercase; }
-    .top-actions { display: flex; gap: 8px; }
-    .top-link { border: 1px solid #7ea2ff; border-radius: 8px; background: #19284d; color: #e8f0ff; font-weight: 700; font-size: 13px; padding: 8px 10px; text-decoration: none; }
-    .top-link:hover { filter: brightness(1.12); }
-    #hud { position: fixed; left: 12px; top: 72px; color: #d8e7ff; font-weight: 600; font-size: 14px; letter-spacing: .2px; text-shadow: 0 1px 0 #000; pointer-events: none; z-index: 3; }
-    #overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.48); color: #fff; text-align: center; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #topbar { position: fixed; top: 0; left: 0; right: 0; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px; background: linear-gradient(180deg, rgba(9,14,29,.95), rgba(9,14,29,.65)); border-bottom: 1px solid rgba(126,162,255,.32); z-index: 4; }
+    @supports (backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px)) {
+      #topbar { background: linear-gradient(180deg, rgba(9,14,29,.72), rgba(9,14,29,.38)); backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2); }
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-logo { width: 32px; height: 32px; flex: none; filter: drop-shadow(0 0 4px rgba(96,212,255,.55)); }
+    .brand-text { display: flex; flex-direction: column; justify-content: center; gap: 0; min-width: 0; line-height: 1.15; }
+    .game-title { display: flex; flex-direction: column; font-weight: 800; letter-spacing: .2px; white-space: nowrap; }
+    .game-title .line1, .game-title .line2 { background: linear-gradient(90deg, #eaf9ff, #7ee0ff 55%, #7cd8ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .game-title .line1 { font-size: 17px; }
+    .game-title .line2 { font-size: 14px; font-weight: 700; opacity: .92; }
+    .studio { font-size: 10.5px; font-weight: 700; color: #8cb0ff; letter-spacing: .6px; text-transform: uppercase; margin-left: .55em; opacity: .85; }
+    .top-actions { display: flex; gap: 8px; flex: none; }
+    .icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #7ea2ff; border-radius: 10px; background: #19284d; color: #e8f0ff; text-decoration: none; cursor: pointer; transition: filter .15s, box-shadow .15s, border-color .15s, background-color .15s, transform .1s; }
+    .icon-btn svg { width: 19px; height: 19px; display: block; }
+    .icon-btn:hover, .icon-btn:focus-visible { filter: brightness(1.18); border-color: #bcd6ff; background: #1f3260; box-shadow: 0 0 0 3px rgba(126,162,255,.25), 0 0 12px rgba(124,216,255,.55); }
+    .icon-btn:active { transform: scale(.94); }
+    .icon-btn[aria-pressed="true"] { border-color: #7cff9e; box-shadow: 0 0 10px rgba(124,255,158,.35); }
+    /* M2: compact topbar on narrow viewports — height must match TOPBAR_H_SMALL in JS */
+    @media (max-width: 560px) {
+      #topbar { height: 56px; padding: 6px 8px; gap: 6px; }
+      .brand { gap: 6px; }
+      .brand-logo { width: 26px; height: 26px; }
+      .game-title .line1 { font-size: 13px; }
+      .game-title .line2 { font-size: 10.5px; }
+      .studio { font-size: 9px; margin-left: .45em; }
+      .top-actions { gap: 6px; }
+      .icon-btn { width: 34px; height: 34px; border-radius: 8px; }
+      .icon-btn svg { width: 17px; height: 17px; }
+    }
+    #overlay { position: fixed; inset: 0; display: none; place-items: center; background: rgba(3,6,16,.6); color: #fff; text-align: center; z-index: 10; }
     #overlay.show { display: grid; }
-    .panel { background: rgba(12, 18, 35, .92); border: 1px solid #5f87ff; border-radius: 10px; padding: 22px 28px; min-width: 260px; }
-    .title { font-size: 34px; font-weight: 800; margin-bottom: 8px; }
-    .countdown { color: #9cb9ff; font-size: 18px; margin: 6px 0 14px; }
-    button { border: 1px solid #7ea2ff; border-radius: 8px; background: #19284d; color: #e8f0ff; font-weight: 700; padding: 8px 12px; cursor: pointer; }
+    .panel {
+      position: relative;
+      background: rgba(12, 18, 38, .78);
+      border: 1px solid rgba(126,220,255,.45);
+      border-radius: 22px;
+      padding: 30px 36px 26px;
+      min-width: 300px;
+      box-shadow: 0 0 0 1px rgba(126,162,255,.08), 0 0 32px rgba(96,212,255,.22), 0 0 70px rgba(60,140,220,.12), 0 20px 60px rgba(0,0,0,.5);
+      animation: panelIn .32s cubic-bezier(.2,.8,.3,1.2) both;
+    }
+    @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+      .panel { background: rgba(10,16,32,.62); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); }
+    }
+    @keyframes panelIn { from { opacity: 0; transform: scale(.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .title {
+      font-size: 32px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase;
+      background: linear-gradient(90deg, #eaf9ff, #7ee0ff 55%, #7cd8ff); -webkit-background-clip: text; background-clip: text; color: transparent;
+      padding: 0 4px 14px; margin-bottom: 16px;
+      border-bottom: 1px solid rgba(126,220,255,.28);
+      position: relative;
+    }
+    .title::before {
+      content: ''; position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+      width: 64px; height: 1px; background: rgba(126,220,255,.28);
+    }
+    .newbest { color: #ffd873; font-weight: 800; font-size: 15px; letter-spacing: 1px; margin: -6px 0 14px; text-transform: uppercase; animation: pulseBest 0.9s ease-in-out infinite; text-shadow: 0 0 12px rgba(255,216,115,.55); }
+    @keyframes pulseBest { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: .8; } }
+    .stat-grid { display: grid; gap: 10px; margin: 4px 0 0; }
+    .stat-grid--top { grid-template-columns: 1fr 1fr; }
+    .stat-grid--bottom { grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; }
+    .stat-cell {
+      background: rgba(126,162,255,.07); border: 1px solid rgba(126,162,255,.2); border-radius: 12px;
+      padding: 9px 8px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .stat-cap { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: #8cb0ff; }
+    .stat-val { font-size: 22px; font-weight: 800; color: #e8f0ff; font-variant-numeric: tabular-nums; }
+    .stat-grid--bottom .stat-val { font-size: 18px; }
+    #statBest { color: #ffd873; }
+    .countdown { color: #7a93c9; font-size: 13px; margin: 14px 0 0; }
+    button { border: 1px solid #7ea2ff; border-radius: 8px; background: #19284d; color: #e8f0ff; font-weight: 700; padding: 8px 12px; cursor: pointer; transition: filter .15s, box-shadow .15s, transform .1s, border-color .15s; }
     button:hover { filter: brightness(1.12); }
+    #restartNow {
+      display: block; width: 100%; font-size: 16px; font-weight: 800; letter-spacing: .4px;
+      padding: 13px 18px; border-radius: 12px; border-color: #7ee0ff;
+      background: linear-gradient(180deg, #2a5fb0, #19284d);
+      box-shadow: 0 0 0 1px rgba(126,220,255,.15), 0 4px 18px rgba(60,150,255,.28);
+    }
+    #restartNow:hover { filter: brightness(1.15); box-shadow: 0 0 0 1px rgba(126,220,255,.3), 0 0 22px rgba(124,216,255,.55), 0 4px 18px rgba(60,150,255,.35); transform: translateY(-1px); }
+    #restartNow:active { transform: translateY(0) scale(.98); }
   </style>
 </head>
 <body>
   <header id="topbar">
     <div class="brand">
-      <div class="game-title">Eternal Invasion: Space Edition</div>
-      <div class="studio">BuntGames</div>
+      <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#eaf9ff"/>
+            <stop offset=".55" stop-color="#39bdf8"/>
+            <stop offset="1" stop-color="#1a6fb0"/>
+          </linearGradient>
+        </defs>
+        <path d="M16 2 L22 20 L16 17 L10 20 Z" fill="url(#logoGrad)" stroke="#91e8ff" stroke-width="1"/>
+        <path d="M16 17 L13 25 L16 23.5 L19 25 Z" fill="#7cd8ff"/>
+        <circle cx="16" cy="10" r="2.4" fill="#0d2740"/>
+        <circle cx="9" cy="21" r="1.6" fill="#8cf0ff"/>
+        <circle cx="23" cy="21" r="1.6" fill="#8cf0ff"/>
+      </svg>
+      <div class="brand-text">
+        <div class="game-title">
+          <span class="line1">Eternal Invasion</span>
+          <span class="line2">Space Edition<span class="studio">BuntGames</span></span>
+        </div>
+      </div>
     </div>
     <div class="top-actions">
-      <a class="top-link" href="http://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer">YouTube</a>
-      <button id="soundToggle" type="button" aria-pressed="false">Sound: OFF</button>
-      <a class="top-link" href="http://kitscript.com/game" target="_blank" rel="noopener noreferrer">Kitscript</a>
+      <button id="soundToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Toggle sound" title="Sound: OFF">
+        <svg id="soundIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M4 10v4h4l5 4V6L8 10H4z" fill="currentColor" stroke="none"/><path d="M16 9c1.2 1 1.2 5 0 6"/><path d="M18.5 6.5c2.4 2.6 2.4 8.4 0 11"/></svg>
+        <svg id="soundIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6L8 10H4z" fill="currentColor" stroke="none"/><path d="M16.5 9.5l5 5m0-5l-5 5"/></svg>
+      </button>
+      <a class="icon-btn" id="youtubeLink" href="http://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer" aria-label="YouTube channel" title="YouTube">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 7.5v9l8-4.5-8-4.5z" fill="currentColor"/></svg>
+      </a>
+      <a class="icon-btn" id="kitscriptLink" href="http://kitscript.com/game" target="_blank" rel="noopener noreferrer" aria-label="Kitscript" title="Kitscript">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.2"/></svg>
+      </a>
     </div>
   </header>
   <canvas id="game"></canvas>
-  <div id="hud"></div>
-  <div id="overlay"><div class="panel"><div class="title">GAME OVER</div><div class="countdown" id="cd">Restarting in 7…</div><button id="restartNow">Restart now</button></div></div>
+  <div id="overlay"><div class="panel">
+    <div class="title">Game Over</div>
+    <div id="newBest" class="newbest" style="display:none;">✦ NEW BEST! ✦</div>
+    <div class="stat-grid stat-grid--top">
+      <div class="stat-cell"><span class="stat-cap">Score</span><span class="stat-val" id="statScore">0</span></div>
+      <div class="stat-cell"><span class="stat-cap">Best</span><span class="stat-val" id="statBest">0</span></div>
+    </div>
+    <div class="stat-grid stat-grid--bottom">
+      <div class="stat-cell"><span class="stat-cap">Wave</span><span class="stat-val" id="statWave">1</span></div>
+      <div class="stat-cell"><span class="stat-cap">Lv</span><span class="stat-val" id="statLevel">1</span></div>
+      <div class="stat-cell"><span class="stat-cap">Kills</span><span class="stat-val" id="statKills">0</span></div>
+      <div class="stat-cell"><span class="stat-cap">Time</span><span class="stat-val" id="statTime">0s</span></div>
+    </div>
+    <button id="restartNow">Restart Now</button>
+    <div class="countdown" id="cd">Restarting in 7…</div>
+  </div></div>
   <script>
-    const RUNNING = 'RUNNING', GAME_OVER = 'GAME_OVER', RESTART_COUNTDOWN = 'RESTART_COUNTDOWN';
+    const RUNNING = 'RUNNING', GAME_OVER = 'GAME_OVER', RESTART_COUNTDOWN = 'RESTART_COUNTDOWN', PAUSED = 'PAUSED';
     const c = document.getElementById('game'), x = c.getContext('2d');
-    const hud = document.getElementById('hud'), ov = document.getElementById('overlay'), cd = document.getElementById('cd');
+    const ov = document.getElementById('overlay'), cd = document.getElementById('cd');
+    const newBestEl = document.getElementById('newBest');
+    const statScoreEl = document.getElementById('statScore'), statBestEl = document.getElementById('statBest');
+    const statWaveEl = document.getElementById('statWave'), statKillsEl = document.getElementById('statKills'), statTimeEl = document.getElementById('statTime');
+    const statLevelEl = document.getElementById('statLevel');
     const soundToggle = document.getElementById('soundToggle');
 
-    let w = 0, h = 0, dangerY = 0;
-    const keys = Object.create(null);
-    const stars = Array.from({ length: 130 }, () => ({ x: Math.random(), y: Math.random(), z: .4 + Math.random() * .9, t: Math.random() * 6.28 }));
+    const HIGHSCORE_KEY = 'space-auto-battle-highscore';
+    function loadHighscore() {
+      try { return parseInt(localStorage.getItem(HIGHSCORE_KEY), 10) || 0; } catch (e) { return 0; }
+    }
+    function saveHighscore(v) {
+      try { localStorage.setItem(HIGHSCORE_KEY, String(v)); } catch (e) {}
+    }
+    let highscore = loadHighscore();
 
-    const player = { x: 0, y: 0, r: 13, speed: 630, autoSpeed: 450, lives: 3, invulnUntil: 0, fireCd: 0 };
-    const enemies = [], pBullets = [], eBullets = [];
-    let target = null, score = 0, wave = 1;
+    // R1: fixed logical field resolution (2:3 portrait). All gameplay/HUD/FX math uses GW/GH,
+    // never the window/canvas pixel size — keeps difficulty/geometry independent of window size.
+    const GW = 720, GH = 1080;
+    const TOPBAR_H = 68, TOPBAR_H_SMALL = 56;
+    let w = GW, h = GH; // kept as aliases to GW/GH for readability at call sites
+    let dangerY = GH - 120;
+    // R2: letterbox scale/offset (logical -> physical/CSS). Recomputed on resize().
+    let scale = 1, offsetX = 0, offsetY = 0, dpr = 1;
+    const keys = Object.create(null);
+    const STAR_LAYERS = [
+      { n: 70, speed: 10, size: 1, alpha: .35, color: '150,175,220' },
+      { n: 50, speed: 22, size: 1.3, alpha: .55, color: '170,200,255' },
+      { n: 28, speed: 40, size: 1.8, alpha: .85, color: '210,230,255' }
+    ];
+    const stars = [];
+    for (const layer of STAR_LAYERS) {
+      for (let i = 0; i < layer.n; i++) {
+        stars.push({ x: Math.random(), y: Math.random(), speed: layer.speed, size: layer.size, baseAlpha: layer.alpha, color: layer.color, t: Math.random() * 6.28 });
+      }
+    }
+
+    const player = { x: 0, y: 0, r: 26, speed: 630, autoSpeed: 450, lives: 3, invulnUntil: 0, fireCd: 0, tilt: 0, moveDir: 0 };
+    const enemies = [], dyingEnemies = [], pBullets = [], eBullets = [];
+    const particles = [];
+    const scorePopups = [];
+    let waveBanner = null; // {wave, t}
+    let waveGateUntil = 0; // enemies/shots paused until this time (ms/1000)
+    let target = null, score = 0, wave = 1, kills = 0, runStartTime = 0;
+
+    // ---- X1: XP / level growth system (v1.8) --------------------------------------------------
+    // All tuning constants for the growth system are collected here so balance passes only touch
+    // this one block. See readme.md "성장 시스템 (v1.8)" for a summary.
+    const GROWTH = {
+      xpPerHp: 1,           // XP granted per point of an enemy's maxHp on kill
+      waveClearXpMul: 3,    // wave-clear bonus XP = wave * this
+      baseXp: 10,           // XP required to go from Lv1 -> Lv2
+      xpGrowth: 1.4,        // per-level multiplicative growth of the XP requirement
+      fireCdMul: 0.93,      // fire-cooldown multiplier applied per level-up (compounding)
+      fireCdMin: 0.07,      // floor for fire cooldown, seconds
+      dmgLevels: [3, 5, 7, 9, 11, 13, 15, 17, 19],   // levels at which +1 bullet damage is granted
+      twinShotLevel: 4,     // milestone: parallel 2-shot unlocked at this level
+      twinShotSpreadRatio: 0.6, // twin shots' horizontal offset as a fraction of AIM_MAX_RATIO cone half-width
+      pierceLevel: 8        // milestone: bullets pierce through 1 extra enemy at this level
+    };
+    // XP required to advance FROM level `lv` TO level `lv+1` (lv is 1-based current level).
+    function xpToNext(lv) { return Math.round(GROWTH.baseXp * Math.pow(GROWTH.xpGrowth, lv - 1)); }
+
+    // X2: per-wave enemy HP compounding growth rate (replaces the old flat "+1 every 3 waves").
+    // Tier base HP (doubled to 2/4/6, see buildWave) is multiplied by (1+WAVE_HP_GROWTH)^(wave-1).
+    // Tuned so early waves feel roughly like before, but toughness ramps up in step with the
+    // player's XP-driven DPS growth (fire-rate compounding + periodic +1 damage + twin-shot/pierce
+    // milestones) — see readme.md "성장 시스템 (v1.8)" for the balance rationale.
+    const WAVE_HP_GROWTH = 0.18;
+
+    const playerGrowth = {
+      level: 1, xp: 0, xpNext: xpToNext(1),
+      dmg: 1, fireCd: 0.15, twinShot: false, pierce: 0,
+      levelUpFlashUntil: 0, ringFxUntil: 0
+    };
+    // S1/S2 HUD animation state
+    let hudRemainingDisplay = 0; // lerped gauge fraction display value (0..1)
+    let bestFlashUntil = 0; // now-timestamp until which "Best" highlight animates
+    let bestBeaten = false; // whether score has already crossed highscore this run (avoid re-trigger)
+    const lifeFx = [null, null, null]; // per-slot fade-out state: {t} while animating loss, null = settled
     let formation = { x: 0, y: 70, vx: 72, stepDown: 24 };
     let enemySpeedBase = 72, nextEnemyShot = 0;
+
+    // F2: single-anchor model — every enemy's world position is always formation.x/y plus its own
+    // fixed (never-mutated) relative offset e.ox/e.oy. These two helpers are the only place that
+    // combine anchor + offset, so every consumer (render, collision, danger-line, AI, bullets,
+    // particles) stays consistent by construction instead of by convention.
+    function enemyX(e) { return formation.x + e.ox; }
+    function enemyY(e) { return formation.y + e.oy; }
+
+    let shake = 0;
+    let hitVignette = 0; // 0..1, fades over 0.25s
+    let meteor = null; // {x,y,vx,vy,life,maxLife}
+    let nextMeteorAt = 0;
+
+    // M1: touch/pointer drag state — while active, touch target x overrides auto pilot + dodge AI,
+    // same priority tier as keyboard manual input.
+    let touchActive = false, touchX = 0;
 
     let mode = RUNNING, gameOverHold = 0, countdown = 7;
 
@@ -63,46 +254,86 @@
       bg: '#05070f',
       dangerLine: 'rgba(255,86,86,.26)',
       aimLine: 'rgba(130,190,255,.35)',
+      aimLineOut: 'rgba(120,40,40,.35)',
       player: {
-        nose: '#d9f7ff',
-        wing: '#39bdf8',
-        outline: '#91e8ff',
+        nose: '#f2fcff',
+        wing: '#4cc8ff',
+        wingDark: '#155e94',
+        belly: '#0a2c4d',
+        outline: '#bdeeff',
+        rimLight: '#eafcff',
         cockpit: '#eaf9ff',
-        wingLine: '#184f76',
+        cockpitGlass: '#7fd4ff',
+        wingLine: '#0e3f66',
+        panelLine: 'rgba(8,32,54,.65)',
+        accent: '#ffc266',
+        wingtipLight: '#bff6ff',
         engineGlow: 'rgba(96,212,255,.38)',
         engineCore: 'rgba(194,245,255,.9)',
         shield: 'rgba(133,201,255,.85)',
         shieldInner: 'rgba(85,163,255,.32)'
       },
       enemy: {
-        top: '#9bb8ff',
-        topFlash: '#fff4ad',
-        cockpit: '#1a2342',
-        cockpitFlash: '#334f92',
-        engine: '#25325a',
-        engineFlash: '#5268a8',
-        pod: '#708ed8',
-        podFlash: '#b9d0ff',
-        glow: '#ff6a7f',
-        glowFlash: '#ffe1e1',
-        outline: 'rgba(93,119,196,.8)',
-        outlineFlash: 'rgba(255,243,184,.95)',
+        // shared HP bar colors
         hpBg: 'rgba(6,10,22,.88)',
-        hpFg: '#7affb0'
+        hpFg: '#7affb0',
+        // shared dark undertone for all tiers (belly/shadow) — keeps lighting consistent
+        underTone: '#141a2c',
+        // tier 0: light scout (top row) — bright violet, lightest/leanest silhouette
+        t0: {
+          top: '#c9baff', top2: '#8f78e6', cockpit: '#2a2050', cockpitGlass: '#7d6ad6', pod: '#a893f5', glow: '#8ff2ff', rim: '#e6ddff'
+        },
+        // tier 1: mid fighter (middle row) — steel blue, balanced twin-boom mass
+        t1: {
+          top: '#8fb3ff', top2: '#4f6fc9', cockpit: '#182247', cockpitGlass: '#5a7cd6', pod: '#6a86d6', glow: '#ff8a6a', rim: '#d6e6ff'
+        },
+        // tier 2: heavy armor (bottom row) — dark slate armor, red core, bulkiest
+        t2: {
+          top: '#5b6584', top2: '#33384f', cockpit: '#1c1420', cockpitGlass: '#5c4656', pod: '#454b66', glow: '#ff3550', rim: '#a9b3d6'
+        }
       },
       bullets: {
         player: '#7cd8ff',
         enemy: '#ff7373'
-      }
+      },
+      particle: {
+        explode: ['255,150,60', '255,214,90', '150,120,255'],
+        spark: ['255,240,200', '255,180,120']
+      },
+      hud: {
+        text: '#e6efff',
+        dim: '#8cb0ff',
+        panelBg: 'rgba(10,15,30,.68)',
+        panelBorder: 'rgba(126,162,255,.28)',
+        panelDivider: 'rgba(126,162,255,.18)',
+        gaugeBg: 'rgba(20,28,54,.85)',
+        gaugeFg: '#7affb0',
+        gaugeFg2: '#e8ff7a',
+        gaugeWarn: '#ff8a6a',
+        lifeIcon: '#7cd8ff',
+        lifeIconEmpty: 'rgba(124,216,255,.18)',
+        bestHighlight: '#ffd873'
+      },
+      popup: {
+        score: '#ffe27a',
+        bonus: '#7cff9e'
+      },
+      vignette: 'rgba(255,40,40,1)',
+      nebula: ['rgba(120,80,220,1)', 'rgba(40,200,190,1)'],
+      meteor: '#dff2ff'
     };
 
     const MASTER_VOLUME = 0.08;
     let audioCtx = null, masterGain = null, audioReady = false;
     let soundEnabled = false;
 
+    const soundIconOn = document.getElementById('soundIconOn'), soundIconOff = document.getElementById('soundIconOff');
     function updateSoundToggleUi() {
-      soundToggle.textContent = `Sound: ${soundEnabled ? 'ON' : 'OFF'}`;
       soundToggle.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+      soundToggle.title = `Sound: ${soundEnabled ? 'ON' : 'OFF'}`;
+      soundToggle.setAttribute('aria-label', `Sound ${soundEnabled ? 'on' : 'off'}, click to toggle`);
+      soundIconOn.style.display = soundEnabled ? '' : 'none';
+      soundIconOff.style.display = soundEnabled ? 'none' : '';
     }
 
     function applySoundState() {
@@ -153,18 +384,539 @@
       else if (kind === 'playerHit') tone('sawtooth', 180, 0.2, 0.9, 0.55);
     }
 
-    function resize() {
-      w = c.width = innerWidth; h = c.height = innerHeight;
-      dangerY = h - 120;
-      player.y = h - 64;
-      player.x = Math.min(Math.max(player.x || w * .5, 28), w - 28);
-    }
-    addEventListener('resize', resize); resize();
+    // Offscreen sprite caches (G5 nebula, G6 vignette, G4 bullet glow) — built at CSS-pixel size, drawn with drawImage.
+    let nebulaCanvas = null, vignetteCanvas = null;
+    let bulletGlowP = null, bulletGlowE = null;
 
-    addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) e.preventDefault(); });
+    function makeNebulaCanvas() {
+      const oc = document.createElement('canvas');
+      oc.width = Math.max(1, Math.round(w)); oc.height = Math.max(1, Math.round(h));
+      const octx = oc.getContext('2d');
+      const spots = [
+        { cx: w * .18, cy: h * .28, r: Math.max(w, h) * .5, color: THEME.nebula[0], a: .06 },
+        { cx: w * .82, cy: h * .62, r: Math.max(w, h) * .55, color: THEME.nebula[1], a: .05 },
+        { cx: w * .5, cy: h * .12, r: Math.max(w, h) * .4, color: THEME.nebula[0], a: .04 }
+      ];
+      for (const s of spots) {
+        const g = octx.createRadialGradient(s.cx, s.cy, 0, s.cx, s.cy, s.r);
+        g.addColorStop(0, s.color.replace(',1)', `,${s.a})`));
+        g.addColorStop(1, s.color.replace(',1)', ',0)'));
+        octx.fillStyle = g;
+        octx.fillRect(0, 0, oc.width, oc.height);
+      }
+      return oc;
+    }
+
+    function makeVignetteCanvas() {
+      const oc = document.createElement('canvas');
+      oc.width = Math.max(1, Math.round(w)); oc.height = Math.max(1, Math.round(h));
+      const octx = oc.getContext('2d');
+      const cx = w * .5, cy = h * .5, rIn = Math.min(w, h) * .32, rOut = Math.max(w, h) * .72;
+      const g = octx.createRadialGradient(cx, cy, rIn, cx, cy, rOut);
+      g.addColorStop(0, THEME.vignette.replace(',1)', ',0)'));
+      g.addColorStop(1, THEME.vignette.replace(',1)', ',.55)'));
+      octx.fillStyle = g;
+      octx.fillRect(0, 0, oc.width, oc.height);
+      return oc;
+    }
+
+    function makeBulletGlow(rgb) {
+      const size = 20, r = size / 2;
+      const oc = document.createElement('canvas');
+      oc.width = size; oc.height = size;
+      const octx = oc.getContext('2d');
+      const g = octx.createRadialGradient(r, r, 0, r, r, r);
+      g.addColorStop(0, `rgba(${rgb},.9)`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
+      octx.fillStyle = g;
+      octx.fillRect(0, 0, size, size);
+      return oc;
+    }
+
+    // ---- V1: offscreen ship sprite prerendering -----------------------------------------------
+    // Hulls are drawn once (at startup) into small high-res offscreen canvases, then blitted with
+    // drawImage every frame instead of re-tracing dozens of path ops per ship per frame. Dynamic
+    // elements (engine flame, wingtip/nav lights, shield ring, invuln blink, HP bar, hit-flash) are
+    // NOT baked in — those still draw live on top so their animation stays smooth.
+    const SPR_RES = 3;      // offscreen supersample factor (final scale-down keeps edges crisp)
+    const SHIP_SCALE = 2;   // W1: global ship geometry scale (2x for mobile visibility) — applied
+                             // once here so every hand-authored paint function's coordinates (all
+                             // written for the original 1x hull) come out doubled on screen, and the
+                             // supersample ratio (SPR_RES) stays the same so it doesn't blur.
+    const SPR_HALF = 68;    // half-extent (logical px) of the sprite local box, origin at center
+                             // (34 * SHIP_SCALE — must scale with SHIP_SCALE to keep the same margin
+                             // ratio around the now-larger painted hull).
+
+    function makeSpriteCanvas() {
+      const oc = document.createElement('canvas');
+      const px = SPR_HALF * 2 * SPR_RES;
+      oc.width = px; oc.height = px;
+      const octx = oc.getContext('2d');
+      octx.translate(SPR_HALF * SPR_RES, SPR_HALF * SPR_RES);
+      octx.scale(SPR_RES * SHIP_SCALE, SPR_RES * SHIP_SCALE);
+      return { oc, octx };
+    }
+
+    // Builds a same-shape all-white silhouette of whatever `paintFn` draws, by drawing at full
+    // alpha then compositing with 'source-in' to flatten every non-transparent pixel to white.
+    // Used as a flash overlay sprite (drawn with globalAlpha on top of the base hull sprite) —
+    // saves having to hand-author a second colour palette per tier (V3 recommended approach).
+    function makeFlashSilhouette(paintFn) {
+      const { oc, octx } = makeSpriteCanvas();
+      paintFn(octx);
+      octx.setTransform(1, 0, 0, 1, 0, 0);
+      octx.globalCompositeOperation = 'source-in';
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, oc.width, oc.height);
+      return oc;
+    }
+
+    // Hero delta-wing interceptor. Lit from above: spine/nose brightest, wing undersides dark,
+    // thin rim-light traces the top edges only. Big shapes: swept back-wing (shadow mass) +
+    // swept mid-wing (lit mass) + slim dagger fuselage on top — plus one amber spine accent as
+    // the single point-color, and a compact gradient canopy with one highlight dot.
+    function drawPlayerHull(ctx) {
+      const T = THEME.player;
+
+      // rear wing — dark shadow mass, swept far back with pointed tips (not blunt)
+      const backGrad = ctx.createLinearGradient(0, -2, 0, 17);
+      backGrad.addColorStop(0, T.wingDark);
+      backGrad.addColorStop(1, T.belly);
+      ctx.fillStyle = backGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -1);
+      ctx.lineTo(-19, 14);
+      ctx.lineTo(-16, 17);
+      ctx.lineTo(-3, 9.5);
+      ctx.lineTo(0, 11);
+      ctx.lineTo(3, 9.5);
+      ctx.lineTo(16, 17);
+      ctx.lineTo(19, 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = T.wingLine;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // rim light along the top-facing leading edge only (upper light source)
+      ctx.strokeStyle = 'rgba(234,251,255,.5)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -1); ctx.lineTo(-19, 14);
+      ctx.moveTo(0, -1); ctx.lineTo(19, 14);
+      ctx.stroke();
+
+      // mid wing — lit mass, narrower & sharper sweep, forward of the shadow wing
+      const midGrad = ctx.createLinearGradient(-16, -6, 16, 6);
+      midGrad.addColorStop(0, T.wingDark);
+      midGrad.addColorStop(0.5, T.wing);
+      midGrad.addColorStop(1, T.wingDark);
+      ctx.fillStyle = midGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -6);
+      ctx.lineTo(-16, 10);
+      ctx.lineTo(-11, 11.5);
+      ctx.lineTo(0, 4.5);
+      ctx.lineTo(11, 11.5);
+      ctx.lineTo(16, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = T.outline;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // wing intakes (angled notches, kept slim)
+      ctx.fillStyle = 'rgba(5,16,28,.6)';
+      ctx.beginPath();
+      ctx.moveTo(-12.5, 7.6); ctx.lineTo(-9.6, 8); ctx.lineTo(-10.2, 10.8); ctx.lineTo(-12.2, 10.4); ctx.closePath();
+      ctx.moveTo(12.5, 7.6); ctx.lineTo(9.6, 8); ctx.lineTo(10.2, 10.8); ctx.lineTo(12.2, 10.4); ctx.closePath();
+      ctx.fill();
+
+      // wingtip fins — small sharp fins that read as the outermost silhouette point
+      ctx.fillStyle = T.wingDark;
+      ctx.beginPath();
+      ctx.moveTo(-16, 10); ctx.lineTo(-19.5, 9.5); ctx.lineTo(-16.5, 13.5); ctx.closePath();
+      ctx.moveTo(16, 10); ctx.lineTo(19.5, 9.5); ctx.lineTo(16.5, 13.5); ctx.closePath();
+      ctx.fill();
+
+      // main fuselage — slim dagger nose to mid-body, brightest surface (top light)
+      const bodyGrad = ctx.createLinearGradient(0, -19, 0, 9);
+      bodyGrad.addColorStop(0, T.nose);
+      bodyGrad.addColorStop(0.45, '#8ee4ff');
+      bodyGrad.addColorStop(1, T.wing);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -19);
+      ctx.lineTo(-4.5, -3);
+      ctx.lineTo(-6.5, 9);
+      ctx.lineTo(0, 6.5);
+      ctx.lineTo(6.5, 9);
+      ctx.lineTo(4.5, -3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = T.outline;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      // top rim light — bright 1px trace on the upper nose edges only
+      ctx.strokeStyle = T.rimLight;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -19); ctx.lineTo(-3.6, -4.5);
+      ctx.moveTo(0, -19); ctx.lineTo(3.6, -4.5);
+      ctx.stroke();
+
+      // single amber spine accent — the one point-color, kept as a thin stripe down the nose
+      ctx.strokeStyle = T.accent;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -15); ctx.lineTo(0, -4);
+      ctx.stroke();
+
+      // panel lines on fuselage
+      ctx.strokeStyle = T.panelLine;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-3, -5); ctx.lineTo(-4.5, 5.5);
+      ctx.moveTo(3, -5); ctx.lineTo(4.5, 5.5);
+      ctx.stroke();
+
+      // canopy — compact gradient glass + single highlight dot (no double glints)
+      const canGrad = ctx.createLinearGradient(0, -9.5, 0, 2.5);
+      canGrad.addColorStop(0, T.cockpit);
+      canGrad.addColorStop(0.6, T.cockpitGlass);
+      canGrad.addColorStop(1, '#204f70');
+      ctx.fillStyle = canGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -10.5);
+      ctx.lineTo(-2.5, -3.5);
+      ctx.lineTo(-2.2, 2.8);
+      ctx.lineTo(2.2, 2.8);
+      ctx.lineTo(2.5, -3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(20,60,90,.5)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      // single highlight point (top-left of canopy, consistent with the upper light source)
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.beginPath();
+      ctx.ellipse(-0.9, -6.5, 0.8, 1.6, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    let playerSprite = null;
+
+    function buildPlayerSprite() {
+      const { oc, octx } = makeSpriteCanvas();
+      drawPlayerHull(octx);
+      playerSprite = oc;
+    }
+
+    // V3: enemy tier hull painters, drawn centered at local origin (scale baked in via s already
+    // applied by caller through ctx transform, so these use the same coordinates as the old
+    // drawEnemy* functions but relative to (0,0) instead of (ex,ey)).
+    // Tier 0 — light recon dart: the leanest, brightest silhouette of the three tiers. Single
+    // slim spine, needle nose, small swept fins. Lit from above (col.top bright at the nose,
+    // col.top2 shadow at the tail), thin violet rim on the top edges only.
+    function paintEnemyScout(ctx, col) {
+      const bodyGrad = ctx.createLinearGradient(0, -14, 0, 7);
+      bodyGrad.addColorStop(0, col.top);
+      bodyGrad.addColorStop(1, col.top2);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(2.2, -5);
+      ctx.lineTo(12, 5);
+      ctx.lineTo(4, 2);
+      ctx.lineTo(0, 6);
+      ctx.lineTo(-4, 2);
+      ctx.lineTo(-12, 5);
+      ctx.lineTo(-2.2, -5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.3)';
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+      // rim light — top edges only, upper light source
+      ctx.strokeStyle = col.rim;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -14); ctx.lineTo(2.2, -5);
+      ctx.moveTo(0, -14); ctx.lineTo(-2.2, -5);
+      ctx.stroke();
+
+      // thin spine seam
+      ctx.strokeStyle = 'rgba(0,0,0,.22)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -10); ctx.lineTo(0, 4);
+      ctx.stroke();
+
+      // small swept nose fin
+      ctx.fillStyle = col.pod;
+      ctx.beginPath();
+      ctx.moveTo(-1.2, -7); ctx.lineTo(0, -14.5); ctx.lineTo(1.2, -7); ctx.closePath();
+      ctx.fill();
+
+      // slim cockpit — small glass gradient so it reads as canopy, not a flat dark hole
+      const canGrad0 = ctx.createLinearGradient(0, -5.5, 0, 2.5);
+      canGrad0.addColorStop(0, col.cockpitGlass);
+      canGrad0.addColorStop(1, col.cockpit);
+      ctx.fillStyle = canGrad0;
+      ctx.beginPath();
+      ctx.ellipse(0, -1.5, 2.6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.beginPath();
+      ctx.ellipse(-0.7, -3, 0.6, 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // single engine nozzle (dark undertone, keeps lighting consistent)
+      ctx.fillStyle = THEME.enemy.underTone;
+      ctx.fillRect(-2.4, 2, 4.8, 3.6);
+
+      ctx.fillStyle = col.glow;
+      ctx.beginPath();
+      ctx.arc(-9, 3.2, 1.4, 0, Math.PI * 2);
+      ctx.arc(9, 3.2, 1.4, 0, Math.PI * 2);
+      ctx.arc(0, 5.6, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Tier 1 — mid fighter: balanced twin-boom body, more mass than the scout but still crisp.
+    // Symmetric wedge hull lit from above, twin outboard booms read as the tier-defining silhouette
+    // feature (distinct from the scout's single spine and the heavy's slab wings).
+    function paintEnemyFighter(ctx, col) {
+      const bodyGrad = ctx.createLinearGradient(0, -14, 0, 2);
+      bodyGrad.addColorStop(0, col.top);
+      bodyGrad.addColorStop(1, col.top2);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(7, -7);
+      ctx.lineTo(11, 0);
+      ctx.lineTo(-11, 0);
+      ctx.lineTo(-7, -7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.3)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      // rim light on top-facing wedge edges
+      ctx.strokeStyle = col.rim;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -14); ctx.lineTo(7, -7);
+      ctx.moveTo(0, -14); ctx.lineTo(-7, -7);
+      ctx.stroke();
+
+      // nose seam
+      ctx.strokeStyle = 'rgba(0,0,0,.22)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, -14); ctx.lineTo(0, 0);
+      ctx.stroke();
+
+      // twin outboard booms — the tier-defining silhouette element, swept back from the hull
+      // edge (not flared above it), tapering to a blunt trailing tip
+      const boomGrad = ctx.createLinearGradient(0, -2, 0, 9);
+      boomGrad.addColorStop(0, col.top2);
+      boomGrad.addColorStop(1, THEME.enemy.underTone);
+      ctx.fillStyle = boomGrad;
+      ctx.beginPath();
+      ctx.moveTo(-11, -1); ctx.lineTo(-17, 1); ctx.lineTo(-15, 8.5); ctx.lineTo(-9.5, 7.5); ctx.closePath();
+      ctx.moveTo(11, -1); ctx.lineTo(17, 1); ctx.lineTo(15, 8.5); ctx.lineTo(9.5, 7.5); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.3)';
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+
+      const canGrad1 = ctx.createLinearGradient(0, -8.6, 0, -2);
+      canGrad1.addColorStop(0, col.cockpitGlass);
+      canGrad1.addColorStop(1, col.cockpit);
+      ctx.fillStyle = canGrad1;
+      ctx.beginPath();
+      ctx.ellipse(0, -5.4, 2.8, 3.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.5)';
+      ctx.beginPath();
+      ctx.ellipse(-1, -6.4, 0.6, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // central engine block (dark undertone, keeps lighting consistent across tiers)
+      ctx.fillStyle = THEME.enemy.underTone;
+      ctx.fillRect(-5, 0.5, 10, 5.5);
+
+      ctx.fillStyle = col.pod;
+      ctx.fillRect(-11, 0.5, 3.6, 6);
+      ctx.fillRect(7.4, 0.5, 3.6, 6);
+
+      ctx.fillStyle = col.glow;
+      ctx.fillRect(-3.5, 5.5, 3, 2.6);
+      ctx.fillRect(0.5, 5.5, 3, 2.6);
+      ctx.beginPath();
+      ctx.arc(-12.5, 7.5, 1.3, 0, Math.PI * 2);
+      ctx.arc(12.5, 7.5, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Tier 2 — heavy armor: widest and lowest silhouette, dark slab armor with a single red
+    // core as the tier's point-color. Bulk is read through big flat plate shapes + shading,
+    // not extra clutter — panel seams kept to a few 1px dark lines.
+    function paintEnemyHeavy(ctx, col) {
+      const bodyGrad = ctx.createLinearGradient(0, -11, 0, 4);
+      bodyGrad.addColorStop(0, col.top);
+      bodyGrad.addColorStop(1, col.top2);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(-18, -4);
+      ctx.lineTo(-9, -10.5);
+      ctx.lineTo(-3, -9);
+      ctx.lineTo(0, -11);
+      ctx.lineTo(3, -9);
+      ctx.lineTo(9, -10.5);
+      ctx.lineTo(18, -4);
+      ctx.lineTo(14.5, 3.5);
+      ctx.lineTo(-14.5, 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.42)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // rim light on the top plate edges only
+      ctx.strokeStyle = col.rim;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(-9, -10.5); ctx.lineTo(-18, -4);
+      ctx.moveTo(9, -10.5); ctx.lineTo(18, -4);
+      ctx.moveTo(-9, -10.5); ctx.lineTo(-3, -9); ctx.lineTo(0, -11); ctx.lineTo(3, -9); ctx.lineTo(9, -10.5);
+      ctx.stroke();
+
+      // a few armor seams — kept sparse, not segmented into many plates
+      ctx.strokeStyle = 'rgba(0,0,0,.32)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-12, -6.5); ctx.lineTo(-10.5, 2.5);
+      ctx.moveTo(12, -6.5); ctx.lineTo(10.5, 2.5);
+      ctx.stroke();
+
+      // wide low side plates — bulkiest silhouette element, wider/flatter than tier1's booms
+      const podGrad = ctx.createLinearGradient(0, -1, 0, 10);
+      podGrad.addColorStop(0, col.top2);
+      podGrad.addColorStop(1, THEME.enemy.underTone);
+      ctx.fillStyle = podGrad;
+      ctx.fillRect(-21, -1, 7, 9.5);
+      ctx.fillRect(14, -1, 7, 9.5);
+      ctx.strokeStyle = 'rgba(0,0,0,.4)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-21, -1, 7, 9.5);
+      ctx.strokeRect(14, -1, 7, 9.5);
+
+      const canGrad2 = ctx.createLinearGradient(0, -4, 0, 3);
+      canGrad2.addColorStop(0, col.cockpitGlass);
+      canGrad2.addColorStop(1, col.cockpit);
+      ctx.fillStyle = canGrad2;
+      ctx.fillRect(-6.5, -4, 13, 7);
+      ctx.strokeStyle = 'rgba(0,0,0,.3)';
+      ctx.lineWidth = 0.6;
+      ctx.strokeRect(-6.5, -4, 13, 7);
+      ctx.fillStyle = 'rgba(255,255,255,.28)';
+      ctx.fillRect(-5.5, -3.3, 4.5, 1.4);
+
+      // ventral core — single red point-color, the tier's defining accent
+      ctx.fillStyle = 'rgba(0,0,0,.5)';
+      ctx.beginPath();
+      ctx.arc(0, 1.5, 4.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = col.glow;
+      ctx.beginPath();
+      ctx.arc(0, 1.5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = THEME.enemy.underTone;
+      ctx.fillRect(-13, 4.5, 11, 6.5);
+      ctx.fillRect(2, 4.5, 11, 6.5);
+
+      ctx.fillStyle = col.glow;
+      ctx.fillRect(-11, 9.5, 4.5, 3);
+      ctx.fillRect(6.5, 9.5, 4.5, 3);
+      ctx.beginPath();
+      ctx.arc(-16.5, 1, 1.7, 0, Math.PI * 2);
+      ctx.arc(16.5, 1, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const ENEMY_PAINTERS = [paintEnemyScout, paintEnemyFighter, paintEnemyHeavy];
+    let enemySprites = [null, null, null];       // base hull sprite per tier
+    let enemyFlashSprites = [null, null, null];  // white silhouette overlay per tier, for hit-flash
+
+    function buildEnemySprites() {
+      for (let t = 0; t < 3; t++) {
+        const { oc, octx } = makeSpriteCanvas();
+        ENEMY_PAINTERS[t](octx, THEME.enemy['t' + t]);
+        enemySprites[t] = oc;
+        enemyFlashSprites[t] = makeFlashSilhouette(ctx => ENEMY_PAINTERS[t](ctx, THEME.enemy['t' + t]));
+      }
+    }
+
+    const topbarEl = document.getElementById('topbar');
+
+    // R2/R3: resize() now only recomputes the letterbox scale/offset (logical GW/GH -> physical
+    // canvas) and the canvas backbuffer size. Gameplay geometry (dangerY, player.y, etc.) is fixed
+    // in logical units and set once at startup, not here.
+    function resize() {
+      const winW = innerWidth, winH = innerHeight;
+      const topbarH = topbarEl ? topbarEl.offsetHeight : TOPBAR_H;
+      const availW = winW, availH = Math.max(1, winH - topbarH);
+      dpr = window.devicePixelRatio || 1;
+      c.width = Math.round(winW * dpr); c.height = Math.round(winH * dpr);
+      scale = Math.min(availW / GW, availH / GH);
+      offsetX = (availW - GW * scale) * .5;
+      offsetY = topbarH + (availH - GH * scale) * .5;
+      if (!nebulaCanvas) nebulaCanvas = makeNebulaCanvas();
+      if (!vignetteCanvas) vignetteCanvas = makeVignetteCanvas();
+    }
+    addEventListener('resize', resize);
+    dangerY = GH - 120;
+    player.y = GH - 64;
+    player.x = GW * .5;
+    resize();
+    bulletGlowP = makeBulletGlow('124,216,255');
+    bulletGlowE = makeBulletGlow('255,115,115');
+    buildPlayerSprite();
+    buildEnemySprites();
+
+    // R3: screen (client) pixel -> logical game coordinate, for pointer/touch input (M1).
+    function toGame(px, py) {
+      return { x: (px - offsetX) / scale, y: (py - offsetY) / scale };
+    }
+
+    addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+      if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key)) e.preventDefault();
+      if (e.key === 'Enter' || e.key === ' ') { if (mode !== RUNNING) beginNewRun(); }
+      if (e.key.toLowerCase() === 'p') togglePause();
+    });
     addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    addEventListener('blur', () => { for (const k in keys) keys[k] = false; touchActive = false; });
     addEventListener('pointerdown', unlockAudio, { once: true });
     addEventListener('keydown', unlockAudio, { once: true });
+
+    // M1: touch/mouse drag on the canvas moves the player toward the pressed logical x.
+    function onPointerMove(e) {
+      if (!touchActive) return;
+      const rect = c.getBoundingClientRect();
+      const g = toGame(e.clientX - rect.left, e.clientY - rect.top);
+      touchX = g.x;
+    }
+    c.addEventListener('pointerdown', e => {
+      touchActive = true;
+      c.setPointerCapture && c.setPointerCapture(e.pointerId);
+      onPointerMove(e);
+      e.preventDefault();
+    });
+    c.addEventListener('pointermove', e => { onPointerMove(e); if (touchActive) e.preventDefault(); });
+    addEventListener('pointerup', () => { touchActive = false; });
+    addEventListener('pointercancel', () => { touchActive = false; });
     document.getElementById('restartNow').onclick = () => { if (mode !== RUNNING) beginNewRun(); };
     soundToggle.onclick = async () => {
       initAudio();
@@ -178,24 +930,58 @@
 
     function buildWave() {
       enemies.length = 0;
-      const cols = 6, rows = 3, sx = 84, sy = 66;
+      // W1: hitbox tiers doubled (was [30,34,38]) — column/row spacing widened to match so the
+      // now-larger tier-2 hull doesn't crowd its neighbors, and the formation start y is pushed
+      // down so row 0's (also-doubled) height clears the HUD panel.
+      // H1: row-0 base oy raised 100 -> 120 for the 2x HUD: panel bottom sits at logical y=108
+      // (drawHud topY 24 + barH), so row 0 starts at world y 190 (formation.y 70 + oy 120) and its
+      // sprite top edge (~y 130, sprite half-height 60) keeps ~20px of clearance under the panel.
+      // X1: HUD panel grew 16px (barH 88->104) to fit the new XP gauge strip, so row-0 oy is bumped
+      // 120 -> 130 to restore ~6-16px of clearance under the taller panel (bottom now at logical
+      // y=124; row 0 world y=200, sprite top ~140).
+      const cols = 6, rows = 3, sx = 104, sy = 92;
       const startX = (w - (cols - 1) * sx) * .5;
-      const hpBoost = Math.floor((wave - 1) / 3);
+      // X2: wave HP scaling reworked for the v1.8 growth system. Old rule was flat "+1 every 3
+      // waves"; now each wave compounds the base tier HP by WAVE_HP_GROWTH (see GROWTH-adjacent
+      // consts below) so enemy toughness keeps pace with the player's growing DPS from XP levels.
+      const waveHpMul = Math.pow(1 + WAVE_HP_GROWTH, wave - 1);
+      const tierSize = [60, 68, 76];
+      // X2: base tier HP doubled (was 1/2/3) as the growth-system baseline before per-wave scaling.
+      const tierBaseHp = [2, 4, 6];
       for (let r = 0; r < rows; r++) {
         for (let col = 0; col < cols; col++) {
-          const base = r === 0 ? 1 : (r === 1 ? 2 : 3);
-          enemies.push({ x: startX + col * sx, y: 86 + r * sy, w: 34, h: 22, maxHp: base + hpBoost, hp: base + hpBoost, flash: 0, alive: true });
+          const base = Math.max(1, Math.round(tierBaseHp[r] * waveHpMul));
+          const rowScore = r === 0 ? 30 : (r === 1 ? 20 : 10);
+          const sz = tierSize[r];
+          // F2: enemies are anchored to the formation by a fixed relative offset (ox, oy) decided
+          // once here at grid layout time and never touched again. World position is always derived
+          // as formation.x + e.ox / formation.y + e.oy (see enemyX/enemyY) — enemies never carry
+          // their own independently-accumulated x/y.
+          enemies.push({ ox: startX + col * sx, oy: 130 + r * sy, w: sz, h: Math.round(sz * .65), tier: r, maxHp: base, hp: base, flash: 0, alive: true, score: rowScore });
         }
       }
-      formation = { x: 0, y: 70, vx: enemySpeedBase + (wave - 1) * 8, stepDown: 20 + Math.min(18, wave * 1.5) };
+      formation = { x: 0, y: 70, vx: enemySpeedBase + (wave - 1) * 4, stepDown: 20 + Math.min(18, wave * 1.5) };
       nextEnemyShot = 0.6 + Math.random() * 0.6;
+      waveBanner = { wave, t: 0 };
+      waveGateUntil = (performance.now() / 1000) + 0.8;
     }
 
     function beginNewRun() {
-      score = 0; wave = 1; enemySpeedBase = 72;
-      player.lives = 3; player.invulnUntil = 0; player.fireCd = 0;
+      score = 0; wave = 1; enemySpeedBase = 36; kills = 0;
+      player.lives = 3; player.invulnUntil = 0; player.fireCd = 0; player.tilt = 0;
       pBullets.length = 0; eBullets.length = 0;
+      particles.length = 0; scorePopups.length = 0; dyingEnemies.length = 0;
+      shake = 0; hitVignette = 0;
+      bestFlashUntil = 0; bestBeaten = false;
+      lifeFx[0] = lifeFx[1] = lifeFx[2] = null;
       mode = RUNNING; gameOverHold = 0; countdown = 7;
+      runStartTime = performance.now() / 1000;
+      // X1: reset all XP/level growth state for the new run — otherwise level/dmg/fireCd/twinShot/
+      // pierce would carry over from the previous run's game-over.
+      playerGrowth.level = 1; playerGrowth.xp = 0; playerGrowth.xpNext = xpToNext(1);
+      playerGrowth.dmg = 1; playerGrowth.fireCd = 0.15;
+      playerGrowth.twinShot = false; playerGrowth.pierce = 0;
+      playerGrowth.levelUpFlashUntil = 0; playerGrowth.ringFxUntil = 0;
       ov.classList.remove('show');
       buildWave();
     }
@@ -205,33 +991,126 @@
       mode = GAME_OVER;
       gameOverHold = 0.45;
       countdown = 7;
+      const isNewBest = score > highscore;
+      if (isNewBest) { highscore = score; saveHighscore(highscore); }
+      const playTime = Math.max(0, Math.round((performance.now() / 1000) - runStartTime));
+      newBestEl.style.display = isNewBest ? 'block' : 'none';
+      statScoreEl.textContent = `${score}`;
+      statBestEl.textContent = `${highscore}`;
+      statWaveEl.textContent = `${wave}`;
+      statLevelEl.textContent = `${playerGrowth.level}`;
+      statKillsEl.textContent = `${kills}`;
+      statTimeEl.textContent = `${playTime}s`;
       ov.classList.add('show');
       cd.textContent = `Restarting in ${Math.ceil(countdown)}…`;
     }
 
-    function pickTarget() {
-      let best = null;
-      for (const e of enemies) {
-        if (!e.alive) continue;
-        if (!best) { best = e; continue; }
-        if (e.hp < best.hp) best = e;
-        else if (e.hp === best.hp && Math.abs(e.x - player.x) < Math.abs(best.x - player.x)) best = e;
-      }
-      target = best;
+    // A2: incoming-damage tally per enemy from bullets already in flight (avoids overkill).
+    // X1: bullets now carry variable damage (playerGrowth.dmg at fire time), so this sums each
+    // in-flight bullet's own dmg rather than just counting bullets 1-for-1.
+    function incomingDamage(e) {
+      let n = 0;
+      for (const b of pBullets) if (b.tgt === e) n += (b.dmg || 1);
+      return n;
     }
 
+    function pickTarget() {
+      // Score candidates: prefer low effective HP, lower-row (closer to danger line), and proximity.
+      // Effective HP <= 0 (already lethal amount of in-flight bullets assigned) is excluded unless
+      // every alive enemy is excluded, in which case fall back to raw-HP selection.
+      let best = null, bestScore = -Infinity;
+      let fallback = null, fallbackScore = -Infinity;
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        const ex = enemyX(e), ey = enemyY(e);
+        const effHp = e.hp - incomingDamage(e);
+        const distScore = -Math.abs(ex - player.x) * 0.01;
+        const rowScore = ey * 0.03; // farther down (closer to danger line) = higher priority
+        const hpScore = -effHp * 2;
+        const s = hpScore + rowScore + distScore;
+        if (s > fallbackScore) { fallbackScore = s; fallback = e; }
+        if (effHp > 0 && s > bestScore) { bestScore = s; best = e; }
+      }
+      target = best || fallback;
+    }
+
+    // F1: wall-bounce margin (logical px), measured against enemy *hitbox* edges (e.w/e.h based).
+    // Kept tiny so the outermost surviving ship travels almost flush to the field border before
+    // reflecting. Sprites are drawn larger than their hitbox (drawEnemy: sprite half-width == e.w,
+    // i.e. 2x the hitbox half-width), so at this margin the sprite art can overlap the border
+    // slightly — that's intended/allowed. Both the bounce test and the post-bounce clamp must use
+    // this same constant or the clamp can fight the next frame's bounce test.
+    const WALL_M = 3;
+
+    // F1: bounds are recomputed fresh every call from currently-alive enemies only (dying/dead
+    // enemies are excluded — killEnemy() flips e.alive=false and moves them to dyingEnemies, a
+    // separate array not read here). No caching, so the moment an edge-column enemy dies, the next
+    // call sees the narrower survivor set and the formation immediately has more room to roam.
     function enemyBounds() {
       let l = 1e9, r = -1e9;
-      for (const e of enemies) if (e.alive) { l = Math.min(l, e.x - e.w * .5); r = Math.max(r, e.x + e.w * .5); }
+      for (const e of enemies) if (e.alive) { const ex = enemyX(e); l = Math.min(l, ex - e.w * .5); r = Math.max(r, ex + e.w * .5); }
       return { l, r };
     }
 
+    // F1 balance: classic-Invaders "fewer aliens left = faster" feel. This is a per-frame *display/
+    // movement* multiplier only — it is never baked into formation.vx itself, so it can't stack
+    // multiplicatively with the *=-1.06 bounce acceleration. Recomputed each frame from current
+    // alive/total ratio, capped at +50% when the wave is almost cleared.
+    function enemySpeedMul() {
+      const total = enemies.length || 1;
+      let alive = 0;
+      for (const e of enemies) if (e.alive) alive++;
+      return 1 + ((total - alive) / total) * 0.5;
+    }
+
+    // A4: aiming cone — player bullets can't fan out to snipe targets far to the side. The fired
+    // direction's horizontal component is clamped to at most AIM_MAX_RATIO * |vertical component|
+    // (~8.5 degrees off vertical at 0.15), forcing the auto-pilot to actually fly under a target
+    // before shots can connect. Raise/lower this single constant to retune the cone width.
+    const AIM_MAX_RATIO = 0.15;
+
     function firePlayerBullet() {
       if (!target) return;
-      const ox = target.x - player.x, oy = target.y - player.y;
-      const d = Math.hypot(ox, oy) || 1;
       const sp = 580;
-      pBullets.push({ x: player.x, y: player.y - player.r, vx: ox / d * sp, vy: oy / d * sp });
+      const tx0 = enemyX(target), ty0 = enemyY(target);
+      // A3: lead shot — approximate target's future position using formation vx and travel time.
+      const ox0 = tx0 - player.x, oy0 = ty0 - player.y;
+      const d0 = Math.hypot(ox0, oy0) || 1;
+      const t0 = d0 / sp;
+      const leadX = tx0 + formation.vx * enemySpeedMul() * t0;
+      const ox = leadX - player.x, oy = ty0 - player.y;
+      const d = Math.hypot(ox, oy) || 1;
+      // Normalized aim direction toward the (led) target. oy is expected to be negative (target is
+      // above the player); guard with -1 fallback so the clamp math below still behaves if a target
+      // is ever exactly level with or below the player.
+      let dirX = ox / d, dirY = oy / d;
+      if (dirY >= 0) dirY = -1e-6;
+      const maxHoriz = AIM_MAX_RATIO * Math.abs(dirY);
+      let inCone = true;
+      if (Math.abs(dirX) > maxHoriz) {
+        inCone = false;
+        dirX = Math.sign(dirX) * maxHoriz;
+        // renormalize so the clamped (dirX, dirY) direction is still unit length, keeping bullet
+        // speed magnitude exactly sp regardless of how far the raw aim direction had to be clamped.
+        const nd = Math.hypot(dirX, dirY) || 1;
+        dirX /= nd; dirY /= nd;
+      }
+      // A2 fix: a clamped (miss) shot no longer tracks a target for overkill accounting — otherwise
+      // incomingDamage()/pickTarget() would count bullets that can never actually hit as "in-flight
+      // damage" against the target and switch targets away too early.
+      const tgt = inCone ? target : null;
+      const dmg = playerGrowth.dmg, pierce = playerGrowth.pierce;
+      if (playerGrowth.twinShot) {
+        // X1 Lv4 milestone: parallel 2-shot — both bolts keep the exact same (already cone-clamped)
+        // direction as a single shot would, just launched from two slightly offset origin points, so
+        // they stay visually "parallel" and never violate AIM_MAX_RATIO themselves.
+        const spread = 8;
+        const px = -dirY, py = dirX; // unit vector perpendicular to fire direction, for the offset
+        pBullets.push({ x: player.x + px * spread, y: player.y - player.r + py * spread, vx: dirX * sp, vy: dirY * sp, trail: [], tgt, dmg, pierce, hitSet: null });
+        pBullets.push({ x: player.x - px * spread, y: player.y - player.r - py * spread, vx: dirX * sp, vy: dirY * sp, trail: [], tgt, dmg, pierce, hitSet: null });
+      } else {
+        pBullets.push({ x: player.x, y: player.y - player.r, vx: dirX * sp, vy: dirY * sp, trail: [], tgt, dmg, pierce, hitSet: null });
+      }
       playSfx('playerFire');
     }
 
@@ -242,80 +1121,319 @@
       const live = enemies.filter(e => e.alive);
       if (!live.length) return;
       const e = live[(Math.random() * live.length) | 0];
-      const ey = e.y + formation.y;
+      const ex = enemyX(e), ey = enemyY(e);
       const tx = player.x + (Math.random() - .5) * 24, ty = player.y;
-      const ox = tx - e.x, oy = ty - ey, d = Math.hypot(ox, oy) || 1, sp = 240 + wave * 8;
-      eBullets.push({ x: e.x, y: ey + 14, vx: ox / d * sp, vy: oy / d * sp });
+      const ox = tx - ex, oy = ty - ey, d = Math.hypot(ox, oy) || 1, sp = 240 + wave * 8;
+      eBullets.push({ x: ex, y: ey + e.h * .5 + 4, vx: ox / d * sp, vy: oy / d * sp, trail: [] });
       playSfx('enemyFire');
     }
 
+    function addShake(v) { shake = Math.min(8, shake + v); }
+
+    function spawnParticle(p) {
+      if (particles.length >= 400) particles.shift();
+      particles.push(p);
+    }
+
+    function spawnExplosion(px, py) {
+      // W1: slightly bigger/denser burst to match the now-2x ship hulls (cosmetic only).
+      const n = 10 + ((Math.random() * 8) | 0);
+      for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2, spd = 60 + Math.random() * 160;
+        const palette = THEME.particle.explode;
+        spawnParticle({
+          x: px, y: py,
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          life: 0, maxLife: 0.35 + Math.random() * 0.35,
+          size: 2 + Math.random() * 3.2,
+          color: palette[(Math.random() * palette.length) | 0]
+        });
+      }
+    }
+
+    function spawnSparks(px, py) {
+      const n = 4 + ((Math.random() * 3) | 0);
+      for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2, spd = 80 + Math.random() * 140;
+        const palette = THEME.particle.spark;
+        spawnParticle({
+          x: px, y: py,
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+          life: 0, maxLife: 0.22 + Math.random() * 0.2,
+          size: 1.2 + Math.random() * 1.8,
+          color: palette[(Math.random() * palette.length) | 0]
+        });
+      }
+    }
+
+    function addScorePopup(px, py, text, big, kind) {
+      scorePopups.push({ x: px, y: py, text, big: !!big, kind: kind || null, life: 0, maxLife: big ? 1.1 : 0.8 });
+    }
+
+    function updateParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life += dt;
+        if (p.life >= p.maxLife) { particles.splice(i, 1); continue; }
+        p.vx *= Math.pow(0.9, dt * 60);
+        p.vy *= Math.pow(0.9, dt * 60);
+        p.x += p.vx * dt; p.y += p.vy * dt;
+      }
+    }
+
+    function updateScorePopups(dt) {
+      for (let i = scorePopups.length - 1; i >= 0; i--) {
+        const s = scorePopups[i];
+        s.life += dt;
+        if (s.life >= s.maxLife) scorePopups.splice(i, 1);
+      }
+    }
+
+    function updateDyingEnemies(dt) {
+      for (let i = dyingEnemies.length - 1; i >= 0; i--) {
+        const e = dyingEnemies[i];
+        e.dyingT += dt;
+        if (e.dyingT >= 0.2) dyingEnemies.splice(i, 1);
+      }
+    }
+
+    function updateMeteor(dt, now) {
+      if (meteor) {
+        meteor.life += dt;
+        meteor.x += meteor.vx * dt; meteor.y += meteor.vy * dt;
+        if (meteor.life >= meteor.maxLife) meteor = null;
+      } else if (now >= nextMeteorAt) {
+        const fromLeft = Math.random() < 0.5;
+        meteor = {
+          x: fromLeft ? -20 : w + 20, y: Math.random() * h * 0.4,
+          vx: (fromLeft ? 1 : -1) * (420 + Math.random() * 180),
+          vy: 260 + Math.random() * 140,
+          life: 0, maxLife: 0.9
+        };
+        nextMeteorAt = now + 6 + Math.random() * 6;
+      }
+    }
+
+    // X1: apply the cumulative, auto-applied level-up rewards for reaching playerGrowth.level.
+    // Called once per level gained (grantXp loops it for multi-level jumps). No choice UI — every
+    // reward is deterministic from the new level number, per the design constants in GROWTH.
+    function applyLevelUp() {
+      const lv = playerGrowth.level;
+      // fire-rate: compounding multiplier per level, floored so auto-fire never becomes absurd.
+      playerGrowth.fireCd = Math.max(GROWTH.fireCdMin, playerGrowth.fireCd * GROWTH.fireCdMul);
+      // damage: +1 at specific milestone levels (3,5,7,9,...).
+      if (GROWTH.dmgLevels.includes(lv)) playerGrowth.dmg += 1;
+      // milestones: twin parallel shot at lv4, one-enemy pierce at lv8.
+      if (lv === GROWTH.twinShotLevel) playerGrowth.twinShot = true;
+      if (lv === GROWTH.pierceLevel) playerGrowth.pierce = Math.max(playerGrowth.pierce, 1);
+
+      playerGrowth.levelUpFlashUntil = (performance.now() / 1000) + 1.1;
+      playerGrowth.ringFxUntil = (performance.now() / 1000) + 0.5;
+      addScorePopup(player.x, player.y - 50, 'LEVEL UP!', true, 'levelup');
+      // rising arpeggio as the level-up sting, built from the existing tone() synth.
+      tone('square', 520, 0.09, 0.8, 1.4);
+      setTimeout(() => tone('square', 720, 0.09, 0.8, 1.4), 70);
+      setTimeout(() => tone('square', 960, 0.14, 0.85, 1.3), 140);
+    }
+
+    // X1: award XP and roll however many level-ups it produces (handles large single-kill/bonus
+    // XP grants that could cross more than one threshold at once).
+    function grantXp(amount) {
+      if (amount <= 0) return;
+      playerGrowth.xp += amount;
+      while (playerGrowth.xp >= playerGrowth.xpNext) {
+        playerGrowth.xp -= playerGrowth.xpNext;
+        playerGrowth.level++;
+        playerGrowth.xpNext = xpToNext(playerGrowth.level);
+        applyLevelUp();
+      }
+    }
+
+    function killEnemy(e) {
+      // F2: snapshot the enemy's world position at the instant of death into its own e.x/e.y — from
+      // this point on the enemy is detached from the formation anchor (moved to dyingEnemies) and
+      // its death animation plays out in place rather than continuing to track formation.x/y.
+      e.x = enemyX(e); e.y = enemyY(e);
+      e.alive = false;
+      e.dying = true; e.dyingT = 0;
+      dyingEnemies.push(e);
+      score += e.score; kills++;
+      addScorePopup(e.x, e.y, `+${e.score}`, false);
+      spawnExplosion(e.x, e.y);
+      addShake(1.5);
+      playSfx('enemyDown');
+      grantXp(e.maxHp * GROWTH.xpPerHp);
+    }
+
     function updateRunning(dt, now) {
+      updateParticles(dt);
+      updateScorePopups(dt);
+      updateDyingEnemies(dt);
+      updateMeteor(dt, now);
+      shake = Math.max(0, shake - dt * 14);
+      hitVignette = Math.max(0, hitVignette - dt / 0.25);
+      if (waveBanner) { waveBanner.t += dt; if (waveBanner.t >= 1.2) waveBanner = null; }
+
+      // S1: detect the frame score first crosses highscore, trigger 1s Best highlight
+      if (!bestBeaten && score > highscore) { bestBeaten = true; bestFlashUntil = now + 1; }
+      // S2: advance life-loss fade slots, clearing once their animation completes
+      for (let i = 0; i < lifeFx.length; i++) {
+        if (!lifeFx[i]) continue;
+        lifeFx[i].t += dt;
+        if (lifeFx[i].t >= 0.4) lifeFx[i] = null;
+      }
+
       pickTarget();
 
       const l = keys['arrowleft'] || keys['a'], r = keys['arrowright'] || keys['d'];
       const manual = (r ? 1 : 0) - (l ? 1 : 0);
-      if (manual) player.x += manual * player.speed * dt;
-      else if (target) {
-        const dx = target.x - player.x, step = Math.sign(dx) * Math.min(Math.abs(dx), player.autoSpeed * dt);
+      let moveDir = 0;
+      if (manual) { player.x += manual * player.speed * dt; moveDir = manual; }
+      else if (touchActive) {
+        // M1: touch drag — move toward touchX at manual speed, same priority as keyboard manual.
+        const dx = touchX - player.x, step = Math.sign(dx) * Math.min(Math.abs(dx), player.speed * dt);
         player.x += step;
+        moveDir = Math.abs(dx) > 1 ? Math.sign(dx) : 0;
       }
-      player.x = Math.max(22, Math.min(w - 22, player.x));
+      else {
+        // A1: bullet-dodge — scan eBullets for ones on track to cross the player's y within 0.9s
+        // and land within a danger radius of player.x; if any found, flee the danger-x average
+        // instead of chasing the target this frame.
+        const dangerR = 68;
+        let dangerSum = 0, dangerN = 0;
+        for (const b of eBullets) {
+          if (b.vy <= 0) continue;
+          const t = (player.y - b.y) / b.vy;
+          if (t < 0 || t > 0.9) continue;
+          const fx = b.x + b.vx * t;
+          if (Math.abs(fx - player.x) < dangerR) { dangerSum += fx; dangerN++; }
+        }
+        if (dangerN > 0) {
+          const avoidX = dangerSum / dangerN;
+          let dir = player.x >= avoidX ? 1 : -1;
+          // if fleeing would run us into the wall, flee the other way instead
+          if (dir < 0 && player.x <= player.r + 11) dir = 1;
+          else if (dir > 0 && player.x >= w - (player.r + 11)) dir = -1;
+          player.x += dir * player.autoSpeed * dt;
+          moveDir = dir;
+        } else if (target) {
+          const dx = enemyX(target) - player.x, step = Math.sign(dx) * Math.min(Math.abs(dx), player.autoSpeed * dt);
+          player.x += step;
+          moveDir = Math.abs(dx) > 1 ? Math.sign(dx) : 0;
+        }
+      }
+      player.x = Math.max(player.r + 9, Math.min(w - (player.r + 9), player.x));
+      const targetTilt = moveDir * 0.12;
+      player.tilt += (targetTilt - player.tilt) * Math.min(1, dt * 8);
 
+      const gated = now < waveGateUntil;
+
+      // X1: fire cadence is now driven by playerGrowth.fireCd (shrinks per level-up, see
+      // applyLevelUp), instead of the old fixed 0.15s literal.
       player.fireCd -= dt;
-      while (player.fireCd <= 0) { firePlayerBullet(); player.fireCd += 0.15; }
+      while (player.fireCd <= 0) { if (!gated) firePlayerBullet(); player.fireCd += playerGrowth.fireCd; }
 
-      formation.x += formation.vx * dt;
+      // F2: single anchor — only formation.x/y ever accumulate motion. Each enemy's e.ox/e.oy is a
+      // fixed offset decided at buildWave() time, so there is nothing per-enemy left to advance here.
+      if (!gated) {
+        const moveVx = formation.vx * enemySpeedMul();
+        formation.x += moveVx * dt;
+      }
+
+      // F2: bounds are derived fresh from currently-alive enemies' offsets (enemyBounds already adds
+      // formation.x via enemyX), so the moment an edge-column enemy dies, the next call sees the
+      // narrower survivor set and the formation immediately gets more room before reflecting.
       const b = enemyBounds();
-      if (b.l + formation.x < 14 || b.r + formation.x > w - 14) {
+      if (b.l < WALL_M || b.r > w - WALL_M) {
         formation.vx *= -1.06;
+        // F1 cap: the *1.06-per-bounce acceleration otherwise compounds without limit over a long
+        // wave, eventually making the formation feel dangerously fast once it's low on the field.
+        // Cap the magnitude at 2x this wave's base speed (baseSpeed itself already grows per-wave/
+        // per-clear, so later waves still ramp — this only stops runaway *compounding* within a wave).
+        const vxCap = (enemySpeedBase + (wave - 1) * 4) * 2;
+        formation.vx = Math.max(-vxCap, Math.min(vxCap, formation.vx));
         formation.y += formation.stepDown;
+        // F2 fix: b.l/b.r are *world* coordinates (enemyBounds already folds in formation.x via
+        // enemyX/enemyY), so "WALL_M - b.l" / "(w-WALL_M) - b.r" are correction *deltas*, not
+        // absolute positions for formation.x. Treating them as absolute clamp bounds (old code:
+        // formation.x = min(max(formation.x, WALL_M-b.l), (w-WALL_M)-b.r)) teleported the whole
+        // formation to whatever small/negative number those bounds happened to be — most visible
+        // (tens to hundreds of px) once edge-column enemies died and shrank b.l/b.r. Adding the
+        // delta nudges formation.x by just enough to pull the breaching edge back to the wall.
+        if (b.l < WALL_M) formation.x += WALL_M - b.l;
+        if (b.r > w - WALL_M) formation.x += (w - WALL_M) - b.r;
       }
 
       for (const e of enemies) if (e.alive) {
-        e.x += formation.vx * dt;
         e.flash = Math.max(0, e.flash - dt * 6);
-        if (e.y + formation.y > dangerY) { beginGameOver(); return; }
+        if (enemyY(e) > dangerY) { beginGameOver(); return; }
       }
 
-      fireEnemyBullet(dt);
+      if (!gated) fireEnemyBullet(dt);
 
       for (let i = pBullets.length - 1; i >= 0; i--) {
-        const b = pBullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        const b = pBullets[i];
+        b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 4) b.trail.pop();
+        b.x += b.vx * dt; b.y += b.vy * dt;
         if (b.x < -20 || b.x > w + 20 || b.y < -30 || b.y > h + 20) { pBullets.splice(i, 1); continue; }
         for (const e of enemies) {
           if (!e.alive) continue;
-          const ex = e.x, ey = e.y + formation.y;
+          // X1: pierce — a bullet that already hit `pierce+1` enemies is spent; skip enemies it has
+          // already hit this flight so it can't double-tap the same target while passing through.
+          if (b.hitSet && b.hitSet.has(e)) continue;
+          const ex = enemyX(e), ey = enemyY(e);
           if (Math.abs(b.x - ex) < e.w * .5 && Math.abs(b.y - ey) < e.h * .5) {
-            e.hp--; e.flash = 1; pBullets.splice(i, 1);
+            e.hp -= (b.dmg || 1); e.flash = 1;
             playSfx('enemyHit');
-            if (e.hp <= 0) { e.alive = false; score += 10; playSfx('enemyDown'); }
+            if (e.hp <= 0) killEnemy(e);
+            const pierceLeft = b.pierce || 0;
+            if (pierceLeft > 0) {
+              // consume one pierce charge, remember this enemy so the same bullet can't re-hit it,
+              // and let the bullet continue instead of removing it.
+              b.pierce = pierceLeft - 1;
+              if (!b.hitSet) b.hitSet = new Set();
+              b.hitSet.add(e);
+              if (b.tgt === e) b.tgt = null; // spent target reference, avoid stale overkill accounting
+            } else {
+              pBullets.splice(i, 1);
+            }
             break;
           }
         }
       }
 
       for (let i = eBullets.length - 1; i >= 0; i--) {
-        const b = eBullets[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        const b = eBullets[i];
+        b.trail.unshift({ x: b.x, y: b.y }); if (b.trail.length > 4) b.trail.pop();
+        b.x += b.vx * dt; b.y += b.vy * dt;
         if (b.x < -20 || b.x > w + 20 || b.y < -20 || b.y > h + 20) { eBullets.splice(i, 1); continue; }
         if (Math.hypot(b.x - player.x, b.y - player.y) < player.r + 4) {
           eBullets.splice(i, 1);
           if (now > player.invulnUntil) {
+            lifeFx[Math.max(0, player.lives - 1)] = { t: 0 };
             player.lives--; player.invulnUntil = now + 0.8;
             playSfx('playerHit');
+            spawnSparks(player.x, player.y);
+            addShake(6);
+            hitVignette = 1;
             if (player.lives <= 0) { beginGameOver(); return; }
           }
         }
       }
 
       if (!enemies.some(e => e.alive)) {
-        wave++; enemySpeedBase += 5;
+        const bonus = wave * 50;
+        score += bonus;
+        addScorePopup(w * .5, h * .4, `+${bonus}`, true);
+        grantXp(wave * GROWTH.waveClearXpMul);
+        wave++; enemySpeedBase += 2.5;
         pBullets.length = 0; eBullets.length = 0;
         buildWave();
       }
     }
 
     function updateState(dt) {
-      if (mode === RUNNING) return;
+      if (mode === RUNNING || mode === PAUSED) return;
       if (mode === GAME_OVER) {
         gameOverHold -= dt;
         if (gameOverHold <= 0) mode = RESTART_COUNTDOWN;
@@ -327,142 +1445,631 @@
       }
     }
 
+    function togglePause() {
+      if (mode === RUNNING) { mode = PAUSED; }
+      else if (mode === PAUSED) { mode = RUNNING; last = performance.now() / 1000; }
+    }
+
+    // V1: player render — static hull is a prerendered sprite (drawImage); engine flame, wingtip
+    // lights, nozzle glow and the invuln shield ring remain live vector draws on top so their
+    // animation (sine flicker, pulse, blink) stays smooth despite the hull being a fixed bitmap.
     function drawPlayer(ctx, p, now) {
       const inv = now < p.invulnUntil;
       const blinkOff = inv && Math.floor(now * 16) % 2 !== 0;
       if (blinkOff) return;
+      const T = THEME.player;
 
-      const bodyGrad = ctx.createLinearGradient(p.x, p.y - 18, p.x, p.y + 16);
-      bodyGrad.addColorStop(0, THEME.player.nose);
-      bodyGrad.addColorStop(0.55, '#79deff');
-      bodyGrad.addColorStop(1, THEME.player.wing);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.tilt || 0);
 
-      ctx.fillStyle = THEME.player.engineGlow;
+      // W1: these live-drawn overlays (flame/lights/nozzle/shield) were hand-authored in the same
+      // 1x coordinate space as the hull paint functions, but — unlike the hull sprite — are drawn
+      // directly here every frame rather than through makeSpriteCanvas's SHIP_SCALE transform. Scale
+      // this whole overlay pass by SHIP_SCALE so it lines up with the (already doubled) hull sprite.
+      ctx.save();
+      ctx.scale(SHIP_SCALE, SHIP_SCALE);
+
+      const flick = Math.sin(now * 20), flick2 = Math.sin(now * 20 + 1.4);
+      const flameLen = 9 + flick * 3, flameLen2 = 9 + flick2 * 3;
+      const glowR = 6 + flick * 1.2;
+
+      // engine glow + flame (drawn first, behind hull)
+      ctx.fillStyle = T.engineGlow;
       ctx.beginPath();
-      ctx.arc(p.x - 7, p.y + 14, 6, 0, Math.PI * 2);
-      ctx.arc(p.x + 7, p.y + 14, 6, 0, Math.PI * 2);
+      ctx.arc(-7, 14, Math.max(2, glowR), 0, Math.PI * 2);
+      ctx.arc(7, 14, Math.max(2, glowR), 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 0.75 + flick * 0.2;
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y + 18);
-      ctx.lineTo(p.x - 7, p.y + 27);
-      ctx.lineTo(p.x + 7, p.y + 27);
+      ctx.moveTo(-7, 16);
+      ctx.lineTo(-9, 16 + flameLen);
+      ctx.lineTo(-5, 16 + flameLen);
       ctx.closePath();
       ctx.fill();
-
-      ctx.fillStyle = bodyGrad;
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y - 16);
-      ctx.lineTo(p.x - 14, p.y + 14);
-      ctx.lineTo(p.x + 14, p.y + 14);
+      ctx.moveTo(7, 16);
+      ctx.lineTo(5, 16 + flameLen2);
+      ctx.lineTo(9, 16 + flameLen2);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = THEME.player.outline;
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
 
-      ctx.strokeStyle = THEME.player.wingLine;
-      ctx.lineWidth = 1.1;
+      // prerendered hull sprite (V1) — scaled down from SPR_RES supersample to logical size
+      if (playerSprite) {
+        const d = SPR_HALF * 2;
+        ctx.drawImage(playerSprite, -SPR_HALF, -SPR_HALF, d, d);
+      }
+
+      ctx.save();
+      ctx.scale(SHIP_SCALE, SHIP_SCALE);
+
+      // wingtip nav lights (kept live for the pulse animation)
+      const tipPulse = 0.55 + 0.45 * (Math.sin(now * 6) * .5 + .5);
+      ctx.globalAlpha = tipPulse;
+      ctx.fillStyle = T.wingtipLight;
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y - 8);
-      ctx.lineTo(p.x - 9, p.y + 11);
-      ctx.moveTo(p.x, p.y - 8);
-      ctx.lineTo(p.x + 9, p.y + 11);
-      ctx.stroke();
+      ctx.arc(-15.5, 12, 1.7, 0, Math.PI * 2);
+      ctx.arc(15.5, 12, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
-      ctx.fillStyle = THEME.player.cockpit;
-      ctx.fillRect(p.x - 3, p.y - 5, 6, 9);
-      ctx.fillStyle = THEME.player.engineCore;
-      ctx.fillRect(p.x - 6, p.y + 13, 4, 2.6);
-      ctx.fillRect(p.x + 2, p.y + 13, 4, 2.6);
+      // engine nozzle cores
+      ctx.fillStyle = T.engineCore;
+      ctx.fillRect(-6, 13, 4, 2.6);
+      ctx.fillRect(2, 13, 4, 2.6);
 
       if (inv && Math.floor(now * 12) % 2 === 0) {
-        ctx.strokeStyle = THEME.player.shield;
+        ctx.strokeStyle = T.shield;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 21, 0, Math.PI * 2);
+        ctx.arc(0, 0, 21, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.strokeStyle = THEME.player.shieldInner;
+        ctx.strokeStyle = T.shieldInner;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 17.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 17.5, 0, Math.PI * 2);
         ctx.stroke();
       }
+      ctx.restore();
+
+      // X1: level-up ring FX — short expanding/fading ring centered on the ship, undoes the tilt
+      // rotate (drawn after that ctx.restore() above) so the ring itself never tilts with the hull.
+      if (now < playerGrowth.ringFxUntil) {
+        const remain = playerGrowth.ringFxUntil - now;
+        const t = 1 - Math.max(0, Math.min(1, remain / 0.5));
+        const ringR = 24 + t * 46;
+        const ringAlpha = Math.max(0, 1 - t);
+        ctx.save();
+        ctx.globalAlpha = ringAlpha;
+        ctx.strokeStyle = THEME.hud.bestHighlight;
+        ctx.lineWidth = 3 - t * 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
     }
 
-    function drawEnemy(ctx, e, formationY) {
-      if (!e.alive) return;
-      const ex = e.x, ey = e.y + formationY;
+    // V1/V3: enemies now draw from prerendered per-tier sprites, with the hit-flash rendered as a
+    // white silhouette overlay (globalAlpha-composited) rather than swapping to a second painted
+    // palette — keeps sprite count at 3 hulls + 3 flash masks total. dying scale-up/fade (D3) is
+    // just a ctx.scale/globalAlpha wrapped around the same drawImage call, so it still applies.
+    function drawEnemy(ctx, e) {
+      // F2: dying enemies carry their own snapshotted e.x/e.y (set once in killEnemy at the moment
+      // of death) and no longer track the formation anchor; alive enemies always derive world
+      // position from formation.x/y + their fixed offset.
+      const ex = e.dying ? e.x : enemyX(e), ey = e.dying ? e.y : enemyY(e);
+      const tier = e.tier || 0;
       const flash = Math.min(1, e.flash);
-      const topColor = flash > 0 ? THEME.enemy.topFlash : THEME.enemy.top;
-      const cockpitColor = flash > 0 ? THEME.enemy.cockpitFlash : THEME.enemy.cockpit;
-      const engineColor = flash > 0 ? THEME.enemy.engineFlash : THEME.enemy.engine;
-      const podColor = flash > 0 ? THEME.enemy.podFlash : THEME.enemy.pod;
-      const glowColor = flash > 0 ? THEME.enemy.glowFlash : THEME.enemy.glow;
+      // W1: baseline doubled (34->68) alongside tierSize/SPR_HALF so the sprite-to-hitbox scale
+      // ratio (and thus rendered ship size relative to hitbox) is unchanged from before the 2x pass.
+      const s = (e.w || 68) / 68;
 
-      ctx.fillStyle = topColor;
-      ctx.beginPath();
-      ctx.moveTo(ex - 16, ey - 8);
-      ctx.lineTo(ex, ey - 12);
-      ctx.lineTo(ex + 16, ey - 8);
-      ctx.lineTo(ex + 13, ey + 1);
-      ctx.lineTo(ex - 13, ey + 1);
-      ctx.closePath();
-      ctx.fill();
+      let dyingAlpha = 1;
+      if (e.dying) {
+        const t = Math.min(1, e.dyingT / 0.2);
+        dyingAlpha = 1 - t;
+        const scale = 1 + t * 0.4;
+        ctx.save();
+        ctx.globalAlpha = dyingAlpha;
+        ctx.translate(ex, ey);
+        ctx.scale(scale, scale);
+        ctx.translate(-ex, -ey);
+      }
 
-      ctx.fillStyle = cockpitColor;
-      ctx.fillRect(ex - 8, ey - 2, 16, 7);
-      ctx.fillStyle = engineColor;
-      ctx.fillRect(ex - 11, ey + 5, 22, 6);
+      const sprite = enemySprites[tier], flashSprite = enemyFlashSprites[tier];
+      if (sprite) {
+        const d = SPR_HALF * 2 * s;
+        ctx.drawImage(sprite, ex - d / 2, ey - d / 2, d, d);
+        if (flash > 0 && flashSprite) {
+          ctx.globalAlpha = (e.dying ? dyingAlpha : 1) * flash;
+          ctx.drawImage(flashSprite, ex - d / 2, ey - d / 2, d, d);
+          ctx.globalAlpha = e.dying ? dyingAlpha : 1;
+        }
+      }
 
-      ctx.fillStyle = podColor;
-      ctx.fillRect(ex - 18, ey + 2, 5, 8);
-      ctx.fillRect(ex + 13, ey + 2, 5, 8);
+      if (!e.dying && e.hp < e.maxHp) {
+        // W1: bar width/gap/thickness scaled with SHIP_SCALE to match the doubled hitbox (was
+        // bw=28, gap=6, thickness=4 sized for the old 30/34/38 tier widths).
+        const bw = 28 * SHIP_SCALE, hpW = bw * (e.hp / e.maxHp), barGap = 6 * SHIP_SCALE, barH = 4 * SHIP_SCALE;
+        ctx.fillStyle = THEME.enemy.hpBg;
+        ctx.fillRect(ex - bw / 2, ey - e.h * .5 - barGap, bw, barH);
+        ctx.fillStyle = THEME.enemy.hpFg;
+        ctx.fillRect(ex - bw / 2, ey - e.h * .5 - barGap, hpW, barH);
+      }
 
-      ctx.fillStyle = glowColor;
-      ctx.fillRect(ex - 15, ey + 9, 4, 3.5);
-      ctx.fillRect(ex + 11, ey + 9, 4, 3.5);
-      ctx.beginPath();
-      ctx.arc(ex - 15.5, ey + 1.5, 1.5, 0, Math.PI * 2);
-      ctx.arc(ex + 15.5, ey + 1.5, 1.5, 0, Math.PI * 2);
-      ctx.fill();
+      if (e.dying) ctx.restore();
+    }
 
-      ctx.strokeStyle = flash > 0 ? THEME.enemy.outlineFlash : THEME.enemy.outline;
-      ctx.lineWidth = 1.1 + flash * 1.2;
-      ctx.strokeRect(ex - 16.5, ey - 12.5, 33, 24);
-
-      const bw = 28, hpW = bw * (e.hp / e.maxHp);
-      ctx.fillStyle = THEME.enemy.hpBg;
-      ctx.fillRect(ex - bw / 2, ey - 18, bw, 4);
-      ctx.fillStyle = THEME.enemy.hpFg;
-      ctx.fillRect(ex - bw / 2, ey - 18, hpW, 4);
+    // R2: draw the letterbox gutter + field border in physical CSS-pixel space (identity transform,
+    // dpr scale only) — this is outside the logical GW/GH world so it never gets clipped/scaled.
+    function drawGutterAndBorder() {
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const winW = innerWidth, winH = innerHeight;
+      x.fillStyle = '#02030a';
+      x.fillRect(0, 0, winW, winH);
+      const fx0 = offsetX - 1, fy0 = offsetY - 1, fw = GW * scale + 2, fh = GH * scale + 2;
+      // UI polish: field border tuned to match the topbar's border hue (rgba(126,162,255,*)) with a
+      // faint outer glow, instead of reusing the in-game aim-line color for chrome.
+      x.save();
+      x.shadowColor = 'rgba(126,162,255,.25)';
+      x.shadowBlur = 6;
+      x.strokeStyle = 'rgba(126,180,255,.4)';
+      x.lineWidth = 1;
+      x.strokeRect(fx0 + .5, fy0 + .5, fw - 1, fh - 1);
+      x.restore();
     }
 
     function draw(now) {
-      x.clearRect(0, 0, w, h);
+      drawGutterAndBorder();
+
+      // R2: logical(GW,GH) -> physical transform, composited with devicePixelRatio.
+      x.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * offsetX, dpr * offsetY);
+      x.save();
+      x.beginPath();
+      x.rect(0, 0, GW, GH);
+      x.clip();
+
       x.fillStyle = THEME.bg; x.fillRect(0, 0, w, h);
+      if (nebulaCanvas) x.drawImage(nebulaCanvas, 0, 0);
 
-      for (const s of stars) {
-        s.t += .01 * s.z;
-        const px = s.x * w, py = (s.y * h + (now * 18 * s.z)) % h, a = .25 + .6 * (Math.sin(s.t) * .5 + .5);
-        x.fillStyle = `rgba(170,200,255,${a.toFixed(3)})`;
-        const r = s.z * 1.4;
-        x.fillRect(px, py, r, r);
-      }
+      // shake offset — world-only, computed once per frame
+      const shakeMag = shake;
+      const sx = shakeMag > 0.01 ? (Math.random() * 2 - 1) * shakeMag : 0;
+      const sy = shakeMag > 0.01 ? (Math.random() * 2 - 1) * shakeMag : 0;
 
-      x.strokeStyle = THEME.dangerLine; x.beginPath(); x.moveTo(0, dangerY); x.lineTo(w, dangerY); x.stroke();
+      x.save();
+      x.translate(sx, sy);
+
+      drawStarfield(now);
+      drawMeteor();
+
+      drawDangerLine(now);
 
       if (target) {
-        x.strokeStyle = THEME.aimLine; x.setLineDash([6, 7]);
-        x.beginPath(); x.moveTo(player.x, player.y - 10); x.lineTo(target.x, target.y + formation.y); x.stroke(); x.setLineDash([]);
+        // A4: aim line still points straight at the target (for readability), but its style flags
+        // whether the target actually sits inside the firing cone — dim/red dashes = "out of range,"
+        // matching bullets that would currently be clamped off-target.
+        const tox = enemyX(target) - player.x, toy = enemyY(target) - (player.y - 10);
+        const tdirY = toy >= 0 ? -1e-6 : toy;
+        const outOfCone = Math.abs(tox) > AIM_MAX_RATIO * Math.abs(tdirY);
+        x.strokeStyle = outOfCone ? THEME.aimLineOut : THEME.aimLine;
+        x.setLineDash(outOfCone ? [3, 6] : [6, 7]);
+        x.beginPath(); x.moveTo(player.x, player.y - 10); x.lineTo(enemyX(target), enemyY(target)); x.stroke(); x.setLineDash([]);
       }
 
-      for (const b of pBullets) { x.fillStyle = THEME.bullets.player; x.fillRect(b.x - 2, b.y - 6, 4, 8); }
-      for (const b of eBullets) { x.fillStyle = THEME.bullets.enemy; x.fillRect(b.x - 2, b.y - 2, 4, 8); }
+      drawBullets();
 
-      for (const e of enemies) drawEnemy(x, e, formation.y);
+      for (const e of enemies) drawEnemy(x, e);
+      for (const e of dyingEnemies) drawEnemy(x, e);
       drawPlayer(x, player, now);
 
-      hud.textContent = `Score ${score}   Lives ${player.lives}   Wave ${wave}   Target ${target ? `HP:${target.hp}` : '-'}`;
+      drawParticles();
+      drawTouchIndicator();
+
+      x.restore();
+
+      drawScorePopups();
+      drawVignette();
+      drawWaveBanner();
+      drawHud(now);
+
+      if (mode === PAUSED) drawPauseScreen();
+
+      x.restore(); // pop the clip
+    }
+
+    function drawStarfield(now) {
+      for (const s of stars) {
+        s.t += .01;
+        const px = s.x * w, py = (s.y * h + (now * s.speed)) % h;
+        const a = s.baseAlpha * (.7 + .3 * (Math.sin(s.t) * .5 + .5));
+        x.fillStyle = `rgba(${s.color},${a.toFixed(3)})`;
+        x.fillRect(px, py, s.size, s.size);
+      }
+    }
+
+    function drawMeteor() {
+      if (!meteor) return;
+      const t = meteor.life / meteor.maxLife;
+      const alpha = 1 - t;
+      const tailX = meteor.x - meteor.vx * 0.05, tailY = meteor.y - meteor.vy * 0.05;
+      const g = x.createLinearGradient(meteor.x, meteor.y, tailX, tailY);
+      g.addColorStop(0, `rgba(223,242,255,${alpha.toFixed(3)})`);
+      g.addColorStop(1, 'rgba(223,242,255,0)');
+      x.strokeStyle = g;
+      x.lineWidth = 2;
+      x.beginPath();
+      x.moveTo(meteor.x, meteor.y);
+      x.lineTo(tailX, tailY);
+      x.stroke();
+    }
+
+    function drawDangerLine(now) {
+      let closestGap = 1e9;
+      for (const e of enemies) if (e.alive) closestGap = Math.min(closestGap, dangerY - enemyY(e));
+      const near = closestGap < 200;
+      const proximity = near ? 1 - Math.max(0, closestGap) / 200 : 0;
+      const pulseSpeed = 3 + proximity * 10;
+      const alpha = 0.26 + proximity * 0.5;
+
+      const bandH = 46;
+      const bandGrad = x.createLinearGradient(0, dangerY - bandH, 0, dangerY);
+      bandGrad.addColorStop(0, 'rgba(255,70,70,0)');
+      bandGrad.addColorStop(1, `rgba(255,70,70,${(0.05 + proximity * 0.16).toFixed(3)})`);
+      x.fillStyle = bandGrad;
+      x.fillRect(0, dangerY - bandH, w, bandH);
+
+      x.strokeStyle = `rgba(255,86,86,${alpha.toFixed(3)})`;
+      x.lineWidth = 2;
+      x.setLineDash([10, 8]);
+      x.lineDashOffset = -now * pulseSpeed * 10;
+      x.beginPath(); x.moveTo(0, dangerY); x.lineTo(w, dangerY); x.stroke();
+      x.setLineDash([]);
+      x.lineDashOffset = 0;
+    }
+
+    function drawBulletWithTrail(b, glowSprite, coreColor, w2, h2, glowSize) {
+      glowSize = glowSize || 20;
+      for (let i = b.trail.length - 1; i >= 0; i--) {
+        const t = b.trail[i];
+        const a = (1 - (i + 1) / (b.trail.length + 1)) * 0.35;
+        x.fillStyle = coreColor.replace(')', `,${a.toFixed(3)})`).replace('rgb', 'rgba');
+        x.fillRect(t.x - w2 / 2, t.y - h2 / 2, w2, h2);
+      }
+      const gh = glowSize / 2;
+      x.drawImage(glowSprite, b.x - gh, b.y - gh, glowSize, glowSize);
+      x.fillStyle = coreColor;
+      x.fillRect(b.x - w2 / 2, b.y - h2 / 2, w2, h2);
+    }
+
+    function drawBullets() {
+      for (const b of pBullets) {
+        // X1: visible damage feedback — player bullets get a touch bigger/glowier as playerGrowth.dmg
+        // climbs (dmg 1 = baseline, each +1 nudges size/glow up), so power growth reads at a glance.
+        const dmg = b.dmg || 1;
+        const bw = 4 + Math.min(4, (dmg - 1) * 1.1), bh = 8 + Math.min(6, (dmg - 1) * 1.6);
+        const glowSize = 20 + Math.min(14, (dmg - 1) * 3.5);
+        drawBulletWithTrail(b, bulletGlowP, 'rgb(124,216,255)', bw, bh, glowSize);
+      }
+      for (const b of eBullets) drawBulletWithTrail(b, bulletGlowE, 'rgb(255,115,115)', 4, 8);
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        const t = p.life / p.maxLife;
+        const alpha = Math.max(0, 1 - t);
+        x.fillStyle = `rgba(${p.color},${alpha.toFixed(3)})`;
+        const s = p.size * (1 - t * 0.4);
+        x.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+      }
+    }
+
+    // M1: faint ring under the finger while dragging, in logical coords.
+    function drawTouchIndicator() {
+      if (!touchActive) return;
+      x.save();
+      x.strokeStyle = 'rgba(190,220,255,.45)';
+      x.lineWidth = 2;
+      x.beginPath();
+      x.arc(touchX, player.y, player.r + 18, 0, Math.PI * 2);
+      x.stroke();
+      x.restore();
+    }
+
+    function drawScorePopups() {
+      x.textAlign = 'center';
+      for (const s of scorePopups) {
+        const t = s.life / s.maxLife;
+        const alpha = 1 - t;
+        const rise = t * (s.big ? 30 : 22);
+        x.globalAlpha = Math.max(0, alpha);
+        // X1: "LEVEL UP!" gets its own gold color + slight upscale pop so it reads as a distinct
+        // milestone event rather than just another big score popup.
+        if (s.kind === 'levelup') {
+          const pop = 1 + (1 - Math.min(1, t / 0.35)) * 0.25;
+          x.fillStyle = THEME.hud.bestHighlight;
+          x.font = '800 30px system-ui, sans-serif';
+          x.save();
+          x.translate(s.x, s.y - rise);
+          x.scale(pop, pop);
+          x.shadowColor = 'rgba(255,216,115,.7)';
+          x.shadowBlur = 14;
+          x.fillText(s.text, 0, 0);
+          x.restore();
+        } else {
+          x.fillStyle = s.big ? THEME.popup.bonus : THEME.popup.score;
+          x.font = s.big ? '800 34px system-ui, sans-serif' : '700 16px system-ui, sans-serif';
+          x.fillText(s.text, s.x, s.y - rise);
+        }
+      }
+      x.globalAlpha = 1;
+      x.textAlign = 'start';
+    }
+
+    function drawVignette() {
+      if (hitVignette <= 0 || !vignetteCanvas) return;
+      x.save();
+      x.globalAlpha = hitVignette;
+      x.drawImage(vignetteCanvas, 0, 0);
+      x.restore();
+    }
+
+    function drawWaveBanner() {
+      if (!waveBanner) return;
+      const t = waveBanner.t;
+      let alpha, slide;
+      if (t < 0.3) { alpha = t / 0.3; slide = (1 - alpha) * -60; }
+      else if (t < 0.9) { alpha = 1; slide = 0; }
+      else { alpha = 1 - (t - 0.9) / 0.3; slide = (1 - alpha) * 60; }
+      alpha = Math.max(0, Math.min(1, alpha));
+      x.save();
+      x.globalAlpha = alpha;
+      x.textAlign = 'center';
+      x.fillStyle = '#eaf3ff';
+      x.font = '800 46px system-ui, sans-serif';
+      x.fillText(`WAVE ${waveBanner.wave}`, w / 2, h * .38 + slide);
+      x.textAlign = 'start';
+      x.restore();
+    }
+
+    function drawMiniShip(px, py, filled, scale, alpha) {
+      x.save();
+      x.globalAlpha = alpha;
+      x.translate(px, py);
+      x.scale(scale, scale);
+      x.fillStyle = filled ? THEME.hud.lifeIcon : 'rgba(0,0,0,0)';
+      x.strokeStyle = THEME.hud.lifeIconEmpty;
+      x.lineWidth = filled ? 0 : 1.3;
+      x.beginPath();
+      x.moveTo(0, -7);
+      x.lineTo(-7, 6);
+      x.lineTo(7, 6);
+      x.closePath();
+      if (filled) x.fill(); else x.stroke();
+      x.restore();
+    }
+
+    let hudLastNow = 0;
+    // H1: HUD scaled ~2x for readability (fonts/icons/gauge/panel doubled, small caption labels
+    // added above each section, subtle text shadow for contrast on the starfield). The panel is
+    // also moved up (topY 62 -> 24) so even at double height its bottom edge (topY+4+barH-8 = 108)
+    // stays clear of the formation's first row (buildWave starts row 0 at world y >= 190, sprite
+    // top edge ~130).
+    function drawHud(now) {
+      const hudDt = Math.min(0.1, Math.max(0, now - (hudLastNow || now)));
+      hudLastNow = now;
+      const now_hud = now;
+      const topY = 24;
+      // X1: panel height grown 88 -> 104 to fit a thin XP gauge strip along the bottom edge (16px
+      // of extra room). buildWave's row-0 world y (190, sprite top ~130) still clears the new panel
+      // bottom (topY+4+ph = 28+96 = 124) by ~6px — checked against the wider tier-2 hitbox too.
+      const barH = 104;
+      const pad = 12;
+      x.save();
+
+      // S1: panel background with rounded corners + border + section dividers
+      const px0 = pad, py0 = topY + 4, pw = w - pad * 2, ph = barH - 8;
+      const rr = 16;
+      x.beginPath();
+      x.moveTo(px0 + rr, py0);
+      x.arcTo(px0 + pw, py0, px0 + pw, py0 + ph, rr);
+      x.arcTo(px0 + pw, py0 + ph, px0, py0 + ph, rr);
+      x.arcTo(px0, py0 + ph, px0, py0, rr);
+      x.arcTo(px0, py0, px0 + pw, py0, rr);
+      x.closePath();
+      x.fillStyle = THEME.hud.panelBg;
+      x.fill();
+      x.strokeStyle = THEME.hud.panelBorder;
+      x.lineWidth = 1;
+      x.stroke();
+
+      // section dividers (left|center, center|right)
+      const div1 = px0 + pw * 0.28, div2 = px0 + pw * 0.72;
+      x.strokeStyle = THEME.hud.panelDivider;
+      x.beginPath();
+      x.moveTo(div1, py0 + 8); x.lineTo(div1, py0 + ph - 8);
+      x.moveTo(div2, py0 + 8); x.lineTo(div2, py0 + ph - 8);
+      x.stroke();
+
+      // H1: thin dark text shadow — lifts text/icons off bright starfield pixels behind the panel
+      x.shadowColor = 'rgba(0,0,0,.6)';
+      x.shadowBlur = 3;
+      x.shadowOffsetY = 1;
+      x.textAlign = 'center';
+
+      // H1: small dim caption above each section clarifies the info structure at a glance
+      const capFont = '700 13px system-ui, sans-serif';
+      const capY = topY + 22;
+      const lcx = (px0 + div1) / 2, rcx = (div2 + px0 + pw) / 2;
+
+      // left: lives as mini-ship icons (2x), with fade+shrink-out on loss and dim outline when empty
+      x.fillStyle = THEME.hud.dim;
+      x.font = capFont;
+      x.fillText('LIVES', lcx, capY);
+      let lx = lcx - 44;
+      for (let i = 0; i < 3; i++) {
+        const fx = lifeFx[i];
+        let filled = i < player.lives, scale = 2, alpha = 1;
+        if (fx) {
+          const t = Math.min(1, fx.t / 0.4);
+          filled = true; // still show ship fading out
+          scale = 2 * (1 - t * 0.5);
+          alpha = 1 - t;
+        }
+        drawMiniShip(lx, topY + 56, filled, scale, alpha);
+        lx += 44;
+      }
+
+      // center: score (monospace, digit-aligned) + best (highlights on new record)
+      x.fillStyle = THEME.hud.dim;
+      x.font = capFont;
+      x.fillText('SCORE', w / 2, capY);
+      x.fillStyle = THEME.hud.text;
+      x.font = '800 40px ui-monospace, monospace';
+      x.fillText(`${score}`, w / 2, topY + 58);
+
+      const flashing = now_hud < bestFlashUntil;
+      if (flashing) {
+        const t = 1 - Math.max(0, bestFlashUntil - now_hud) / 1;
+        const pulse = Math.sin(t * Math.PI * 6) * 0.5 + 0.5;
+        x.save();
+        x.translate(w / 2, topY + 78);
+        x.scale(1 + pulse * 0.18, 1 + pulse * 0.18);
+        x.fillStyle = THEME.hud.bestHighlight;
+        x.font = '800 19px ui-monospace, monospace';
+        x.fillText(`Best ${highscore}`, 0, 0);
+        x.restore();
+      } else {
+        x.fillStyle = THEME.hud.dim;
+        x.font = '600 18px ui-monospace, monospace';
+        x.fillText(`Best ${highscore}`, w / 2, topY + 78);
+      }
+
+      // right: wave + remaining-enemy gauge (green gradient, smoothed toward target)
+      const total = enemies.length + dyingEnemies.length || 1;
+      const remaining = enemies.filter(e => e.alive).length;
+      const gaugeW = 170, gaugeH = 14;
+      const gx = rcx - gaugeW / 2, gy = topY + 48;
+      const targetFrac = Math.max(0, Math.min(1, remaining / total));
+      hudRemainingDisplay += (targetFrac - hudRemainingDisplay) * Math.min(1, hudDt * 6);
+      if (Math.abs(hudRemainingDisplay - targetFrac) < 0.002) hudRemainingDisplay = targetFrac;
+      x.fillStyle = THEME.hud.text;
+      x.font = '800 24px system-ui, sans-serif';
+      x.fillText(`WAVE ${wave}`, rcx, topY + 38);
+      // H1: no shadow on the gauge rects — blur under thin bars reads as smearing, not depth
+      x.shadowColor = 'transparent';
+      x.shadowBlur = 0;
+      x.shadowOffsetY = 0;
+      x.fillStyle = THEME.hud.gaugeBg;
+      x.fillRect(gx, gy, gaugeW, gaugeH);
+      const drawFrac = hudRemainingDisplay;
+      const gaugeGrad = x.createLinearGradient(gx, 0, gx + gaugeW, 0);
+      if (drawFrac > 0.3) {
+        gaugeGrad.addColorStop(0, THEME.hud.gaugeFg2);
+        gaugeGrad.addColorStop(1, THEME.hud.gaugeFg);
+      } else {
+        gaugeGrad.addColorStop(0, THEME.hud.gaugeWarn);
+        gaugeGrad.addColorStop(1, THEME.hud.gaugeFg2);
+      }
+      x.fillStyle = gaugeGrad;
+      x.fillRect(gx, gy, gaugeW * drawFrac, gaugeH);
+
+      // X1: thin full-width XP gauge along the panel's bottom edge — the panel grew 16px (barH
+      // 88->104) specifically to fit this strip without crowding the three sections above it.
+      const xpBarH = 6, xpPad = 20;
+      const xpx0 = px0 + xpPad, xpw = pw - xpPad * 2;
+      const xpy = py0 + ph - xpBarH - 6;
+      const xpFrac = Math.max(0, Math.min(1, playerGrowth.xp / playerGrowth.xpNext));
+      x.fillStyle = THEME.hud.gaugeBg;
+      x.fillRect(xpx0, xpy, xpw, xpBarH);
+      x.fillStyle = THEME.hud.bestHighlight;
+      x.fillRect(xpx0, xpy, xpw * xpFrac, xpBarH);
+
+      // "LV n" badge under Best — drawn last (on top of the XP gauge strip it visually sits over)
+      // so the digits stay legible instead of being painted over by the gauge fill. Pulses briefly
+      // right after a level-up (same window as the level-up ring FX / score popup).
+      x.shadowColor = 'rgba(0,0,0,.6)';
+      x.shadowBlur = 3;
+      x.shadowOffsetY = 1;
+      const lvPulseT = now_hud < playerGrowth.levelUpFlashUntil
+        ? 1 - Math.max(0, playerGrowth.levelUpFlashUntil - now_hud) / 1.1 : 1;
+      const lvPulse = now_hud < playerGrowth.levelUpFlashUntil ? Math.sin(lvPulseT * Math.PI * 5) * 0.5 + 0.5 : 0;
+      x.textAlign = 'center';
+      x.save();
+      x.translate(w / 2, topY + 96);
+      x.scale(1 + lvPulse * 0.22, 1 + lvPulse * 0.22);
+      x.fillStyle = now_hud < playerGrowth.levelUpFlashUntil ? THEME.hud.bestHighlight : THEME.hud.dim;
+      x.font = '800 15px ui-monospace, monospace';
+      x.fillText(`LV ${playerGrowth.level}`, 0, 0);
+      x.restore();
+
+      x.textAlign = 'start';
+      x.restore();
+    }
+
+    // Shared "glass panel" chrome for PAUSED (canvas-drawn) so it reads as the same design
+    // language as the HTML game-over/overlay panel: rounded card, soft cyan border glow, thin
+    // hairline dividers framing an uppercase gradient title.
+    function drawGlassPanel(cx, cy, pw, ph, rr) {
+      x.save();
+      x.beginPath();
+      x.moveTo(cx - pw / 2 + rr, cy - ph / 2);
+      x.arcTo(cx + pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2, rr);
+      x.arcTo(cx + pw / 2, cy + ph / 2, cx - pw / 2, cy + ph / 2, rr);
+      x.arcTo(cx - pw / 2, cy + ph / 2, cx - pw / 2, cy - ph / 2, rr);
+      x.arcTo(cx - pw / 2, cy - ph / 2, cx + pw / 2, cy - ph / 2, rr);
+      x.closePath();
+      x.fillStyle = 'rgba(11,17,36,.72)';
+      x.shadowColor = 'rgba(96,212,255,.35)';
+      x.shadowBlur = 34;
+      x.fill();
+      x.shadowColor = 'transparent'; x.shadowBlur = 0;
+      x.strokeStyle = 'rgba(126,220,255,.4)';
+      x.lineWidth = 1;
+      x.stroke();
+      x.restore();
+    }
+
+    function drawPauseScreen() {
+      x.fillStyle = 'rgba(3,6,16,.6)'; x.fillRect(0, 0, w, h);
+
+      const cx = w / 2, cy = h / 2;
+      const pw = Math.min(420, w - 80), ph = 260;
+      drawGlassPanel(cx, cy, pw, ph, 22);
+
+      x.textAlign = 'center';
+      const titleY = cy - ph / 2 + 46;
+
+      // hairline above the title, matching the HTML panel's ::before divider
+      x.strokeStyle = 'rgba(126,220,255,.28)';
+      x.lineWidth = 1;
+      x.beginPath(); x.moveTo(cx - 32, titleY - 28); x.lineTo(cx + 32, titleY - 28); x.stroke();
+
+      const titleGrad = x.createLinearGradient(cx - 90, 0, cx + 90, 0);
+      titleGrad.addColorStop(0, '#eaf9ff');
+      titleGrad.addColorStop(.55, '#7ee0ff');
+      titleGrad.addColorStop(1, '#7cd8ff');
+      x.fillStyle = titleGrad;
+      x.font = '800 34px system-ui, sans-serif';
+      x.fillText('P A U S E D', cx, titleY);
+
+      x.strokeStyle = 'rgba(126,220,255,.28)';
+      x.beginPath(); x.moveTo(cx - pw / 2 + 24, titleY + 18); x.lineTo(cx + pw / 2 - 24, titleY + 18); x.stroke();
+
+      x.fillStyle = THEME.hud.dim;
+      x.font = '600 14.5px system-ui, sans-serif';
+      const lines = [
+        '← / → or A / D  —  Move',
+        'P  —  Pause / Resume',
+        'Enter  —  Restart',
+        'Sound toggle  —  top bar button'
+      ];
+      lines.forEach((line, i) => x.fillText(line, cx, titleY + 50 + i * 26));
+      x.textAlign = 'start';
     }
 
     let last = performance.now() / 1000;
