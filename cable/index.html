@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cable Car Defense - BuntGames</title>
+    <meta name="description" content="Cable Car Defense: defend the ski resort cable line from waves of climbing invaders. A fast, free browser tower-defense game by BuntGames.">
+    <meta property="og:title" content="Cable Car Defense - BuntGames">
+    <meta property="og:description" content="Defend the ski resort cable line from waves of climbing invaders in this fast-paced free browser tower-defense game.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f172a'/%3E%3Cline x1='8' y1='30' x2='92' y2='30' stroke='%2394a3b8' stroke-width='6'/%3E%3Ccircle cx='50' cy='30' r='7' fill='%23334155'/%3E%3Crect x='33' y='34' width='34' height='30' rx='6' fill='%232563eb'/%3E%3Crect x='39' y='40' width='22' height='12' rx='3' fill='%23bae6fd' opacity='0.6'/%3E%3Ccircle cx='50' cy='58' r='8' fill='%23f1c40f'/%3E%3C/svg%3E">
     <style>
         :root {
             --primary: #3498db;
@@ -38,6 +43,7 @@
             background: #020617;
             display: block;
             image-rendering: pixelated;
+            touch-action: none;
         }
 
         #ui-layer {
@@ -86,6 +92,8 @@
             display: flex;
             gap: 12px;
             align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .btn {
@@ -106,32 +114,38 @@
             backdrop-filter: blur(4px);
         }
 
-        .btn:hover { 
-            background: var(--light); 
-            color: var(--dark); 
+        .btn:hover {
+            background: var(--light);
+            color: var(--dark);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
-        
+
         .btn-active { background: var(--gold); color: var(--dark); border-color: var(--gold); }
         .btn-icon-only { padding: 8px; }
         .btn-yt { border-color: var(--yt-red); color: var(--yt-red); }
         .btn-yt:hover { background: var(--yt-red); color: white; }
 
-        .stats-bar { 
-            position: absolute; 
-            top: 85px; 
-            left: 25px; 
-            font-size: 15px; 
+        .stats-bar {
+            position: absolute;
+            top: 85px;
+            left: 25px;
+            font-size: 15px;
             font-weight: 800;
-            color: var(--light); 
-            text-shadow: 1px 1px 4px #000; 
+            color: var(--light);
+            text-shadow: 1px 1px 4px #000;
             background: rgba(15, 23, 42, 0.6);
             padding: 6px 18px;
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
         }
+
+        #combo-display { color: var(--gold); margin-left: 10px; }
 
         #hud {
             position: absolute;
@@ -156,17 +170,60 @@
             position: relative;
             border-radius: 12px;
             transition: all 0.2s;
-            overflow: hidden;
+            overflow: visible;
             backdrop-filter: blur(4px);
         }
 
         .weapon-slot:hover { border-color: #64748b; transform: translateX(5px); }
         .weapon-slot.active { border-color: var(--gold); box-shadow: 0 0 15px rgba(241, 196, 15, 0.4); background: rgba(15, 23, 42, 0.95); }
-        
+        .weapon-slot.ready::after {
+            content: '';
+            position: absolute;
+            top: -4px; left: -4px;
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+            z-index: 5;
+        }
+
+        .weapon-slot.ai-used {
+            border-color: #22d3ee;
+            box-shadow: 0 0 18px rgba(34, 211, 238, 0.75);
+        }
+
+        #hint-toast {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(241, 196, 15, 0.4);
+            color: var(--light);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 12px 26px;
+            border-radius: 24px;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 50;
+            max-width: 92vw;
+        }
+        #hint-toast.show { opacity: 1; }
+        #hint-toast b { color: var(--gold); }
+
+        @media (max-width: 480px) {
+            #hint-toast { font-size: 10px; padding: 9px 14px; letter-spacing: 0.5px; white-space: normal; text-align: center; bottom: 50px; }
+        }
+
         .weapon-slot span { font-size: 9px; margin-top: 6px; font-weight: 800; color: #94a3b8; text-transform: uppercase; z-index: 2; }
         .weapon-slot.active span { color: var(--gold); }
 
-        .cd-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.6); z-index: 1; transition: height 0.1s linear; }
+        .cd-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.6); z-index: 1; transition: height 0.1s linear; border-radius: 0 0 10px 10px; overflow: hidden; }
         .cd-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 900; color: white; z-index: 3; text-shadow: 0 0 4px #000; }
         .weapon-key { position: absolute; top: 2px; right: 2px; background: var(--gold); color: #000; font-weight: 900; padding: 1px 4px; font-size: 9px; border-radius: 3px; z-index: 4; }
 
@@ -177,9 +234,29 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 100; pointer-events: auto;
             text-align: center;
+            box-sizing: border-box;
+            padding: 20px;
         }
 
         .hidden { display: none; }
+
+        @media (max-width: 480px) {
+            .header { padding: 0 10px; top: 8px; gap: 6px; }
+            .game-title { font-size: 15px; letter-spacing: 0; }
+            .brand-label { font-size: 8px; letter-spacing: 1px; }
+            .controls-group { gap: 6px; }
+            .btn { padding: 6px 8px; font-size: 9px; }
+            .btn-icon-only { padding: 6px; }
+            .btn-icon-only svg { width: 16px; height: 16px; }
+            .stats-bar { top: 70px; left: 10px; font-size: 11px; padding: 4px 10px; gap: 2px; }
+            #hud { top: 112px; left: 10px; gap: 8px; }
+            .weapon-slot { width: 46px; height: 46px; border-radius: 10px; }
+            .weapon-slot span { font-size: 6.5px; margin-top: 2px; }
+            .weapon-key { font-size: 7px; padding: 1px 3px; }
+            .cd-text { font-size: 10px; }
+            .overlay-screen h1 { font-size: 32px !important; letter-spacing: -1px !important; }
+            .overlay-screen p { font-size: 13px !important; }
+        }
     </style>
 </head>
 <body>
@@ -202,11 +279,13 @@
                 </a>
                 <button class="btn btn-active" id="autoToggle">AUTO: ON</button>
                 <button class="btn" id="soundToggle">SOUND: OFF</button>
+                <button class="btn" id="pauseToggle" title="Pause (P)">PAUSE</button>
             </div>
         </div>
 
         <div class="stats-bar">
-            WAVE <span id="wave-val">1</span> &nbsp;|&nbsp; SCORE <span id="score-val">0</span>
+            <span>WAVE <span id="wave-val">1</span></span>&nbsp;|&nbsp;<span>SCORE <span id="score-val">0</span></span>&nbsp;|&nbsp;<span>BEST <span id="best-val">0</span></span>
+            <span id="combo-display" style="display:none;"></span>
         </div>
 
         <div id="hud">
@@ -245,17 +324,19 @@
             </div>
         </div>
 
-        <div id="start-screen" class="overlay-screen hidden">
-            <h1 style="color:var(--gold); font-size: 54px; margin-bottom: 20px; font-weight: 900; letter-spacing: -1px;">CABLE CAR DEFENSE</h1>
-            <p style="color: #94a3b8; margin-bottom: 35px; letter-spacing: 2px; font-weight: bold;">DEFEND THE BASE FROM ASCENDING UNITS</p>
-            <button class="btn" id="start-btn" style="padding: 18px 60px; font-size: 24px; border-color: var(--gold); color: var(--gold);">START MISSION</button>
-        </div>
+        <div id="hint-toast"></div>
 
         <div id="game-over-screen" class="overlay-screen hidden">
             <h1 style="color:var(--danger); font-size: 60px; margin-bottom: 15px; font-weight: 900; letter-spacing: -3px;">CABLE CUT!</h1>
-            <p id="final-stats" style="font-size: 22px; color: var(--light); margin-bottom: 12px; font-weight: 800;">WAVES SURVIVED: 0</p>
+            <p id="final-stats" style="font-size: 22px; color: var(--light); margin-bottom: 8px; font-weight: 800;">WAVES SURVIVED: 0</p>
+            <p id="best-stats" style="font-size: 15px; color: var(--gold); margin-bottom: 14px; font-weight: 700;">BEST WAVE: 0 &nbsp;|&nbsp; BEST SCORE: 0</p>
             <div id="game-over-timer" style="color: #94a3b8; font-weight: bold;">Restarting in 7.0s...</div>
             <button class="btn btn-active" id="restart-btn" style="margin-top: 35px; padding: 15px 50px; font-size: 20px;">REDEPLOY NOW</button>
+        </div>
+
+        <div id="pause-screen" class="overlay-screen hidden">
+            <h1 style="color:var(--gold); font-size: 52px; margin-bottom: 30px; font-weight: 900; letter-spacing: -1px;">PAUSED</h1>
+            <button class="btn btn-active" id="resume-btn" style="padding: 16px 55px; font-size: 20px;">RESUME</button>
         </div>
     </div>
 </div>
@@ -278,8 +359,8 @@ const AudioSys = {
         osc.start(); osc.stop(this.ctx.currentTime + duration);
     },
     shoot() { this.play(440, 'sine', 0.1, 0.05); },
-    explosion() { this.play(120, 'sawtooth', 0.25, 0.15); }, 
-    deflect() { this.play(200, 'square', 0.1, 0.08); }, 
+    explosion() { this.play(120, 'sawtooth', 0.25, 0.15); },
+    deflect() { this.play(200, 'square', 0.1, 0.08); },
     freeze() { this.play(880, 'triangle', 0.4, 0.05); },
     gameOver() { this.play(150, 'sawtooth', 1.0, 0.2); }
 };
@@ -291,30 +372,47 @@ let width, height;
 const bgCanvas = document.createElement('canvas');
 const bgCtx = bgCanvas.getContext('2d');
 
+const weaponSlotEls = document.querySelectorAll('.weapon-slot');
+
+// 고정 타임스텝: 60 updates/sec. 기존 프레임 단위 값(speed, gravity, timer:150, particle life 등)은
+// 60fps 기준으로 작성되어 있으므로 이 상수를 바꾸지 않는 한 값 변경 없이 그대로 동작한다.
+const FIXED_DT = 1000 / 60;
+const MAX_UPDATES_PER_FRAME = 5; // 탭 비활성 등으로 큰 델타가 들어와도 폭주(스파이럴 오브 데스)하지 않도록 제한
+
+const BEST_KEY = 'ccd_best_v1';
+
 const state = {
     screen: 'playing', score: 0, wave: 1,
-    enemies: [], projectiles: [], effects: [], particles: [], 
+    enemies: [], projectiles: [], effects: [], particles: [],
     buildings: [], trees: [], mountains: [],
     playerX: 0, playerTargetX: 0, playerMaxSpeed: 6.0,
     lastSpawnTime: 0, enemiesToSpawn: 5, selectedWeapon: 0,
-    gameOverTime: 0, ladderX: 0, playerMinX: 0, 
+    gameOverTime: 0, ladderX: 0, playerMinX: 0,
     restartDuration: 7, autoMode: true, frameCount: 0,
-    weatherType: 'clear', 
-    weatherParticles: [] 
+    weatherType: 'clear',
+    weatherParticles: [],
+    gameTime: 0, paused: false,
+    waveBannerText: '', waveBannerUntil: 0,
+    combo: { count: 0, expire: 0 },
+    best: { wave: 0, score: 0 },
+    floatingTexts: [],
+    ladderAlertUntil: 0,
+    hintUntil: 0, hintShown: false
 };
 
 const WEAPONS = [
-    { name: 'Drop', type: 'vertical', color: '#fff', cooldown: 350, vy: 14, gravity: 0, damage: 1, lastFired: 0 },
-    { name: 'Arc', type: 'parabolic', color: '#f1c40f', cooldown: 650, vy: -5, gravity: 0.2, damage: 2, lastFired: 0 },
-    { name: 'Freeze', type: 'cc_freeze', color: '#5dade2', cooldown: 20000, damage: 0, lastFired: 0 },
-    { name: 'Pit', type: 'cc_pit', color: '#34495e', cooldown: 35000, damage: 0, lastFired: 0 },
-    { name: 'Sticky', type: 'cc_sticky', color: '#2ecc71', cooldown: 25000, damage: 0, lastFired: 0 }
+    { name: 'Drop', type: 'vertical', color: '#fff', cooldown: 350, vy: 14, gravity: 0, damage: 1, lastFired: -99999 },
+    { name: 'Arc', type: 'parabolic', color: '#f1c40f', cooldown: 650, vy: -5, gravity: 0.2, damage: 2, lastFired: -99999 },
+    { name: 'Freeze', type: 'cc_freeze', color: '#5dade2', cooldown: 20000, vy: -6, gravity: 0.25, damage: 0, lastFired: -99999 },
+    { name: 'Pit', type: 'cc_pit', color: '#34495e', cooldown: 35000, vy: -6, gravity: 0.25, damage: 0, lastFired: -99999 },
+    { name: 'Sticky', type: 'cc_sticky', color: '#2ecc71', cooldown: 25000, vy: -6, gravity: 0.25, damage: 0, lastFired: -99999 }
 ];
 
 const ENEMY_TYPES = {
     BASIC: { type: 'basic', hp: 1, speed: 0.8, color: '#f1f5f9', size: 42, shield: false },
     SHIELD: { type: 'shield', hp: 2, speed: 0.5, color: '#facc15', size: 48, shield: true },
-    RUNNER: { type: 'runner', hp: 1, speed: 1.6, color: '#22d3ee', size: 36, shield: false }
+    RUNNER: { type: 'runner', hp: 1, speed: 1.6, color: '#22d3ee', size: 36, shield: false },
+    TANKER: { type: 'tanker', hp: 5, speed: 0.35, color: '#a855f7', size: 58, shield: false }
 };
 
 const ARC_FIXED_OFFSET = 180;
@@ -323,27 +421,125 @@ function init() {
     resize();
     state.playerX = state.ladderX;
     state.playerTargetX = state.ladderX;
+    state.best = loadBest();
     generateRandomWorld();
     preRenderStaticBG();
-    window.addEventListener('resize', () => { resize(); generateRandomWorld(); preRenderStaticBG(); });
-    window.addEventListener('keydown', e => { if (e.key >= '1' && e.key <= '5') selectWeapon(parseInt(e.key) - 1); });
-    canvas.addEventListener('mousemove', e => { if (!state.autoMode) setPlayerTarget(e.clientX - canvas.getBoundingClientRect().left); });
-    document.getElementById('start-btn').addEventListener('click', startGame);
+    updateUI();
+
+    window.addEventListener('resize', () => { resize(); preRenderStaticBG(); });
+    window.addEventListener('keydown', e => {
+        if (e.key >= '1' && e.key <= '5') {
+            selectWeapon(parseInt(e.key) - 1);
+        } else if (e.code === 'Space' || e.key === 'Enter') {
+            e.preventDefault();
+            if (state.screen === 'playing' && !state.paused) fireWeapon(state.playerTargetX); // 강제 발사
+        } else if (e.key === 'p' || e.key === 'P') {
+            togglePause();
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if (!state.autoMode && state.screen === 'playing' && !state.paused) {
+            setPlayerTarget(getCanvasX(e.clientX));
+        }
+    });
+    // 클릭/탭 = 선택된 CC 무기(3~5)를 그 지점에 투척. Drop/Arc 선택 중에는
+    // 수동 모드에서만 즉시 1회 강제 발사 (오토 모드는 자동 발사가 담당)
+    canvas.addEventListener('click', e => { handleTapFire(getCanvasX(e.clientX)); });
+
+    let touchStartX = 0, touchStartY = 0, touchMoved = false;
+    canvas.addEventListener('touchstart', e => {
+        if (state.screen !== 'playing' || state.paused) return;
+        const t = e.touches[0];
+        touchStartX = t.clientX; touchStartY = t.clientY; touchMoved = false;
+    }, { passive: true });
+    canvas.addEventListener('touchmove', e => {
+        if (state.screen !== 'playing' || state.paused) return;
+        const t = e.touches[0];
+        if (Math.abs(t.clientX - touchStartX) > 6 || Math.abs(t.clientY - touchStartY) > 6) {
+            touchMoved = true;
+            if (state.autoMode) setAutoMode(false);
+            setPlayerTarget(getCanvasX(t.clientX));
+        }
+        e.preventDefault();
+    }, { passive: false });
+    canvas.addEventListener('touchend', e => {
+        if (state.screen !== 'playing' || state.paused) { touchMoved = false; return; }
+        if (!touchMoved) handleTapFire(getCanvasX(touchStartX));
+        touchMoved = false;
+    }, { passive: true });
+
     document.getElementById('restart-btn').addEventListener('click', startGame);
+    document.getElementById('resume-btn').addEventListener('click', togglePause);
+    document.getElementById('pauseToggle').addEventListener('click', togglePause);
     document.getElementById('soundToggle').addEventListener('click', () => {
         AudioSys.init(); AudioSys.enabled = !AudioSys.enabled;
         document.getElementById('soundToggle').innerText = `SOUND: ${AudioSys.enabled ? 'ON' : 'OFF'}`;
     });
-    document.getElementById('autoToggle').addEventListener('click', () => {
-        state.autoMode = !state.autoMode;
-        document.getElementById('autoToggle').innerText = `AUTO: ${state.autoMode ? 'ON' : 'OFF'}`;
-        document.getElementById('autoToggle').classList.toggle('btn-active', state.autoMode);
-    });
-    document.querySelectorAll('.weapon-slot').forEach(slot => {
+    document.getElementById('autoToggle').addEventListener('click', () => setAutoMode(!state.autoMode));
+    weaponSlotEls.forEach(slot => {
         slot.addEventListener('click', () => selectWeapon(parseInt(slot.dataset.index)));
     });
+
+    // attract 모드: 로드 즉시 플레이 시작. 게임오버 후 7초 자동 재시작으로 방치 시 무한 데모 순환
     startGame();
     requestAnimationFrame(gameLoop);
+}
+
+function getCanvasX(clientX) { return clientX - canvas.getBoundingClientRect().left; }
+
+function handleTapFire(x) {
+    if (state.screen !== 'playing' || state.paused) return;
+    if (state.selectedWeapon >= 2) {
+        const w = WEAPONS[state.selectedWeapon];
+        fireWeapon(x); // CC 무기: 클릭/탭 지점에 투척 (오토/수동 공통 개입 수단)
+        // 투척에 성공했으면 기본 무기로 복귀 — CC는 긴 쿨다운이라 선택 유지 시 자동 사격이 멈춘다
+        if (w.lastFired === state.gameTime) selectWeapon(0);
+    } else if (!state.autoMode) {
+        setPlayerTarget(x);
+        fireWeapon(x); // 수동 모드에서 Drop/Arc 즉시 1회 강제 발사
+    }
+}
+
+function showHintToast() {
+    const el = document.getElementById('hint-toast');
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    el.innerHTML = isTouch
+        ? '<b>DRAG</b> to move &nbsp;&middot;&nbsp; <b>TAP</b> to throw CC weapon &nbsp;&middot;&nbsp; <b>AUTO</b> plays by itself'
+        : '<b>MOUSE</b> moves (AUTO OFF) &nbsp;&middot;&nbsp; <b>1-5</b> weapon &nbsp;&middot;&nbsp; <b>CLICK</b> throws CC &nbsp;&middot;&nbsp; <b>P</b> pause';
+    el.classList.add('show');
+    state.hintUntil = state.gameTime + 4000;
+    state.hintShown = true;
+}
+
+function setAutoMode(on) {
+    state.autoMode = on;
+    document.getElementById('autoToggle').innerText = `AUTO: ${on ? 'ON' : 'OFF'}`;
+    document.getElementById('autoToggle').classList.toggle('btn-active', on);
+}
+
+function togglePause() {
+    if (state.screen !== 'playing') return;
+    state.paused = !state.paused;
+    document.getElementById('pause-screen').classList.toggle('hidden', !state.paused);
+    const btn = document.getElementById('pauseToggle');
+    btn.innerText = state.paused ? 'RESUME' : 'PAUSE';
+    btn.classList.toggle('btn-active', state.paused);
+}
+
+function loadBest() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(BEST_KEY));
+        if (raw && typeof raw.wave === 'number' && typeof raw.score === 'number') return raw;
+    } catch (e) { /* ignore corrupt storage */ }
+    return { wave: 0, score: 0 };
+}
+
+function saveBest(wave, score) {
+    const cur = loadBest();
+    const next = { wave: Math.max(cur.wave, wave), score: Math.max(cur.score, score) };
+    try { localStorage.setItem(BEST_KEY, JSON.stringify(next)); } catch (e) { /* storage unavailable */ }
+    return next;
 }
 
 function generateRandomWorld() {
@@ -351,7 +547,7 @@ function generateRandomWorld() {
     state.weatherType = weatherPool[Math.floor(Math.random() * weatherPool.length)];
     state.weatherParticles = [];
     if (state.weatherType === 'snow') {
-        for(let i=0; i<80; i++) { 
+        for(let i=0; i<80; i++) {
             state.weatherParticles.push({
                 x: Math.random() * width, y: Math.random() * height,
                 r: Math.random() * 2 + 0.5, s: Math.random() * 1.5 + 0.5,
@@ -381,7 +577,7 @@ function generateRandomWorld() {
                 centerX: Math.random() * width,
                 baseWidth: cfg.wRange[0] + Math.random() * (cfg.wRange[1] - cfg.wRange[0]),
                 peakHeight: cfg.maxH * (0.8 + Math.random() * 0.4),
-                path: generateJaggedPeak(5, 0.4) 
+                path: generateJaggedPeak(5, 0.4)
             });
         }
         return { baseColor: cfg.base, shadowColor: cfg.shadow, peaks: peaks };
@@ -420,12 +616,39 @@ function generateJaggedPeak(iterations, roughness) {
     return pts;
 }
 
+// resize()는 캔버스 크기와 케이블 X좌표만 갱신하고 배경을 새 비율로 재스케일한다.
+// 월드(산/건물/나무/날씨)를 완전히 새로 생성하는 것은 startGame()에서만 일어난다.
 function resize() {
+    const oldW = width, oldH = height;
     width = window.innerWidth; height = window.innerHeight;
     canvas.width = width; canvas.height = height;
     bgCanvas.width = width; bgCanvas.height = height;
     state.ladderX = width - 120;
     state.playerMinX = state.ladderX - (state.ladderX * 0.666);
+
+    if (oldW) {
+        const scaleX = width / oldW;
+        const scaleY = height / oldH;
+        rescaleWorld(scaleX, scaleY);
+        state.playerX *= scaleX;
+        state.playerTargetX *= scaleX;
+    }
+    state.playerX = Math.min(state.ladderX, Math.max(state.playerMinX, state.playerX));
+    state.playerTargetX = Math.min(state.ladderX, Math.max(state.playerMinX, state.playerTargetX));
+}
+
+function rescaleWorld(scaleX, scaleY) {
+    state.mountains.forEach(layer => layer.peaks.forEach(p => { p.centerX *= scaleX; p.baseWidth *= scaleX; }));
+    state.buildings.forEach(b => { b.x *= scaleX; b.w *= scaleX; b.h *= scaleY; });
+    state.trees.forEach(t => { t.x *= scaleX; });
+    state.weatherParticles.forEach(p => {
+        if (typeof p.x === 'number') p.x *= scaleX;
+        if (typeof p.y === 'number') p.y *= scaleY;
+        if (typeof p.w === 'number') p.w *= scaleX;
+        if (typeof p.h === 'number') p.h *= scaleY;
+    });
+    state.enemies.forEach(e => { e.x *= scaleX; });
+    state.projectiles.forEach(p => { p.x *= scaleX; });
 }
 
 function preRenderStaticBG() {
@@ -435,19 +658,19 @@ function preRenderStaticBG() {
     skyGrad.addColorStop(1, '#1e293b');
     bgCtx.fillStyle = skyGrad;
     bgCtx.fillRect(0, 0, width, height);
-    
+
     state.mountains.forEach((layer) => {
         layer.peaks.forEach(peak => {
             const startX = peak.centerX - (peak.baseWidth / 2);
             const peakH = peak.peakHeight * height * 0.45;
             const baseY = height - 40;
-            
+
             // 1. 산의 그림자 영역 (좌측/전체 베이스)
             bgCtx.fillStyle = layer.shadowColor;
             bgCtx.beginPath(); bgCtx.moveTo(startX, baseY);
             peak.path.forEach(p => bgCtx.lineTo(startX + p.x * peak.baseWidth, baseY - p.y * peakH));
             bgCtx.lineTo(startX + peak.baseWidth, baseY); bgCtx.fill();
-            
+
             // 2. 산의 본체 영역 (우측 사면)
             bgCtx.fillStyle = layer.baseColor;
             for(let i=0; i<peak.path.length-1; i++) {
@@ -477,7 +700,7 @@ function preRenderStaticBG() {
                     bgCtx.lineTo(startX + p.x * peak.baseWidth, (baseY - p.y * peakH) + 15 + Math.random() * 10);
                 });
                 bgCtx.fill();
-                
+
                 // 최상단 하이라이트 추가
                 bgCtx.fillStyle = '#f1f5f9';
                 bgCtx.beginPath();
@@ -490,7 +713,7 @@ function preRenderStaticBG() {
                 }
             }
         });
-        
+
         let fogGrad = bgCtx.createLinearGradient(0, height - 380, 0, height - 40);
         fogGrad.addColorStop(0, 'rgba(15, 23, 42, 0)'); fogGrad.addColorStop(1, 'rgba(15, 23, 42, 0.65)');
         bgCtx.fillStyle = fogGrad; bgCtx.fillRect(0, height - 380, width, 340);
@@ -528,26 +751,40 @@ function preRenderStaticBG() {
 function setPlayerTarget(x) { state.playerTargetX = Math.max(state.playerMinX, Math.min(state.ladderX, x)); }
 
 function selectWeapon(idx) {
+    if (state.screen !== 'playing' || state.paused) return;
     state.selectedWeapon = idx;
-    document.querySelectorAll('.weapon-slot').forEach((s, i) => s.classList.toggle('active', i === idx));
+    weaponSlotEls.forEach((s, i) => s.classList.toggle('active', i === idx));
 }
 
 function startGame() {
     state.screen = 'playing'; state.score = 0; state.wave = 1; state.enemies = []; state.projectiles = [];
-    state.effects = []; state.particles = []; state.enemiesToSpawn = 5; state.lastSpawnTime = Date.now();
-    WEAPONS.forEach(w => w.lastFired = 0);
+    state.effects = []; state.particles = []; state.enemiesToSpawn = 5;
+    state.gameTime = 0; state.lastSpawnTime = 0; state.paused = false;
+    state.combo = { count: 0, expire: 0 };
+    state.floatingTexts = []; state.ladderAlertUntil = 0; state.aiCcNextAllowed = 0;
+    WEAPONS.forEach(w => { w.lastFired = -99999; w._uiHeight = undefined; w._uiText = undefined; w._uiReady = undefined; w._aiUsedUntil = 0; });
     generateRandomWorld(); preRenderStaticBG();
-    document.getElementById('start-screen').classList.add('hidden');
+    state.waveBannerText = 'WAVE 1';
+    state.waveBannerUntil = state.gameTime + 1400;
+    if (!state.hintShown) showHintToast();
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('pause-screen').classList.add('hidden');
+    document.getElementById('pauseToggle').innerText = 'PAUSE';
+    document.getElementById('pauseToggle').classList.remove('btn-active');
     updateUI();
+    updateComboUI();
 }
 
 function gameOver() {
     if (state.screen === 'gameover') return;
-    state.screen = 'gameover'; state.gameOverTime = Date.now();
+    state.screen = 'gameover'; state.gameOverTime = state.gameTime;
     AudioSys.gameOver();
+    const best = saveBest(state.wave - 1, state.score);
+    state.best = best;
     document.getElementById('game-over-screen').classList.remove('hidden');
     document.getElementById('final-stats').innerText = `WAVES SURVIVED: ${state.wave - 1} | FINAL SCORE: ${state.score}`;
+    document.getElementById('best-stats').innerText = `BEST WAVE: ${best.wave} | BEST SCORE: ${best.score}`;
+    updateUI();
 }
 
 function getTravelTime(v0, g, h) {
@@ -568,34 +805,139 @@ function createParticles(x, y, color, count) {
 }
 
 function updateCooldownUI() {
-    const slots = document.querySelectorAll('.weapon-slot');
-    const now = Date.now();
     WEAPONS.forEach((w, i) => {
-        const elapsed = now - w.lastFired;
+        const elapsed = state.gameTime - w.lastFired;
         const progress = Math.min(1, elapsed / w.cooldown);
-        const overlay = slots[i].querySelector('.cd-overlay');
-        const text = slots[i].querySelector('.cd-text');
-        if (progress < 1) {
-            overlay.style.height = (100 - progress * 100) + '%';
-            if (text) text.innerText = Math.ceil((w.cooldown - elapsed) / 1000) + 's';
-        } else {
-            overlay.style.height = '0%';
-            if (text) text.innerText = '';
+        const ready = progress >= 1;
+        const heightPct = ready ? 0 : Math.round((100 - progress * 100) * 10) / 10;
+        const secText = ready ? '' : Math.ceil((w.cooldown - elapsed) / 1000) + 's';
+        const slot = weaponSlotEls[i];
+        if (w._uiHeight !== heightPct) {
+            slot.querySelector('.cd-overlay').style.height = heightPct + '%';
+            w._uiHeight = heightPct;
+        }
+        if (w._uiText !== secText) {
+            const textEl = slot.querySelector('.cd-text');
+            if (textEl) textEl.innerText = secText;
+            w._uiText = secText;
+        }
+        if (w._uiReady !== ready) {
+            slot.classList.toggle('ready', ready);
+            w._uiReady = ready;
+        }
+        const aiUsed = state.gameTime < (w._aiUsedUntil || 0);
+        if (w._uiAiUsed !== aiUsed) {
+            slot.classList.toggle('ai-used', aiUsed);
+            w._uiAiUsed = aiUsed;
         }
     });
 }
 
-function update() {
-    state.frameCount++;
-    if (state.screen === 'gameover') {
-        const elapsed = (Date.now() - state.gameOverTime) / 1000;
-        const remaining = Math.max(0, state.restartDuration - elapsed);
-        document.getElementById('game-over-timer').innerText = `Restarting in ${remaining.toFixed(1)}s...`;
-        if (elapsed >= state.restartDuration) startGame();
-        return; 
+function updateComboUI() {
+    const el = document.getElementById('combo-display');
+    if (!el) return;
+    if (state.combo.count > 1) {
+        const mult = (1 + Math.min(state.combo.count - 1, 5) * 0.1).toFixed(1);
+        el.innerText = `COMBO x${state.combo.count} (${mult}x)`;
+        el.style.display = '';
+    } else {
+        el.style.display = 'none';
     }
+}
+
+// 3마리 이상 밀집한 보행 적 무리를 찾아 그 중심 X좌표를 돌려준다 (오토 CC 사용 판정에 사용)
+function findDenseCluster() {
+    const walking = state.enemies.filter(e => e.state === 'walking');
+    let best = null;
+    for (let e of walking) {
+        const nearby = walking.filter(o => Math.abs(o.x - e.x) < 90);
+        if (nearby.length >= 3 && (!best || nearby.length > best.count)) {
+            const avgX = nearby.reduce((s, o) => s + o.x, 0) / nearby.length;
+            best = { x: avgX, count: nearby.length };
+        }
+    }
+    return best;
+}
+
+// 무기 낙하 시간 기반 요격 지점: "지금 쏘면 착탄할 시점의 적 예상 X좌표".
+// 이동 목표와 발사 판정이 반드시 이 동일한 값을 공유해야 한다 (과거엔 서로 다른 리드를 써서
+// 걷는 적에겐 발사 조건이 성립하지 않았음).
+function getInterceptX(e, weaponIdx) {
+    const w = WEAPONS[weaponIdx];
+    const t = getTravelTime(w.vy, w.gravity || 0, (height - 40) - 95);
+    return e.state === 'walking' ? e.x + e.speed * t : state.ladderX;
+}
+
+// 기회 사격: 선택 무기(Drop/Arc)의 쿨다운이 돌아올 때마다, "지금 쏘면 예측 착탄 지점이
+// 적 예상 위치의 히트 반경 이내"인 적이 하나라도 있으면 발사한다. 중요도 높은 적부터 검사하되
+// 경로상 정렬된 아무 적이든 잡는다 — 필드 전역에서 교전이 벌어지는 그림.
+// 오토/수동 공통 (수동 모드는 위치만 조작, 발사는 자동).
+function tryOpportunisticFire() {
+    const wIdx = state.selectedWeapon;
+    if (wIdx >= 2) return; // CC는 상황 판정(오토)/클릭 투척(수동) 전용
+    const w = WEAPONS[wIdx];
+    if (state.gameTime - w.lastFired < w.cooldown) return;
+    const candidates = [...state.enemies].sort((a, b) => {
+        const ia = a.state === 'climbing' ? a.climbProgress + 1 : a.x / state.ladderX;
+        const ib = b.state === 'climbing' ? b.climbProgress + 1 : b.x / state.ladderX;
+        return ib - ia;
+    });
+    for (const e of candidates) {
+        if (wIdx === 0 && e.shield) continue; // Drop은 방패에 튕기므로 제외
+        const pe = getInterceptX(e, wIdx);
+        if (wIdx === 0) {
+            if (Math.abs(state.playerX - pe) < e.size / 2 + 8) { fireWeapon(pe); return; }
+        } else {
+            // Arc는 고정 오프셋(±180) 거리에서만 발사 — 오프셋 자체가 포지셔닝 재미의 핵심
+            if (Math.abs(Math.abs(state.playerX - pe) - ARC_FIXED_OFFSET) < 40 && pe > 0) { fireWeapon(pe); return; }
+        }
+    }
+}
+
+// 웨이브에 따라 등장 확률이 점진적으로 변하는 적 종류를 뽑는다.
+// 1~2웨이브: Basic만, 3웨이브+: Runner 추가, 5웨이브+: Shield 추가, 8웨이브+: Tanker(저속·고HP) 추가
+function pickEnemyType() {
+    const w = state.wave;
+    const weighted = [{ t: ENEMY_TYPES.BASIC, wgt: Math.max(1, 6 - w * 0.3) }];
+    if (w >= 3) weighted.push({ t: ENEMY_TYPES.RUNNER, wgt: 2 + w * 0.2 });
+    if (w >= 5) weighted.push({ t: ENEMY_TYPES.SHIELD, wgt: 1.5 + w * 0.15 });
+    if (w >= 8) weighted.push({ t: ENEMY_TYPES.TANKER, wgt: 1 + w * 0.15 });
+    const total = weighted.reduce((s, x) => s + x.wgt, 0);
+    let r = Math.random() * total;
+    for (const item of weighted) {
+        if (r < item.wgt) return item.t;
+        r -= item.wgt;
+    }
+    return weighted[weighted.length - 1].t;
+}
+
+function awardKillScore(e) {
+    let base = e.type === 'shield' ? 50 : e.type === 'runner' ? 40 : e.type === 'tanker' ? 70 : 25;
+    if (e.state === 'climbing') base *= 1.5;
+    if (state.gameTime < state.combo.expire) state.combo.count++;
+    else state.combo.count = 1;
+    state.combo.expire = state.gameTime + 3000;
+    const mult = 1 + Math.min(state.combo.count - 1, 5) * 0.1;
+    const pts = Math.round(base * mult);
+    state.score += pts;
+    // 처치 위치에 점수 팝업 (화면 곳곳의 교전 피드백)
+    state.floatingTexts.push({
+        x: e.x, y: e.y - e.size - 30,
+        text: '+' + pts,
+        sub: state.combo.count > 1 ? 'x' + state.combo.count : null,
+        life: 55
+    });
+    updateUI();
+    updateComboUI();
+}
+
+function update() {
+    if (state.paused) return;
+    state.frameCount++;
+    state.gameTime += FIXED_DT;
+
     updateCooldownUI();
-    
+
     state.weatherParticles.forEach(s => {
         if (state.weatherType === 'snow') {
             s.y += s.s; s.x += Math.sin(state.frameCount * 0.02 + s.o) * 0.4;
@@ -605,7 +947,26 @@ function update() {
         }
     });
 
+    if (state.screen === 'gameover') {
+        const elapsed = (state.gameTime - state.gameOverTime) / 1000;
+        const remaining = Math.max(0, state.restartDuration - elapsed);
+        document.getElementById('game-over-timer').innerText = `Restarting in ${remaining.toFixed(1)}s...`;
+        if (elapsed >= state.restartDuration) startGame();
+        return;
+    }
+
+    if (state.combo.count > 0 && state.gameTime >= state.combo.expire) {
+        state.combo.count = 0;
+        updateComboUI();
+    }
+
     if (state.screen !== 'playing') return;
+
+    // 힌트 토스트 자동 소멸
+    if (state.hintUntil && state.gameTime >= state.hintUntil) {
+        document.getElementById('hint-toast').classList.remove('show');
+        state.hintUntil = 0;
+    }
 
     if (state.enemies.length > 0) {
         let target = null; let maxImp = -1;
@@ -613,49 +974,63 @@ function update() {
             const imp = e.state === 'climbing' ? e.climbProgress + 1 : e.x / state.ladderX;
             if (imp > maxImp) { maxImp = imp; target = e; }
         }
-        
-        if (target) {
-            const now = Date.now();
-            if (state.autoMode) {
-                if (target.shield && state.selectedWeapon !== 1) selectWeapon(1);
-                else if (!target.shield && state.selectedWeapon < 2) selectWeapon(0);
-                
-                [2, 3, 4].forEach(idx => {
-                    const w = WEAPONS[idx];
-                    if (now - w.lastFired >= w.cooldown && Math.random() < 0.003) {
+
+        if (target && state.autoMode) {
+            if (target.shield && state.selectedWeapon !== 1) selectWeapon(1);
+            else if (!target.shield && state.selectedWeapon !== 0 && state.selectedWeapon < 2) selectWeapon(0);
+
+            // CC 무기는 확률이 아니라 상황(필드 중반 이후 밀집 3+ 또는 사다리 근접 Runner)에 따라,
+            // 한 번에 하나씩만(연속 투척 간격 6초) 사용한다 — 스폰 직후 뭉침에 3종을 한꺼번에 낭비하지 않도록
+            if (state.gameTime >= (state.aiCcNextAllowed || 0)) {
+                const cluster = findDenseCluster();
+                const meaningfulCluster = cluster && cluster.x > state.ladderX * 0.35 ? cluster : null;
+                const runnerNear = state.enemies.find(e => e.type === 'runner' && e.state === 'walking' && (state.ladderX - e.x) < 220);
+                let fireAtX = null;
+                if (meaningfulCluster) fireAtX = meaningfulCluster.x;
+                else if (runnerNear) fireAtX = runnerNear.x + runnerNear.speed * 20;
+                if (fireAtX !== null) {
+                    const readyIdx = [2, 4, 3].find(idx => state.gameTime - WEAPONS[idx].lastFired >= WEAPONS[idx].cooldown); // Freeze > Sticky > Pit 순
+                    if (readyIdx !== undefined) {
+                        const w = WEAPONS[readyIdx];
                         const current = state.selectedWeapon;
-                        selectWeapon(idx); fireWeapon(target.x); selectWeapon(current);
+                        selectWeapon(readyIdx); fireWeapon(fireAtX); selectWeapon(current);
+                        if (w.lastFired === state.gameTime) { // 실제 투척 성공 시
+                            w._aiUsedUntil = state.gameTime + 1500; // AI 판단이 보이도록 슬롯 하이라이트
+                            state.aiCcNextAllowed = state.gameTime + 6000;
+                        }
                     }
-                });
-
-                const weapon = WEAPONS[state.selectedWeapon < 2 ? state.selectedWeapon : 0];
-                const t = getTravelTime(weapon.vy, weapon.gravity || 0, height - 100);
-                let fireX = target.state === 'walking' ? target.x + target.speed * t : state.ladderX;
-                if (state.selectedWeapon === 1) {
-                    let posRight = fireX + ARC_FIXED_OFFSET;
-                    let posLeft = fireX - ARC_FIXED_OFFSET;
-                    if (posRight <= state.ladderX && posRight >= state.playerMinX) setPlayerTarget(posRight);
-                    else if (posLeft >= state.playerMinX && posLeft <= state.ladderX) setPlayerTarget(posLeft);
-                } else setPlayerTarget(fireX);
+                }
             }
 
-            let pX = target.state === 'walking' ? target.x + target.speed * 15 : state.ladderX;
-            if (state.selectedWeapon === 1) {
-                if (Math.abs(Math.abs(state.playerX - pX) - ARC_FIXED_OFFSET) < 40) fireWeapon(pX);
-            } else if (state.selectedWeapon === 0) {
-                if (Math.abs(state.playerX - pX) < 25) fireWeapon(pX);
-            }
+            // 이동 목표: 발사 판정(tryOpportunisticFire)과 동일한 요격 지점을 사용한다
+            const wIdx = state.selectedWeapon < 2 ? state.selectedWeapon : 0;
+            const aimX = getInterceptX(target, wIdx);
+            if (wIdx === 1) {
+                const posRight = aimX + ARC_FIXED_OFFSET;
+                const posLeft = aimX - ARC_FIXED_OFFSET;
+                if (posRight <= state.ladderX && posRight >= state.playerMinX) setPlayerTarget(posRight);
+                else if (posLeft >= state.playerMinX && posLeft <= state.ladderX) setPlayerTarget(posLeft);
+            } else setPlayerTarget(aimX);
         }
+
+        // 발사는 오토/수동 공통: 쿨다운이 돌아올 때마다 정렬된 아무 적에게나 기회 사격.
+        // 수동 모드(AUTO OFF)는 "위치만 조작" — 정렬은 플레이어가, 발사는 여기서 자동으로.
+        tryOpportunisticFire();
     }
 
     let dist = state.playerTargetX - state.playerX;
     state.playerX += Math.abs(dist * 0.1) > state.playerMaxSpeed ? Math.sign(dist) * state.playerMaxSpeed : dist * 0.1;
 
-    if (state.enemiesToSpawn > 0 && Date.now() - state.lastSpawnTime > 1800 / (1 + state.wave * 0.1)) {
-        spawnEnemy(); state.enemiesToSpawn--; state.lastSpawnTime = Date.now();
+    if (state.enemiesToSpawn > 0 && state.gameTime - state.lastSpawnTime > 1800 / (1 + state.wave * 0.1)) {
+        spawnEnemy(); state.enemiesToSpawn--; state.lastSpawnTime = state.gameTime;
     }
     if (state.enemiesToSpawn === 0 && state.enemies.length === 0) {
-        state.wave++; state.enemiesToSpawn = 5 + state.wave * 2; updateUI();
+        const bonus = 100 + state.wave * 20;
+        state.score += bonus;
+        state.wave++; state.enemiesToSpawn = 5 + state.wave * 2;
+        state.waveBannerText = `WAVE ${state.wave}`;
+        state.waveBannerUntil = state.gameTime + 1400;
+        updateUI();
     }
 
     for (let i = state.projectiles.length - 1; i >= 0; i--) {
@@ -672,12 +1047,17 @@ function update() {
             const dX = p.x - e.x; const dY = p.y - (e.y - e.size/2);
             if (dX*dX + dY*dY < (e.size/1.5 + p.size)**2) {
                 if (p.type === 'drop' && e.shield) {
-                    p.vx = (Math.random()-0.5)*6; p.vy = -5; p.gravity = 0.3; createParticles(p.x, p.y, '#94a3b8', 3);
-                    AudioSys.deflect(); 
+                    // 튕긴 직후 짧은 무적 시간을 부여해 같은 프레임 다중 판정을 막는다
+                    if (p.deflectImmuneUntil && p.deflectImmuneUntil > state.gameTime) continue;
+                    p.vx = (Math.random()-0.5)*6; p.vy = -5; p.gravity = 0.3;
+                    p.deflectImmuneUntil = state.gameTime + 150;
+                    createParticles(p.x, p.y, '#94a3b8', 3);
+                    AudioSys.deflect();
+                    break;
                 } else if (p.type === 'drop' || p.type === 'arc') {
                     e.hp -= p.damage; state.projectiles.splice(i, 1);
-                    createParticles(e.x, e.y - e.size, e.color, 8); AudioSys.explosion(); 
-                    if (e.hp <= 0) { state.enemies.splice(j, 1); state.score += 25; updateUI(); }
+                    createParticles(e.x, e.y - e.size, e.color, 8); AudioSys.explosion();
+                    if (e.hp <= 0) { awardKillScore(e); state.enemies.splice(j, 1); }
                     break;
                 }
             }
@@ -688,17 +1068,26 @@ function update() {
     state.particles = state.particles.filter(p => p.life > 0);
     state.effects.forEach(fx => fx.timer--);
     state.effects = state.effects.filter(fx => fx.timer > 0);
+    state.floatingTexts.forEach(ft => { ft.y -= 0.8; ft.life--; });
+    state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
 
     for(let e of state.enemies) {
         e.speed = e.baseSpeed; e.cc = null;
         for(let fx of state.effects) {
             if (Math.abs(e.x - fx.x) < fx.radius) {
+                // Freeze는 지상/등반 적 모두에게 적용(등반 저지용 최후 수단), Sticky/Pit은 Pit과 동일하게 지상(walking) 적에게만 적용
                 if (fx.type === 'cc_freeze') { e.speed = 0; e.cc = 'frozen'; }
-                else if (fx.type === 'cc_sticky') { e.speed *= 0.3; e.cc = 'slow'; }
+                else if (fx.type === 'cc_sticky' && e.state === 'walking') { e.speed *= 0.3; e.cc = 'slow'; }
                 else if (fx.type === 'cc_pit' && e.state === 'walking') { e.speed = 0; e.cc = 'trapped'; }
             }
         }
-        if (e.state === 'walking') { e.x += e.speed; if (e.x >= state.ladderX) e.state = 'climbing'; }
+        if (e.state === 'walking') {
+            e.x += e.speed;
+            if (e.x >= state.ladderX) {
+                e.state = 'climbing';
+                state.ladderAlertUntil = state.gameTime + 1500; // 등반 시작 경고 펄스
+            }
+        }
         else { e.climbProgress += e.speed * 0.002; e.y = (height-40) - e.climbProgress * (height-100); if (e.climbProgress >= 1) gameOver(); }
     }
 }
@@ -706,45 +1095,45 @@ function update() {
 /**
  * 무기 발사 로직
  * 발사 위치(startY)를 케이블카 본체의 정중앙(Cable 40 + Offset 55 = 95)으로 조정
+ * Drop을 제외한 모든 무기(Arc, CC 3종)는 getTravelTime 기반으로 목표 X좌표에 착탄하도록 vx를 계산한다.
  */
 function fireWeapon(targetX = null) {
-    if (state.screen !== 'playing') return;
+    if (state.screen !== 'playing' || state.paused) return;
     const w = WEAPONS[state.selectedWeapon];
-    const now = Date.now();
-    if (now - w.lastFired < w.cooldown) return;
-    w.lastFired = now;
-    
-    const startX = state.playerX; 
+    if (state.gameTime - w.lastFired < w.cooldown) return;
+    w.lastFired = state.gameTime;
+
+    const startX = state.playerX;
     const startY = 95; // 본체 중앙 높이
-    
+    const aimX = targetX !== null ? targetX : state.playerTargetX;
+
     if (w.type === 'vertical') {
         state.projectiles.push({x:startX, y:startY, vx:0, vy:w.vy, type:'drop', color:w.color, size:6, damage: w.damage});
-    } else if (w.type === 'parabolic') {
+    } else {
         const travelDist = (height - 40) - startY;
         const t = getTravelTime(w.vy, w.gravity, travelDist);
-        const dx = ((targetX || state.playerTargetX) - startX) / t;
-        state.projectiles.push({x:startX, y:startY, vx:dx, vy:w.vy, type:'arc', color:w.color, size:8, gravity:w.gravity, damage: w.damage});
-    } else {
-        state.projectiles.push({x:startX, y:startY, vx:(startX > width/2 ? -1.5 : 1.5), vy:-4, type:w.type, color:w.color, size:10, gravity:0.2, damage: w.damage});
+        const dx = (aimX - startX) / t;
+        const isCc = w.type.startsWith('cc_');
+        state.projectiles.push({x:startX, y:startY, vx:dx, vy:w.vy, type: isCc ? w.type : 'arc', color:w.color, size: isCc ? 10 : 8, gravity:w.gravity, damage: w.damage});
     }
     AudioSys.shoot();
 }
 
 function spawnEnemy() {
-    const types = [ENEMY_TYPES.BASIC, ENEMY_TYPES.SHIELD, ENEMY_TYPES.RUNNER];
-    const config = types[Math.floor(Math.random() * types.length)];
+    const config = pickEnemyType();
     state.enemies.push({
         ...config,
-        x:-40, y:height-40, 
+        x:-40, y:height-40,
         hp:config.hp + Math.floor(state.wave/4), maxHp:config.hp + Math.floor(state.wave/4),
         baseSpeed:config.speed,
         state:'walking', climbProgress:0, cc:null, legPhase: Math.random()*Math.PI*2
     });
 }
 
-function updateUI() { 
-    document.getElementById('wave-val').innerText = state.wave; 
-    document.getElementById('score-val').innerText = state.score; 
+function updateUI() {
+    document.getElementById('wave-val').innerText = state.wave;
+    document.getElementById('score-val').innerText = state.score;
+    document.getElementById('best-val').innerText = state.best.score;
 }
 
 /**
@@ -752,12 +1141,12 @@ function updateUI() {
  */
 function drawPlayer(x, y) {
     ctx.save(); ctx.translate(x, y);
-    
+
     // 1. 도르레 및 케이블 지지대
     ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 30); ctx.stroke();
     ctx.fillStyle = '#334155'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
-    
+
     // 2. 케이블카 본체
     ctx.fillStyle = '#2563eb';
     ctx.beginPath(); ctx.roundRect(-40, 30, 80, 50, 8); ctx.fill();
@@ -772,22 +1161,22 @@ function drawPlayer(x, y) {
     ctx.ellipse(0, turretY, 18, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.stroke();
-    
+
     ctx.fillStyle = '#334155';
     ctx.beginPath();
     ctx.roundRect(-25, turretY - 5, 50, 10, 2);
     ctx.fill();
-    
+
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(-12, turretY - 6, 24, 12);
     ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
     ctx.strokeRect(-12, turretY - 6, 24, 12);
-    
+
     ctx.fillStyle = '#fbbf24';
     ctx.beginPath();
     ctx.arc(0, turretY, 4, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.restore();
 }
 
@@ -846,6 +1235,23 @@ function drawWeather() {
     ctx.restore();
 }
 
+function drawWaveBanner() {
+    if (state.screen !== 'playing' || state.gameTime >= state.waveBannerUntil) return;
+    const remain = state.waveBannerUntil - state.gameTime;
+    const fadeWindow = 300;
+    let alpha = 1;
+    if (remain > 1400 - fadeWindow) alpha = (1400 - remain) / fadeWindow;
+    else if (remain < fadeWindow) alpha = remain / fadeWindow;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.fillStyle = '#f1c40f';
+    ctx.font = '900 58px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 14;
+    ctx.fillText(state.waveBannerText, width / 2, height / 2 - 80);
+    ctx.restore();
+}
+
 function draw() {
     ctx.drawImage(bgCanvas, 0, 0);
     ctx.strokeStyle = '#334155'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 40); ctx.lineTo(width, 40); ctx.stroke();
@@ -863,6 +1269,15 @@ function draw() {
         ctx.strokeStyle = rungColor;
         ctx.beginPath(); ctx.moveTo(railL - 4, y); ctx.lineTo(railR + 4, y); ctx.stroke();
     }
+    // 적 등반 시작 경고: 사다리 주변 은은한 붉은 펄스
+    if (state.gameTime < state.ladderAlertUntil) {
+        const pulse = 0.10 + 0.10 * Math.sin(state.frameCount * 0.25);
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(railL - 18, 40, (railR - railL) + 36, height - 80);
+        ctx.restore();
+    }
     for(let p of state.particles) {
         ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 30; ctx.fillRect(p.x, p.y, 4, 4);
     }
@@ -877,10 +1292,49 @@ function draw() {
     for(let p of state.projectiles) {
         ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
     }
+    // 처치 점수/콤보 팝업
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (const ft of state.floatingTexts) {
+        ctx.globalAlpha = Math.min(1, ft.life / 25);
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = '900 17px "Segoe UI", sans-serif';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        if (ft.sub) {
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = '800 12px "Segoe UI", sans-serif';
+            ctx.fillText(ft.sub, ft.x, ft.y + 15);
+        }
+    }
+    ctx.restore();
     drawWeather();
+    drawWaveBanner();
 }
 
-function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+// requestAnimationFrame의 실제 프레임 간격과 무관하게 update()는 항상 60회/초(FIXED_DT)로 실행된다.
+// 화면 주사율이 60Hz든 144Hz든 적/투사체 속도가 동일하게 유지된다.
+let lastFrameTime = null;
+let accumulator = 0;
+
+function gameLoop(timestamp) {
+    if (lastFrameTime === null) lastFrameTime = timestamp;
+    let frameTime = timestamp - lastFrameTime;
+    lastFrameTime = timestamp;
+    if (frameTime > 250) frameTime = 250; // 탭 비활성 후 복귀 등 비정상적으로 큰 델타 제한
+
+    accumulator += frameTime;
+    let updates = 0;
+    while (accumulator >= FIXED_DT && updates < MAX_UPDATES_PER_FRAME) {
+        update();
+        accumulator -= FIXED_DT;
+        updates++;
+    }
+    if (updates >= MAX_UPDATES_PER_FRAME) accumulator = 0; // 따라잡기 폭주 방지
+
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
 window.onload = init;
 </script>
 </body>
