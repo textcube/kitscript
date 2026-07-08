@@ -1,0 +1,28 @@
+:root {
+  --champagne: #F6F1E7;
+  --parchment: #EFE6D8;
+  --paper: #FBF8F1;
+  --ink: #3A3128;
+  --muted: #766957;
+  --taupe: #8B7D6E;
+  --gold: #B08D57;
+  --gold-bright: #D4B978;
+  --dark: #171310;
+  --on-dark: #EFE6D8;
+  --forest: #12351F;
+  --aubergine: #2C1645;
+  --bordeaux: #5A1823;
+  --line: rgba(58, 49, 40, 0.16);
+  --gold-line: rgba(176, 141, 87, 0.45);
+
+  --font-display: "Cormorant Garamond", "Noto Serif KR", serif;
+  --font-serif-kr: "Noto Serif KR", serif;
+  --font-script: "Great Vibes", cursive;
+  --font-body: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+
+  --container: 1180px;
+  --gutter: clamp(20px, 5vw, 56px);
+  --nav-height: 76px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --leading-body: 1.75;
+}

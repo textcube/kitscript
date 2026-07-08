@@ -1,0 +1,51 @@
+/*
+  motion.css
+  Scroll-reveal support (spec §7, V2-F). Elements marked [data-reveal]
+  and the clip-mask headline lines are fully visible by default so the
+  page reads correctly with JS disabled (progressive enhancement,
+  spec §18). scroll.js only pushes them into their pre-reveal states
+  via inline styles once GSAP + ScrollTrigger have actually loaded —
+  the hidden state is never the CSS default.
+*/
+
+[data-reveal],
+[data-reveal-scale] {
+  will-change: transform, opacity;
+}
+
+.reveal-ready {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .8s var(--ease), transform .8s var(--ease);
+}
+
+.reveal-ready.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Clip-mask line reveal structure (V2-F): each display-headline line
+   sits inside an overflow-hidden mask; GSAP (scroll-triggered) or the
+   hero's CSS keyframes (load-triggered) slide the inner span up. */
+.line-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.line-inner {
+  display: block;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  [data-reveal-scale] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .line-inner {
+    transform: none !important;
+    animation: none !important;
+  }
+}
