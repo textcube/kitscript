@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eternal Invasion: Tank Edition</title>
+    <meta name="description" content="Eternal Invasion: Tank Edition - 우주 배경 실시간 탱크 전투 웹 게임. 오토파일럿 AI, 3종 스킬, 워프 귀환을 갖춘 단일 페이지 브라우저 게임을 지금 바로 플레이하세요.">
+    <meta property="og:title" content="Eternal Invasion: Tank Edition">
+    <meta property="og:description" content="우주를 무대로 아군과 적군 기지가 격돌하는 실시간 탱크 전투. 오토파일럿 또는 수동 조작으로 적 기지를 파괴하라.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305050a'/%3E%3Ccircle cx='16' cy='17' r='9' fill='none' stroke='%2300e5ff' stroke-width='1.5' opacity='0.5'/%3E%3Crect x='8' y='15' width='16' height='9' rx='2' fill='%2300e5ff'/%3E%3Ccircle cx='16' cy='19' r='5' fill='%23111'/%3E%3Crect x='16' y='11' width='11' height='3' fill='%2300e5ff'/%3E%3C/svg%3E">
     <style>
         :root {
             --allied-color: #00e5ff;
@@ -38,6 +43,8 @@
             overflow: hidden;
             border: 1px solid #1a1a2e;
             box-shadow: 0 0 100px rgba(0,0,0,0.8);
+            transform-origin: center center;
+            flex-shrink: 0;
         }
 
         #game-container::after {
@@ -100,8 +107,8 @@
             height: 100%; 
             border-radius: 50%; 
             background: conic-gradient(var(--cd-color, var(--allied-color)) var(--pct, 0%), transparent 0); 
-            mask: radial-gradient(transparent 62%, black 64%); 
-            -webkit-mask: radial-gradient(transparent 58%, black 60%);
+            mask: radial-gradient(transparent 62%, black 64%);
+            -webkit-mask: radial-gradient(transparent 62%, black 64%);
             transform: scaleX(-1);
         }
         .circle-label { font-size: 8px; font-weight: 900; color: rgba(255,255,255,0.4); text-align: center; z-index: 2; pointer-events: none; }
@@ -113,7 +120,7 @@
         .skill-wrapper { position: relative; }
         .skill-key-hint { position: absolute; top: -8px; right: -2px; background: #222; padding: 1px 4px; border-radius: 3px; font-size: 8px; border: 1px solid var(--glass-border); z-index: 2; color: #fff; }
 
-        .controls-top { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
+        .controls-top { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 80; }
         button { background: rgba(255,255,255,0.05); backdrop-filter: blur(5px); color: rgba(255,255,255,0.8); border: 1px solid var(--glass-border); padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; transition: 0.2s; }
         button:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: #fff; }
 
@@ -144,6 +151,41 @@
             color: #000;
             box-shadow: 0 0 30px var(--allied-color);
             transform: scale(1.05);
+        }
+
+        /* 매치 통계 (킬/시간) HUD */
+        .match-stats { align-self: center; background: var(--panel-bg); backdrop-filter: blur(12px); padding: 8px 18px; border-radius: 4px; border: 1px solid var(--glass-border); text-align: center; min-width: 130px; }
+        .match-stats .value { font-size: 13px; }
+
+        /* 에너지 부족 스킬 아이콘 */
+        .circle-cd-container.low-energy { opacity: 0.35; filter: grayscale(0.7); }
+
+        /* 일시정지 오버레이 */
+        .pause-overlay { position: absolute; inset: 0; background: rgba(5, 5, 15, 0.85); z-index: 150; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(6px); }
+        .pause-overlay h2 { font-size: 36px; font-weight: 100; letter-spacing: 10px; margin-bottom: 5px; color: #fff; }
+        .pause-overlay p { color: rgba(255,255,255,0.5); font-size: 11px; letter-spacing: 1px; margin-bottom: 20px; }
+
+        /* 조작법 안내 배너 */
+        .controls-hint { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 5, 15, 0.85); border: 1px solid var(--glass-border); border-radius: 6px; padding: 16px 28px; z-index: 90; pointer-events: none; text-align: center; opacity: 1; transition: opacity 0.8s ease; backdrop-filter: blur(8px); }
+        .controls-hint.fade-out { opacity: 0; }
+        .controls-hint .hint-title { font-size: 10px; letter-spacing: 3px; color: var(--allied-color); font-weight: 900; margin-bottom: 8px; }
+        .controls-hint .hint-row { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px; letter-spacing: 0.5px; }
+
+        .touch-only { display: none; }
+        body.touch-device .controls-hint .hint-row.touch-only { display: block; }
+
+        /* 모바일 터치 컨트롤 (게임 스케일과 무관하게 항상 실제 크기 유지) */
+        #touch-overlay { position: fixed; left: 0; right: 0; bottom: 0; z-index: 500; padding: 18px; box-sizing: border-box; display: none; justify-content: space-between; align-items: flex-end; pointer-events: none; }
+        body.touch-device #touch-overlay { display: flex; }
+        #joystick-base { width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.25); position: relative; pointer-events: auto; touch-action: none; }
+        #joystick-stick { width: 46px; height: 46px; border-radius: 50%; background: rgba(0,229,255,0.35); border: 2px solid var(--allied-color); position: absolute; left: 32px; top: 32px; pointer-events: none; box-shadow: 0 0 12px var(--allied-color); }
+        #touch-skills { display: flex; gap: 14px; pointer-events: auto; }
+        .touch-skill-btn { width: 56px; height: 56px; min-width: 44px; min-height: 44px; border-radius: 50%; background: rgba(10,15,30,0.8); border: 2px solid var(--glass-border); color: #fff; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); touch-action: manipulation; }
+        .touch-skill-btn:active { transform: scale(0.9); border-color: var(--allied-color); box-shadow: 0 0 12px var(--allied-color); }
+
+        @media (max-width: 600px) {
+            .match-stats { min-width: 90px; padding: 6px 10px; }
+            .tank-status { padding: 10px 18px; gap: 16px; }
         }
     </style>
 </head>
@@ -179,15 +221,21 @@
             <div class="label">Operational Status</div>
             <div class="value" id="allied-base-hp">100%</div>
         </div>
-        <div class="controls-top">
-            <button id="sound-toggle">AUDIO: OFF</button>
-            <button onclick="location.reload()">REBOOT</button>
-            <button id="ai-toggle">AUTO-PILOT: ON</button>
+        <div class="match-stats">
+            <div class="label">Elapsed / Kills</div>
+            <div class="value"><span id="match-time">00:00</span> &middot; <span id="kill-count">0</span> KO</div>
         </div>
         <div id="enemy-base-panel" class="base-stats enemy">
             <div class="label">Target Integrity</div>
             <div class="value" id="enemy-base-hp">100%</div>
         </div>
+    </div>
+
+    <div class="controls-top">
+        <button id="sound-toggle">AUDIO: OFF</button>
+        <button id="pause-toggle" title="Pause (P)">PAUSE</button>
+        <button id="reboot-btn">REBOOT</button>
+        <button id="ai-toggle">AUTO-PILOT: ON</button>
     </div>
 
     <div class="tank-status">
@@ -210,21 +258,21 @@
         <div class="skills">
             <div class="skill-wrapper">
                 <span class="skill-key-hint">1</span>
-                <div id="skill-1-container" class="circle-cd-container">
+                <div id="skill-1-container" class="circle-cd-container" title="Tactical Strike (1) - 40 EN">
                     <div id="skill-1-circle" class="circular-progress" style="--pct: 100%"></div>
                     <div class="circle-label">STRK</div>
                 </div>
             </div>
             <div class="skill-wrapper">
                 <span class="skill-key-hint">2</span>
-                <div id="skill-2-container" class="circle-cd-container">
+                <div id="skill-2-container" class="circle-cd-container" title="EMP Disruption (2) - 30 EN">
                     <div id="skill-2-circle" class="circular-progress" style="--pct: 100%"></div>
                     <div class="circle-label">EMP</div>
                 </div>
             </div>
             <div class="skill-wrapper">
                 <span class="skill-key-hint">3</span>
-                <div id="skill-3-container" class="circle-cd-container">
+                <div id="skill-3-container" class="circle-cd-container" title="Missile Salvo (3) - 50 EN">
                     <div id="skill-3-circle" class="circular-progress" style="--pct: 100%"></div>
                     <div class="circle-label">MSL</div>
                 </div>
@@ -232,11 +280,37 @@
         </div>
     </div>
 
+    <div class="controls-hint" id="controls-hint">
+        <div class="hint-title">TACTICAL BRIEFING</div>
+        <div class="hint-row">WASD / Arrow Keys - Move &nbsp;&middot;&nbsp; Mouse - Aim &amp; Click to Fire (Manual Mode)</div>
+        <div class="hint-row">1 / 2 / 3 - Skills &nbsp;&middot;&nbsp; R / B - Warp Home &nbsp;&middot;&nbsp; P - Pause</div>
+        <div class="hint-row touch-only">Joystick - Move &nbsp;&middot;&nbsp; Bottom-Right Buttons - Skills / Warp</div>
+    </div>
+
+    <div id="pause-overlay" class="pause-overlay">
+        <h2>PAUSED</h2>
+        <p>PRESS P OR TAP RESUME TO CONTINUE</p>
+        <button class="restart-btn" id="resume-btn">RESUME</button>
+    </div>
+
     <div id="msg-overlay">
         <h1 id="msg-title" style="font-size: 48px; font-weight: 100; letter-spacing: 10px; margin-bottom: 5px;">MISSION OVER</h1>
         <p id="msg-body" style="color: var(--allied-color); letter-spacing: 2px; margin-top: 0;">STATUS: NEUTRALIZED</p>
-        <p style="color: #666; font-size: 11px; margin-top: 40px; font-weight: 800;">AUTO-REDEPLOY IN <span id="restart-timer" style="color: var(--accent);">7</span> SECONDS...</p>
-        <button class="restart-btn" onclick="location.reload()">REDEPLOY NOW</button>
+        <p style="color: #999; font-size: 11px; letter-spacing: 1px; margin-top: 15px;">KILLS: <span id="final-kills" style="color:#fff;">0</span> &nbsp;|&nbsp; TIME: <span id="final-time" style="color:#fff;">00:00</span></p>
+        <p style="color: #666; font-size: 11px; margin-top: 25px; font-weight: 800;">AUTO-REDEPLOY IN <span id="restart-timer" style="color: var(--accent);">7</span> SECONDS...</p>
+        <button class="restart-btn" id="redeploy-btn">REDEPLOY NOW</button>
+    </div>
+</div>
+
+<div id="touch-overlay">
+    <div id="joystick-base">
+        <div id="joystick-stick"></div>
+    </div>
+    <div id="touch-skills">
+        <button class="touch-skill-btn" id="touch-skill-1">STRK</button>
+        <button class="touch-skill-btn" id="touch-skill-2">EMP</button>
+        <button class="touch-skill-btn" id="touch-skill-3">MSL</button>
+        <button class="touch-skill-btn" id="touch-warp">WARP</button>
     </div>
 </div>
 
@@ -276,21 +350,50 @@ const CONFIG = {
     TANK_ENERGY: 100,
     TANK_RANGE: 220, TANK_SKILL_RANGE: 180, 
     SECONDARY_CD: 120, WARP_TIME: 180,
-    SPAWN_RATE: 100,
+    SPAWN_RATE: 100, SPAWN_RATE_MIN: 40, DIFFICULTY_INTERVAL_SEC: 30,
     ULT1_CD: 800, ULT2_CD: 1000, ULT3_CD: 1200,
-    MAX_SHARDS: 100, 
+    ULT1_COST: 40, ULT2_COST: 30, ULT3_COST: 50,
+    EMP_STUN_FRAMES: 180,
+    ENEMY_RESPAWN_FRAMES: 300,
+    MAX_SHARDS: 100,
     COLORS: { allied: '#00e5ff', enemy: '#ff3d00', accent: '#ffd600' }
 };
 
 const state = {
-    running: false, entities: [], projectiles: [], shards: [], floatingTexts: [], muzzleFlashes: [],
+    running: false, paused: false, entities: [], projectiles: [], shards: [], floatingTexts: [], muzzleFlashes: [],
     rangeEffects: [], stars: [], nebulae: [], player: null, enemyTank: null,
-    bases: { allied: null, enemy: null }, keys: {}, frame: 0, spawnTimer: 0, aiEnabled: true
+    bases: { allied: null, enemy: null }, keys: {}, frame: 0, spawnTimer: 0, aiEnabled: true,
+    stats: { kills: 0 }, countdownInterval: null
 };
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = CONFIG.WIDTH; canvas.height = CONFIG.HEIGHT;
+
+/**
+ * 터치 디바이스 감지 & 마우스/조이스틱 입력 상태
+ */
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (isTouchDevice) document.body.classList.add('touch-device');
+const mouse = { x: CONFIG.WIDTH / 2, y: CONFIG.HEIGHT / 2 };
+const touchMove = { x: 0, y: 0 };
+
+/**
+ * 예약된 setTimeout 관리 (게임 종료/재시작 시 취소용)
+ */
+let pendingTimeouts = [];
+function scheduleTimeout(fn, delay) {
+    const id = setTimeout(() => {
+        pendingTimeouts = pendingTimeouts.filter(t => t !== id);
+        fn();
+    }, delay);
+    pendingTimeouts.push(id);
+    return id;
+}
+function clearPendingTimeouts() {
+    pendingTimeouts.forEach(id => clearTimeout(id));
+    pendingTimeouts = [];
+}
 
 /**
  * UTILITY FUNCTIONS
@@ -305,6 +408,9 @@ const lerpAngle = (a, b, t) => { let d = b - a; while (d < -Math.PI) d += Math.P
  */
 class Shard {
     constructor(x, y, color, speed) {
+        this.init(x, y, color, speed);
+    }
+    init(x, y, color, speed) {
         this.x = x; this.y = y; this.color = color;
         const angle = Math.random() * Math.PI * 2;
         const vel = 1 + Math.random() * speed;
@@ -315,7 +421,8 @@ class Shard {
         this.size = 1.5 + Math.random() * 3.5;
         this.life = 1.0;
         this.decay = 0.01 + Math.random() * 0.015;
-        this.type = Math.floor(Math.random() * 3); 
+        this.type = Math.floor(Math.random() * 3);
+        return this;
     }
     update() {
         this.x += this.vx; this.y += this.vy;
@@ -342,10 +449,16 @@ class Shard {
     }
 }
 
+let shardCursor = 0;
 function spawnShards(x, y, color, count, speed) {
     for(let i=0; i<count; i++) {
-        if (state.shards.length > CONFIG.MAX_SHARDS) state.shards.shift();
-        state.shards.push(new Shard(x, y, color, speed));
+        if (state.shards.length < CONFIG.MAX_SHARDS) {
+            state.shards.push(new Shard(x, y, color, speed));
+        } else {
+            // 풀링: shift() 대신 순환 인덱스의 기존 파편 객체를 재사용
+            state.shards[shardCursor].init(x, y, color, speed);
+            shardCursor = (shardCursor + 1) % CONFIG.MAX_SHARDS;
+        }
     }
 }
 
@@ -398,7 +511,7 @@ class MuzzleFlash {
         ctx.save();
         ctx.translate(this.x, this.y); ctx.rotate(this.angle);
         const alpha = this.life / this.maxLife;
-        ctx.fillStyle = this.color; ctx.shadowBlur = 10; ctx.shadowColor = this.color; ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color; ctx.shadowBlur = 6; ctx.shadowColor = this.color; ctx.globalAlpha = alpha;
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.size, -this.size/2); ctx.lineTo(this.size * 1.2, 0); ctx.lineTo(this.size, this.size/2); ctx.closePath(); ctx.fill();
         ctx.restore();
     }
@@ -450,7 +563,8 @@ class Projectile {
         }
     }
     draw(ctx) {
-        ctx.save(); ctx.shadowBlur = 5; ctx.shadowColor = this.color; ctx.fillStyle = this.color;
+        // 성능: 탄환은 매 프레임 다수 렌더링되므로 shadowBlur 제거
+        ctx.save(); ctx.fillStyle = this.color;
         ctx.beginPath(); ctx.arc(this.x, this.y, this.isMissile ? 4 : 2, 0, Math.PI*2); ctx.fill(); ctx.restore();
     }
 }
@@ -461,16 +575,21 @@ class Unit {
         this.hp = 100; this.maxHp = 100;
         this.color = side === 'allied' ? CONFIG.COLORS.allied : CONFIG.COLORS.enemy;
         this.dead = false;
-        this.dying = false; 
+        this.dying = false;
         this.deathTimer = 0;
-        this.maxDeathTimer = 45; 
+        this.maxDeathTimer = 45;
         this.radius = 12; this.isMoving = false; this.hitTimer = 0;
+        this.stunTimer = 0;
     }
     takeDamage(amt) {
         if (this.dead || this.dying) return;
-        this.hp -= amt; AudioEngine.hit(); 
-        this.hitTimer = 48; 
+        this.hp -= amt; AudioEngine.hit();
+        this.hitTimer = 48;
         if (this.hp <= 0) this.triggerDeath();
+    }
+    applyStun(duration) {
+        if (this.dead || this.dying) return;
+        this.stunTimer = Math.max(this.stunTimer, duration);
     }
     triggerDeath() {
         if (this.dying) return;
@@ -478,6 +597,8 @@ class Unit {
         this.deathTimer = this.maxDeathTimer;
         AudioEngine.explode();
         spawnShards(this.x, this.y, this.color, 8, 3);
+        // 킬 카운트: 적 진영(병사/AI탱크)이 파괴될 때 집계 (기지 파괴는 별도 승리 조건)
+        if (this.side === 'enemy' && !(this instanceof Base)) state.stats.kills++;
     }
     updateDeathSequence() {
         if (!this.dying) return;
@@ -489,7 +610,21 @@ class Unit {
             AudioEngine.explode();
             spawnShards(this.x, this.y, this.color, 12, 5);
             spawnShards(this.x, this.y, '#fff', 4, 7);
+            if (this.onBecomeDead) this.onBecomeDead();
         }
+    }
+    drawStunIndicator(ctx) {
+        if (this.stunTimer <= 0 || this.dead || this.dying) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.globalAlpha = 0.5 + Math.sin(state.frame * 0.3) * 0.3;
+        ctx.strokeStyle = '#d500f9';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
     }
     drawHPBar(ctx, width, height, offset) {
         if (this.dead || this.dying) return;
@@ -588,14 +723,16 @@ class Base extends Unit {
 }
 
 class Soldier extends Unit {
-    constructor(x, y, side) {
-        super(x, y, side); this.speed = 0.8 + Math.random() * 0.4; this.range = 140; this.fireRate = 90;
+    constructor(x, y, side, tier = 0) {
+        super(x, y, side); this.speed = 0.8 + Math.random() * 0.4; this.range = 140; this.fireRate = Math.max(45, 90 - tier * 4);
         this.cooldown = 0; this.radius = 12; this.angle = side === 'allied' ? 0 : Math.PI; this.turretAngle = this.angle; this.targetY = 100 + Math.random() * 400;
         this.barrelLen = 16;
+        if (tier > 0) { this.maxHp = 100 + tier * 10; this.hp = this.maxHp; }
     }
     update() {
         if (this.dead) return;
         if (this.dying) { this.updateDeathSequence(); return; }
+        if (this.stunTimer > 0) { this.stunTimer--; this.isMoving = false; if (this.hitTimer > 0) this.hitTimer--; return; }
         let target = this.findTarget(); this.isMoving = true;
         if (target && dist(this, target) < this.range) {
             this.isMoving = false; this.turretAngle = lerpAngle(this.turretAngle, angleBetween(this, target), 0.15);
@@ -609,7 +746,17 @@ class Soldier extends Unit {
         if (this.cooldown > 0) this.cooldown--;
         if (this.hitTimer > 0) this.hitTimer--;
     }
-    findTarget() { return state.entities.filter(e => e.side !== this.side && !e.dead && !e.dying).sort((a,b) => dist(this,a) - dist(this,b))[0]; }
+    findTarget() {
+        // 성능: filter().sort() 대신 단일 순회로 최단거리 타겟 탐색
+        let best = null, bestDist = Infinity;
+        for (let i = 0; i < state.entities.length; i++) {
+            const e = state.entities[i];
+            if (e.side === this.side || e.dead || e.dying) continue;
+            const d = dist(this, e);
+            if (d < bestDist) { bestDist = d; best = e; }
+        }
+        return best;
+    }
     fire(target) { 
         state.projectiles.push(new Projectile(this.x, this.y, this.turretAngle, 7, 10, this.side, this.color, false, this.range + 50)); 
         state.muzzleFlashes.push(new MuzzleFlash(this.x + Math.cos(this.turretAngle) * this.barrelLen, this.y + Math.sin(this.turretAngle) * this.barrelLen, this.turretAngle, this.color, 12));
@@ -633,58 +780,84 @@ class Soldier extends Unit {
         ctx.fillStyle = '#555'; ctx.fillRect(0, -2, this.barrelLen, 4); ctx.strokeRect(0, -2, this.barrelLen, 4);
         ctx.restore();
         this.drawHPBar(ctx, 24, 3, -25);
+        this.drawStunIndicator(ctx);
     }
 }
 
 class AITank extends Unit {
     constructor(x, y, side) {
         super(x, y, side); this.hp = CONFIG.TANK_HP; this.maxHp = CONFIG.TANK_HP; this.energy = CONFIG.TANK_ENERGY; this.maxEnergy = CONFIG.TANK_ENERGY;
-        this.angle = side === 'allied' ? 0 : Math.PI; this.turretAngle = this.angle; this.radius = 28; this.speed = 1.6; 
+        this.angle = side === 'allied' ? 0 : Math.PI; this.turretAngle = this.angle; this.radius = 28; this.speed = 1.6;
         this.warpTimer = 0; this.isWarping = false; this.cooldowns = { primary: 0, secondary: 0, ult1: 0, ult2: 0, ult3: 0 };
         this.aiControl = true; this.recoil = 0; this.targetY = y;
         this.barrelLen = 35;
+        this.manualFireHeld = false;
+        this.respawnTimer = 0;
+        // 잔버그 수정: 부활을 프레임 나머지 연산 대신 사망 시점 기준 고정 딜레이 카운트다운으로 처리
+        this.onBecomeDead = () => { this.respawnTimer = CONFIG.ENEMY_RESPAWN_FRAMES; };
     }
     update() {
-        if (this.dead) { if (state.frame % 300 === 0) this.respawn(); return; }
+        if (this.dead) {
+            if (this.respawnTimer > 0) this.respawnTimer--;
+            else this.respawn();
+            return;
+        }
         if (this.dying) { this.updateDeathSequence(); return; }
-        
-        if (this.isWarping) { 
-            this.warpTimer++; 
-            if (this.warpTimer >= CONFIG.WARP_TIME) this.finishWarp(); 
-            return; 
+
+        if (this.isWarping) {
+            this.warpTimer++;
+            if (this.warpTimer >= CONFIG.WARP_TIME) this.finishWarp();
+            return;
         }
-        
+
+        if (this.stunTimer > 0) {
+            this.stunTimer--;
+            this.isMoving = false;
+            this.recoil = lerp(this.recoil, 0, 0.1);
+            if (this.hitTimer > 0) this.hitTimer--;
+            return;
+        }
+
         const homeBase = this.side === 'allied' ? state.bases.allied : state.bases.enemy;
-        if (dist(this, homeBase) < 120) { 
-            if (this.hp < this.maxHp) this.hp += 0.8; 
-            if (this.energy < this.maxEnergy) this.energy += 1.6; 
+        if (dist(this, homeBase) < 120) {
+            if (this.hp < this.maxHp) this.hp += 0.8;
+            if (this.energy < this.maxEnergy) this.energy += 1.6;
         }
-        
+
         const lastX = this.x; const lastY = this.y;
         if (this.aiControl) this.handleAIBehavior(); else if (this === state.player) this.handleManualControl();
-        
+
         const currentSpeed = Math.sqrt((this.x - lastX)**2 + (this.y - lastY)**2);
         this.isMoving = currentSpeed > 0.05;
         if (this.isMoving) this.angle = lerpAngle(this.angle, Math.atan2(this.y - lastY, this.x - lastX), 0.15);
-        
+
         this.x = Math.max(50, Math.min(CONFIG.WIDTH - 50, this.x)); this.y = Math.max(50, Math.min(CONFIG.HEIGHT - 50, this.y));
-        
+
+        // 수동 모드(데스크톱, 터치 제외)에서는 마우스로 조준하고 클릭으로 주포 발사
+        const isManualAim = !this.aiControl && this === state.player && !isTouchDevice;
         let target = this.findTarget(CONFIG.TANK_RANGE * 1.5);
-        if (target) {
-            const targetDist = dist(this, target);
+
+        if (isManualAim) {
+            this.turretAngle = lerpAngle(this.turretAngle, angleBetween(this, mouse), 0.25);
+            if (this.manualFireHeld && this.cooldowns.primary <= 0) { this.firePrimary(); this.cooldowns.primary = 22; }
+        } else if (target) {
             this.turretAngle = lerpAngle(this.turretAngle, angleBetween(this, target), 0.15);
-            
-            if (targetDist <= CONFIG.TANK_RANGE) {
+            if (dist(this, target) <= CONFIG.TANK_RANGE) {
                 if (this.cooldowns.primary <= 0) { this.firePrimary(); this.cooldowns.primary = 22; }
             }
-            
-            if (this.energy >= 10 && this.cooldowns.secondary <= 0 && targetDist <= CONFIG.TANK_SKILL_RANGE) { 
-                this.fireSecondary(target); 
-                this.energy -= 10; 
-                this.cooldowns.secondary = CONFIG.SECONDARY_CD; 
+        } else {
+            this.turretAngle = lerpAngle(this.turretAngle, this.angle, 0.05);
+        }
+
+        if (target) {
+            const targetDist = dist(this, target);
+            if (this.energy >= 10 && this.cooldowns.secondary <= 0 && targetDist <= CONFIG.TANK_SKILL_RANGE) {
+                this.fireSecondary(target);
+                this.energy -= 10;
+                this.cooldowns.secondary = CONFIG.SECONDARY_CD;
             }
-        } else this.turretAngle = lerpAngle(this.turretAngle, this.angle, 0.05);
-        
+        }
+
         this.recoil = lerp(this.recoil, 0, 0.1);
         Object.keys(this.cooldowns).forEach(k => { if(this.cooldowns[k] > 0) this.cooldowns[k]--; });
         if (this.hitTimer > 0) this.hitTimer--;
@@ -727,14 +900,26 @@ class AITank extends Unit {
         let mx = 0, my = 0;
         if (state.keys['KeyW'] || state.keys['ArrowUp']) my -= 1; if (state.keys['KeyS'] || state.keys['ArrowDown']) my += 1;
         if (state.keys['KeyA'] || state.keys['ArrowLeft']) mx -= 1; if (state.keys['KeyD'] || state.keys['ArrowRight']) mx += 1;
+        if (Math.hypot(touchMove.x, touchMove.y) > 0.15) { mx += touchMove.x; my += touchMove.y; }
         if (mx !== 0 || my !== 0) { const a = Math.atan2(my, mx); this.x += Math.cos(a) * this.speed; this.y += Math.sin(a) * this.speed; }
     }
-    respawn() { 
-        this.dead = false; this.dying = false; this.hp = this.maxHp; this.energy = this.maxEnergy; 
-        const b = this.side === 'allied' ? state.bases.allied : state.bases.enemy; 
-        this.x = b.x; this.y = b.y; 
+    respawn() {
+        this.dead = false; this.dying = false; this.hp = this.maxHp; this.energy = this.maxEnergy;
+        this.stunTimer = 0; this.respawnTimer = 0;
+        const b = this.side === 'allied' ? state.bases.allied : state.bases.enemy;
+        this.x = b.x; this.y = b.y;
     }
-    findTarget(max) { return state.entities.filter(e => e.side !== this.side && !e.dead && !e.dying && dist(this, e) <= max).sort((a, b) => dist(this, a) - dist(this, b))[0]; }
+    findTarget(max) {
+        // 성능: filter().sort() 대신 단일 순회로 최단거리 타겟 탐색
+        let best = null, bestDist = Infinity;
+        for (let i = 0; i < state.entities.length; i++) {
+            const e = state.entities[i];
+            if (e.side === this.side || e.dead || e.dying) continue;
+            const d = dist(this, e);
+            if (d <= max && d < bestDist) { bestDist = d; best = e; }
+        }
+        return best;
+    }
     firePrimary() { 
         this.recoil = 8; 
         state.projectiles.push(new Projectile(this.x, this.y, this.turretAngle, 11, 20, this.side, this.color, false, CONFIG.TANK_RANGE)); 
@@ -766,39 +951,51 @@ class AITank extends Unit {
         AudioEngine.explode();
     }
     
-    useUlt1() { 
-        if (this.cooldowns.ult1 > 0 || this.dead || this.dying) return; 
+    useUlt1() {
+        if (this.cooldowns.ult1 > 0 || this.dead || this.dying) return;
+        if (this.energy < CONFIG.ULT1_COST) { if (this === state.player) state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "LOW ENERGY", '#ff1744')); return; }
+        this.energy -= CONFIG.ULT1_COST;
         const tx = this.side === 'allied' ? this.x + 220 : this.x - 220;
         const impactColor = this.side === 'allied' ? CONFIG.COLORS.accent : CONFIG.COLORS.enemy;
         state.rangeEffects.push(new RangeImpact(tx, this.y, 75, 'STRK', impactColor));
-        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "TACTICAL STRIKE", impactColor)); 
-        for (let i=0; i<8; i++) { setTimeout(() => this.explosionAt(tx + (Math.random()-0.5)*150, this.y + (Math.random()-0.5)*150, 100, 70, impactColor), i * 120); } 
-        this.cooldowns.ult1 = CONFIG.ULT1_CD; 
+        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "TACTICAL STRIKE", impactColor));
+        for (let i=0; i<8; i++) { scheduleTimeout(() => this.explosionAt(tx + (Math.random()-0.5)*150, this.y + (Math.random()-0.5)*150, 100, 70, impactColor), i * 120); }
+        this.cooldowns.ult1 = CONFIG.ULT1_CD;
     }
-    useUlt2() { 
-        if (this.cooldowns.ult2 > 0 || this.dead || this.dying) return; 
+    useUlt2() {
+        if (this.cooldowns.ult2 > 0 || this.dead || this.dying) return;
+        if (this.energy < CONFIG.ULT2_COST) { if (this === state.player) state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "LOW ENERGY", '#ff1744')); return; }
+        this.energy -= CONFIG.ULT2_COST;
         const impactColor = this.side === 'allied' ? this.color : CONFIG.COLORS.enemy;
         state.rangeEffects.push(new RangeImpact(this.x, this.y, 220, 'EMP', impactColor));
-        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "EMP DISRUPTION", impactColor)); 
-        this.explosionAt(this.x, this.y, 220, 30, impactColor); 
-        this.cooldowns.ult2 = CONFIG.ULT2_CD; 
+        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "EMP DISRUPTION", impactColor));
+        // EMP 리워크: 데미지 유지 + 범위 내 적을 3초간 기절(이동/발사 불가)시킴
+        this.explosionAt(this.x, this.y, 220, 30, impactColor, CONFIG.EMP_STUN_FRAMES);
+        this.cooldowns.ult2 = CONFIG.ULT2_CD;
     }
-    useUlt3() { 
-        if (this.cooldowns.ult3 > 0 || this.dead || this.dying) return; 
+    useUlt3() {
+        if (this.cooldowns.ult3 > 0 || this.dead || this.dying) return;
+        if (this.energy < CONFIG.ULT3_COST) { if (this === state.player) state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "LOW ENERGY", '#ff1744')); return; }
+        this.energy -= CONFIG.ULT3_COST;
         const impactColor = this.side === 'allied' ? CONFIG.COLORS.accent : CONFIG.COLORS.enemy;
-        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "MISSILE SALVO", impactColor)); 
-        state.entities.filter(e => e.side !== this.side && !e.dead && !e.dying && dist(this, e) < 500).slice(0, 8).forEach((t, i) => { 
-            setTimeout(() => { 
-                const p = new Projectile(this.x, this.y, Math.random()*Math.PI*2, 6, 60, this.side, impactColor, true, 600); 
-                p.target = t; state.projectiles.push(p); AudioEngine.heavyShoot(); 
-            }, i * 90); 
-        }); 
-        this.cooldowns.ult3 = CONFIG.ULT3_CD; 
+        state.floatingTexts.push(new TacticalText(this.x, this.y - 40, "MISSILE SALVO", impactColor));
+        state.entities.filter(e => e.side !== this.side && !e.dead && !e.dying && dist(this, e) < 500).slice(0, 8).forEach((t, i) => {
+            scheduleTimeout(() => {
+                const p = new Projectile(this.x, this.y, Math.random()*Math.PI*2, 6, 60, this.side, impactColor, true, 600);
+                p.target = t; state.projectiles.push(p); AudioEngine.heavyShoot();
+            }, i * 90);
+        });
+        this.cooldowns.ult3 = CONFIG.ULT3_CD;
     }
-    explosionAt(x, y, r, d, c) { 
-        AudioEngine.explode(); 
-        spawnShards(x, y, c, 5, 3); 
-        state.entities.forEach(e => { if (e.side !== this.side && !e.dead && !e.dying && dist({x,y}, e) < r) e.takeDamage(d); }); 
+    explosionAt(x, y, r, d, c, stunDuration = 0) {
+        AudioEngine.explode();
+        spawnShards(x, y, c, 5, 3);
+        state.entities.forEach(e => {
+            if (e.side !== this.side && !e.dead && !e.dying && dist({x,y}, e) < r) {
+                e.takeDamage(d);
+                if (stunDuration > 0) e.applyStun(stunDuration);
+            }
+        });
     }
     draw(ctx) {
         if (this.dead) return;
@@ -820,7 +1017,8 @@ class AITank extends Unit {
         ctx.fillStyle = '#444'; ctx.fillRect(0, -6, this.barrelLen, 12); ctx.strokeRect(0, -6, this.barrelLen, 12); 
         ctx.restore();
         this.drawHPBar(ctx, 60, 6, -55);
-        if (this.isWarping) { 
+        this.drawStunIndicator(ctx);
+        if (this.isWarping) {
             ctx.save(); 
             ctx.strokeStyle = '#d500f9'; 
             ctx.lineWidth = 4; 
@@ -868,10 +1066,13 @@ function drawBackground() {
  */
 function update() {
     state.frame++; state.spawnTimer++;
-    if (state.spawnTimer >= CONFIG.SPAWN_RATE) {
+    // 난이도 상승: 시간 경과에 따라 적 스폰 주기 단축(하한선 있음) + 적 병사 능력치 소폭 강화
+    const difficultyTier = Math.floor((state.frame / 60) / CONFIG.DIFFICULTY_INTERVAL_SEC);
+    const spawnRate = Math.max(CONFIG.SPAWN_RATE_MIN, CONFIG.SPAWN_RATE - difficultyTier * 6);
+    if (state.spawnTimer >= spawnRate) {
         state.spawnTimer = 0;
         state.entities.push(new Soldier(120, 100 + Math.random() * 400, 'allied'));
-        state.entities.push(new Soldier(CONFIG.WIDTH - 120, 100 + Math.random() * 400, 'enemy'));
+        state.entities.push(new Soldier(CONFIG.WIDTH - 120, 100 + Math.random() * 400, 'enemy', difficultyTier));
     }
     for(let i=state.entities.length-1; i>=0; i--) state.entities[i].update && state.entities[i].update();
     for(let i=state.projectiles.length-1; i>=0; i--) state.projectiles[i].update();
@@ -887,12 +1088,23 @@ function update() {
     state.rangeEffects = state.rangeEffects.filter(r => r.life > 0);
     if (state.bases.enemy.hp <= 0) endGame("MISSION CLEAR", "TARGET HUB DESTROYED");
     if (state.bases.allied.hp <= 0) endGame("MISSION FAILED", "PROTOCOL BREACHED: BASE LOST");
-    if (state.frame % 2 === 0) {
+    if (state.frame % 2 === 0 && state.player) {
         document.getElementById('allied-base-hp').innerText = Math.max(0, Math.floor((state.bases.allied.hp/CONFIG.BASE_HP)*100)) + '%';
         document.getElementById('enemy-base-hp').innerText = Math.max(0, Math.floor((state.bases.enemy.hp/CONFIG.BASE_HP)*100)) + '%';
-        document.getElementById('tank-hp-bar').style.width = (state.player.hp / state.player.maxHp) * 100 + '%';
-        document.getElementById('tank-energy-bar').style.width = (state.player.energy / state.player.maxEnergy) * 100 + '%';
-        
+
+        // 잔버그 수정: HP/에너지 HUD 바를 0~100%로 클램프
+        const hpPct = Math.max(0, Math.min(100, (state.player.hp / state.player.maxHp) * 100));
+        const enPct = Math.max(0, Math.min(100, (state.player.energy / state.player.maxEnergy) * 100));
+        document.getElementById('tank-hp-bar').style.width = hpPct + '%';
+        document.getElementById('tank-energy-bar').style.width = enPct + '%';
+
+        // 게임성: 킬 수 / 경과 시간 HUD (frame은 고정 60updates/sec이므로 프레임 수 = 실제 경과초 * 60)
+        const elapsedSec = Math.floor(state.frame / 60);
+        const mm = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+        const ss = String(elapsedSec % 60).padStart(2, '0');
+        document.getElementById('match-time').innerText = `${mm}:${ss}`;
+        document.getElementById('kill-count').innerText = state.stats.kills;
+
         const warpEl = document.getElementById(`warp-action-circle`);
         const warpContainer = document.getElementById(`warp-action-container`);
         if (state.player.isWarping) {
@@ -904,20 +1116,21 @@ function update() {
             warpContainer.classList.add('ready');
         }
 
-        updateCD('skill-1', state.player.cooldowns.ult1, CONFIG.ULT1_CD);
-        updateCD('skill-2', state.player.cooldowns.ult2, CONFIG.ULT2_CD);
-        updateCD('skill-3', state.player.cooldowns.ult3, CONFIG.ULT3_CD);
+        updateCD('skill-1', state.player.cooldowns.ult1, CONFIG.ULT1_CD, state.player.energy >= CONFIG.ULT1_COST);
+        updateCD('skill-2', state.player.cooldowns.ult2, CONFIG.ULT2_CD, state.player.energy >= CONFIG.ULT2_COST);
+        updateCD('skill-3', state.player.cooldowns.ult3, CONFIG.ULT3_CD, state.player.energy >= CONFIG.ULT3_COST);
     }
 }
 
-function updateCD(id, current, max) {
+function updateCD(id, current, max, affordable = true) {
     const el = document.getElementById(`${id}-circle`);
     const container = document.getElementById(`${id}-container`);
     if (!el || !container) return;
     const pct = current > 0 ? ((max - current) / max) * 100 : 100;
     el.style.setProperty('--pct', `${pct}%`);
-    if (current <= 0) container.classList.add('ready');
+    if (current <= 0 && affordable) container.classList.add('ready');
     else container.classList.remove('ready');
+    container.classList.toggle('low-energy', current <= 0 && !affordable);
 }
 
 function draw() {
@@ -930,50 +1143,167 @@ function draw() {
     state.floatingTexts.forEach(t => t.draw(ctx));
 }
 
-function loop() { if (!state.running) return; update(); draw(); requestAnimationFrame(loop); }
+/**
+ * 고정 타임스텝 게임 루프: 60 updates/sec 고정, 탭 복귀 시 폭주 방지를 위해
+ * 프레임당 최대 업데이트 수 제한. 기존 프레임 단위 상수(쿨다운/스폰주기/워프시간 등)는
+ * 60fps 기준이므로 값 변경 없이 그대로 동작한다.
+ */
+const STEP_MS = 1000 / 60;
+const MAX_UPDATES_PER_FRAME = 5;
+let accumulator = 0;
+let lastTime = 0;
+let loopId = 0;
 
-function startGame() {
-    initBackground(); 
+function loop(timestamp, myId) {
+    if (!state.running || myId !== loopId) return; // 게임 종료 또는 이전 루프 체인이면 정지
+    requestAnimationFrame(ts => loop(ts, myId));
+
+    if (state.paused) { lastTime = timestamp; return; } // 일시정지: 시간 누적 없이 매 프레임 리셋(재개 시 점프 방지)
+
+    if (!lastTime) lastTime = timestamp;
+    let delta = timestamp - lastTime;
+    lastTime = timestamp;
+    if (delta > 250) delta = 250; // 탭 비활성 후 복귀 시 거대한 델타 방지
+
+    accumulator += delta;
+    let updates = 0;
+    while (accumulator >= STEP_MS && updates < MAX_UPDATES_PER_FRAME) {
+        update();
+        accumulator -= STEP_MS;
+        updates++;
+    }
+    if (updates >= MAX_UPDATES_PER_FRAME) accumulator = 0; // 폭주 방지: 남은 누적분 폐기
+
+    draw();
+}
+
+function startLoop() {
+    loopId++; // 이전에 떠돌던 rAF 콜백을 무효화하여 이중 루프 방지
+    lastTime = 0;
+    accumulator = 0;
+    const myId = loopId;
+    requestAnimationFrame(ts => loop(ts, myId));
+}
+
+function initEntities() {
+    initBackground();
     state.bases.allied = new Base(80, CONFIG.HEIGHT/2, 'allied');
     state.bases.enemy = new Base(CONFIG.WIDTH - 80, CONFIG.HEIGHT/2, 'enemy');
     state.player = new AITank(200, CONFIG.HEIGHT/2, 'allied');
     state.enemyTank = new AITank(CONFIG.WIDTH - 200, CONFIG.HEIGHT/2, 'enemy');
     state.entities = [state.bases.allied, state.bases.enemy, state.player, state.enemyTank];
+    state.projectiles = []; state.shards = []; state.floatingTexts = []; state.muzzleFlashes = []; state.rangeEffects = [];
+    shardCursor = 0;
+    state.frame = 0; state.spawnTimer = 0; state.paused = false;
+    state.stats = { kills: 0 };
+}
+
+function startGame() {
+    initEntities();
     state.running = true;
     document.getElementById('init-loader').style.display = 'none';
-    loop();
+    startLoop();
+    showControlsHint();
+}
+
+/**
+ * 리로드 없는 재시작. 오디오 ON/OFF, 오토파일럿 설정은 유지하고
+ * 진행 중인 스킬 setTimeout / 재시작 카운트다운을 모두 취소한다.
+ */
+function resetGame() {
+    clearPendingTimeouts();
+    if (state.countdownInterval) { clearInterval(state.countdownInterval); state.countdownInterval = null; }
+
+    const aiPref = state.player ? state.player.aiControl : true;
+
+    document.getElementById('msg-overlay').style.display = 'none';
+    document.getElementById('pause-overlay').style.display = 'none';
+    document.getElementById('pause-toggle').innerText = 'PAUSE';
+
+    initEntities();
+    state.player.aiControl = aiPref;
+    document.getElementById('ai-toggle').innerText = aiPref ? "AUTO-PILOT: ON" : "AUTO-PILOT: OFF";
+    updateCursor();
+
+    state.running = true;
+    startLoop();
+}
+
+function togglePause() {
+    if (!state.running) return;
+    state.paused = !state.paused;
+    document.getElementById('pause-overlay').style.display = state.paused ? 'flex' : 'none';
+    document.getElementById('pause-toggle').innerText = state.paused ? 'RESUME' : 'PAUSE';
 }
 
 function endGame(title, body) {
     if (!state.running) return;
-    state.running = false; 
-    document.getElementById('msg-title').innerText = title; 
-    document.getElementById('msg-body').innerText = body; 
+    state.running = false;
+    clearPendingTimeouts(); // 오버레이 뒤에서 스킬 폭발/미사일이 계속 발동하는 것을 방지
+    document.getElementById('msg-title').innerText = title;
+    document.getElementById('msg-body').innerText = body;
+    document.getElementById('final-kills').innerText = state.stats.kills;
+    const elapsedSec = Math.floor(state.frame / 60);
+    document.getElementById('final-time').innerText = `${String(Math.floor(elapsedSec/60)).padStart(2,'0')}:${String(elapsedSec%60).padStart(2,'0')}`;
     document.getElementById('msg-overlay').style.display = 'block';
-    
-    // 카운트다운 로직
+
+    // 카운트다운 로직 (리로드 없이 resetGame으로 재시작)
     let count = 7;
     const timerDisplay = document.getElementById('restart-timer');
     timerDisplay.innerText = count;
-    
-    const countdownInterval = setInterval(() => {
+
+    state.countdownInterval = setInterval(() => {
         count--;
         if (count >= 0) {
             timerDisplay.innerText = count;
         }
         if (count <= 0) {
-            clearInterval(countdownInterval);
-            location.reload();
+            clearInterval(state.countdownInterval);
+            state.countdownInterval = null;
+            resetGame();
         }
     }, 1000);
 }
 
+/**
+ * 반응형 스케일링: 1200x600 내부 해상도는 유지한 채 뷰포트에 맞춰 letterbox 축소.
+ * 데스크톱처럼 화면이 충분히 크면 원래 크기(1:1)를 그대로 유지한다.
+ */
+function resizeGame() {
+    const gameContainer = document.getElementById('game-container');
+    const scale = Math.min(1, window.innerWidth / CONFIG.WIDTH, window.innerHeight / CONFIG.HEIGHT);
+    gameContainer.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', resizeGame);
+window.addEventListener('orientationchange', resizeGame);
+resizeGame();
+
+function updateCursor() {
+    canvas.style.cursor = (state.player && !state.player.aiControl && !isTouchDevice) ? 'crosshair' : 'default';
+}
+
+function showControlsHint() {
+    const hint = document.getElementById('controls-hint');
+    if (!hint) return;
+    hint.style.display = 'block';
+    hint.classList.remove('fade-out');
+    setTimeout(() => {
+        hint.classList.add('fade-out');
+        setTimeout(() => { hint.style.display = 'none'; }, 800);
+    }, 5500);
+}
+
 window.addEventListener('click', () => AudioEngine.init());
+
+// 잔버그 수정: 로드 완료 전(state.player가 null) 키 입력 시 예외가 나지 않도록 가드
 window.addEventListener('keydown', e => {
     state.keys[e.code] = true;
+    if (e.code === 'KeyP') { togglePause(); return; }
+    if (!state.running || state.paused || !state.player) return;
     if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
         state.player.aiControl = false;
         document.getElementById('ai-toggle').innerText = "AUTO-PILOT: OFF";
+        updateCursor();
     }
     if (e.code === 'KeyR' || e.code === 'KeyB') state.player.startWarp();
     if (e.code === 'Digit1') state.player.useUlt1();
@@ -983,18 +1313,78 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => state.keys[e.code] = false);
 
 document.getElementById('ai-toggle').addEventListener('click', (e) => {
+    if (!state.player) return;
     state.player.aiControl = !state.player.aiControl;
     e.target.innerText = state.player.aiControl ? "AUTO-PILOT: ON" : "AUTO-PILOT: OFF";
+    updateCursor();
 });
 document.getElementById('sound-toggle').addEventListener('click', (e) => {
     AudioEngine.init();
     const isOn = AudioEngine.toggle();
     e.target.innerText = isOn ? "AUDIO: ON" : "AUDIO: OFF";
 });
-document.getElementById('warp-action-container').addEventListener('click', () => state.player.startWarp());
-document.getElementById('skill-1-container').addEventListener('click', () => state.player.useUlt1());
-document.getElementById('skill-2-container').addEventListener('click', () => state.player.useUlt2());
-document.getElementById('skill-3-container').addEventListener('click', () => state.player.useUlt3());
+document.getElementById('pause-toggle').addEventListener('click', togglePause);
+document.getElementById('resume-btn').addEventListener('click', togglePause);
+document.getElementById('reboot-btn').addEventListener('click', resetGame);
+document.getElementById('redeploy-btn').addEventListener('click', resetGame);
+document.getElementById('warp-action-container').addEventListener('click', () => { if (state.player) state.player.startWarp(); });
+document.getElementById('skill-1-container').addEventListener('click', () => { if (state.player) state.player.useUlt1(); });
+document.getElementById('skill-2-container').addEventListener('click', () => { if (state.player) state.player.useUlt2(); });
+document.getElementById('skill-3-container').addEventListener('click', () => { if (state.player) state.player.useUlt3(); });
+
+/**
+ * 수동 모드 마우스 조준 + 클릭 발사 (오토파일럿 시에는 기존 자동 조준 유지)
+ */
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+});
+canvas.addEventListener('mousedown', () => {
+    AudioEngine.init();
+    if (!state.running || state.paused || !state.player || state.player.dead || state.player.dying) return;
+    if (!state.player.aiControl) state.player.manualFireHeld = true;
+});
+window.addEventListener('mouseup', () => { if (state.player) state.player.manualFireHeld = false; });
+
+/**
+ * 모바일 가상 조이스틱: 터치 시작 시 오토파일럿 자동 해제
+ */
+const joyBase = document.getElementById('joystick-base');
+const joyStick = document.getElementById('joystick-stick');
+let joystickActive = false;
+function joyHandle(e) {
+    e.preventDefault();
+    const touch = e.touches[0]; if (!touch) return;
+    const rect = joyBase.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    let dx = touch.clientX - cx, dy = touch.clientY - cy;
+    const maxR = rect.width / 2;
+    const d = Math.min(Math.hypot(dx, dy), maxR);
+    const ang = Math.atan2(dy, dx);
+    dx = Math.cos(ang) * d; dy = Math.sin(ang) * d;
+    joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+    touchMove.x = dx / maxR; touchMove.y = dy / maxR;
+    if (state.player && !state.player.dead && !state.player.dying && state.player.aiControl) {
+        state.player.aiControl = false;
+        document.getElementById('ai-toggle').innerText = "AUTO-PILOT: OFF";
+    }
+}
+function joyReset() {
+    joystickActive = false;
+    touchMove.x = 0; touchMove.y = 0;
+    joyStick.style.transform = 'translate(0, 0)';
+}
+joyBase.addEventListener('touchstart', e => { AudioEngine.init(); joystickActive = true; joyHandle(e); }, { passive: false });
+joyBase.addEventListener('touchmove', e => { if (joystickActive) joyHandle(e); }, { passive: false });
+joyBase.addEventListener('touchend', joyReset);
+joyBase.addEventListener('touchcancel', joyReset);
+
+document.getElementById('touch-warp').addEventListener('click', () => { if (state.player) state.player.startWarp(); });
+document.getElementById('touch-skill-1').addEventListener('click', () => { if (state.player) state.player.useUlt1(); });
+document.getElementById('touch-skill-2').addEventListener('click', () => { if (state.player) state.player.useUlt2(); });
+document.getElementById('touch-skill-3').addEventListener('click', () => { if (state.player) state.player.useUlt3(); });
+
 window.onload = startGame;
 </script>
 </body>
