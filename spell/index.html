@@ -144,15 +144,37 @@
         /* Game Stage */
         #game-container {
             position: relative;
-            width: 900px;
-            height: 550px;
+            width: 98%;
+            max-width: 900px;
+            aspect-ratio: 900 / 550;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 0 0 12px 12px;
             overflow: hidden;
             box-shadow: 0 10px 50px rgba(0,0,0,0.8);
         }
 
-        canvas { display: block; background: #000; width: 100%; height: 100%; }
+        canvas { display: block; background: #000; width: 100%; height: 100%; touch-action: none; }
+
+        @media (max-width: 600px) {
+            #top-ui { padding: 8px 10px; gap: 8px; border-radius: 8px 8px 0 0; }
+            .game-title { font-size: 14px; }
+            .brand-name { font-size: 8px; }
+            .letter-box { width: 18px; height: 18px; font-size: 10px; }
+            .stats-group { gap: 8px; }
+            .stat-label { font-size: 8px; }
+            .stat-value { font-size: 13px; }
+            .bonus-timer { font-size: 60px; }
+            .mode-indicator { font-size: 9px; padding: 4px 8px; }
+            .social-btn { width: 28px; height: 28px; }
+            .social-btn svg { width: 16px; height: 16px; }
+        }
+
+        @media (max-width: 420px) {
+            #top-ui { justify-content: center; }
+            .brand-group { order: 1; }
+            .stats-group { order: 2; }
+            #target-words-container { order: 3; width: 100%; }
+        }
 
         /* Overlays */
         #overlay, #settings-modal {
@@ -339,16 +361,20 @@
 
     <div class="stats-group">
         <div class="stat-item">
+            <span class="stat-label">HI-SCORE</span>
+            <span id="ui-hiscore" class="stat-value">000000</span>
+        </div>
+        <div class="stat-item">
             <span class="stat-label">SCORE</span>
             <span id="ui-score" class="stat-value">000000</span>
         </div>
         <div class="stat-item">
             <span class="stat-label">MISSED</span>
-            <span id="ui-missed" class="stat-value warn">0</span>
+            <span id="ui-missed" class="stat-value warn">0/10</span>
         </div>
-        
+
         <!-- Sound Toggle Button -->
-        <button id="sound-btn" class="icon-btn" title="Toggle Sound">
+        <button id="sound-btn" class="icon-btn" title="Toggle Sound" aria-label="Toggle Sound" aria-pressed="false">
             <svg id="sound-off-icon" viewBox="0 0 24 24" width="22" height="22">
                 <path d="M16.5,12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45,2.45C16.42,12.43,16.5,12.22,16.5,12z M19,12c0,0.94-0.2,1.82-0.54,2.64 l1.51,1.51C20.63,14.91,21,13.5,21,12c0-4.28-2.99-7.86-7-8.77v2.06C17.11,6.14,19,8.84,19,12z M4.27,3L3,4.27L7.73,9H3v6h4l5,5v-6.73 l4.25,4.25C15.55,18.1,14.56,18.51,13.5,18.73v2.04c1.6-0.25,3.07-0.9,4.32-1.84L20.27,21L21.54,19.73L4.27,3z M12,4L9.91,6.09 L12,8.18V4z"/>
             </svg>
@@ -357,7 +383,7 @@
             </svg>
         </button>
 
-        <button id="settings-btn" class="icon-btn" title="Edit Word List">
+        <button id="settings-btn" class="icon-btn" title="Edit Word List" aria-label="Edit Word List">
             <svg viewBox="0 0 24 24" width="20" height="20">
                 <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.81,11.69,4.81,12c0,0.33,0.02,0.65,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
             </svg>
@@ -531,7 +557,8 @@ EXECUTE 실행하다</textarea>
 
     const uiScore = document.getElementById('ui-score');
     const uiMissed = document.getElementById('ui-missed');
-    
+    const uiHiScore = document.getElementById('ui-hiscore');
+
     // Sound Elements
     const soundBtn = document.getElementById('sound-btn');
     const soundOnIcon = document.getElementById('sound-on-icon');
@@ -540,10 +567,19 @@ EXECUTE 실행하다</textarea>
     let WIDTH, HEIGHT;
     const AUTO_IDLE_TIME = 7000;
     const RESTART_TIME = 7000;
-    const INITIAL_ENEMY_SPEED = 0.25; 
+    const INITIAL_ENEMY_SPEED = 0.25;
+    const MISSED_LIMIT = 10;
+    const COMBO_WINDOW_STEPS = 3 * 60; // 3 seconds of fixed 60Hz steps
 
-    let gameState = 'STARTING'; 
+    // localStorage keys
+    const LS_PREFIX = 'spellclaw_';
+    const LS_WORDLIST = LS_PREFIX + 'wordlist';
+    const LS_HISCORE = LS_PREFIX + 'hiscore';
+    const LS_MUTED = LS_PREFIX + 'muted';
+
+    let gameState = 'STARTING';
     let score = 0;
+    let hiScore = 0;
     let missedCount = 0;
     let lastInputTime = Date.now();
     let isAutoMode = true;
@@ -553,9 +589,36 @@ EXECUTE 실행하다</textarea>
     let targetWords = [];
     let stars = [];
 
+    // Difficulty / combo state
+    let gameElapsed = 0; // seconds of active (non-paused) play, advanced by fixed steps
+    let combo = 0;
+    let comboTimer = 0;
+
+    // Pause bookkeeping (used by P-key, visibilitychange, and settings modal)
+    let stateBeforePause = null;
+    let pauseStartTime = 0;
+
     // Sound Logic
     let isMuted = true; // Initially off per browser policy
     let audioCtx = null;
+
+    // ---- localStorage helpers ----
+    function safeGetItem(key) {
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSetItem(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) { /* ignore (private mode, quota, etc.) */ }
+    }
+    function saveWordList(text) { safeSetItem(LS_WORDLIST, text); }
+    function loadWordList() { return safeGetItem(LS_WORDLIST); }
+    function saveMuted(v) { safeSetItem(LS_MUTED, v ? '1' : '0'); }
+    function loadMuted() { return safeGetItem(LS_MUTED); }
+    function saveHiScore(v) { safeSetItem(LS_HISCORE, String(v)); }
+    function loadHiScore() {
+        const raw = safeGetItem(LS_HISCORE);
+        const n = parseInt(raw || '0', 10);
+        return isNaN(n) ? 0 : n;
+    }
 
     const player = {
         x: 80, y: 0, w: 45, h: 25,
@@ -572,10 +635,17 @@ EXECUTE 실행하다</textarea>
 
     function initCanvas() {
         const rect = canvas.parentNode.getBoundingClientRect();
-        canvas.width = WIDTH = rect.width;
-        canvas.height = HEIGHT = rect.height;
+        const dpr = window.devicePixelRatio || 1;
+        WIDTH = rect.width;
+        HEIGHT = rect.height;
+        // Internal pixel buffer scaled for device pixel ratio; CSS size stays logical.
+        canvas.width = Math.round(WIDTH * dpr);
+        canvas.height = Math.round(HEIGHT * dpr);
+        canvas.style.width = WIDTH + 'px';
+        canvas.style.height = HEIGHT + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         player.y = HEIGHT / 2;
-        
+
         stars = [];
         for(let i=0; i<150; i++) {
             stars.push({
@@ -635,7 +705,35 @@ EXECUTE 실행하다</textarea>
     }
 
     window.addEventListener('resize', initCanvas);
+
+    // ---- Pause / resume (shared by P key, tab visibility, and settings modal) ----
+    // Date.now()-based timers (lastInputTime, restartTimerStart) are shifted forward by
+    // the paused duration on resume so they don't effectively advance while paused.
+    function enterPause() {
+        if (gameState === 'PAUSED') return;
+        stateBeforePause = gameState;
+        gameState = 'PAUSED';
+        pauseStartTime = Date.now();
+    }
+
+    function exitPause() {
+        if (gameState !== 'PAUSED') return;
+        const pausedMs = Date.now() - pauseStartTime;
+        lastInputTime += pausedMs;
+        restartTimerStart += pausedMs;
+        gameState = stateBeforePause || 'STARTING';
+        stateBeforePause = null;
+        // Prevent stale key state from before the pause affecting post-resume movement.
+        Object.keys(keys).forEach(k => { keys[k] = false; });
+    }
+
     window.addEventListener('keydown', e => {
+        if (e.code === 'KeyP') {
+            if (settingsModal.style.display === 'flex') return;
+            if (gameState === 'PAUSED') exitPause();
+            else if (gameState === 'PLAYING' || gameState === 'BONUS') enterPause();
+            return;
+        }
         if (gameState === 'PAUSED') return;
         keys[e.code] = true;
         isAutoMode = false;
@@ -643,40 +741,76 @@ EXECUTE 실행하다</textarea>
     });
     window.addEventListener('keyup', e => keys[e.code] = false);
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && (gameState === 'PLAYING' || gameState === 'BONUS')) {
+            enterPause();
+        }
+    });
+
+    // ---- Touch / pointer support ----
+    let isDragging = false;
+    function pointerToPlayerY(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleY = rect.height > 0 ? HEIGHT / rect.height : 1;
+        return (e.clientY - rect.top) * scaleY;
+    }
+    canvas.addEventListener('pointerdown', e => {
+        if (gameState === 'PAUSED') return;
+        isDragging = true;
+        isAutoMode = false;
+        lastInputTime = Date.now();
+        player.y = pointerToPlayerY(e);
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    });
+    canvas.addEventListener('pointermove', e => {
+        if (!isDragging || gameState === 'PAUSED') return;
+        isAutoMode = false;
+        lastInputTime = Date.now();
+        player.y = pointerToPlayerY(e);
+    });
+    canvas.addEventListener('pointerup', () => { isDragging = false; });
+    canvas.addEventListener('pointercancel', () => { isDragging = false; });
+
     // Sound Toggle logic
-    soundBtn.addEventListener('click', () => {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        isMuted = !isMuted;
+    function updateSoundUI() {
         if (isMuted) {
             soundOnIcon.style.display = 'none';
             soundOffIcon.style.display = 'block';
             soundBtn.classList.remove('active');
+            soundBtn.setAttribute('aria-pressed', 'false');
         } else {
             soundOnIcon.style.display = 'block';
             soundOffIcon.style.display = 'none';
             soundBtn.classList.add('active');
-            // Resume context if suspended
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            soundBtn.setAttribute('aria-pressed', 'true');
         }
+    }
+
+    soundBtn.addEventListener('click', () => {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        isMuted = !isMuted;
+        updateSoundUI();
+        saveMuted(isMuted);
+        if (!isMuted && audioCtx.state === 'suspended') audioCtx.resume();
     });
 
     // Settings logic with restart
     settingsBtn.addEventListener('click', () => {
-        if (gameState === 'ENDED' && Date.now() - restartTimerStart > 0) return;
-        const prevState = gameState;
-        gameState = 'PAUSED';
+        enterPause();
         settingsTextarea.value = wordInput.value;
         settingsModal.style.display = 'flex';
-        settingsModal.dataset.prevState = prevState;
     });
 
     closeSettingsBtn.addEventListener('click', () => {
         settingsModal.style.display = 'none';
-        gameState = settingsModal.dataset.prevState || 'STARTING';
+        exitPause();
     });
 
     saveSettingsBtn.addEventListener('click', () => {
         wordInput.value = settingsTextarea.value;
+        saveWordList(wordInput.value);
+        settingsModal.style.display = 'none';
+        stateBeforePause = null;
         initGame();
         showHudMessage("DATABASE UPDATED - REBOOTING...");
     });
@@ -686,7 +820,10 @@ EXECUTE 실행하다</textarea>
             const text = await navigator.clipboard.readText();
             if (text && text.trim().length > 0) {
                 wordInput.value = text;
+                saveWordList(wordInput.value);
                 showHudMessage("DATA SYNCED FROM CLIPBOARD");
+                settingsModal.style.display = 'none';
+                stateBeforePause = null;
                 initGame();
             } else {
                 showHudMessage("CLIPBOARD EMPTY");
@@ -695,12 +832,18 @@ EXECUTE 실행하다</textarea>
             const manualText = prompt("Paste your IT terms here (FORMAT: WORD MEANING):");
             if (manualText) {
                 wordInput.value = manualText;
+                saveWordList(wordInput.value);
+                settingsModal.style.display = 'none';
+                stateBeforePause = null;
                 initGame();
             }
         }
     });
 
-    startNowBtn.addEventListener('click', () => initGame());
+    startNowBtn.addEventListener('click', () => {
+        stateBeforePause = null;
+        initGame();
+    });
 
     function showHudMessage(txt) {
         const msg = document.getElementById('death-msg');
@@ -732,6 +875,10 @@ EXECUTE 실행하다</textarea>
         missedCount = 0;
         gameState = 'PLAYING';
         bonusTimeLeft = 0;
+        gameElapsed = 0;
+        combo = 0;
+        comboTimer = 0;
+        stateBeforePause = null;
         player.upgradeLevel = 0;
         player.bullets = [];
         player.y = HEIGHT / 2;
@@ -739,7 +886,7 @@ EXECUTE 실행하다</textarea>
         drops = [];
         particles = [];
         floatingTexts = [];
-        
+
         const shuffled = [...wordsDB].sort(() => 0.5 - Math.random());
         targetWords = shuffled.slice(0, 3).map(obj => ({
             ...obj, collected: new Array(obj.word.length).fill(false)
@@ -766,7 +913,8 @@ EXECUTE 실행하다</textarea>
             });
         });
         if (uiScore) uiScore.innerText = score.toString().padStart(6, '0');
-        if (uiMissed) uiMissed.innerText = missedCount;
+        if (uiMissed) uiMissed.innerText = `${missedCount}/${MISSED_LIMIT}`;
+        if (uiHiScore) uiHiScore.innerText = hiScore.toString().padStart(6, '0');
     }
 
     function getNeededLetters() {
@@ -777,6 +925,13 @@ EXECUTE 실행하다</textarea>
             });
         });
         return needed;
+    }
+
+    function getDifficultyFactor() {
+        // Ramps 0 -> 1 over ~3 minutes of active play, or sooner if score climbs fast.
+        const timeFactor = Math.min(gameElapsed / 180, 1);
+        const scoreFactor = Math.min(score / 20000, 1);
+        return Math.max(timeFactor, scoreFactor);
     }
 
     function spawnEnemy() {
@@ -791,8 +946,10 @@ EXECUTE 실행하다</textarea>
 
         const data = eligibleWords[Math.floor(Math.random() * eligibleWords.length)];
         const word = data.word;
-        
-        const speed = (gameState === 'BONUS' ? 0.7 : INITIAL_ENEMY_SPEED) + (Math.random() * 0.15);
+
+        const difficulty = getDifficultyFactor();
+        const baseSpeed = gameState === 'BONUS' ? 0.7 : INITIAL_ENEMY_SPEED;
+        const speed = baseSpeed * (1 + difficulty * 1.5) + (Math.random() * 0.15);
         const segments = [];
         const startX = WIDTH + 100;
         const startY = 80 + Math.random() * (HEIGHT - 160);
@@ -872,6 +1029,24 @@ EXECUTE 실행하다</textarea>
         player.cooldown = 10;
     }
 
+    function comboMultiplier() {
+        return combo >= 2 ? (1 + Math.floor(combo / 3) * 0.5) : 1;
+    }
+    function bonusMultiplier() {
+        return gameState === 'BONUS' ? 2 : 1;
+    }
+
+    function registerScore(base) {
+        score += Math.round(base * comboMultiplier() * bonusMultiplier());
+        if (score > hiScore) {
+            hiScore = score;
+            saveHiScore(hiScore);
+        }
+    }
+
+    // update() advances exactly one fixed 60Hz step; it is invoked as many (or as
+    // few) times per rendered frame as needed by the accumulator loop in loop(),
+    // so all movement/cooldown/timer logic below is framerate-independent.
     function update() {
         if (gameState === 'PAUSED') return;
 
@@ -883,8 +1058,10 @@ EXECUTE 실행하다</textarea>
             return;
         }
 
+        gameElapsed += 1 / 60;
+
         if (!isAutoMode && Date.now() - lastInputTime > AUTO_IDLE_TIME) isAutoMode = true;
-        
+
         if (modeBadge) {
             modeBadge.className = 'mode-indicator ' + (isAutoMode ? 'mode-auto' : 'mode-manual');
             modeBadge.innerText = isAutoMode ? 'AUTO PILOT' : 'MANUAL OVERRIDE';
@@ -896,7 +1073,7 @@ EXECUTE 실행하다</textarea>
             if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
             if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
         }
-        
+
         if ((gameState === 'PLAYING' || gameState === 'BONUS') && player.cooldown <= 0) {
             fireWeapon();
         }
@@ -911,25 +1088,37 @@ EXECUTE 실행하다</textarea>
         });
 
         if (gameState === 'BONUS') {
-            bonusTimeLeft -= 1/60;
+            bonusTimeLeft -= 1 / 60;
             if (bonusDisplay) bonusDisplay.innerText = Math.ceil(bonusTimeLeft);
             if (bonusTimeLeft <= 0) endGame("BONUS OVER");
         }
 
-        player.bullets.forEach((b, i) => {
+        // Combo decay (independent of kills happening this step)
+        if (comboTimer > 0) {
+            comboTimer--;
+            if (comboTimer <= 0) combo = 0;
+        }
+
+        // --- Bullet movement / out-of-range cleanup (reverse loop: safe removal) ---
+        for (let i = player.bullets.length - 1; i >= 0; i--) {
+            const b = player.bullets[i];
             b.x += b.vx; b.y += b.vy;
             const distTraveled = Math.abs(b.x - b.startX);
-            const rangeLimit = WIDTH * (2/3);
+            const rangeLimit = WIDTH * (2 / 3);
 
             if (distTraveled > rangeLimit || b.x > WIDTH + 50 || b.x < -50 || b.y < -50 || b.y > HEIGHT + 50) {
                 player.bullets.splice(i, 1);
             }
-        });
+        }
 
-        const rate = (gameState === 'BONUS' ? 0.05 : 0.012);
-        if (Math.random() < rate && enemies.length < 12) spawnEnemy();
+        const difficulty = getDifficultyFactor();
+        const rate = (gameState === 'BONUS' ? 0.05 : 0.012) * (1 + difficulty * 1.2);
+        const enemyCap = 12 + Math.floor(difficulty * 6);
+        if (Math.random() < rate && enemies.length < enemyCap) spawnEnemy();
 
-        enemies.forEach((enemy, eIdx) => {
+        // --- Enemies: movement, chain follow, bullet collision, death/miss (reverse loop) ---
+        for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
+            const enemy = enemies[eIdx];
             enemy.distance += enemy.speed;
             const head = enemy.segments[0];
             head.x = (WIDTH + 100) - enemy.distance;
@@ -938,9 +1127,9 @@ EXECUTE 실행하다</textarea>
             for (let i = 0; i < enemy.segments.length; i++) {
                 const seg = enemy.segments[i];
                 if (i > 0) {
-                    const prev = enemy.segments[i-1];
+                    const prev = enemy.segments[i - 1];
                     const dx = prev.x - seg.x, dy = prev.y - seg.y;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist > 28) {
                         const angle = Math.atan2(dy, dx);
                         seg.x = prev.x - Math.cos(angle) * 28;
@@ -948,69 +1137,90 @@ EXECUTE 실행하다</textarea>
                     }
                 }
 
-                player.bullets.forEach((bullet, bIdx) => {
+                for (let bIdx = player.bullets.length - 1; bIdx >= 0; bIdx--) {
+                    const bullet = player.bullets[bIdx];
                     const dx = bullet.x - seg.x, dy = bullet.y - seg.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 25) {
+                    if (Math.sqrt(dx * dx + dy * dy) < 25) {
                         if (seg.hp > 0) {
                             seg.hp--;
                             player.bullets.splice(bIdx, 1);
-                            score += 15;
+                            registerScore(15);
                             createExplosion(seg.x, seg.y, '#fff');
                             if (Math.random() < 0.25) {
                                 floatingTexts.push({ x: seg.x, y: seg.y, text: enemy.meaning, life: 60, scale: 1.1 });
                             }
                         }
                     }
-                });
+                }
             }
 
             if (enemy.segments.every(s => s.hp <= 1)) {
-                drops.push({ x: head.x, y: head.y, char: head.char, vx: -1.5, vy: 0, life: 1 });
-                score += 150;
+                // Soft-lock guard: always drop a still-needed letter when one remains,
+                // even if this enemy's head letter isn't one of them.
+                const needed = getNeededLetters();
+                let dropChar = head.char;
+                if (needed.size > 0 && !needed.has(dropChar)) {
+                    const neededArr = [...needed];
+                    dropChar = neededArr[Math.floor(Math.random() * neededArr.length)];
+                }
+                drops.push({ x: head.x, y: head.y, char: dropChar, vx: -1.5, vy: 0, life: 1 });
+                combo++;
+                comboTimer = COMBO_WINDOW_STEPS;
+                registerScore(150);
                 createExplosion(head.x, head.y, '#00ff9f');
                 enemies.splice(eIdx, 1);
             } else if (head.x < -100) {
                 missedCount++;
+                combo = 0;
+                comboTimer = 0;
                 enemies.splice(eIdx, 1);
-                if (missedCount >= 100) endGame("CRITICAL FAILURE");
+                if (missedCount >= MISSED_LIMIT) endGame("CRITICAL FAILURE");
             }
-        });
+        }
 
-        drops.forEach((d, i) => {
+        // --- Drops (reverse loop: safe removal) ---
+        for (let i = drops.length - 1; i >= 0; i--) {
+            const d = drops[i];
             d.x += d.vx;
             d.life = (Math.sin(Date.now() * 0.01) + 1.5) / 2;
             if (Math.abs(d.x - player.x) < 50 && Math.abs(d.y - player.y) < 50) {
                 playCollectSound();
                 collectLetter(d.char);
                 drops.splice(i, 1);
-                score += 300;
+                registerScore(300);
                 createExplosion(player.x, player.y, '#00d1ff');
-            } else if (d.x < -50) drops.splice(i, 1);
-        });
+            } else if (d.x < -50) {
+                drops.splice(i, 1);
+            }
+        }
 
         if (player.upgradeLevel >= 2) {
             const time = Date.now() * 0.004;
             player.drones = [
-                { x: player.x + Math.cos(time)*70, y: player.y + Math.sin(time)*70 },
-                { x: player.x + Math.cos(time+Math.PI)*70, y: player.y + Math.sin(time+Math.PI)*70 }
+                { x: player.x + Math.cos(time) * 70, y: player.y + Math.sin(time) * 70 },
+                { x: player.x + Math.cos(time + Math.PI) * 70, y: player.y + Math.sin(time + Math.PI) * 70 }
             ];
             if (player.cooldown === 1) {
-                 spawnBullet(player.drones[0].x, player.drones[0].y, 0, true);
-                 spawnBullet(player.drones[1].x, player.drones[1].y, 0, true);
+                spawnBullet(player.drones[0].x, player.drones[0].y, 0, true);
+                spawnBullet(player.drones[1].x, player.drones[1].y, 0, true);
             }
         }
 
-        particles.forEach((p, i) => { 
-            p.x += p.vx; p.y += p.vy; p.life -= 0.03; 
-            if(p.life <= 0) particles.splice(i,1); 
-        });
-        floatingTexts.forEach((ft, i) => { 
+        // --- Particles / floating texts (reverse loop: safe removal) ---
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
             ft.y -= 0.8; ft.life--; ft.scale += 0.005;
-            if(ft.life<=0) floatingTexts.splice(i,1); 
-        });
+            if (ft.life <= 0) floatingTexts.splice(i, 1);
+        }
 
         if (uiScore) uiScore.innerText = score.toString().padStart(6, '0');
-        if (uiMissed) uiMissed.innerText = missedCount;
+        if (uiMissed) uiMissed.innerText = `${missedCount}/${MISSED_LIMIT}`;
+        if (uiHiScore) uiHiScore.innerText = hiScore.toString().padStart(6, '0');
     }
 
     function collectLetter(char) {
@@ -1178,23 +1388,104 @@ EXECUTE 실행하다</textarea>
             ctx.shadowBlur = 5;
             ctx.shadowColor = 'rgba(255, 51, 102, 0.5)';
             ctx.fillStyle = `rgba(255, 51, 102, ${ft.life/60})`;
-            ctx.font = `bold ${15 * ft.scale}px 'Noto Sans KR'`; 
+            ctx.font = `bold ${15 * ft.scale}px 'Noto Sans KR'`;
             ctx.fillText(ft.text, ft.x, ft.y);
         });
-        
+
         ctx.shadowBlur = 0;
+
+        // Bonus mode screen tint/pulse for visual differentiation
+        if (gameState === 'BONUS') {
+            const pulse = (Math.sin(Date.now() * 0.005) + 1) / 2;
+            ctx.fillStyle = `rgba(0, 255, 159, ${0.04 + pulse * 0.05})`;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            ctx.strokeStyle = `rgba(0, 255, 159, ${0.35 + pulse * 0.35})`;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(3, 3, WIDTH - 6, HEIGHT - 6);
+        }
+
+        // Combo HUD
+        if (combo >= 2 && (gameState === 'PLAYING' || gameState === 'BONUS')) {
+            const mult = comboMultiplier();
+            const multLabel = Number.isInteger(mult) ? mult.toString() : mult.toFixed(1);
+            ctx.save();
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.shadowColor = '#ffdd00';
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = '#ffdd00';
+            ctx.font = "bold 22px 'Orbitron'";
+            ctx.fillText(`x${multLabel} COMBO`, WIDTH - 16, 16);
+            ctx.shadowBlur = 0;
+            ctx.font = "11px 'Orbitron'";
+            ctx.fillStyle = 'rgba(255,221,0,0.8)';
+            ctx.fillText(`${combo} HITS`, WIDTH - 16, 42);
+            ctx.restore();
+        }
+
+        // Paused overlay (settings modal already covers the canvas visually when open)
+        if (gameState === 'PAUSED' && settingsModal.style.display !== 'flex') {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = '#00ff9f';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#00ff9f';
+            ctx.font = "bold 40px 'Orbitron'";
+            ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 10);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#888';
+            ctx.font = "14px 'Orbitron'";
+            ctx.fillText('Press P to resume', WIDTH / 2, HEIGHT / 2 + 30);
+            ctx.restore();
+        }
     }
 
-    function loop() {
-        update();
+    // ---- Fixed timestep game loop (accumulator pattern) ----
+    // update() always represents exactly 1/60s of game time; the number of times
+    // it runs per animation frame depends on real elapsed time, so gameplay speed
+    // is identical regardless of display refresh rate (60Hz, 120Hz, 144Hz, ...).
+    const STEP_MS = 1000 / 60;
+    const MAX_FRAME_MS = 250; // clamp huge gaps (tab switch, debugger pause, etc.)
+    let lastTimestamp = null;
+    let accumulator = 0;
+
+    function loop(timestamp) {
+        if (lastTimestamp === null) lastTimestamp = timestamp;
+        let frameMs = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        if (frameMs > MAX_FRAME_MS) frameMs = MAX_FRAME_MS;
+
+        if (gameState === 'PAUSED') {
+            // Don't let a paused game "catch up" with a burst of steps on resume.
+            accumulator = 0;
+        } else {
+            accumulator += frameMs;
+            while (accumulator >= STEP_MS) {
+                update();
+                accumulator -= STEP_MS;
+            }
+        }
+
         draw();
         requestAnimationFrame(loop);
     }
 
     window.onload = () => {
+        const savedWords = loadWordList();
+        if (savedWords && savedWords.trim().length > 0) wordInput.value = savedWords;
+
+        const savedMuted = loadMuted();
+        if (savedMuted !== null) isMuted = savedMuted === '1';
+        updateSoundUI();
+
+        hiScore = loadHiScore();
+
         initCanvas();
         initGame();
-        loop();
+        requestAnimationFrame(loop);
     };
 
 </script>
