@@ -303,6 +303,36 @@
         .preview-caption { margin-top: 1.25rem; color: var(--text-muted); font-size: 0.75rem; text-align: center; }
         @media (max-width: 850px) { .preview-caption { margin-top: 0.5rem; margin-bottom: 0.5rem; } }
 
+        /* 자동 시연(어트랙트) 모드 배지 */
+        #demo-badge {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 45;
+            padding: 7px 16px;
+            border-radius: 999px;
+            background: rgba(11,15,26,0.88);
+            border: 1px solid var(--gold-dim);
+            color: var(--gold);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 8px 20px -8px rgba(0,0,0,0.6), 0 0 18px -4px rgba(232,198,116,0.35);
+            animation: demoPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes demoPulse {
+            0%, 100% { opacity: 0.82; }
+            50% { opacity: 1; }
+        }
+        @media (max-width: 850px) {
+            #demo-badge { top: 6px; font-size: 0.68rem; padding: 6px 12px; }
+        }
+
         .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
         .pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 10px; }
         .pattern-grid .temp-item { font-size: 0.66rem; padding: 8px 2px; }
@@ -401,6 +431,7 @@
 
     <!-- CENTER: LIVE PREVIEW (first in DOM so it can sit sticky-on-top on mobile) -->
     <section class="preview-area" id="preview-area">
+        <div id="demo-badge" class="hidden" role="status">Demo &mdash; Click to exit</div>
         <div id="card-stage">
             <div id="card-container">
                 <div id="card-pattern" aria-hidden="true"></div>
@@ -647,11 +678,40 @@
     let qrTimer = null;
     let qrCache = { key: null, canvas: null };
 
+    // ---- 자동 시연(어트랙트) 모드 ----
+    const DEMO_FIRST_RUN_DELAY = 2500; // 최초 실행 시 시연 시작까지 대기(ms)
+    const DEMO_STEP_MS = 3500;         // 시연 스텝 간격(ms)
+    let DEMO_IDLE_MS = 60000;          // 유휴 판정 시간(ms)
+
+    const DEMO_PERSONAS = {
+        seoyeon: { name: '김서연', title: 'Chief Design Officer', company: '스튜디오 하늘', phone: '010-2345-6789', email: 'seoyeon@haneul.studio', web: 'haneul.studio', youtube: 'youtube.com/@haneulstudio', addr: '서울특별시 성동구 성수동' },
+        james:   { name: 'James Park', title: 'Creative Director', company: 'Northlight Films', phone: '010-7777-1234', email: 'james@northlight.film', web: 'northlight.film', youtube: 'youtube.com/@northlightfilms', addr: 'Seoul, South Korea' },
+        doyoon:  { name: '이도윤', title: 'Brand Strategist', company: '문라이트 랩', phone: '010-9876-5432', email: 'doyoon@moonlight-lab.kr', web: 'moonlight-lab.kr', youtube: 'youtube.com/@moonlightlab', addr: '부산광역시 해운대구' }
+    };
+
+    // 템플릿 5종 전부 순회. 한글 페르소나는 한글 지원 폰트 페어로 오버라이드.
+    const DEMO_STEPS = [
+        { persona: 'james',   template: 'corporate' },
+        { persona: 'seoyeon', template: 'luxury',  fontPair: 'serene' },
+        { persona: 'doyoon',  template: 'dark',    fontPair: 'serene' },
+        { persona: 'james',   template: 'aurora' },
+        { persona: 'seoyeon', template: 'minimal', fontPair: 'serene' }
+    ];
+
+    let demoActive = false;
+    let demoSnapshot = null;
+    let demoStepIndex = 0;
+    let demoStepTimer = null;
+    let demoStartTimer = null;
+    let idleTimer = null;
+    let userHasEdited = false;  // 이번 세션에서 사용자가 state를 수정했는지
+
     window.onload = () => {
         restoreState();
         syncInputsFromState();
         bindEvents();
         bindTabs();
+        bindDemoTriggers();
         render();
 
         window.addEventListener('resize', () => {
@@ -661,6 +721,11 @@
         window.addEventListener('orientationchange', () => {
             setTimeout(() => { updateCardScale(); positionMobileTabbar(); }, 200);
         });
+
+        // 페이지 진입 후 입력/수정이 없으면 저장분 여부와 관계없이 자동 시연 시작
+        demoStartTimer = setTimeout(() => {
+            if (!userHasEdited && !demoActive) startDemo();
+        }, DEMO_FIRST_RUN_DELAY);
     };
 
     function escapeVCardValue(v) {
@@ -990,6 +1055,81 @@
         reader.readAsDataURL(file);
     }
 
+    // ---- 자동 시연(어트랙트) 모드 ----
+
+    function startDemo() {
+        if (demoActive) return;
+        clearTimeout(demoStartTimer);
+        clearTimeout(idleTimer);
+        clearTimeout(saveTimer); // 시연 직전 예약된 저장이 시연 데이터로 실행되는 것 방지
+        demoSnapshot = JSON.parse(JSON.stringify(state)); // 시작 전 상태 깊은 복사
+        demoActive = true;       // 이후 render()의 scheduleSave()는 전부 무시됨
+        demoStepIndex = 0;
+        document.getElementById('demo-badge').classList.remove('hidden');
+        demoStep();
+    }
+
+    function demoStep() {
+        if (!demoActive) return;
+        const step = DEMO_STEPS[demoStepIndex % DEMO_STEPS.length];
+        Object.assign(state, DEMO_PERSONAS[step.persona]);
+        applyTemp(step.template); // 템플릿+폰트 페어+패턴+QR 스타일 일괄 전환 (render 포함)
+        if (step.fontPair && FONT_PAIRS[step.fontPair]) {
+            state.fontPair = step.fontPair;
+            document.getElementById('sel-fontpair').value = step.fontPair;
+            render();
+        }
+        syncInputsFromState(); // 좌측 입력 패널에도 페르소나 반영
+        demoStepIndex++;
+        demoStepTimer = setTimeout(demoStep, DEMO_STEP_MS);
+    }
+
+    function stopDemo() {
+        if (!demoActive) return;
+        clearTimeout(demoStepTimer);
+        clearTimeout(qrTimer); // 시연 데이터로 예약된 QR 재생성 취소
+        // 스냅샷 복원 — demoActive가 아직 true이므로 복원 render()는 저장을 트리거하지 않음
+        Object.assign(state, demoSnapshot);
+        demoSnapshot = null;
+        syncInputsFromState();
+        render();
+        document.getElementById('demo-badge').classList.add('hidden');
+        demoActive = false; // 복원 render 이후에 해제 (저장 가드 순서 중요)
+        armIdleTimer();
+    }
+
+    function armIdleTimer() {
+        clearTimeout(idleTimer);
+        if (userHasEdited || demoActive) return; // 이번 세션에서 수정한 사용자에겐 유휴 시연 없음
+        idleTimer = setTimeout(() => {
+            if (!userHasEdited && !demoActive) startDemo();
+        }, DEMO_IDLE_MS);
+    }
+
+    function markUserEdit() {
+        userHasEdited = true;
+        clearTimeout(idleTimer);
+        clearTimeout(demoStartTimer);
+    }
+
+    function bindDemoTriggers() {
+        // 어떤 상호작용이든: 시연 중이면 즉시 종료, 아니면 유휴 타이머 리셋
+        ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((evt) => {
+            document.addEventListener(evt, () => {
+                if (demoActive) { stopDemo(); return; }
+                clearTimeout(demoStartTimer); // 첫 실행 대기 중 상호작용 시 자동 시작 취소
+                armIdleTimer();
+            }, { capture: true, passive: true });
+        });
+
+        // state를 실제로 수정하는 조작 감지 (시연은 실제 이벤트를 발생시키지 않으므로 안전)
+        document.addEventListener('input', markUserEdit, true);
+        document.addEventListener('change', markUserEdit, true);
+        document.querySelectorAll('.template-grid .temp-item, #pattern-grid .temp-item').forEach((b) => {
+            b.addEventListener('click', markUserEdit);
+        });
+    }
+
     function applyTemp(type) {
         const def = TEMPLATE_DEFS[type];
         if (!def) return;
@@ -1079,11 +1219,13 @@
     // ---- Persistence ----
 
     function scheduleSave() {
+        if (demoActive) return; // 시연 중에는 절대 저장 예약 금지
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveState, 400);
     }
 
     function saveState() {
+        if (demoActive) return; // 이중 안전장치: 시연 데이터가 사용자 저장분을 덮어쓰지 않도록
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (err) {
