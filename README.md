@@ -1,9 +1,9 @@
-﻿# kitscript
+# kitscript
 
 When a homepage becomes a battlefield.
 
-`kitscript`는 정적인 랜딩 페이지를 게임형 인터페이스로 바꾸는 실험 프로젝트입니다.  
-루트 허브에서 전투/레벨업을 통해 모듈(미니게임)을 해금하고, 각 모듈은 독립 실행 가능한 HTML 게임을 지향합니다.
+`kitscript`는 정적인 랜딩 페이지를 게임형 인터페이스로 바꾸는 실험 프로젝트입니다.
+루트 허브(`index.html`)에서 전투/레벨업을 통해 모듈(미니게임)을 해금하고, 각 모듈은 독립 실행 가능한 HTML 게임을 지향합니다.
 
 ## Concept
 
@@ -36,47 +36,127 @@ When a homepage becomes a battlefield.
 - Copy-friendly: 공통 프레임워크 의존보다, 파일 단독 이해/수정 가능성을 우선합니다.
 - Experimental landing: 방문자가 곧바로 플레이 가능한 인터랙티브 홈페이지를 지향합니다.
 
+## 랜딩 페이지(`index.html`) 분석
+
+루트 `index.html`(약 635줄)은 `BUNT GAMES | 8-BIT Eternal Invasion`이라는 하나의 **자동 전투(auto-battler) 미니게임**이면서 동시에 나머지 모든 미니게임 모듈로 향하는 **허브/런처** 역할을 겸합니다. 외부 프레임워크나 빌드 과정 없이 `<style>`/`<script>` 인라인 코드만으로 구성된 순수 정적 HTML 한 장입니다.
+
+### 구조 개요
+
+| 영역 | 설명 |
+| --- | --- |
+| `#video-background` | YouTube IFrame API로 배경 영상(`kFnxuOnbHU0`)을 음소거 자동재생. API 로드 실패/임베드 에러(153/101/150) 시 `youtube-nocookie.com` iframe으로 자동 폴백 |
+| `#gameCanvas` | `<canvas>` 기반 픽셀아트 오토배틀러. 플레이어·요정(터렛) 4기가 자동으로 적(좀비/미라/드라큘라/호박/스켈레톤)을 조준·사격 |
+| `#brand-header` | 로고, 중앙 HP/MP 게이지·점수 HUD, YouTube/GitHub 외부 링크 |
+| `#left-modules` / `#right-modules` | 레벨업으로 해금되는 24개 모듈(미니게임) 바로가기 버튼을 JS로 동적 렌더링 |
+| `#bottom-controls` | 처치 10회당 충전되는 "SALVO CHARGE" 게이지, 3충전 시 활성화되는 광역기 버튼(`GENESIS BURST`), 사운드 토글 |
+| `#toast-container` | 레벨업/충전/에러 등 이벤트 토스트 알림 |
+
+### 스타일링/스크립트 방식
+
+- CSS는 `<head>` 내 `<style>` 블록에 전부 인라인, CSS 커스텀 프로퍼티(`--primary-gold`, `--magic-blue` 등)로 팔레트 관리
+- `max-width: 850px` 미디어쿼리 1개로 모바일 대응(헤더 세로 배치, 모듈 버튼 폭 100%)
+- JS도 `<body>` 하단 `<script>` 블록에 전부 인라인 (외부 의존은 Google Fonts, YouTube IFrame API뿐)
+- 게임 루프는 `requestAnimationFrame` 기반, 적 스폰/추적/충돌/파티클/발사체를 매 프레임 갱신
+
+### 연결된 하위 프로젝트 (모듈 해금 목록)
+
+`CONFIG.MODULES` 배열에 정의된 24개 모듈이 레벨 순서대로 좌/우에 번갈아 배치되며, `https://kitscript.com/game/<label>` (소문자) 절대경로로 링크됩니다.
+
+| 순서 | 레벨 | 라벨 | 로컬 폴더 존재 |
+| --- | --- | --- | --- |
+| 1 | 1 | ONE | ✅ `/one` |
+| 2 | 2 | CLOCK | ✅ `/clock` |
+| 3 | 3 | UNITY | ❌ 없음 |
+| 4 | 4 | TANK | ✅ `/tank` |
+| 5 | 5 | CABLE | ✅ `/cable` |
+| 6 | 6 | QUIZ | ✅ `/quiz` |
+| 7 | 7 | ROGUE | ✅ `/rogue` |
+| 8 | 8 | WORLD | ✅ `/world` |
+| 9 | 9 | PILOT | ✅ `/pilot` |
+| 10 | 10 | PUZZLE | ✅ `/puzzle` |
+| 11 | 11 | OCEAN | ✅ `/ocean` |
+| 12 | 12 | BIRD | ✅ `/bird` |
+| 13 | 13 | PIZZA | ✅ `/pizza` |
+| 14 | 14 | BOMB | ✅ `/bomb` |
+| 15 | 15 | DRONE | ✅ `/drone` |
+| 16 | 16 | HACK | ✅ `/hack` |
+| 17 | 17 | COWBOY | ✅ `/cowboy` |
+| 18 | 18 | ZONE | ✅ `/zone` |
+| 19 | 19 | PANDEMIC | ✅ `/pandemic` |
+| 20 | 20 | SPACE | ✅ `/space` |
+| 21 | 21 | WAVE | ❌ 없음 |
+| 22 | 22 | PLAYLIST | ❌ 없음 |
+| 23 | 23 | HOUSE | ❌ 없음 |
+| 24 | 24 | BOOK | ❌ 없음 |
+
+> 레벨 7 이하 모듈은 항상 해금 상태로 노출되며, 레벨 8 이상 모듈만 `LOCK LV.N`으로 잠깁니다. `UNITY`, `WAVE`, `PLAYLIST`, `HOUSE`, `BOOK`은 이 저장소에는 해당 폴더가 없어 라이브 사이트(`kitscript.com`)에만 존재하거나 아직 미구현 상태로 추정됩니다.
+
+또한 저장소에는 `MODULES` 배열에 아예 등록되지 않아 허브에서 링크되지 않는 폴더도 다수 존재합니다: `album`, `avatar`, `bizcard`, `city`, `clinic`, `clip`, `clipcut`, `home`, `invasion`, `metaball`, `model`, `motion`, `oxpizza`, `pickme`, `reader`, `shop`, `solomade`, `sopraknight`, `spell`, `star`, `terminal`, `textcast`, `tool`, `water`, `word`, `writer` 등. 완성도에 따라 허브 노출 여부를 검토할 필요가 있습니다.
+
+### 품질 관점 분석 요약
+
+- **접근성**: `viewport`에 `user-scalable=no`/`maximum-scale=1.0`으로 확대/축소 차단, 6~9px의 매우 작은 폰트 다수, 캔버스 게임 콘텐츠에 대체 텍스트 없음, HP/MP 게이지에 `role="progressbar"` 등 ARIA 부재, `prefers-reduced-motion` 미대응
+- **SEO/메타태그**: `<meta name="description">`, Open Graph/Twitter Card, `<link rel="canonical">`, favicon 전부 부재. `<title>`이 허브 전체가 아닌 첫 미니게임("8-BIT Eternal Invasion") 기준으로만 작성됨
+- **반응형/모바일**: 미디어쿼리 1개로 대응하나 확대/축소 차단은 오히려 접근성·모바일 UX를 저해. 폰트 크기가 모바일에서 더 축소되어(6px) 가독성 저하
+- **성능**: 인라인 CSS/JS라 별도 캐싱 불가(철학상 트레이드오프), 배경 유튜브 영상 자동재생으로 모바일 데이터/배터리 소모, 탭이 백그라운드로 가도 `requestAnimationFrame` 루프가 계속 실행되어 불필요한 연산 지속
+- **코드 구조**: 단일 파일 철학에는 부합하나, `<header>`/`<main>` 같은 시맨틱 랜드마크 태그 대신 `<div>` 사용, JS 코드 내 한글 주석 일부가 인코딩 깨짐(mojibake) 상태로 저장되어 있음 (예: 439번째 줄 `?쒕꽕?쒖뒪 踰꾩뒪??諛쒖궗 濡쒖쭅 蹂듦뎄`)
+- **UX**: 잠긴 모듈 버튼이 `href="#"`로 남아 있어 클릭 시 페이지 최상단으로 스크롤/포커스 이동 가능, 외부 링크(`target="_blank"`)에 `rel="noopener noreferrer"` 누락으로 리버스 탭내빙 위험
+
+## 개선 사항 (Improvements)
+
+`index.html` 분석에서 확인된 구체적 개선 제안입니다. 각 항목은 실제 코드에서 확인된 문제만 다룹니다.
+
+1. **메타 설명/OG 태그 누락** — `<head>`에 `<meta name="description">`, `og:title`, `og:description`, `og:image`, `twitter:card` 등이 전혀 없습니다. 검색엔진 노출 및 SNS/메신저 공유 시 미리보기가 제대로 표시되지 않으므로 추가가 필요합니다.
+2. **favicon 부재** — `<link rel="icon" ...>`가 없어 브라우저 탭에 기본 아이콘만 표시됩니다. 픽셀아트 컨셉에 맞는 파비콘(`.ico`/`.png`)을 추가하세요.
+3. **확대/축소 차단 (접근성 위반)** — `<meta name="viewport" content="... maximum-scale=1.0, user-scalable=no">`는 저시력 사용자의 핀치 줌을 막아 WCAG 1.4.4(Resize Text) 기준에 위배됩니다. `user-scalable=no`와 `maximum-scale=1.0`을 제거하거나 최소 `maximum-scale=5` 수준으로 완화하세요.
+4. **지나치게 작은 폰트 크기** — `.brand-sub`(6px), `.bar-label`(6px), `.link-btn`(6px), 모바일 미디어쿼리의 `.module-btn`(6px) 등 6~9px 폰트가 다수 존재합니다. 픽셀 폰트 특성을 고려해도 최소 10~11px 이상으로 올려 가독성을 확보하세요.
+5. **외부 링크에 `rel="noopener noreferrer"` 누락** — `brand-links`의 YouTube/GitHub 링크와 `mountFallbackVideoIframe`이 생성하는 iframe 등 `target="_blank"`를 쓰는 요소에 `rel="noopener noreferrer"`가 없어 리버스 탭내빙(reverse tabnabbing) 위험이 있습니다. 모든 `target="_blank"` 앵커에 추가하세요.
+6. **잠긴 모듈 버튼의 `href="#"` 처리 미흡** — `renderModules()`에서 잠긴 모듈은 `btn.href = '#'`로만 설정되고 클릭 이벤트를 막지 않아, 클릭 시 페이지 스크롤 점프가 발생할 수 있습니다. `<a>` 대신 `<button disabled aria-disabled="true">`를 쓰거나 `e.preventDefault()`와 `tabindex="-1"`을 추가하세요.
+7. **ARIA/시맨틱 마크업 부재** — HP/MP 게이지(`.bar-fill`)에 `role="progressbar"`, `aria-valuenow/min/max`가 없고, 브랜드 헤더는 `<header>` 대신 `<div id="brand-header">`, 전체 UI는 `<main>` 랜드마크 없이 `<div id="ui-layer">`로만 감싸여 있습니다. 스크린리더 사용자를 위해 시맨틱 태그와 ARIA 속성을 보강하세요.
+8. **`prefers-reduced-motion` 미대응** — `@keyframes blink`, `fadeInUp`과 캔버스 파티클/애니메이션이 사용자의 "모션 줄이기" 설정과 무관하게 항상 실행됩니다. `@media (prefers-reduced-motion: reduce)`로 애니메이션 강도를 낮추는 처리를 추가하세요.
+9. **탭 비활성 시에도 게임 루프 계속 실행** — `gameLoop`이 `requestAnimationFrame`만으로 반복되며 `document.visibilitychange`를 확인하지 않아, 배경 탭 상태에서도 스폰/이동/충돌 연산이 계속 소모됩니다. 탭이 숨겨지면 `state.active`를 일시 정지하도록 개선하세요.
+10. **JS 주석 인코딩 깨짐(mojibake)** — 439번째 줄과 606번째 줄 부근의 한글 주석이 `?쒕꽕?쒖뒪 踰꾩뒪??諛쒖궗 濡쒖쭅 蹂듦뎄`처럼 깨진 상태로 저장되어 있습니다. UTF-8로 다시 저장해 정상 한글 주석으로 복구하세요.
+11. **`<title>`이 허브 전체를 대표하지 못함** — 현재 `<title>`은 "BUNT GAMES | 8-BIT Eternal Invasion"으로, 이 페이지가 24개 모듈을 포괄하는 허브임에도 첫 미니게임 이름만 노출합니다. "BUNT GAMES | Retro Arcade Hub" 등 허브 성격을 드러내는 제목으로 조정을 검토하세요.
+12. **`CONFIG.MODULES`와 실제 폴더 간 불일치** — `UNITY`, `WAVE`, `PLAYLIST`, `HOUSE`, `BOOK` 라벨은 이 저장소에 대응하는 폴더가 없고, 반대로 `album`, `clinic`, `city`, `star`, `terminal` 등 다수 폴더는 `MODULES`에 전혀 등록되지 않아 허브에서 접근할 수 없습니다. 로컬 개발/테스트 시 혼란을 줄이려면 목록을 동기화하거나 주석으로 상태(완료/예정/비공개)를 표시하세요.
+13. **Google Fonts 로딩에 `preconnect` 미사용** — `<link href="https://fonts.googleapis.com/...">`만 있고 `rel="preconnect"`가 없어 폰트 로딩이 지연될 수 있습니다. `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`을 추가하면 초기 렌더링이 개선됩니다.
+14. **캔버스 게임 콘텐츠의 대체 텍스트 부재** — `#gameCanvas`는 시각적으로만 정보를 전달하며 `aria-label`이나 대체 설명이 없습니다. 스크린리더 사용자를 위한 최소한의 설명(예: 배경 장식 요소이며 상호작용은 하단 버튼으로 가능하다는 안내)을 `aria-hidden`/`aria-label` 조합으로 보강하는 것을 고려하세요.
+
 ## Hub Menu Order
 
-현재 허브의 레벨 해금 순서:
+`index.html`의 `CONFIG.MODULES` 기준 실제 해금 순서(레벨 1~24):
 
 1. ONE
 2. CLOCK
-3. PILOT
-4. PUZZLE
-5. OCEAN
-6. BIRD
-7. PIZZA
-8. BOMB
-9. DRONE
-10. HACK
-11. COWBOY
-12. ZONE
-13. PANDEMIC
-14. SPACE
-15. WAVE
-16. PLAYLIST
-17. HOUSE
-18. BOOK
+3. UNITY *(로컬 폴더 없음)*
+4. TANK
+5. CABLE
+6. QUIZ
+7. ROGUE
+8. WORLD
+9. PILOT
+10. PUZZLE
+11. OCEAN
+12. BIRD
+13. PIZZA
+14. BOMB
+15. DRONE
+16. HACK
+17. COWBOY
+18. ZONE
+19. PANDEMIC
+20. SPACE
+21. WAVE *(로컬 폴더 없음)*
+22. PLAYLIST *(로컬 폴더 없음)*
+23. HOUSE *(로컬 폴더 없음)*
+24. BOOK *(로컬 폴더 없음)*
 
-참고: 일부 메뉴는 라이브 환경에서 심볼릭 링크/외부 경로로 연결됩니다.
+참고: 모듈 버튼은 상대경로가 아닌 `https://kitscript.com/game/<label>` 절대경로로 연결되므로, 로컬에서 허브를 열어도 클릭 시 라이브 사이트로 이동합니다.
 
 ## Project Structure
 
 - Root hub: `/index.html`
-- Local mini games:
-  - `/bird/index.html`
-  - `/bomb/index.html`
-  - `/cowboy/index.html`
-  - `/drone/index.html`
-  - `/hack/index.html`
-  - `/invasion/index.html`
-  - `/ocean/index.html`
-  - `/pandemic/index.html`
-  - `/pizza/index.html`
-  - `/puzzle/index.html`
-  - `/space/index.html`
-  - `/zone/index.html`
+- Local mini games (허브에 등록된 폴더): `/bird`, `/bomb`, `/cable`, `/clock`, `/cowboy`, `/drone`, `/hack`, `/ocean`, `/one`, `/pandemic`, `/pilot`, `/pizza`, `/puzzle`, `/quiz`, `/rogue`, `/space`, `/tank`, `/world`, `/zone`
+- Local projects not yet linked from the hub: `/album`, `/avatar`, `/bizcard`, `/city`, `/clinic`, `/clip`, `/clipcut`, `/home`, `/invasion`, `/metaball`, `/model`, `/motion`, `/oxpizza`, `/pickme`, `/reader`, `/shop`, `/solomade`, `/sopraknight`, `/spell`, `/star`, `/terminal`, `/textcast`, `/tool`, `/water`, `/word`, `/writer`
 
 ## Run Locally
 
@@ -100,6 +180,7 @@ python -m http.server 8080
 - 대부분 Canvas + WebAudio 기반
 - 게임 오버 후 자동 재시작 UX(대체로 7초 카운트다운) 사용
 - 터치/키보드 입력을 함께 고려한 아케이드 스타일 구성
+- 루트 허브(`index.html`)는 CSS/JS 전부 인라인, 외부 의존은 Google Fonts와 YouTube IFrame API뿐
 
 ## Contribution Guideline
 
@@ -109,8 +190,5 @@ python -m http.server 8080
 
 ## License
 
-별도 라이선스 파일이 없다면 기본적으로 All Rights Reserved로 간주됩니다.  
+별도 라이선스 파일이 없다면 기본적으로 All Rights Reserved로 간주됩니다.
 필요 시 `LICENSE` 파일을 추가해 정책을 명시하세요.
-
-
-
