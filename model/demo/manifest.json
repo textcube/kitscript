@@ -1,0 +1,5 @@
+{
+  "_comment": "Model2Sprite demo-mode playlist. Put .glb/.gltf/.fbx files in model/demo/ and list their filenames below (played in listed order, ~14s each). If this file is missing or 'models' is empty, the viewer falls back to the built-in RobotExpressive sample from threejs.org.",
+  "_example": { "models": ["robot.glb", "dragon.fbx"] },
+  "models": []
+}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model2Sprite | BUNTGAMES</title>
+    <!-- NOTE: Tailwind Play CDN is prototype-only; for production, serve a built/purged CSS file instead. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js and Loaders -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,7 +15,7 @@
     <!-- JSZip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.294.0"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
@@ -120,8 +121,12 @@
 <body class="h-screen flex text-xs">
     <div class="hud-scanlines"></div>
 
+    <!-- Mobile Sidebar Toggles (hidden on md and up) -->
+    <button onclick="toggleSidebar('left')" aria-label="Toggle asset panel" class="md:hidden fixed top-3 left-3 z-40 p-2.5 btn-outline text-[#00f3ff]"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
+    <button onclick="toggleSidebar('right')" aria-label="Toggle settings panel" class="md:hidden fixed top-3 right-3 z-40 p-2.5 btn-outline text-[#00f3ff]"><i data-lucide="panel-right" class="w-4 h-4"></i></button>
+
     <!-- Sidebar Left -->
-    <aside class="w-80 h-full border-r hud-panel z-20 flex flex-col shrink-0 shadow-[20px_0_60px_rgba(0,0,0,0.7)]">
+    <aside id="leftSidebar" class="w-80 max-w-[85vw] md:max-w-none h-full border-r hud-panel flex flex-col shrink-0 shadow-[20px_0_60px_rgba(0,0,0,0.7)] fixed md:static inset-y-0 left-0 -translate-x-full md:translate-x-0 transition-transform duration-200 z-30 md:z-20">
         <!-- Header -->
         <div class="p-6 border-b border-[#00f3ff33] relative overflow-hidden group">
             <div class="absolute top-0 left-0 w-1 h-full bg-[#00f3ff] shadow-[0_0_15px_#00f3ff]"></div>
@@ -189,7 +194,13 @@
     <main class="flex-1 relative flex flex-col bg-[#010203]">
         <div id="canvasContainer" class="flex-1 relative">
             <canvas id="mainCanvas" class="w-full h-full block"></canvas>
-            
+
+            <!-- Demo (Attract) Mode Banner -->
+            <div id="demoBanner" class="hidden absolute top-24 left-1/2 -translate-x-1/2 z-20 pointer-events-none text-center space-y-1.5">
+                <div class="px-6 py-2 border border-[#00f3ff44] bg-[#000a18cc] backdrop-blur-md text-[10px] font-black uppercase tracking-[0.4em] text-[#00f3ff] animate-pulse rounded-sm shadow-[0_0_25px_rgba(0,243,255,0.15)]">DEMO_MODE // INTERACT_TO_START</div>
+                <div id="demoModelName" class="text-[9px] font-black uppercase tracking-[0.3em] text-[#00f3ff88]"></div>
+            </div>
+
             <div class="absolute inset-0 pointer-events-none p-6 flex flex-col justify-between z-10">
                 <!-- HUD Top -->
                 <div class="flex justify-between items-start">
@@ -250,7 +261,7 @@
     </main>
 
     <!-- Sidebar Right -->
-    <aside class="w-80 h-full border-l hud-panel flex flex-col shrink-0 z-20 shadow-[-20px_0_60px_rgba(0,0,0,0.7)] overflow-y-auto custom-scrollbar">
+    <aside id="rightSidebar" class="w-80 max-w-[85vw] md:max-w-none h-full border-l hud-panel flex flex-col shrink-0 shadow-[-20px_0_60px_rgba(0,0,0,0.7)] overflow-y-auto custom-scrollbar fixed md:static inset-y-0 right-0 translate-x-full md:translate-x-0 transition-transform duration-200 z-30 md:z-20">
         <div class="p-6 border-b border-[#00f3ff44] flex items-center justify-between bg-[#00f3ff05]">
             <div class="flex items-center gap-2">
                 <i data-lucide="settings" class="w-4 h-4 text-[#00f3ff]"></i>
@@ -310,6 +321,16 @@
 
         <!-- Actions -->
         <div class="p-8 mt-auto space-y-4 bg-[#00f3ff08]">
+            <div class="space-y-2">
+                <div class="flex justify-between text-[8px] font-black uppercase opacity-50 tracking-widest"><span>OUTPUT_RESOLUTION</span><span>PX</span></div>
+                <select id="exportRes" class="w-full bg-[#000d18] border border-[#00f3ff33] text-[#00f3ff] text-[10px] font-black py-3 px-3 focus:outline-none focus:border-[#00f3ff] appearance-none">
+                    <option value="0">VIEWPORT_NATIVE</option>
+                    <option value="256">256 x 256</option>
+                    <option value="512">512 x 512</option>
+                    <option value="1024">1024 x 1024</option>
+                    <option value="2048">2048 x 2048</option>
+                </select>
+            </div>
             <button id="exportPngBtn" class="w-full py-6 btn-primary disabled:opacity-30 disabled:pointer-events-none font-black uppercase tracking-[0.4em] text-[11px] flex flex-col items-center justify-center gap-1 active:scale-95">
                 <div class="flex items-center gap-3"><i data-lucide="image" class="w-5 h-5"></i> <span>GEN_SPRITE_PACK</span></div>
             </button>
@@ -331,16 +352,34 @@
         let isPlaying = false;
         let isExporting = false;
         let playbackSpeed = 1;
+        let activeModelName = 'MODEL';
         const SAMPLE_MODEL_URL = "https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb";
+        const MAX_SAFE_FILE_SIZE = 100 * 1024 * 1024; // 100MB soft limit (warn only)
 
         const terminalLog = document.getElementById('terminalLog');
         function addLog(msg, type = 'INFO') {
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
             const logEntry = document.createElement('div');
             logEntry.className = 'flex gap-2';
-            const colorClass = type === 'ERROR' ? 'text-red-500' : type === 'SUCCESS' ? 'text-green-500' : 'text-[#00f3ffaa]';
-            logEntry.innerHTML = `<span class="opacity-20 shrink-0 text-[7px]">[${time}]</span><span class="${colorClass}">${msg}</span>`;
+            const colorClass = type === 'ERROR' ? 'text-red-500' : type === 'SUCCESS' ? 'text-green-500' : type === 'WARN' ? 'text-yellow-500' : 'text-[#00f3ffaa]';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'opacity-20 shrink-0 text-[7px]';
+            timeSpan.textContent = `[${time}]`;
+            const msgSpan = document.createElement('span');
+            msgSpan.className = colorClass;
+            msgSpan.textContent = msg; // textContent: user-supplied strings are never parsed as HTML
+            logEntry.append(timeSpan, msgSpan);
             terminalLog.prepend(logEntry);
+        }
+
+        function sanitizeName(name) {
+            return String(name || '').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'UNTITLED';
+        }
+
+        function buildExportName(ext) {
+            const clipName = activeAction ? sanitizeName(activeAction._clip.name) : 'CLIP';
+            const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDDHHMMSS
+            return `${sanitizeName(activeModelName)}_${clipName}_${ts}.${ext}`;
         }
 
         // --- Init Scene ---
@@ -413,8 +452,27 @@
         }
 
         // --- Model Handling ---
+        function disposeModel(obj) {
+            obj.traverse((node) => {
+                if (node.geometry) node.geometry.dispose();
+                if (node.material) {
+                    const materials = Array.isArray(node.material) ? node.material : [node.material];
+                    materials.forEach((mat) => {
+                        Object.values(mat).forEach((value) => {
+                            if (value && value.isTexture) value.dispose();
+                        });
+                        mat.dispose();
+                    });
+                }
+            });
+        }
+
         async function setupModel(obj, clips) {
-            if (activeModel) scene.remove(activeModel);
+            if (activeModel) {
+                scene.remove(activeModel);
+                disposeModel(activeModel); // free GPU memory (geometry/material/texture)
+            }
+            if (mixer) mixer.stopAllAction();
             activeModel = obj;
             scene.add(obj);
 
@@ -444,10 +502,12 @@
                 btn.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="opacity-20 text-[8px]">[${String(i).padStart(2, '0')}]</span>
-                        <span class="font-bold uppercase tracking-widest truncate max-w-[140px] text-[10px]">${clip.name || 'CLIP_'+i}</span>
+                        <span class="font-bold uppercase tracking-widest truncate max-w-[140px] text-[10px]"></span>
                     </div>
                     <i data-lucide="zap" class="w-3 h-3 opacity-0 group-hover:opacity-100 group-hover:animate-pulse"></i>
                 `;
+                // Clip names come from user files: insert via textContent to avoid HTML injection
+                btn.querySelector('span.font-bold').textContent = clip.name || 'CLIP_' + i;
                 btn.onclick = () => selectAnimation(i);
                 list.appendChild(btn);
             });
@@ -477,7 +537,7 @@
                 }
             });
             lucide.createIcons();
-            addLog(`CLIP_LOCKED: ${clip.name.toUpperCase()}`);
+            addLog(`CLIP_LOCKED: ${(clip.name || 'CLIP_' + index).toUpperCase()}`);
         }
 
         // --- Event Listeners ---
@@ -485,8 +545,19 @@
             const file = e.target.files[0];
             if (!file) return;
             const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext !== 'glb' && ext !== 'gltf' && ext !== 'fbx') {
+                addLog(`UNSUPPORTED_FORMAT: .${ext.toUpperCase()} (EXPECTED GLB/GLTF/FBX)`, "ERROR");
+                e.target.value = '';
+                return;
+            }
+            if (file.size > MAX_SAFE_FILE_SIZE) {
+                addLog(`LARGE_FILE_WARNING: ${(file.size / 1048576).toFixed(1)}MB > 100MB (UI_MAY_FREEZE_DURING_PARSE)`, "WARN");
+            }
+
+            const hideSpinner = () => document.getElementById('loadingSpinner').classList.add('hidden');
             const reader = new FileReader();
-            
+
             document.getElementById('loadingSpinner').classList.remove('hidden');
             addLog(`UPLOADING: ${file.name.toUpperCase()}`);
 
@@ -496,19 +567,28 @@
                     if (ext === 'glb' || ext === 'gltf') {
                         const loader = new THREE.GLTFLoader();
                         loader.parse(data, '', (gltf) => {
+                            activeModelName = file.name.replace(/\.[^.]+$/, '');
                             setupModel(gltf.scene, gltf.animations);
-                            document.getElementById('loadingSpinner').classList.add('hidden');
+                            hideSpinner();
+                        }, (err) => {
+                            addLog(`DATA_PARSE_ERROR: ${(err && err.message) ? err.message : 'GLTF_DECODE_FAIL'}`, "ERROR");
+                            hideSpinner();
                         });
-                    } else if (ext === 'fbx') {
+                    } else {
                         const loader = new THREE.FBXLoader();
                         const model = loader.parse(data);
+                        activeModelName = file.name.replace(/\.[^.]+$/, '');
                         setupModel(model, model.animations);
-                        document.getElementById('loadingSpinner').classList.add('hidden');
+                        hideSpinner();
                     }
                 } catch (err) {
-                    addLog("DATA_PARSE_ERROR", "ERROR");
-                    document.getElementById('loadingSpinner').classList.add('hidden');
+                    addLog(`DATA_PARSE_ERROR: ${(err && err.message) ? err.message : 'UNKNOWN'}`, "ERROR");
+                    hideSpinner();
                 }
+            };
+            reader.onerror = () => {
+                addLog("FILE_READ_ERROR", "ERROR");
+                hideSpinner();
             };
             reader.readAsArrayBuffer(file);
         });
@@ -518,6 +598,7 @@
             addLog("STREAMING_SHOWREEL_ASSET...");
             const loader = new THREE.GLTFLoader();
             loader.load(SAMPLE_MODEL_URL, (gltf) => {
+                activeModelName = 'RobotExpressive';
                 setupModel(gltf.scene, gltf.animations);
                 document.getElementById('loadingSpinner').classList.add('hidden');
                 addLog("SHOWREEL_LOAD_COMPLETE", "SUCCESS");
@@ -620,6 +701,42 @@
         }
 
         // --- Exporters ---
+        function applyExportResolution() {
+            // Snapshot current viewport state, then force a fixed output resolution if selected
+            const container = document.getElementById('canvasContainer');
+            const restore = {
+                width: container.clientWidth,
+                height: container.clientHeight,
+                pixelRatio: renderer.getPixelRatio(),
+                aspect: camera.aspect
+            };
+            const res = parseInt(document.getElementById('exportRes').value, 10);
+            if (res > 0) {
+                renderer.setPixelRatio(1);
+                renderer.setSize(res, res, false); // keep CSS size, resize drawing buffer only
+                camera.aspect = 1;
+                camera.updateProjectionMatrix();
+                addLog(`OUTPUT_RES_LOCKED: ${res}x${res}`, "INFO");
+            }
+            return restore;
+        }
+
+        function restoreViewport(restore) {
+            renderer.setPixelRatio(restore.pixelRatio);
+            renderer.setSize(restore.width, restore.height);
+            camera.aspect = restore.aspect;
+            camera.updateProjectionMatrix();
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000); // release blob reference after download starts
+        }
+
         async function exportPNG() {
             if (!activeAction || isExporting) return;
             isExporting = true;
@@ -631,80 +748,257 @@
             const fps = 30;
             const duration = activeAction._clip.duration;
             const totalFrames = Math.ceil(duration * fps);
-            
+
             const grid = scene.getObjectByName('grid');
             const prevGrid = grid.visible;
             grid.visible = false;
+            const restore = applyExportResolution();
 
-            for (let i = 0; i < totalFrames; i++) {
-                const time = i * (1 / fps);
-                mixer.setTime(time);
-                renderer.render(scene, camera);
-                const data = document.getElementById('mainCanvas').toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
-                zip.file(`frame_${String(i).padStart(4, '0')}.png`, data, { base64: true });
-                
-                const prog = Math.round((i / totalFrames) * 100);
-                document.getElementById('exportProgress').style.width = prog + '%';
-                document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
-                await new Promise(r => setTimeout(r, 10));
+            try {
+                for (let i = 0; i < totalFrames; i++) {
+                    const time = i * (1 / fps);
+                    mixer.setTime(time);
+                    renderer.render(scene, camera);
+                    const data = document.getElementById('mainCanvas').toDataURL('image/png').replace(/^data:image\/png;base64,/, "");
+                    zip.file(`frame_${String(i).padStart(4, '0')}.png`, data, { base64: true });
+
+                    const prog = Math.round((i / totalFrames) * 100);
+                    document.getElementById('exportProgress').style.width = prog + '%';
+                    document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
+                    await new Promise(r => setTimeout(r, 10));
+                }
+
+                const content = await zip.generateAsync({ type: "blob" });
+                downloadBlob(content, buildExportName('zip'));
+                addLog("SPRITE_ARCHIVE_DEPLOYED", "SUCCESS");
+            } catch (err) {
+                addLog(`PIXEL_DUMP_FAILED: ${(err && err.message) ? err.message : 'UNKNOWN'}`, "ERROR");
+            } finally {
+                grid.visible = prevGrid;
+                restoreViewport(restore);
+                isExporting = false;
+                document.getElementById('exportOverlay').classList.add('hidden');
             }
+        }
 
-            const content = await zip.generateAsync({ type: "blob" });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = `BUNTGAMES_SpritePack.zip`;
-            link.click();
-
-            grid.visible = prevGrid;
-            isExporting = false;
-            document.getElementById('exportOverlay').classList.add('hidden');
-            addLog("SPRITE_ARCHIVE_DEPLOYED", "SUCCESS");
+        function pickVideoMimeType() {
+            if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return null;
+            const candidates = ['video/webm; codecs=vp9', 'video/webm; codecs=vp8', 'video/webm'];
+            return candidates.find((m) => MediaRecorder.isTypeSupported(m)) || null;
         }
 
         async function exportWebM() {
             if (!activeAction || isExporting) return;
+
+            const mimeType = pickVideoMimeType();
+            if (!mimeType) {
+                addLog("VIDEO_EXPORT_UNSUPPORTED: NO_WEBM_ENCODER_IN_THIS_BROWSER", "ERROR");
+                return;
+            }
+
             isExporting = true;
             isPlaying = false;
             document.getElementById('exportOverlay').classList.remove('hidden');
-            addLog("ENCODING_VP9_STREAM", "INFO");
+            addLog(`ENCODING_STREAM: ${mimeType.toUpperCase()}`, "INFO");
 
             const fps = 30;
             const duration = activeAction._clip.duration;
             const totalFrames = Math.ceil(duration * fps);
-            
-            const stream = document.getElementById('mainCanvas').captureStream(fps);
-            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+            const restore = applyExportResolution();
+
+            let recorder;
+            try {
+                const stream = document.getElementById('mainCanvas').captureStream(fps);
+                recorder = new MediaRecorder(stream, { mimeType });
+            } catch (err) {
+                addLog(`RECORDER_INIT_FAILED: ${(err && err.message) ? err.message : 'UNKNOWN'}`, "ERROR");
+                restoreViewport(restore);
+                isExporting = false;
+                document.getElementById('exportOverlay').classList.add('hidden');
+                return;
+            }
+
             const chunks = [];
-            
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'video/webm' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `BUNTGAMES_Video.webm`;
-                link.click();
-                isExporting = false;
-                document.getElementById('exportOverlay').classList.add('hidden');
+                downloadBlob(blob, buildExportName('webm'));
                 addLog("VIDEO_STREAM_READY", "SUCCESS");
             };
 
-            recorder.start();
-            for (let i = 0; i < totalFrames; i++) {
-                const time = i * (1 / fps);
-                mixer.setTime(time);
-                renderer.render(scene, camera);
-                const prog = Math.round((i / totalFrames) * 100);
-                document.getElementById('exportProgress').style.width = prog + '%';
-                document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
-                await new Promise(r => setTimeout(r, 1000/fps));
+            try {
+                recorder.start();
+                for (let i = 0; i < totalFrames; i++) {
+                    const time = i * (1 / fps);
+                    mixer.setTime(time);
+                    renderer.render(scene, camera);
+                    const prog = Math.round((i / totalFrames) * 100);
+                    document.getElementById('exportProgress').style.width = prog + '%';
+                    document.getElementById('progressText').innerText = `PROGRESS: ${prog}%`;
+                    await new Promise(r => setTimeout(r, 1000/fps));
+                }
+            } catch (err) {
+                addLog(`VIDEO_ENCODE_FAILED: ${(err && err.message) ? err.message : 'UNKNOWN'}`, "ERROR");
+            } finally {
+                if (recorder.state !== 'inactive') recorder.stop();
+                restoreViewport(restore);
+                isExporting = false;
+                document.getElementById('exportOverlay').classList.add('hidden');
             }
-            recorder.stop();
+        }
+
+        // --- Demo (Attract) Mode ---
+        // Auto-starts on page load: cycles through demo/manifest.json models with
+        // auto-rotating camera and auto-playing clips until the user interacts.
+        const DEMO_MODEL_DURATION = 14000;  // ms per model
+        const DEMO_CLIP_INTERVAL = 5000;    // ms per clip when a model has multiple clips
+        const DEMO_INTERACT_EVENTS = ['pointerdown', 'wheel', 'keydown', 'touchstart'];
+        let demoMode = false;
+        let demoModels = [];
+        let demoIndex = 0;
+        let demoClipIndex = 0;
+        let demoLoadToken = 0;   // invalidates in-flight demo loads after stop/switch
+        let demoFailStreak = 0;
+        let demoModelTimer = null;
+        let demoClipTimer = null;
+
+        async function fetchDemoManifest() {
+            try {
+                const res = await fetch('demo/manifest.json', { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const files = Array.isArray(data.models) ? data.models : [];
+                return files
+                    .filter((f) => typeof f === 'string' && /\.(glb|gltf|fbx)$/i.test(f))
+                    .map((f) => ({ url: 'demo/' + f, name: f.replace(/\.[^.]+$/, '') }));
+            } catch (err) {
+                return [];
+            }
+        }
+
+        function demoAutoPlay() {
+            isPlaying = true;
+            document.getElementById('playBtn').innerHTML = '<i data-lucide="pause" class="w-3 h-3"></i> STALL';
+            lucide.createIcons();
+        }
+
+        function clearDemoTimers() {
+            if (demoModelTimer) { clearTimeout(demoModelTimer); demoModelTimer = null; }
+            if (demoClipTimer) { clearInterval(demoClipTimer); demoClipTimer = null; }
+        }
+
+        function scheduleDemoTimers() {
+            clearDemoTimers();
+            demoModelTimer = setTimeout(() => {
+                if (demoMode) loadDemoModel((demoIndex + 1) % demoModels.length);
+            }, DEMO_MODEL_DURATION);
+            if (animations.length > 1) {
+                demoClipTimer = setInterval(() => {
+                    if (!demoMode) return;
+                    demoClipIndex = (demoClipIndex + 1) % animations.length;
+                    selectAnimation(demoClipIndex);
+                    demoAutoPlay();
+                }, DEMO_CLIP_INTERVAL);
+            }
+        }
+
+        function loadDemoModel(index) {
+            if (!demoMode) return;
+            demoIndex = index;
+            demoClipIndex = 0;
+            const entry = demoModels[index % demoModels.length];
+            const token = ++demoLoadToken;
+            document.getElementById('demoModelName').textContent = `ASSET: ${entry.name.toUpperCase()}`;
+            addLog(`DEMO_STREAMING: ${entry.name.toUpperCase()}`);
+
+            const onLoaded = (obj, clips) => {
+                // Guard: demo may have been stopped (or superseded) while this load was in flight
+                if (!demoMode || token !== demoLoadToken) { disposeModel(obj); return; }
+                demoFailStreak = 0;
+                activeModelName = entry.name;
+                setupModel(obj, clips || []);
+                demoAutoPlay();
+                scheduleDemoTimers();
+            };
+            const onError = () => {
+                if (!demoMode || token !== demoLoadToken) return;
+                addLog(`DEMO_FETCH_FAILURE: ${entry.name.toUpperCase()}`, "ERROR");
+                demoFailStreak++;
+                if (demoFailStreak >= demoModels.length) {
+                    addLog("DEMO_MODE_ABORTED: ALL_ASSETS_UNREACHABLE", "ERROR");
+                    stopDemoMode(true);
+                    return;
+                }
+                demoModelTimer = setTimeout(() => loadDemoModel((index + 1) % demoModels.length), 1500);
+            };
+
+            const ext = entry.url.split('.').pop().toLowerCase();
+            if (ext === 'fbx') {
+                new THREE.FBXLoader().load(entry.url, (model) => onLoaded(model, model.animations), undefined, onError);
+            } else {
+                new THREE.GLTFLoader().load(entry.url, (gltf) => onLoaded(gltf.scene, gltf.animations), undefined, onError);
+            }
+        }
+
+        function onDemoVisibility() {
+            if (!demoMode) return;
+            if (document.hidden) {
+                clearDemoTimers(); // pause cycling while tab is in background
+            } else if (activeModel) {
+                scheduleDemoTimers();
+            }
+        }
+
+        async function startDemoMode() {
+            // Arm interaction traps first so a user gesture during manifest fetch still cancels the demo
+            demoMode = true;
+            DEMO_INTERACT_EVENTS.forEach((ev) => window.addEventListener(ev, stopDemoMode, { capture: true, passive: true }));
+            document.addEventListener('visibilitychange', onDemoVisibility);
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 1.5;
+            document.getElementById('demoBanner').classList.remove('hidden');
+            addLog("DEMO_MODE_ENGAGED: INTERACT_TO_START", "INFO");
+
+            demoModels = await fetchDemoManifest();
+            if (!demoMode) return; // user interacted while manifest was loading
+            if (demoModels.length === 0) {
+                demoModels = [{ url: SAMPLE_MODEL_URL, name: 'RobotExpressive' }];
+                addLog("DEMO_MANIFEST_EMPTY: FALLBACK_TO_SHOWREEL", "WARN");
+            }
+            loadDemoModel(0);
+        }
+
+        function stopDemoMode(silent) {
+            if (!demoMode) return;
+            demoMode = false;
+            demoLoadToken++; // any in-flight demo load resolves as a no-op
+            clearDemoTimers();
+            controls.autoRotate = false;
+            DEMO_INTERACT_EVENTS.forEach((ev) => window.removeEventListener(ev, stopDemoMode, { capture: true }));
+            document.removeEventListener('visibilitychange', onDemoVisibility);
+            document.getElementById('demoBanner').classList.add('hidden');
+            // Current model stays in the scene: the user continues from the demo state
+            if (silent !== true) addLog("DEMO_MODE_DISENGAGED: MANUAL_CONTROL_ACTIVE", "SUCCESS");
+        }
+
+        // Mobile sidebar toggles (no-op on md+ where md:translate-x-0 wins)
+        function toggleSidebar(side) {
+            const left = document.getElementById('leftSidebar');
+            const right = document.getElementById('rightSidebar');
+            if (side === 'left') {
+                left.classList.toggle('-translate-x-full');
+                right.classList.add('translate-x-full'); // keep only one panel open on small screens
+            } else {
+                right.classList.toggle('translate-x-full');
+                left.classList.add('-translate-x-full');
+            }
         }
 
         document.getElementById('exportPngBtn').onclick = exportPNG;
         document.getElementById('exportWebmBtn').onclick = exportWebM;
 
         init();
+        startDemoMode();
     </script>
 </body>
 </html>
