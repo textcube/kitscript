@@ -2,47 +2,96 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0f1a">
     <title>BizCard Pro | QR Business Card Designer</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@400;700&family=Playfair+Display:wght@700&family=Roboto+Mono&display=swap" rel="stylesheet">
-    <!-- QRCode.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@400;600;700&family=Manrope:wght@400;500;700&family=Cormorant+Garamond:wght@600;700&family=Marcellus&family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- qrcode-generator (UTF-8 지원 — qrcodejs 1.0.0은 한글 vCard에서 code length overflow 발생) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <!-- Html2Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
+
     <style>
         :root {
-            --bg-color: #f1f5f9;
-            --panel-bg: #ffffff;
-            --accent-color: #4f46e5;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --radius: 12px;
-            --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            color-scheme: dark;
+            --bg-void: #05070d;
+            --bg-deep: #0b0f1a;
+            --bg-deep-2: #131a2a;
+            --panel-glass: rgba(255,255,255,0.045);
+            --panel-glass-strong: rgba(255,255,255,0.07);
+            --panel-border: rgba(255,255,255,0.09);
+            --gold: #e8c674;
+            --gold-dim: #b8934a;
+            --violet: #8b5cf6;
+            --violet-dim: #6d28d9;
+            --accent-color: var(--violet);
+            --text-main: #eef2ff;
+            --text-muted: #94a0b8;
+            --border-color: rgba(255,255,255,0.09);
+            --radius: 16px;
+            --shadow: 0 20px 45px -14px rgba(0,0,0,0.65);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(139,92,246,0.20), transparent 42%),
+                radial-gradient(circle at 88% 12%, rgba(232,198,116,0.13), transparent 45%),
+                radial-gradient(circle at 50% 100%, rgba(109,40,217,0.16), transparent 55%),
+                linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-void) 100%);
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.24); }
 
         header {
-            background: var(--panel-bg);
-            padding: 0.75rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
+            background: rgba(11,15,26,0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 0.85rem 1.5rem;
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 50;
+            flex-shrink: 0;
         }
 
-        .logo-area { font-weight: 800; font-size: 1.1rem; color: var(--accent-color); display: flex; align-items: center; gap: 10px; }
+        .logo-area {
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(120deg, var(--gold), #fff6df 40%, var(--violet));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .logo-area svg { color: var(--gold); flex-shrink: 0; }
+
+        .header-actions { display: flex; gap: 8px; }
 
         .app-container {
             display: grid;
             grid-template-columns: 340px 1fr 320px;
+            grid-template-areas: "info preview stack";
             flex: 1;
             overflow: hidden;
+            gap: 1rem;
+            padding: 1rem;
+            min-height: 0;
         }
 
         @media (max-width: 1024px) {
@@ -50,28 +99,142 @@
         }
 
         @media (max-width: 850px) {
-            .app-container { grid-template-columns: 1fr; overflow-y: auto; height: auto; }
-            body { overflow-y: auto; }
+            .app-container {
+                display: block;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                min-height: 0;
+                padding: 0;
+                padding-bottom: 76px;
+            }
         }
 
-        .panel { background: var(--panel-bg); padding: 1.25rem; overflow-y: auto; border-right: 1px solid var(--border-color); }
-        .panel-right { border-right: none; border-left: 1px solid var(--border-color); }
-        .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .panel {
+            grid-area: info;
+            background: var(--panel-glass);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+        }
 
-        .form-group { margin-bottom: 0.75rem; }
-        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem; color: var(--text-main); }
+        #panel-stack {
+            grid-area: stack;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        #panel-stack .panel { flex-shrink: 0; }
+
+        @media (max-width: 850px) {
+            .panel, #panel-stack { border-radius: 0; box-shadow: none; overflow-y: visible; }
+            .panel { border-left: none; border-right: none; border-top: none; padding: 1rem; }
+            #panel-stack { gap: 0; }
+        }
+
+        .panel-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group { margin-bottom: 0.85rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-main); }
+
         input[type="text"], input[type="email"], input[type="tel"], input[type="url"], select, textarea {
-            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; transition: all 0.2s;
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            background: rgba(255,255,255,0.04);
+            color: var(--text-main);
+            transition: all 0.2s;
         }
-        input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1); }
+        input[type="text"]::placeholder, input[type="email"]::placeholder, input[type="tel"]::placeholder, input[type="url"]::placeholder { color: var(--text-muted); }
+        input:focus, select:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px rgba(139,92,246,0.28); }
+        select option { background: var(--bg-deep-2); color: var(--text-main); }
+
+        input[type="file"] { color: var(--text-muted); }
+        input[type="file"]::file-selector-button {
+            background: var(--panel-glass-strong);
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        .btn { background: var(--accent-color); color: white; border: none; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-outline { background: white; border: 1px solid var(--accent-color); color: var(--accent-color); }
+        .btn {
+            background: linear-gradient(135deg, var(--violet), var(--violet-dim));
+            color: white;
+            border: none;
+            padding: 0.65rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 24px -8px rgba(139,92,246,0.55);
+            min-height: 44px;
+        }
+        .btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--gold-dim);
+            color: var(--gold);
+            box-shadow: none;
+        }
+        .btn-outline:hover { background: rgba(232,198,116,0.08); }
 
-        .preview-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; position: relative; }
-        
+        .preview-area {
+            grid-area: preview;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow: hidden;
+            position: relative;
+            background:
+                radial-gradient(ellipse 70% 55% at 50% 45%, rgba(139,92,246,0.20), transparent 65%),
+                radial-gradient(circle at 50% 100%, rgba(232,198,116,0.10), transparent 70%);
+            border-radius: var(--radius);
+        }
+
+        @media (max-width: 850px) {
+            .preview-area {
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                padding: 1rem 1rem 0.75rem;
+                border-radius: 0;
+                background:
+                    radial-gradient(ellipse 80% 60% at 50% 35%, rgba(139,92,246,0.22), transparent 65%),
+                    linear-gradient(180deg, rgba(11,15,26,0.97), rgba(11,15,26,0.94));
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--panel-border);
+            }
+        }
+
+        #card-stage { position: relative; flex-shrink: 0; }
+
         /* 명함 컨테이너 */
         #card-container {
             width: 500px;
@@ -80,266 +243,456 @@
             border-radius: 12px;
             box-shadow: var(--shadow);
             display: flex;
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
             overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: center;
+            transform-origin: top left;
         }
 
-        .card-body { 
-            flex: 1; 
-            padding: 2.2rem; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-            position: relative; 
+        .card-body {
+            flex: 1;
+            padding: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
             z-index: 5;
             min-height: 0;
         }
         .card-header { display: flex; align-items: flex-start; gap: 1rem; flex-shrink: 0; }
         .card-logo { width: 45px; height: 45px; object-fit: contain; }
         .card-profile { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
+
         .card-name { font-size: 1.6rem; font-weight: 800; line-height: 1.1; margin-bottom: 2px; }
         .card-title { font-size: 0.9rem; font-weight: 500; opacity: 0.8; }
-        .card-company { font-size: 0.8rem; font-weight: 700; margin-top: 4px; color: var(--accent-color); }
+        .card-company { font-size: 0.8rem; font-weight: 700; margin-top: 4px; color: var(--card-accent, #4f46e5); }
 
         .card-contact { font-size: 0.72rem; line-height: 1.6; margin-top: auto; flex-shrink: 1; min-height: 0; }
         .card-contact div { display: flex; align-items: center; gap: 6px; }
+        .c-icon { display: inline-flex; width: 13px; height: 13px; flex-shrink: 0; }
+        .c-icon svg { width: 100%; height: 100%; display: block; }
 
         /* QR 섹션 */
-        .card-qr-section { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 1.5rem; 
-            background: rgba(0,0,0,0.03); 
-            position: relative; 
-            z-index: 5; 
+        .card-qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.03);
+            position: relative;
+            z-index: 5;
             transition: 0.3s ease;
             flex-shrink: 0;
         }
-        #qrcode-wrap { background: #fff; padding: 6px; border-radius: 8px; position: relative; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        #qrcode-wrap { background: #fff; padding: 6px; border-radius: 8px; position: relative; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0; }
+        #qr-display { display: block; }
+
+        /* 명함 배경 패턴 오버레이 (content는 z-index 5, 패턴은 1) */
+        #card-pattern {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background-repeat: repeat;
+            display: none;
+        }
         .qr-logo-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 22%; height: 22%; background: white; padding: 2px; border-radius: 2px; display: none; }
 
+        .preview-caption { margin-top: 1.25rem; color: var(--text-muted); font-size: 0.75rem; text-align: center; }
+        @media (max-width: 850px) { .preview-caption { margin-top: 0.5rem; margin-bottom: 0.5rem; } }
+
         .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
-        .temp-item { padding: 8px 4px; border: 1px solid var(--border-color); border-radius: 6px; text-align: center; cursor: pointer; font-size: 0.7rem; font-weight: 600; background: #fff; }
-        .temp-item.active { border-color: var(--accent-color); background: rgba(79, 70, 229, 0.05); color: var(--accent-color); }
-        
-        .control-group { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
+        .pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 10px; }
+        .pattern-grid .temp-item { font-size: 0.66rem; padding: 8px 2px; }
+        .temp-item {
+            appearance: none;
+            font-family: inherit;
+            padding: 10px 4px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-muted);
+            min-height: 44px;
+            transition: 0.15s;
+        }
+        .temp-item:hover { border-color: var(--gold-dim); color: var(--text-main); }
+        .temp-item.active { border-color: var(--gold); background: rgba(232,198,116,0.10); color: var(--gold); box-shadow: 0 0 0 1px rgba(232,198,116,0.3) inset; }
+        .temp-item:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+        .control-group { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--panel-border); }
         .control-group:last-child { border-bottom: none; }
-        .flex-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        input[type="color"] { border: none; width: 24px; height: 24px; cursor: pointer; background: none; }
-        input[type="range"] { cursor: pointer; }
+        .flex-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; min-height: 32px; }
+        input[type="color"] { border: 1px solid var(--panel-border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; background: none; padding: 2px; }
+        input[type="range"] { cursor: pointer; width: 100%; accent-color: var(--violet); }
+        input[type="checkbox"] { accent-color: var(--violet); width: 18px; height: 18px; cursor: pointer; }
 
         .hidden { display: none !important; }
+
+        /* Mobile tab bar */
+        .mobile-tabbar {
+            display: none;
+            gap: 6px;
+            padding: 0.6rem 0.75rem;
+            background: rgba(11,15,26,0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--panel-border);
+        }
+        .tab-btn {
+            appearance: none;
+            flex: 1;
+            font-family: inherit;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--panel-border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            padding: 0.6rem 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            min-height: 44px;
+        }
+        .tab-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(232,198,116,0.10); }
+
+        @media (max-width: 850px) {
+            .mobile-tabbar { display: flex; position: sticky; z-index: 39; }
+            #panel-info, #panel-design, #panel-qr { display: none; }
+            body[data-tab="info"] #panel-info,
+            body[data-tab="design"] #panel-design,
+            body[data-tab="qr"] #panel-qr { display: block; }
+            .header-actions.desktop-actions { display: none; }
+        }
+
+        /* Mobile fixed action bar */
+        .mobile-actionbar {
+            display: none;
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 100;
+            gap: 8px;
+            padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom, 0px));
+            background: rgba(11,15,26,0.94);
+            backdrop-filter: blur(14px);
+            border-top: 1px solid var(--panel-border);
+        }
+        .mobile-actionbar .btn { flex: 1; margin: 0; }
+        @media (max-width: 850px) { .mobile-actionbar { display: flex; } }
     </style>
 </head>
-<body>
+<body data-tab="info">
 
 <header>
     <div class="logo-area">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         BizCard Pro
     </div>
-    <div style="display: flex; gap: 8px;">
+    <div class="header-actions desktop-actions">
         <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
         <button class="btn" onclick="downloadQR()">Save QR Only</button>
     </div>
 </header>
 
 <main class="app-container">
+
+    <!-- CENTER: LIVE PREVIEW (first in DOM so it can sit sticky-on-top on mobile) -->
+    <section class="preview-area" id="preview-area">
+        <div id="card-stage">
+            <div id="card-container">
+                <div id="card-pattern" aria-hidden="true"></div>
+                <div class="card-body" id="card-main">
+                    <div class="card-header" id="view-header">
+                        <img id="view-logo" src="" class="card-logo" alt="logo">
+                        <img id="view-profile" src="" class="card-profile hidden" alt="profile">
+                        <div>
+                            <div class="card-name" id="view-name">Tony Kim</div>
+                            <div class="card-title" id="view-title">Producer</div>
+                            <div class="card-company" id="view-company">Bunt Games</div>
+                        </div>
+                    </div>
+                    <div class="card-contact" id="view-contact">
+                        <div id="row-phone"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> <span id="v-phone">010-0000-0000</span></div>
+                        <div id="row-email"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span> <span id="v-email">tony@kitscript.com</span></div>
+                        <div id="row-web"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span id="v-web">kitscript.com</span></div>
+                        <div id="row-youtube"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></span> <span id="v-youtube">youtube.com/@textcube</span></div>
+                        <div id="row-addr"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span> <span id="v-addr">Seoul, South Korea</span></div>
+                    </div>
+                </div>
+                <div class="card-qr-section" id="qr-box">
+                    <div id="qrcode-wrap">
+                        <img id="qr-display" src="" alt="QR code" width="105" height="105">
+                        <img id="qr-logo" class="qr-logo-overlay" src="" alt="">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="preview-caption" id="preview-caption">Preview auto-fits to your screen.</p>
+    </section>
+
+    <!-- Mobile tab bar -->
+    <nav class="mobile-tabbar" id="mobile-tabbar">
+        <button type="button" class="tab-btn active" data-tab-target="info">Info</button>
+        <button type="button" class="tab-btn" data-tab-target="design">Design</button>
+        <button type="button" class="tab-btn" data-tab-target="qr">QR</button>
+    </nav>
+
     <!-- LEFT: CONTENT INPUT -->
-    <aside class="panel">
+    <aside class="panel" id="panel-info" data-tab="info">
         <div class="panel-title">Information</div>
         <div class="form-group">
-            <label>Full Name</label>
+            <label for="in-name">Full Name</label>
             <input type="text" id="in-name" value="Tony Kim">
         </div>
         <div class="form-group">
-            <label>Job Title</label>
+            <label for="in-title">Job Title</label>
             <input type="text" id="in-title" value="Producer">
         </div>
         <div class="form-group">
-            <label>Company</label>
+            <label for="in-company">Company</label>
             <input type="text" id="in-company" value="Bunt Games">
         </div>
         <div class="row">
-            <div class="form-group"><label>Phone</label><input type="tel" id="in-phone" value="010-0000-0000"></div>
-            <div class="form-group"><label>Email</label><input type="email" id="in-email" value="tony@kitscript.com"></div>
+            <div class="form-group"><label for="in-phone">Phone</label><input type="tel" id="in-phone" value="010-0000-0000"></div>
+            <div class="form-group"><label for="in-email">Email</label><input type="email" id="in-email" value="tony@kitscript.com"></div>
         </div>
         <div class="form-group">
-            <label>Website</label>
+            <label for="in-web">Website</label>
             <input type="url" id="in-web" value="kitscript.com">
         </div>
         <div class="form-group">
-            <label>YouTube</label>
+            <label for="in-youtube">YouTube</label>
             <input type="url" id="in-youtube" value="youtube.com/@textcube">
         </div>
         <div class="form-group">
-            <label>Address</label>
+            <label for="in-addr">Address</label>
             <input type="text" id="in-addr" value="Seoul, South Korea">
         </div>
 
         <div class="panel-title" style="margin-top: 1rem;">Assets</div>
         <div class="form-group">
-            <label>Company Logo</label>
+            <label for="f-logo">Company Logo</label>
             <input type="file" id="f-logo" accept="image/*" style="font-size: 0.7rem;">
         </div>
         <div class="form-group">
-            <label>Profile Picture</label>
+            <label for="f-profile">Profile Picture</label>
             <input type="file" id="f-profile" accept="image/*" style="font-size: 0.7rem;">
         </div>
-
-        <div class="panel-title" style="margin-top: 1rem;">QR Configuration</div>
-        <div class="form-group">
-            <label>QR Mode</label>
-            <select id="qr-mode">
-                <option value="vcard" selected>Add to Contacts (vCard)</option>
-                <option value="url">Direct Link (Website)</option>
-                <option value="youtube">Direct Link (YouTube)</option>
-            </select>
-        </div>
     </aside>
 
-    <!-- CENTER: LIVE PREVIEW -->
-    <section class="preview-area">
-        <div id="card-container">
-            <div class="card-body" id="card-main">
-                <div class="card-header" id="view-header">
-                    <img id="view-logo" src="" class="card-logo" alt="logo">
-                    <img id="view-profile" src="" class="card-profile hidden" alt="profile">
-                    <div>
-                        <div class="card-name" id="view-name">Tony Kim</div>
-                        <div class="card-title" id="view-title">Producer</div>
-                        <div class="card-company" id="view-company">Bunt Games</div>
-                    </div>
+    <!-- RIGHT: DESIGN + QR CONTROLS -->
+    <div class="panel-stack" id="panel-stack">
+        <aside class="panel" id="panel-design" data-tab="design">
+            <div class="panel-title">Templates</div>
+            <div class="template-grid">
+                <button type="button" class="temp-item active" id="btn-corporate" onclick="applyTemp('corporate')">Corporate</button>
+                <button type="button" class="temp-item" id="btn-minimal" onclick="applyTemp('minimal')">Minimal</button>
+                <button type="button" class="temp-item" id="btn-dark" onclick="applyTemp('dark')">Dark</button>
+                <button type="button" class="temp-item" id="btn-luxury" onclick="applyTemp('luxury')">Luxury</button>
+                <button type="button" class="temp-item" id="btn-aurora" onclick="applyTemp('aurora')">Aurora</button>
+            </div>
+
+            <div class="panel-title">Background</div>
+            <div class="control-group">
+                <div class="flex-row">
+                    <label for="check-grad">Gradient Mode</label>
+                    <input type="checkbox" id="check-grad">
                 </div>
-                <div class="card-contact" id="view-contact">
-                    <div id="row-phone">📞 <span id="v-phone">010-0000-0000</span></div>
-                    <div id="row-email">✉️ <span id="v-email">tony@kitscript.com</span></div>
-                    <div id="row-web">🌐 <span id="v-web">kitscript.com</span></div>
-                    <div id="row-youtube">🎬 <span id="v-youtube">youtube.com/@textcube</span></div>
-                    <div id="row-addr">📍 <span id="v-addr">Seoul, South Korea</span></div>
+                <div class="flex-row">
+                    <label for="col-bg1">Primary BG</label>
+                    <input type="color" id="col-bg1" value="#ffffff">
+                </div>
+                <div class="flex-row" id="grad-col2-row" style="display: none;">
+                    <label for="col-bg2">Secondary BG</label>
+                    <input type="color" id="col-bg2" value="#f1f5f9">
+                </div>
+                <div class="flex-row">
+                    <label for="col-text">Text Color</label>
+                    <input type="color" id="col-text" value="#0f172a">
+                </div>
+                <div class="flex-row" style="margin-top: 4px;">
+                    <label style="margin-bottom: 0;">Pattern</label>
+                </div>
+                <div class="pattern-grid" id="pattern-grid">
+                    <button type="button" class="temp-item active" data-pattern="none">None</button>
+                    <button type="button" class="temp-item" data-pattern="dots">Dots</button>
+                    <button type="button" class="temp-item" data-pattern="grid">Grid</button>
+                    <button type="button" class="temp-item" data-pattern="waves">Waves</button>
+                    <button type="button" class="temp-item" data-pattern="geo">Geometric</button>
+                    <button type="button" class="temp-item" data-pattern="diag">Diagonal</button>
+                </div>
+                <div class="form-group" id="pattern-opacity-group" style="display: none;">
+                    <label for="range-pattern">Pattern Intensity (<span id="txt-pattern">0.12</span>)</label>
+                    <input type="range" id="range-pattern" min="0.02" max="0.3" step="0.02" value="0.12" style="width: 100%;">
                 </div>
             </div>
-            <div class="card-qr-section" id="qr-box">
-                <div id="qrcode-wrap">
-                    <div id="qrcode"></div>
-                    <img id="qr-logo" class="qr-logo-overlay" src="" alt="">
+
+            <div class="panel-title">Typography</div>
+            <div class="control-group">
+                <div class="form-group">
+                    <label for="sel-fontpair">Font Pairing</label>
+                    <select id="sel-fontpair">
+                        <option value="modern">Modern — Sora + Manrope</option>
+                        <option value="editorial">Editorial — Cormorant + Manrope</option>
+                        <option value="refined">Refined — Marcellus + Sora</option>
+                        <option value="serene">Serene KR — Noto Serif + Sans KR</option>
+                        <option value="mono">Mono Tech — Roboto Mono</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Scale (<span id="txt-scale">1.0</span>)</label>
+                    <input type="range" id="range-scale" min="0.7" max="1.5" step="0.05" value="1.0" style="width: 100%;">
                 </div>
             </div>
-        </div>
-        <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.75rem;">Preview rendered at 1:1 scale.</p>
-    </section>
+        </aside>
 
-    <!-- RIGHT: DESIGN CONTROLS -->
-    <aside class="panel panel-right">
-        <div class="panel-title">Templates</div>
-        <div class="template-grid">
-            <div class="temp-item active" id="btn-corporate" onclick="applyTemp('corporate')">Corporate</div>
-            <div class="temp-item" id="btn-minimal" onclick="applyTemp('minimal')">Minimal</div>
-            <div class="temp-item" id="btn-dark" onclick="applyTemp('dark')">Dark</div>
-        </div>
+        <aside class="panel" id="panel-qr" data-tab="qr">
+            <div class="panel-title">QR Configuration</div>
+            <div class="control-group">
+                <div class="form-group">
+                    <label for="qr-mode">QR Mode</label>
+                    <select id="qr-mode">
+                        <option value="vcard" selected>Add to Contacts (vCard)</option>
+                        <option value="url">Direct Link (Website)</option>
+                        <option value="youtube">Direct Link (YouTube)</option>
+                        <option value="email">Direct Link (Email)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="qr-res">Save Resolution (QR Only)</label>
+                    <select id="qr-res">
+                        <option value="512">512 x 512 px</option>
+                        <option value="1024" selected>1024 x 1024 px</option>
+                        <option value="2048">2048 x 2048 px</option>
+                    </select>
+                </div>
+            </div>
 
-        <div class="panel-title">Background</div>
-        <div class="control-group">
-            <div class="flex-row">
-                <label>Gradient Mode</label>
-                <input type="checkbox" id="check-grad">
+            <div class="panel-title">QR Styling</div>
+            <div class="control-group">
+                <div class="flex-row">
+                    <label for="qr-fg">QR Color</label>
+                    <input type="color" id="qr-fg" value="#000000">
+                </div>
+                <div class="flex-row">
+                    <label for="qr-bg">QR BG</label>
+                    <input type="color" id="qr-bg" value="#ffffff">
+                </div>
+                <div class="flex-row">
+                    <label for="qr-logo-toggle">Overlay Logo</label>
+                    <input type="checkbox" id="qr-logo-toggle">
+                </div>
             </div>
-            <div class="flex-row">
-                <label>Primary BG</label>
-                <input type="color" id="col-bg1" value="#ffffff">
-            </div>
-            <div class="flex-row" id="grad-col2-row" style="display: none;">
-                <label>Secondary BG</label>
-                <input type="color" id="col-bg2" value="#f1f5f9">
-            </div>
-            <div class="flex-row">
-                <label>Text Color</label>
-                <input type="color" id="col-text" value="#0f172a">
-            </div>
-        </div>
-
-        <div class="panel-title">Typography</div>
-        <div class="control-group">
-            <div class="form-group">
-                <label>Font Family</label>
-                <select id="sel-font">
-                    <option value="'Inter', sans-serif">Inter (Modern)</option>
-                    <option value="'Montserrat', sans-serif">Montserrat (Bold)</option>
-                    <option value="'Playfair Display', serif">Playfair (Classic)</option>
-                    <option value="'Roboto Mono', monospace">Mono (Tech)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Scale (<span id="txt-scale">1.0</span>)</label>
-                <input type="range" id="range-scale" min="0.7" max="1.5" step="0.05" value="1.0" style="width: 100%;">
-            </div>
-        </div>
-
-        <div class="panel-title">QR Styling</div>
-        <div class="control-group">
-            <div class="flex-row">
-                <label>QR Color</label>
-                <input type="color" id="qr-fg" value="#000000">
-            </div>
-            <div class="flex-row">
-                <label>QR BG</label>
-                <input type="color" id="qr-bg" value="#ffffff">
-            </div>
-            <div class="flex-row">
-                <label>Overlay Logo</label>
-                <input type="checkbox" id="qr-logo-toggle">
-            </div>
-        </div>
-    </aside>
+        </aside>
+    </div>
 </main>
+
+<div class="mobile-actionbar">
+    <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
+    <button class="btn" onclick="downloadQR()">Save QR Only</button>
+</div>
+
+<!-- Hidden buffers for high-resolution QR generation (never rendered) -->
+<div id="qr-hires" style="display: none;" aria-hidden="true"></div>
+<div id="qr-buf" style="display: none;" aria-hidden="true"></div>
 
 <script>
     const DEFAULT_LOGO = `data:image/svg+xml;base64,${btoa('<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="20" fill="#4f46e5"/><path d="M30 30h30a15 15 0 0 1 0 30h-30z" fill="white" opacity="0.4"/><path d="M35 35h20a10 10 0 0 1 0 20h-20z" fill="white"/></svg>')}`;
-    
+
+    const STORAGE_KEY = 'bizcard-pro-state';
+
+    // 헤딩(이름)용 + 본문용 폰트 페어링 프리셋
+    const FONT_PAIRS = {
+        modern:    { heading: "'Sora', sans-serif",              body: "'Manrope', sans-serif",      headingWeight: 700 },
+        editorial: { heading: "'Cormorant Garamond', serif",     body: "'Manrope', sans-serif",      headingWeight: 700 },
+        refined:   { heading: "'Marcellus', serif",              body: "'Sora', sans-serif",         headingWeight: 400 },
+        serene:    { heading: "'Noto Serif KR', serif",          body: "'Noto Sans KR', sans-serif", headingWeight: 700 },
+        mono:      { heading: "'Roboto Mono', monospace",        body: "'Roboto Mono', monospace",   headingWeight: 700 }
+    };
+
+    // 은은한 배경 패턴 (인라인 SVG data-URI, 색상은 텍스트 색 기반)
+    const PATTERN_SVGS = {
+        dots:  (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="3" cy="3" r="1.3" fill="${c}"/></svg>`,
+        grid:  (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M24 0.5H0.5V24" fill="none" stroke="${c}" stroke-width="1"/></svg>`,
+        waves: (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="14"><path d="M0 7 Q10 1 20 7 T40 7" fill="none" stroke="${c}" stroke-width="1.2"/></svg>`,
+        geo:   (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M14 3 L25 14 L14 25 L3 14 Z" fill="none" stroke="${c}" stroke-width="1"/></svg>`,
+        diag:  (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M-2 16 L16 -2 M-2 30 L30 -2" fill="none" stroke="${c}" stroke-width="1"/></svg>`
+    };
+
+    const TEMPLATE_DEFS = {
+        corporate: { bg1: '#ffffff', bg2: '#e2e8f0', isGrad: false, txtCol: '#0f172a', accent: '#2563eb', qrBg: '#ffffff', qrFg: '#0f172a', layout: 'row',    border: 'none', glow: 'none', fontPair: 'modern',    pattern: 'none',  patternOpacity: 0.10 },
+        minimal:   { bg1: '#fafaf9', bg2: '#fafaf9', isGrad: false, txtCol: '#18181b', accent: '#18181b', qrBg: '#fafaf9', qrFg: '#18181b', layout: 'column', border: '1px solid rgba(0,0,0,0.08)', glow: 'none', fontPair: 'editorial', pattern: 'dots',  patternOpacity: 0.08 },
+        dark:      { bg1: '#1e293b', bg2: '#0f172a', isGrad: true,  txtCol: '#f8fafc', accent: '#38bdf8', qrBg: '#1e293b', qrFg: '#f8fafc', layout: 'row',    border: 'none', glow: 'none', fontPair: 'mono',      pattern: 'grid',  patternOpacity: 0.10 },
+        luxury:    { bg1: '#151109', bg2: '#241c0d', isGrad: true,  txtCol: '#f3e3bd', accent: '#d4af37', qrBg: '#151109', qrFg: '#d4af37', layout: 'row',    border: '1px solid rgba(212,175,55,0.45)', glow: '0 0 50px -10px rgba(212,175,55,0.35)', fontPair: 'refined', pattern: 'geo',   patternOpacity: 0.10 },
+        aurora:    { bg1: '#1e1b4b', bg2: '#7c3aed', isGrad: true,  txtCol: '#ffffff', accent: '#f0abfc', qrBg: '#ffffff', qrFg: '#1e1b4b', layout: 'column', border: 'none', glow: '0 0 60px -8px rgba(168,85,247,0.55)', fontPair: 'modern', pattern: 'waves', patternOpacity: 0.14 }
+    };
+
     const state = {
         name: "Tony Kim", title: "Producer", company: "Bunt Games",
         phone: "010-0000-0000", email: "tony@kitscript.com", web: "kitscript.com", youtube: "youtube.com/@textcube", addr: "Seoul, South Korea",
         logo: DEFAULT_LOGO, profile: null,
-        bg1: "#ffffff", bg2: "#f1f5f9", isGrad: false, txtCol: "#0f172a",
-        font: "'Inter', sans-serif", scale: 1.0,
-        qrFg: "#000000", qrBg: "#ffffff", showQrLogo: false, qrMode: "vcard",
+        bg1: "#ffffff", bg2: "#f1f5f9", isGrad: false, txtCol: "#0f172a", accent: "#2563eb",
+        fontPair: "modern", scale: 1.0,
+        pattern: "none", patternOpacity: 0.12,
+        qrFg: "#000000", qrBg: "#ffffff", showQrLogo: false, qrMode: "vcard", qrRes: "1024",
         template: "corporate"
     };
 
-    let qrInstance = null;
+    const QR_INTERNAL_SIZE = 1024; // 화면 표시용 내부 고해상도
+    let saveTimer = null;
+    let resizeTimer = null;
+    let qrTimer = null;
+    let qrCache = { key: null, canvas: null };
 
     window.onload = () => {
-        initQR();
+        restoreState();
+        syncInputsFromState();
         bindEvents();
+        bindTabs();
         render();
+
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => { updateCardScale(); positionMobileTabbar(); }, 120);
+        });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => { updateCardScale(); positionMobileTabbar(); }, 200);
+        });
     };
 
-    function initQR() {
-        const container = document.getElementById('qrcode');
-        container.innerHTML = "";
-        qrInstance = new QRCode(container, {
-            text: generateQRData(),
-            width: state.template === 'minimal' ? 85 : 110, 
-            height: state.template === 'minimal' ? 85 : 110,
-            colorDark: state.qrFg, colorLight: state.qrBg,
-            correctLevel: QRCode.CorrectLevel.M
-        });
+    function escapeVCardValue(v) {
+        return String(v == null ? '' : v)
+            .replace(/\\/g, '\\\\')
+            .replace(/\n/g, '\\n')
+            .replace(/,/g, '\\,')
+            .replace(/;/g, '\\;');
     }
 
     function generateQRData() {
         const urlSafeWeb = state.web.trim().startsWith('http') ? state.web.trim() : `https://${state.web.trim()}`;
         const urlSafeYT = state.youtube.trim().startsWith('http') ? state.youtube.trim() : `https://${state.youtube.trim()}`;
-        
+
         if (state.qrMode === 'url') return state.web.trim() ? urlSafeWeb : "https://kitscript.com";
         if (state.qrMode === 'youtube') return state.youtube.trim() ? urlSafeYT : "https://youtube.com/@textcube";
-        if (state.qrMode === 'email') return `mailto:${state.email}`;
-        
-        return `BEGIN:VCARD\nVERSION:3.0\nFN:${state.name}\nORG:${state.company}\nTITLE:${state.title}\nTEL;TYPE=CELL:${state.phone}\nEMAIL:${state.email}\nURL;type=WORK:${urlSafeWeb}\nURL;type=SOCIAL:${urlSafeYT}\nADR:;;${state.addr}\nEND:VCARD`;
+        if (state.qrMode === 'email') return `mailto:${state.email.trim()}`;
+
+        const lines = [
+            'BEGIN:VCARD',
+            'VERSION:3.0',
+            `FN:${escapeVCardValue(state.name)}`,
+            `ORG:${escapeVCardValue(state.company)}`,
+            `TITLE:${escapeVCardValue(state.title)}`,
+            `TEL;TYPE=CELL:${escapeVCardValue(state.phone)}`,
+            `EMAIL:${escapeVCardValue(state.email)}`,
+            `URL;type=WORK:${escapeVCardValue(urlSafeWeb)}`,
+            `URL;type=SOCIAL:${escapeVCardValue(urlSafeYT)}`,
+            `ADR:;;${escapeVCardValue(state.addr)}`,
+            'END:VCARD'
+        ];
+        return lines.join('\r\n');
     }
 
     /**
@@ -376,25 +729,43 @@
         const qBox = document.getElementById('qr-box');
         const cBody = document.getElementById('card-main');
         const cContact = document.getElementById('view-contact');
-        
-        card.style.fontFamily = state.font;
+        const def = TEMPLATE_DEFS[state.template] || TEMPLATE_DEFS.corporate;
+
+        const pair = FONT_PAIRS[state.fontPair] || FONT_PAIRS.modern;
+        card.style.fontFamily = pair.body;
+        const nameEl = document.getElementById('view-name');
+        nameEl.style.fontFamily = pair.heading;
+        nameEl.style.fontWeight = pair.headingWeight;
         card.style.color = state.txtCol;
-        card.style.transform = `scale(${state.scale})`;
-        
+        card.style.setProperty('--card-accent', state.accent || def.accent);
+        card.style.border = def.border;
+        card.style.boxShadow = (def.glow && def.glow !== 'none') ? `${def.glow}, var(--shadow)` : 'var(--shadow)';
+
         if (state.isGrad) {
             card.style.background = `linear-gradient(135deg, ${state.bg1}, ${state.bg2})`;
         } else {
             card.style.background = state.bg1;
         }
 
+        // 배경 패턴 오버레이 (실제 div 레이어 — html2canvas 렌더링 안정성)
+        const patEl = document.getElementById('card-pattern');
+        const patGen = PATTERN_SVGS[state.pattern];
+        if (patGen) {
+            patEl.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(patGen(state.txtCol))}")`;
+            patEl.style.opacity = state.patternOpacity;
+            patEl.style.display = 'block';
+        } else {
+            patEl.style.display = 'none';
+        }
+
         // 템플릿별 레이아웃 보정
-        if (state.template === 'minimal') {
+        if (def.layout === 'column') {
             card.style.flexDirection = 'column';
             cBody.style.padding = '1.5rem 2rem';
             cContact.style.fontSize = '0.65rem';
             cContact.style.lineHeight = '1.4';
             cContact.style.marginTop = '0.5rem';
-            
+
             qBox.style.width = '100%';
             qBox.style.height = 'auto';
             qBox.style.padding = '0 2rem 1.5rem';
@@ -425,16 +796,13 @@
             prof.classList.add('hidden');
         }
 
-        // QR 재생성
-        const qContainer = document.getElementById('qrcode');
-        qContainer.innerHTML = "";
-        const qrSize = state.template === 'minimal' ? 85 : 105;
-        qrInstance = new QRCode(qContainer, {
-            text: generateQRData(),
-            width: qrSize, height: qrSize,
-            colorDark: state.qrFg, colorLight: state.qrBg,
-            correctLevel: QRCode.CorrectLevel.M
-        });
+        // QR 갱신 — 내부적으로 고해상도 canvas를 생성하고 img로 축소 표시
+        const qrSize = def.layout === 'column' ? 85 : 105;
+        const qrImg = document.getElementById('qr-display');
+        qrImg.width = qrSize;
+        qrImg.height = qrSize;
+        document.getElementById('qrcode-wrap').style.background = state.qrBg;
+        updateQR();
 
         const qrLogo = document.getElementById('qr-logo');
         if (state.showQrLogo) {
@@ -444,15 +812,118 @@
         } else {
             qrLogo.style.display = 'none';
         }
+
+        updateCardScale();
+        positionMobileTabbar();
+        scheduleSave();
+    }
+
+    // ---- 고해상도 QR ----
+
+    function makeQRCanvas(container, text, size) {
+        container.innerHTML = '';
+        let qr;
+        try {
+            qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+            qr = qrcode(0, 'M'); // type 0 = 데이터 길이에 맞춰 자동 선택
+            qr.addData(text, 'Byte');
+            qr.make();
+        } catch (err) {
+            console.warn('BizCard Pro: QR generation failed (data too long?)', err);
+            return null;
+        }
+
+        const n = qr.getModuleCount();
+        const quiet = 2; // 스캔 안정성용 quiet zone (모듈 단위)
+        const total = n + quiet * 2;
+        const cell = size / total;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = state.qrBg;
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = state.qrFg;
+        for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+                if (!qr.isDark(r, c)) continue;
+                const x = (c + quiet) * cell, y = (r + quiet) * cell;
+                ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cell), Math.ceil(cell));
+            }
+        }
+        container.appendChild(canvas);
+        return canvas;
+    }
+
+    /**
+     * QR 데이터/색상이 실제로 바뀐 경우에만 고해상도 canvas를 재생성.
+     * 타이핑 중 렉 방지를 위해 최초 1회 이후에는 debounce.
+     */
+    function updateQR() {
+        const text = generateQRData();
+        const key = `${text}|${state.qrFg}|${state.qrBg}`;
+        if (key === qrCache.key && qrCache.canvas) return;
+
+        const run = () => {
+            const canvas = makeQRCanvas(document.getElementById('qr-hires'), text, QR_INTERNAL_SIZE);
+            if (!canvas) return;
+            qrCache = { key: key, canvas: canvas };
+            document.getElementById('qr-display').src = canvas.toDataURL('image/png');
+        };
+
+        clearTimeout(qrTimer);
+        if (!qrCache.canvas) {
+            run(); // 최초 로드는 즉시
+        } else {
+            qrTimer = setTimeout(run, 180);
+        }
+    }
+
+    // 내보내기 직전, 대기 중인(debounced) QR 재생성을 즉시 반영
+    function flushQR() {
+        const text = generateQRData();
+        const key = `${text}|${state.qrFg}|${state.qrBg}`;
+        if (key === qrCache.key && qrCache.canvas) return;
+        clearTimeout(qrTimer);
+        const canvas = makeQRCanvas(document.getElementById('qr-hires'), text, QR_INTERNAL_SIZE);
+        if (!canvas) return;
+        qrCache = { key: key, canvas: canvas };
+        document.getElementById('qr-display').src = canvas.toDataURL('image/png');
+    }
+
+    function updateCardScale() {
+        const stage = document.getElementById('card-stage');
+        const area = document.getElementById('preview-area');
+        if (!stage || !area) return;
+        const horizontalPadding = 64; // approx preview-area left+right padding
+        const availW = area.clientWidth - horizontalPadding;
+        const fit = availW > 0 ? Math.min(1, availW / 500) : 1;
+        const finalScale = Math.max(0.1, fit * state.scale);
+
+        const card = document.getElementById('card-container');
+        card.style.transform = `scale(${finalScale})`;
+        stage.style.width = (500 * finalScale) + 'px';
+        stage.style.height = (317 * finalScale) + 'px';
+
+        const caption = document.getElementById('preview-caption');
+        if (caption) caption.innerText = `Preview auto-fit at ${Math.round(finalScale * 100)}% scale.`;
+    }
+
+    function positionMobileTabbar() {
+        const tabbar = document.getElementById('mobile-tabbar');
+        if (!tabbar) return;
+        if (window.innerWidth > 850) { tabbar.style.top = ''; return; }
+        const area = document.getElementById('preview-area');
+        tabbar.style.top = (area ? area.offsetHeight : 0) + 'px';
     }
 
     function bindEvents() {
         const mapping = {
             'in-name': 'name', 'in-title': 'title', 'in-company': 'company',
-            'in-phone': 'phone', 'in-email': 'email', 'in-web': 'web', 
+            'in-phone': 'phone', 'in-email': 'email', 'in-web': 'web',
             'in-youtube': 'youtube', 'in-addr': 'addr',
             'col-bg1': 'bg1', 'col-bg2': 'bg2', 'col-text': 'txtCol',
-            'sel-font': 'font', 'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode'
+            'sel-fontpair': 'fontPair', 'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode', 'qr-res': 'qrRes'
         };
 
         Object.entries(mapping).forEach(([id, key]) => {
@@ -460,6 +931,20 @@
                 state[key] = e.target.value;
                 render();
             });
+        });
+
+        document.querySelectorAll('#pattern-grid .temp-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.pattern = btn.dataset.pattern;
+                syncPatternControls();
+                render();
+            });
+        });
+
+        document.getElementById('range-pattern').addEventListener('input', (e) => {
+            state.patternOpacity = parseFloat(e.target.value);
+            document.getElementById('txt-pattern').innerText = state.patternOpacity.toFixed(2);
+            render();
         });
 
         document.getElementById('range-scale').addEventListener('input', (e) => {
@@ -483,6 +968,17 @@
         document.getElementById('f-profile').addEventListener('change', (e) => handleFile(e, 'profile'));
     }
 
+    function bindTabs() {
+        document.querySelectorAll('.tab-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.tabTarget;
+                document.body.setAttribute('data-tab', target);
+                document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+                positionMobileTabbar();
+            });
+        });
+    }
+
     function handleFile(e, key) {
         const file = e.target.files[0];
         if (!file) return;
@@ -495,43 +991,61 @@
     }
 
     function applyTemp(type) {
+        const def = TEMPLATE_DEFS[type];
+        if (!def) return;
         state.template = type;
-        document.querySelectorAll('.temp-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('btn-' + type).classList.add('active');
+        document.querySelectorAll('.template-grid .temp-item').forEach(i => i.classList.remove('active'));
+        const btn = document.getElementById('btn-' + type);
+        if (btn) btn.classList.add('active');
 
-        if (type === 'corporate') {
-            state.bg1 = "#ffffff"; state.txtCol = "#0f172a";
-            state.isGrad = false;
-            state.qrBg = "#ffffff"; state.qrFg = "#000000";
-        } else if (type === 'minimal') {
-            state.bg1 = "#ffffff"; state.txtCol = "#0f172a";
-            state.isGrad = false;
-            state.qrBg = "#ffffff"; state.qrFg = "#000000";
-        } else if (type === 'dark') {
-            state.bg1 = "#1e293b"; state.txtCol = "#f8fafc";
-            state.qrBg = "#1e293b"; state.qrFg = "#ffffff";
-            state.isGrad = true; state.bg2 = "#0f172a";
-        }
-        
+        state.bg1 = def.bg1;
+        state.bg2 = def.bg2;
+        state.isGrad = def.isGrad;
+        state.txtCol = def.txtCol;
+        state.accent = def.accent;
+        state.qrBg = def.qrBg;
+        state.qrFg = def.qrFg;
+        state.fontPair = def.fontPair;
+        state.pattern = def.pattern;
+        state.patternOpacity = def.patternOpacity;
+
         document.getElementById('col-bg1').value = state.bg1;
         document.getElementById('col-bg2').value = state.bg2;
         document.getElementById('col-text').value = state.txtCol;
         document.getElementById('qr-bg').value = state.qrBg;
         document.getElementById('qr-fg').value = state.qrFg;
+        document.getElementById('sel-fontpair').value = state.fontPair;
         document.getElementById('check-grad').checked = state.isGrad;
         document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
+        syncPatternControls();
 
         render();
     }
 
+    function syncPatternControls() {
+        document.querySelectorAll('#pattern-grid .temp-item').forEach((b) => {
+            b.classList.toggle('active', b.dataset.pattern === state.pattern);
+        });
+        const op = Number(state.patternOpacity);
+        document.getElementById('range-pattern').value = op;
+        document.getElementById('txt-pattern').innerText = op.toFixed(2);
+        document.getElementById('pattern-opacity-group').style.display = state.pattern === 'none' ? 'none' : 'block';
+    }
+
     async function exportCard() {
+        flushQR();
+        const qrImg = document.getElementById('qr-display');
+        if (qrImg.decode) { try { await qrImg.decode(); } catch (e) { /* ignore */ } }
+
         const card = document.getElementById('card-container');
-        const originalScale = card.style.transform;
+        const prevTransform = card.style.transform;
+        const prevOrigin = card.style.transformOrigin;
         card.style.transform = 'scale(1)';
+        card.style.transformOrigin = 'top left';
 
         try {
             const canvas = await html2canvas(card, {
-                scale: 3, 
+                scale: 3,
                 useCORS: true,
                 backgroundColor: null,
                 logging: false
@@ -541,17 +1055,92 @@
             link.href = canvas.toDataURL('image/png');
             link.click();
         } finally {
-            card.style.transform = originalScale;
+            card.style.transform = prevTransform;
+            card.style.transformOrigin = prevOrigin;
         }
     }
 
     function downloadQR() {
-        const canvas = document.querySelector('#qrcode canvas');
+        flushQR();
+        const res = parseInt(state.qrRes, 10) || 1024;
+        let canvas;
+        if (res === QR_INTERNAL_SIZE && qrCache.canvas) {
+            canvas = qrCache.canvas; // flushQR 직후이므로 캐시가 최신
+        } else {
+            canvas = makeQRCanvas(document.getElementById('qr-buf'), generateQRData(), res);
+        }
         if (!canvas) return;
         const link = document.createElement('a');
-        link.download = `QR_${state.name.replace(/\s+/g, '_')}.png`;
+        link.download = `QR_${state.name.replace(/\s+/g, '_')}_${res}px.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+    }
+
+    // ---- Persistence ----
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveState, 400);
+    }
+
+    function saveState() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+            try {
+                const lightState = Object.assign({}, state, { logo: null, profile: null });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(lightState));
+                console.warn('BizCard Pro: storage quota exceeded, saved without images.', err);
+            } catch (err2) {
+                console.warn('BizCard Pro: unable to persist state to localStorage.', err2);
+            }
+        }
+    }
+
+    function restoreState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (saved && typeof saved === 'object') {
+                Object.keys(state).forEach((k) => {
+                    if (saved[k] !== undefined) state[k] = saved[k];
+                });
+                if (!state.logo) state.logo = DEFAULT_LOGO;
+                // 구버전 저장분/유효하지 않은 값 방어
+                if (!FONT_PAIRS[state.fontPair]) state.fontPair = 'modern';
+                if (state.pattern !== 'none' && !PATTERN_SVGS[state.pattern]) state.pattern = 'none';
+                if (['512', '1024', '2048'].indexOf(String(state.qrRes)) === -1) state.qrRes = '1024';
+            }
+        } catch (err) {
+            console.warn('BizCard Pro: unable to restore saved state.', err);
+        }
+    }
+
+    function syncInputsFromState() {
+        const idMap = {
+            'in-name': 'name', 'in-title': 'title', 'in-company': 'company', 'in-phone': 'phone', 'in-email': 'email',
+            'in-web': 'web', 'in-youtube': 'youtube', 'in-addr': 'addr',
+            'col-bg1': 'bg1', 'col-bg2': 'bg2', 'col-text': 'txtCol', 'sel-fontpair': 'fontPair',
+            'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode', 'qr-res': 'qrRes'
+        };
+        Object.entries(idMap).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (el) el.value = state[key];
+        });
+
+        const rangeEl = document.getElementById('range-scale');
+        rangeEl.value = state.scale;
+        document.getElementById('txt-scale').innerText = Number(state.scale).toFixed(2);
+
+        document.getElementById('check-grad').checked = state.isGrad;
+        document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
+        document.getElementById('qr-logo-toggle').checked = state.showQrLogo;
+        syncPatternControls();
+
+        document.querySelectorAll('.template-grid .temp-item').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.getElementById('btn-' + state.template);
+        if (activeBtn) activeBtn.classList.add('active');
     }
 </script>
 
