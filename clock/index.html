@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BUNTGAMES / Eternal Invasion: Clock Edition</title>
+    <meta name="description" content="시계 디펜스 — 화면 중앙의 아날로그 시계가 자동 포탑이 되어 사방에서 몰려드는 UFO를 요격하는 오토배틀러 미니게임. ENGAGE로 초침이 가리키는 슬롯의 특수기를 발동하세요.">
+    <meta property="og:title" content="BUNTGAMES / Eternal Invasion: Clock Edition">
+    <meta property="og:description" content="시계가 자동 포탑이 되는 오토배틀러 타워디펜스. 초침이 가리키는 시간 슬롯의 특수기를 발동해 UFO 침공을 막아내세요.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23000508'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%2300ffff' stroke-width='4'/%3E%3Cline x1='32' y1='32' x2='32' y2='14' stroke='%2300ffff' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='32' y1='32' x2='44' y2='32' stroke='%23ff00ff' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%2300ffff'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap">
     <style>
         :root {
             --neon-cyan: #00ffff;
@@ -13,13 +22,10 @@
             --font-main: 'Orbitron', 'Segoe UI', sans-serif;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none;
         }
 
         body, html {
@@ -29,6 +35,7 @@
             background: #000;
             color: #fff;
             font-family: var(--font-main);
+            user-select: none;
         }
 
         #video-background {
@@ -57,6 +64,7 @@
             top: 0; left: 0;
             z-index: 1;
             display: block;
+            user-select: none;
         }
 
         .overlay {
@@ -129,6 +137,7 @@
             transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
+            user-select: none;
         }
 
         .btn:hover {
@@ -148,6 +157,7 @@
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; pointer-events: auto;
+            user-select: none;
         }
 
         #fire-btn .mode-label { font-size: 10px; margin-top: 5px; color: #fff; letter-spacing: 1px; }
@@ -230,19 +240,24 @@
             #game-over h1 { font-size: 2.5rem; }
             .main-title { font-size: 11px; padding: 6px 12px; }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .glitch-text { animation: none; }
+            .btn, #fire-btn, #mana-fill { transition: none; }
+        }
     </style>
 </head>
 <body>
 
     <div id="video-background">
-        <iframe 
-            src="https://www.youtube.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&loop=1&playlist=kFnxuOnbHU0&controls=0&showinfo=0&rel=0&iv_load_policy=3" 
-            frameborder="0" 
+        <iframe
+            src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&loop=1&playlist=kFnxuOnbHU0&controls=0&showinfo=0&rel=0&iv_load_policy=3"
+            frameborder="0"
             allow="autoplay; encrypted-media">
         </iframe>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas" aria-label="시계 디펜스 게임 화면, 조작은 하단 ENGAGE 버튼"></canvas>
 
     <div class="overlay">
         <div class="top-ui">
@@ -254,9 +269,9 @@
                 </div>
             </div>
             <div class="nav-buttons">
-                <a href="https://kitscript.com/game" target="_blank" class="btn">WEBSITE</a>
-                <a href="https://www.youtube.com/@textcube" target="_blank" class="btn">YOUTUBE</a>
-                <button id="sound-toggle" class="btn">AUDIO: OFF</button>
+                <a href="https://kitscript.com/game" target="_blank" rel="noopener noreferrer" class="btn">WEBSITE</a>
+                <a href="https://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="btn">YOUTUBE</a>
+                <button id="sound-toggle" class="btn" aria-pressed="false">AUDIO: OFF</button>
             </div>
         </div>
 
@@ -318,8 +333,10 @@
                 rangeFactor: 1.25 
             },
             health: { max: 100 },
-            particles: { max: 150 } 
+            particles: { max: 150 }
         };
+
+        const UFO_GLOW_LIMIT = 25; // 화면상 UFO 수가 이보다 많으면 glow 렌더 비용을 절약
 
         let timeSlots = [];
         function randomizeSlots() {
@@ -353,6 +370,11 @@
                     osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
                     gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now + 0.05);
                     osc.start(); osc.stop(now + 0.05);
+                } else if (type === 'shield') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(520, now + 0.12);
+                    gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now + 0.12);
+                    osc.start(); osc.stop(now + 0.12);
                 }
             }
         };
@@ -367,7 +389,7 @@
                 this.life = life;
                 this.maxLife = life;
             }
-            update() { this.x += this.vx; this.y += this.vy; this.life--; }
+            update(dtFactor) { this.x += this.vx * dtFactor; this.y += this.vy * dtFactor; this.life -= dtFactor; }
             draw(ctx) {
                 const alpha = this.life / this.maxLife;
                 ctx.save();
@@ -398,10 +420,10 @@
                 this.isSlowed = false;
                 this.pulse = 0;
             }
-            update() {
+            update(dtFactor) {
                 const speedMult = this.isSlowed ? 0.2 : 1;
-                this.x += this.vx * speedMult; this.y += this.vy * speedMult;
-                this.rotation += 0.04; this.pulse += 0.1;
+                this.x += this.vx * speedMult * dtFactor; this.y += this.vy * speedMult * dtFactor;
+                this.rotation += 0.04 * dtFactor; this.pulse += 0.1 * dtFactor;
                 this.isSlowed = false;
             }
             draw(ctx) {
@@ -409,7 +431,7 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.rotation);
-                ctx.shadowBlur = 8; ctx.shadowColor = CONFIG.colors.ufo;
+                ctx.shadowBlur = ufos.length > UFO_GLOW_LIMIT ? 0 : 8; ctx.shadowColor = CONFIG.colors.ufo;
                 ctx.strokeStyle = CONFIG.colors.ufo; ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.ellipse(0, 0, 26 + pulseVal, 10, 0, 0, Math.PI * 2);
@@ -440,8 +462,8 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed;
             }
-            update() {
-                this.x += this.vx; this.y += this.vy;
+            update(dtFactor) {
+                this.x += this.vx * dtFactor; this.y += this.vy * dtFactor;
                 const dx = this.x - centerX;
                 const dy = this.y - centerY;
                 const distSq = dx*dx + dy*dy;
@@ -471,7 +493,10 @@
         let lastAutoSpecialTrigger = 0;
         let activeAbilities = []; let gameStartTime = Date.now();
         let score = 0;
-        let currentTargetAngle = -1.57; 
+        let currentTargetAngle = -1.57;
+        let lastFrameTime = 0;
+        let lastThreatLevel = ''; let lastThreatColor = '';
+        let lastManaFillWidth = null; let lastFireBtnDisabled = null;
 
         function init() {
             randomizeSlots(); resize();
@@ -480,13 +505,20 @@
             soundBtn.addEventListener('click', () => {
                 const on = Sound.toggle();
                 soundBtn.textContent = `AUDIO: ${on ? 'ON' : 'OFF'}`;
+                soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
             });
-            loop();
+            requestAnimationFrame(loop);
         }
 
         function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             centerX = width / 2; centerY = height / 2;
             clockRadius = Math.min(width, height) * 0.36;
         }
@@ -528,32 +560,48 @@
             Sound.play('hit');
         }
 
-        function spawnUFO() {
+        function spawnUFO(dtFactor) {
             if (isGameOver) return;
             const elapsed = (Date.now() - gameStartTime) / 1000;
             const ramp = Math.min(elapsed / CONFIG.ufo.difficultyRampSec, 1);
             const rate = CONFIG.ufo.spawnRateStart + (CONFIG.ufo.spawnRateMax - CONFIG.ufo.spawnRateStart) * Math.pow(ramp, CONFIG.ufo.curvePower);
-            if (Math.random() < rate) ufos.push(new UFO(width, height));
+            if (Math.random() < rate * dtFactor) ufos.push(new UFO(width, height));
             const levels = ["STABLE", "ELEVATED", "HIGH", "SEVERE", "CRITICAL"];
-            threatUI.textContent = levels[Math.floor(ramp * 4.99)];
-            threatUI.style.color = ramp > 0.8 ? "var(--neon-pink)" : "var(--neon-cyan)";
+            const level = levels[Math.floor(ramp * 4.99)];
+            if (level !== lastThreatLevel) {
+                threatUI.textContent = level;
+                lastThreatLevel = level;
+            }
+            const color = ramp > 0.8 ? "var(--neon-pink)" : "var(--neon-cyan)";
+            if (color !== lastThreatColor) {
+                threatUI.style.color = color;
+                lastThreatColor = color;
+            }
         }
 
-        function update() {
+        function update(dtFactor) {
             const timestamp = Date.now();
-            mana = Math.min(CONFIG.mana.max, mana + CONFIG.mana.regen / 60);
-            manaFill.style.width = mana + "%";
-            fireBtn.disabled = mana < CONFIG.mana.cost || isGameOver;
+            mana = Math.min(CONFIG.mana.max, mana + (CONFIG.mana.regen / 60) * dtFactor);
+            const manaPct = mana + "%";
+            if (manaPct !== lastManaFillWidth) {
+                manaFill.style.width = manaPct;
+                lastManaFillWidth = manaPct;
+            }
+            const fireDisabled = mana < CONFIG.mana.cost || isGameOver;
+            if (fireDisabled !== lastFireBtnDisabled) {
+                fireBtn.disabled = fireDisabled;
+                lastFireBtnDisabled = fireDisabled;
+            }
 
             if (isGameOver) {
-                if (secondHandVisible > 0) secondHandVisible--;
+                if (secondHandVisible > 0) secondHandVisible = Math.max(0, secondHandVisible - dtFactor);
                 for (let i = particles.length - 1; i >= 0; i--) {
-                    particles[i].update(); if (particles[i].life <= 0) particles.splice(i, 1);
+                    particles[i].update(dtFactor); if (particles[i].life <= 0) particles.splice(i, 1);
                 }
                 return;
             }
 
-            spawnUFO();
+            spawnUFO(dtFactor);
             const rangeSq = (clockRadius * CONFIG.combat.rangeFactor)**2;
             let closest = null; 
             let minDistSq = Infinity; 
@@ -572,13 +620,13 @@
                 lastAutoFire = timestamp;
             }
             if (mana > 70 && timestamp - lastAutoSpecialTrigger > CONFIG.combat.autoSpecialCooldown) {
-                if (Math.random() < CONFIG.combat.autoSpecialChance) {
-                    activateManualMode(); 
+                if (Math.random() < CONFIG.combat.autoSpecialChance * dtFactor) {
+                    activateManualMode();
                     lastAutoSpecialTrigger = timestamp;
                 }
             }
             for (let i = ufos.length - 1; i >= 0; i--) {
-                const u = ufos[i]; u.update();
+                const u = ufos[i]; u.update(dtFactor);
                 const dx = u.x - centerX; const dy = u.y - centerY;
                 const dSq = dx*dx + dy*dy;
                 if (dSq < 2500) { 
@@ -606,7 +654,7 @@
                 }
             }
             for (let i = bullets.length - 1; i >= 0; i--) {
-                const b = bullets[i]; b.update();
+                const b = bullets[i]; b.update(dtFactor);
                 if (b.dead) { bullets.splice(i, 1); continue; }
                 for (let j = ufos.length - 1; j >= 0; j--) {
                     const u = ufos[j];
@@ -617,16 +665,16 @@
                 }
             }
             for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update();
+                particles[i].update(dtFactor);
                 if (particles[i].life <= 0) particles.splice(i, 1);
             }
             for (let i = activeAbilities.length - 1; i >= 0; i--) {
                 const ab = activeAbilities[i];
-                ab.timer--;
-                if (ab.type === 'BURST') ab.radius += 24;
+                ab.timer -= dtFactor;
+                if (ab.type === 'BURST') ab.radius += 24 * dtFactor;
                 if (ab.timer <= 0) activeAbilities.splice(i, 1);
             }
-            if (secondHandVisible > 0) secondHandVisible--;
+            if (secondHandVisible > 0) secondHandVisible = Math.max(0, secondHandVisible - dtFactor);
         }
 
         function drawSkillHUD() {
@@ -758,8 +806,11 @@
             ctx.strokeRect(centerX - 120, centerY + clockRadius + 60, 240, 14);
         }
 
-        function loop() {
-            update(); draw(); requestAnimationFrame(loop);
+        function loop(now) {
+            if (!lastFrameTime) lastFrameTime = now;
+            const dtFactor = Math.min(Math.max((now - lastFrameTime) / 16.6667, 0), 3);
+            lastFrameTime = now;
+            update(dtFactor); draw(); requestAnimationFrame(loop);
         }
 
         function endGame() {
