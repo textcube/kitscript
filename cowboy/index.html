@@ -54,8 +54,8 @@
         .btn-ui.active { background: var(--accent); color: #000; border-color: #fff; }
 
         /* 게임 뷰포트 */
-        #viewport { position: relative; margin: 15px 0; border: 4px solid var(--wood-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); background: #000; overflow: hidden; }
-        canvas { display: block; }
+        #viewport { position: relative; margin: 15px 0; border: 4px solid var(--wood-dark); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); background: #000; overflow: hidden; max-width: calc(100vw - 30px); }
+        canvas { display: block; width: min(800px, calc(100vw - 30px)); height: auto; aspect-ratio: 8 / 5; }
 
         /* 무기 선택 독 */
         #weapon-dock { width: 100%; max-width: 900px; background: var(--panel); padding: 20px; display: flex; justify-content: center; gap: 15px; border-radius: 15px 15px 0 0; border: 1px solid rgba(212, 175, 55, 0.2); backdrop-filter: blur(10px); }
@@ -97,6 +97,7 @@
             <div class="stat-box">
                 <div class="stat-label" style="font-size: 0.7rem; color: #aaa; text-transform: uppercase;">Wave Status</div>
                 <div class="stat-value">WAVE <span id="wave-val">1</span></div>
+                <div style="font-size: 0.7rem; color: var(--accent); margin-top: 3px; font-weight: 700;">BEST WAVE <span id="best-wave-val">1</span></div>
                 <div style="width: 220px; height: 10px; background: #222; border-radius: 5px; margin-top: 8px; overflow: hidden;">
                     <div id="health-fill"></div>
                 </div>
@@ -108,6 +109,7 @@
         </div>
         <div id="game-over">
             <h2 style="font-size: 4rem; color: var(--danger);">MISSION FAILED</h2>
+            <p style="font-size: 1.3rem; color: #eee; margin: 4px 0;">Reached Wave <span id="final-wave-val">1</span> &nbsp;|&nbsp; Best Wave <span id="final-best-wave-val">1</span></p>
             <p id="retry-msg" style="font-size: 1.2rem; color: #ccc;">Restarting in 7...</p>
         </div>
     </div>
@@ -149,10 +151,18 @@
         const AudioEngine = {
             enabled: false,
             ctx: null,
-            init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
-            toggle() { this.enabled = !this.enabled; if(this.enabled) this.init(); return this.enabled; },
+            init() {
+                if(!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
+                else if(this.ctx.state === 'suspended') { this.ctx.resume(); }
+            },
+            toggle() {
+                this.enabled = !this.enabled; if(this.enabled) this.init();
+                try { localStorage.setItem('cowboy_sound_on', this.enabled ? 'on' : 'off'); } catch(e) {}
+                return this.enabled;
+            },
             play(type) {
-                if(!this.enabled) return;
+                if(!this.enabled || !this.ctx) return;
+                if(this.ctx.state === 'suspended') this.ctx.resume();
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.connect(gain); gain.connect(this.ctx.destination);
@@ -171,6 +181,8 @@
                 osc.start(); osc.stop(this.ctx.currentTime + dur);
             },
             playExplosion() {
+                if(!this.ctx) return;
+                if(this.ctx.state === 'suspended') this.ctx.resume();
                 const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.5, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for(let i=0; i<data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -190,7 +202,22 @@
         const W = 800, H = 500;
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = W; canvas.height = H;
+
+        function applyCanvasScale() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = W * dpr; canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        applyCanvasScale();
+        window.addEventListener('resize', applyCanvasScale);
+        (function watchDPR() {
+            if(!window.matchMedia) return;
+            const mq = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+            mq.addEventListener('change', () => { applyCanvasScale(); watchDPR(); }, { once: true });
+        })();
+
+        function loadBestWave() { try { return parseInt(localStorage.getItem('cowboy_best_wave')) || 1; } catch(e) { return 1; } }
+        function saveBestWave(w) { try { localStorage.setItem('cowboy_best_wave', String(w)); } catch(e) {} }
 
         const GROUND_Y = H - 160;
         const COWBOY_X = 80;
@@ -241,25 +268,31 @@
             }
 
             reset() {
-                this.state = 'playing'; this.hp = 100; this.wave = 1; this.enemies = []; this.bullets = []; this.particles = [];
+                this.state = 'playing'; this.hp = 100; this.wave = 1; this.enemies = []; this.bullets = []; this.particles = []; this.meteors = [];
                 this.currentWeapon = 0; this.lastShotTimes = [0,0,0,0,0]; this.waveKillCount = 0; this.waveTotalCount = 12;
                 this.nextSpawn = 0; this.shake = 0; this.gameOverTick = 0; this.aimAngle = 0; this.targetAimAngle = 0;
                 this.lastInteractionTime = Date.now(); this.lastAutoSwapTime = Date.now(); this.isAutoMode = false;
-                this.muzzleFlash = null;
+                this.muzzleFlash = null; this.lastDisplayedSec = null;
+                this.bestWave = this.bestWave || loadBestWave();
                 document.getElementById('game-over').style.display = 'none';
                 this.updateUI();
             }
 
             bindEvents() {
-                window.onkeydown = (e) => { const k = parseInt(e.key); if(k>=1 && k<=5) { this.lastInteractionTime = Date.now(); this.isAutoMode = false; this.selectWeapon(k-1); }};
+                window.onkeydown = (e) => {
+                    if(this.state === 'gameover') { this.reset(); return; }
+                    const k = parseInt(e.key); if(k>=1 && k<=5) { this.lastInteractionTime = Date.now(); this.isAutoMode = false; this.selectWeapon(k-1); }
+                };
                 document.querySelectorAll('.weapon-slot').forEach(s => s.onclick = () => { this.lastInteractionTime = Date.now(); this.isAutoMode = false; this.selectWeapon(parseInt(s.dataset.id)); });
                 document.getElementById('sound-btn').onclick = (e) => { const on = AudioEngine.toggle(); e.target.textContent = on ? 'Sound ON' : 'Sound OFF'; };
+                document.getElementById('game-over').addEventListener('click', () => { if(this.state === 'gameover') this.reset(); });
             }
 
             selectWeapon(idx) { this.currentWeapon = idx; document.querySelectorAll('.weapon-slot').forEach((s, i) => s.classList.toggle('selected', i===idx)); this.updateUI(); }
 
             updateUI() {
                 document.getElementById('wave-val').textContent = this.wave;
+                document.getElementById('best-wave-val').textContent = this.bestWave;
                 let wn = WEAPONS[this.currentWeapon].name; if(this.isAutoMode) wn += " [AI]";
                 document.getElementById('weapon-val').textContent = wn;
                 document.getElementById('health-fill').style.width = this.hp + '%';
@@ -274,8 +307,15 @@
 
             spawn() {
                 if(this.state !== 'playing') return;
-                let t = 'walker'; const r = Math.random();
-                if(this.wave >= 2 && r < 0.3) t = 'runner'; if(this.wave >= 3 && r < 0.2) t = 'brute'; if(this.wave >= 4 && r < 0.4) t = 'swarm';
+                const options = [];
+                if(this.wave >= 3) options.push(['brute', 0.20]);
+                if(this.wave >= 2) options.push(['runner', 0.30]);
+                if(this.wave >= 4) options.push(['swarm', 0.40]);
+                const usedWeight = options.reduce((s, o) => s + o[1], 0);
+                options.push(['walker', Math.max(0.1, 1 - usedWeight)]);
+                const total = options.reduce((s, o) => s + o[1], 0);
+                let roll = Math.random() * total; let t = 'walker';
+                for(const [type, weight] of options) { if(roll < weight) { t = type; break; } roll -= weight; }
                 const cfg = ENEMIES[t];
                 const baseColor = cfg.palette[Math.floor(Math.random() * cfg.palette.length)];
                 this.enemies.push({ x: W+100, y: GROUND_Y+30+(Math.random()-0.5)*90, ...cfg, color: baseColor, maxHp: cfg.hp, walkTick: Math.random()*100, walkSpd: 0.7+Math.random()*0.5, hitFlash: 0 });
@@ -303,17 +343,35 @@
                 else { this.bullets.push({ x: mx, y: my, vx: Math.cos(ang)*w.spd, vy: Math.sin(ang)*w.spd, ...w, hitList: [] }); }
             }
 
-            update() {
-                this.animTime += 0.05; const now = Date.now();
+            killEnemy(e) {
+                if(e.dead) return;
+                e.dead = true;
+                this.createParticles(e.x, e.y, e.color, 25);
+                this.waveKillCount++;
+                if(this.waveKillCount >= this.waveTotalCount) {
+                    this.wave++; this.waveKillCount = 0; this.waveTotalCount += 6;
+                    if(this.wave > this.bestWave) { this.bestWave = this.wave; saveBestWave(this.bestWave); }
+                    this.updateUI();
+                }
+            }
+
+            update(time) {
+                if(time === undefined) time = performance.now();
+                if(this.lastTime === undefined) this.lastTime = time;
+                const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+                this.lastTime = time;
+                const frameScale = dt * 60;
+                this.animTime += 0.05 * frameScale; const now = Date.now();
                 if(this.state === 'gameover') {
                     const elapsed = (now - this.gameOverTick) / 1000;
-                    document.getElementById('retry-msg').textContent = `Restarting in ${Math.ceil(7 - elapsed)}...`;
+                    const secLeft = Math.max(0, Math.ceil(7 - elapsed));
+                    if(this.lastDisplayedSec !== secLeft) { this.lastDisplayedSec = secLeft; document.getElementById('retry-msg').textContent = `Restarting in ${secLeft}...`; }
                     if(elapsed >= 7) this.reset(); return;
                 }
-                if(now - this.lastInteractionTime > 30000) { if(!this.isAutoMode) { this.isAutoMode = true; this.lastAutoSwapTime = now-60000; this.updateUI(); } if(now - this.lastAutoSwapTime >= 60000) { this.autoEvaluateWeapon(); this.lastAutoSwapTime = now; }}
+                if(now - this.lastInteractionTime > 30000) { if(!this.isAutoMode) { this.isAutoMode = true; this.lastAutoSwapTime = now-5000; this.updateUI(); } if(now - this.lastAutoSwapTime >= 5000) { this.autoEvaluateWeapon(); this.lastAutoSwapTime = now; }}
                 if(now > this.nextSpawn) this.spawn();
-                if(Math.random() < 0.006) this.meteors.push({ x: Math.random()*W, y: -20, vx: 5+Math.random()*5, vy: 5+Math.random()*5, life: 1 });
-                this.meteors.forEach((m, i) => { m.x+=m.vx; m.y+=m.vy; m.life-=0.01; if(m.life<=0) this.meteors.splice(i, 1); });
+                if(Math.random() < 0.36 * dt) this.meteors.push({ x: Math.random()*W, y: -20, vx: 5+Math.random()*5, vy: 5+Math.random()*5, life: 1 });
+                this.meteors.forEach(m => { m.x += m.vx*frameScale; m.y += m.vy*frameScale; m.life -= 0.01*frameScale; if(m.life <= 0) m.dead = true; });
 
                 WEAPONS.forEach((w, i) => {
                     const el = now - this.lastShotTimes[i]; const pr = Math.min(1, el / w.reload);
@@ -321,49 +379,68 @@
                     if(circle) circle.style.strokeDashoffset = 283 * (1 - pr);
                 });
 
-                this.enemies.forEach((e, idx) => {
-                    e.x -= e.spd; e.walkTick += e.walkSpd * 5.5 * e.spd; if(e.hitFlash > 0) e.hitFlash--;
-                    if(Math.random()<0.1) this.particles.push({ x: e.x, y: e.y+e.size/2, vx: 0.5, vy: -0.2, life: 0.4, size: 2+Math.random()*3, color: 'rgba(100,80,60,0.3)' });
+                this.enemies.forEach(e => {
+                    if(e.dead) return;
+                    e.x -= e.spd * frameScale; e.walkTick += e.walkSpd * 5.5 * e.spd * frameScale; if(e.hitFlash > 0) e.hitFlash -= frameScale;
+                    if(Math.random() < 0.1 * frameScale) this.particles.push({ x: e.x, y: e.y+e.size/2, vx: 0.5, vy: -0.2, life: 0.4, size: 2+Math.random()*3, color: 'rgba(100,80,60,0.3)' });
                     if(e.x < COWBOY_X + 25) {
-                        this.hp -= e.typeKey === 'brute' ? 30 : 10; this.shake = 25; this.enemies.splice(idx, 1); this.updateUI();
-                        if(this.hp <= 0) { this.state = 'gameover'; this.gameOverTick = now; document.getElementById('game-over').style.display = 'flex'; }
+                        const dmg = e.typeKey === 'brute' ? 30 : 10;
+                        this.hp = Math.max(0, this.hp - dmg); this.shake = 25; e.dead = true; this.updateUI();
+                        if(this.hp <= 0 && this.state === 'playing') {
+                            this.state = 'gameover'; this.gameOverTick = now; this.lastDisplayedSec = null;
+                            if(this.wave > this.bestWave) { this.bestWave = this.wave; saveBestWave(this.bestWave); }
+                            document.getElementById('final-wave-val').textContent = this.wave;
+                            document.getElementById('final-best-wave-val').textContent = this.bestWave;
+                            document.getElementById('best-wave-val').textContent = this.bestWave;
+                            document.getElementById('game-over').style.display = 'flex';
+                        }
                     }
                 });
 
-                this.bullets.forEach((b, bi) => {
-                    b.x += b.vx; b.y += b.vy; if(b.x < 0 || b.x > W || b.y < 0 || b.y > H) { this.bullets.splice(bi, 1); return; }
-                    this.enemies.forEach((e, ei) => {
-                        if(b.hitList.includes(ei)) return;
+                for(let bi = 0; bi < this.bullets.length; bi++) {
+                    const b = this.bullets[bi];
+                    if(b.dead) continue;
+                    b.x += b.vx * frameScale; b.y += b.vy * frameScale;
+                    if(b.x < 0 || b.x > W || b.y < 0 || b.y > H) { b.dead = true; continue; }
+                    for(let ei = 0; ei < this.enemies.length; ei++) {
+                        const e = this.enemies[ei];
+                        if(e.dead || b.hitList.includes(e)) continue;
                         if(Math.hypot(e.x - b.x, e.y - b.y) < e.size/2 + 10) {
-                            e.hp -= b.dmg; e.hitFlash = 5; b.hitList.push(ei); AudioEngine.play('hit');
-                            if(b.type === 'bomb') { this.explode(b.x, b.y, b.radius, b.dmg); this.bullets.splice(bi, 1); }
-                            else if(b.hitList.length >= b.pen) this.bullets.splice(bi, 1);
-                            if(e.hp <= 0) { this.createParticles(e.x, e.y, e.color, 25); this.enemies.splice(ei, 1); this.waveKillCount++; if(this.waveKillCount >= this.waveTotalCount) { this.wave++; this.waveKillCount = 0; this.waveTotalCount += 6; this.updateUI(); }}
+                            e.hp -= b.dmg; e.hitFlash = 5; b.hitList.push(e); AudioEngine.play('hit');
+                            if(b.type === 'bomb') { this.explode(b.x, b.y, b.radius, b.dmg); b.dead = true; }
+                            else if(b.hitList.length >= b.pen) b.dead = true;
+                            if(e.hp <= 0) this.killEnemy(e);
+                            if(b.dead) break;
                         }
-                    });
-                });
+                    }
+                }
 
-                const target = this.enemies.filter(e => e.x < COWBOY_X + 550).reduce((prev, curr) => (prev.x < curr.x) ? prev : curr, {x: Infinity});
-                if(target.x !== Infinity) { 
+                const target = this.enemies.filter(e => !e.dead && e.x < COWBOY_X + 550).reduce((prev, curr) => (prev.x < curr.x) ? prev : curr, {x: Infinity});
+                if(target.x !== Infinity) {
                     const br = Math.sin(this.animTime * 2.2) * 2.5;
                     const by = GROUND_Y - 35 + br;
                     const pivotX = COWBOY_X + 18 + 18; const pivotY = by + 15;
-                    this.targetAimAngle = Math.atan2(target.y - pivotY, target.x - pivotX); this.shoot(target); 
+                    this.targetAimAngle = Math.atan2(target.y - pivotY, target.x - pivotX); this.shoot(target);
                 }
                 else this.targetAimAngle = 0;
-                
+
                 let diff = this.targetAimAngle - this.aimAngle;
                 while(diff < -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
                 this.aimAngle += diff * 0.15;
 
-                this.particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; if(p.gravity) p.vy += p.gravity; p.life -= 0.025; if(p.life <= 0) this.particles.splice(i, 1); });
-                if(this.muzzleFlash && this.muzzleFlash.life-- <= 0) this.muzzleFlash = null;
-                if(this.cowboyRecoil > 0) this.cowboyRecoil *= 0.85; if(this.shake > 0) this.shake *= 0.9;
+                this.particles.forEach(p => { p.x += p.vx * frameScale; p.y += p.vy * frameScale; if(p.gravity) p.vy += p.gravity * frameScale; p.life -= 0.025 * frameScale; if(p.life <= 0) p.dead = true; });
+                if(this.muzzleFlash) { this.muzzleFlash.life -= frameScale; if(this.muzzleFlash.life <= 0) this.muzzleFlash = null; }
+                if(this.cowboyRecoil > 0) this.cowboyRecoil *= Math.pow(0.85, frameScale); if(this.shake > 0) this.shake *= Math.pow(0.9, frameScale);
+
+                this.enemies = this.enemies.filter(e => !e.dead);
+                this.bullets = this.bullets.filter(b => !b.dead);
+                this.particles = this.particles.filter(p => !p.dead);
+                this.meteors = this.meteors.filter(m => !m.dead);
             }
 
             explode(x, y, r, dmg) {
                 this.shake = 30; AudioEngine.play('exp');
-                this.enemies.forEach((e, i) => { if(Math.hypot(e.x - x, e.y - y) < r) { e.hp -= dmg; if(e.hp <= 0) { this.createParticles(e.x, e.y, e.color, 25); this.enemies.splice(i, 1); this.waveKillCount++; } } });
+                this.enemies.forEach(e => { if(!e.dead && Math.hypot(e.x - x, e.y - y) < r) { e.hp -= dmg; if(e.hp <= 0) this.killEnemy(e); } });
             }
 
             createParticles(x, y, color, count) {
@@ -461,8 +538,20 @@
         }
 
         const game = new EternalInvasion();
-        function frame() { game.update(); game.draw(); requestAnimationFrame(frame); }
-        window.onload = frame;
+
+        try {
+            if(localStorage.getItem('cowboy_sound_on') === 'on') {
+                AudioEngine.enabled = true;
+                const btn = document.getElementById('sound-btn');
+                if(btn) btn.textContent = 'Sound ON';
+                const initOnGesture = () => { AudioEngine.init(); };
+                window.addEventListener('click', initOnGesture, { once: true });
+                window.addEventListener('keydown', initOnGesture, { once: true });
+            }
+        } catch(e) {}
+
+        function frame(time) { game.update(time); game.draw(); requestAnimationFrame(frame); }
+        requestAnimationFrame(frame);
     </script>
 </body>
 </html>
