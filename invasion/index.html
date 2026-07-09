@@ -4,13 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eternal Invasion</title>
+    <meta name="description" content="Eternal Invasion: RED vs BLUE가 9개 레인에서 끝없이 맞붙는 관전형(attract) 자동 백병전 시뮬레이션. 조작 없이 스스로 굴러가는 무한 전쟁을 지켜보세요.">
+    <meta property="og:title" content="Eternal Invasion">
+    <meta property="og:description" content="RED vs BLUE가 9개 레인에서 끝없이 맞붙는 관전형 자동 백병전 시뮬레이션.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Eternal Invasion">
+    <meta name="twitter:description" content="RED vs BLUE가 9개 레인에서 끝없이 맞붙는 관전형 자동 백병전 시뮬레이션.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23050505'/%3E%3Ccircle cx='30' cy='50' r='18' fill='%23ff4d4d'/%3E%3Ccircle cx='70' cy='50' r='18' fill='%234d7cff'/%3E%3C/svg%3E">
     <style>
         body {
             margin: 0;
             padding: 0;
             background-color: #050505;
             color: #eee;
-            font-family: 'Pretendard', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', Roboto, sans-serif;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -138,6 +146,13 @@
             .controls { gap: 8px; padding: 8px; flex-wrap: wrap; }
             .title-text { font-size: 0.9rem; width: 100%; text-align: center; order: -1; }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ui-panel { transition: none; }
+            .again-btn { transition: none; }
+            .again-btn:hover { transform: none; }
+            .nav-btn { transition: none; }
+        }
     </style>
 </head>
 <body>
@@ -149,28 +164,28 @@
 </div>
 
 <div class="controls">
-    <button id="toggleInfo" class="nav-btn info-btn">SYSTEM INFO</button>
-    <button id="soundBtn" class="nav-btn sound-btn">SOUND: OFF</button>
+    <button id="toggleInfo" class="nav-btn info-btn" aria-pressed="false">SYSTEM INFO</button>
+    <button id="soundBtn" class="nav-btn sound-btn" aria-pressed="false">SOUND: OFF</button>
     <button id="endWarBtn" class="nav-btn end-btn">END WAR</button>
     <div class="title-text">ETERNAL INVASION</div>
     <div class="stats">ENTITIES: <span id="entityCount">0</span></div>
     <div class="stats">FPS: <span id="fps">0</span></div>
     <div><span class="red">RED</span> vs <span class="blue">BLUE</span></div>
-    <a href="https://www.youtube.com/@textcube" target="_blank" class="nav-btn yt-btn">BUNT GAMES YT</a>
+    <a href="https://www.youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="nav-btn yt-btn">BUNT GAMES YT</a>
 </div>
 
 <div id="uiPanel" class="ui-panel">
     > SYSTEM_BOOT: OK<br>
     > PROJECT_NAME: ETERNAL_INVASION<br>
     > AUDIO_ENGINE: PROCEDURAL_SYNTH<br>
-    > BGM: STANDBY (USE SOUND BUTTON)<br>
+    > BGM: <span id="bgmStatusText">STANDBY (USE SOUND BUTTON)</span><br>
     > TARGETING: LOWEST_HP_FOCUS<br>
     > STATUS: INFINITE_WAR_ACTIVE<br>
     -------------------------<br>
     > CLICK 'SOUND' BUTTON TO ENABLE AUDIO
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="gameCanvas" aria-label="RED vs BLUE 자동 전투 시뮬레이션 화면" role="img"></canvas>
 
 <script>
 /**
@@ -183,7 +198,6 @@ class AudioEngine {
         this.ctx = null;
         this.masterGain = null;
         this.isStarted = false;
-        this.isMuted = false;
         this.bpm = 135;
         this.nextTickTime = 0;
         this.currentStep = 0;
@@ -311,6 +325,7 @@ const ctx = canvas.getContext('2d');
 const entityCountEl = document.getElementById('entityCount');
 const fpsEl = document.getElementById('fps');
 const uiPanel = document.getElementById('uiPanel');
+const bgmStatusText = document.getElementById('bgmStatusText');
 const toggleBtn = document.getElementById('toggleInfo');
 const soundBtn = document.getElementById('soundBtn');
 const endWarBtn = document.getElementById('endWarBtn');
@@ -327,6 +342,12 @@ let projectiles = [];
 let particles = [];
 let lanes = [];
 const spriteCache = {};
+
+// DOM 쓰기 최소화용 캐시(값 변화 시에만 innerText 갱신)
+let lastEntityCount = -1;
+let lastFps = -1;
+let fpsAccumTime = 0;
+let fpsAccumFrames = 0;
 
 const UNIT_TYPES = { MELEE: 'MELEE', RANGED: 'RANGED' };
 const TEAMS = { RED: 'RED', BLUE: 'BLUE' };
@@ -372,6 +393,7 @@ function endWar() {
     winnerText.innerText = winner;
     resultStats.innerText = `RED UNITS: ${redCount} | BLUE UNITS: ${blueCount}`;
     resultOverlay.classList.add('active');
+    againBtn.focus();
 }
 
 // UI 이벤트 리스너
@@ -382,17 +404,21 @@ soundBtn.addEventListener('click', async (e) => {
     if (isNowPlaying) {
         soundBtn.innerText = "SOUND: ON";
         soundBtn.classList.add('active');
-        uiPanel.innerHTML = uiPanel.innerHTML.replace('STANDBY (USE SOUND BUTTON)', 'TENSION_LOOP_ACTIVE');
+        soundBtn.setAttribute('aria-pressed', 'true');
+        bgmStatusText.textContent = 'TENSION_LOOP_ACTIVE';
     } else {
         soundBtn.innerText = "SOUND: OFF";
         soundBtn.classList.remove('active');
+        soundBtn.setAttribute('aria-pressed', 'false');
+        bgmStatusText.textContent = 'STANDBY (USE SOUND BUTTON)';
     }
 });
 
-toggleBtn.addEventListener('click', (e) => { 
-    e.stopPropagation(); 
-    uiPanel.classList.toggle('active'); 
-    toggleBtn.classList.toggle('active'); 
+toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isActive = uiPanel.classList.toggle('active');
+    toggleBtn.classList.toggle('active');
+    toggleBtn.setAttribute('aria-pressed', String(isActive));
 });
 
 endWarBtn.addEventListener('click', (e) => { 
@@ -413,7 +439,7 @@ class Particle {
         this.vy = (Math.random() - 0.5) * 6;
         this.life = 1.0; this.color = color;
     }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    update(dtFactor) { this.x += this.vx * dtFactor; this.y += this.vy * dtFactor; this.life -= 0.05 * dtFactor; }
     draw() {
         ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, 2, 2); ctx.globalAlpha = 1.0;
@@ -457,12 +483,38 @@ function preRenderSprites() {
 }
 
 function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 50;
+    const cssWidth = window.innerWidth;
+    const cssHeight = window.innerHeight - 50;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    canvas.style.width = cssWidth + 'px';
+    canvas.style.height = cssHeight + 'px';
+    // 모든 시뮬레이션 좌표는 논리(CSS) 픽셀 기준을 유지하고, 백킹 스토어만 DPR로 확대한다.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // canvas.width/height 재설정은 컨텍스트 상태를 리셋하므로 매번 재지정.
+    // 픽셀 스프라이트의 도트 룩이 HiDPI 확대 시 블러 처리되지 않도록 니어리스트 스케일링 유지.
+    ctx.imageSmoothingEnabled = false;
+
+    // canvas.width 대입은 논리 픽셀이 아니므로, 이후 로직은 반드시 CSS 픽셀 값을 사용해야 한다.
+    canvas.logicalWidth = cssWidth;
+    canvas.logicalHeight = cssHeight;
+
     lanes = [];
     const padding = 70;
-    const spacing = (canvas.height - padding * 2) / (CONFIG.LANE_COUNT - 1);
+    const spacing = (cssHeight - padding * 2) / (CONFIG.LANE_COUNT - 1);
     for (let i = 0; i < CONFIG.LANE_COUNT; i++) lanes.push(padding + i * spacing);
+
+    // 기존 유닛을 새 레인 배열/캔버스 폭에 재동기화(창 축소 시 어긋남 방지)
+    entities.forEach(m => {
+        if (lanes[m.laneIndex] !== undefined) {
+            const oldLaneY = m.laneY;
+            m.laneY = lanes[m.laneIndex];
+            m.y += (m.laneY - oldLaneY);
+        }
+        m.x = Math.max(15, Math.min(cssWidth - 15, m.x));
+    });
 }
 
 // 엔티티 클래스
@@ -472,16 +524,16 @@ class Projectile {
         this.color = color; this.damage = damage;
         this.speed = CONFIG.PROJECTILE_SPEED; this.active = true;
     }
-    update() {
+    update(dtFactor) {
         if (!this.target || this.target.state === 'DEAD') { this.active = false; return; }
         const dx = this.target.x - this.x; const dy = this.target.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 8) { 
-            this.target.takeDamage(this.damage); 
-            createHitEffect(this.x, this.y, this.color); 
-            this.active = false; 
+        if (dist < 8) {
+            this.target.takeDamage(this.damage);
+            createHitEffect(this.x, this.y, this.color);
+            this.active = false;
         }
-        else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
+        else { this.x += (dx / dist) * this.speed * dtFactor; this.y += (dy / dist) * this.speed * dtFactor; }
     }
     draw() { ctx.fillStyle = this.color; ctx.fillRect(this.x - 2, this.y - 2, 4, 4); }
 }
@@ -491,7 +543,7 @@ class Minion {
         this.team = team; this.laneIndex = laneIndex; this.type = type;
         this.stats = CONFIG[type]; this.laneY = lanes[laneIndex];
         this.radius = this.stats.radius; this.hp = this.stats.hp; this.maxHp = this.stats.hp;
-        this.x = team === TEAMS.RED ? 40 : canvas.width - 40;
+        this.x = team === TEAMS.RED ? 40 : canvas.logicalWidth - 40;
         this.y = this.laneY + (Math.random() * 20 - 10);
         this.state = 'MOVE'; this.lastAttackTime = 0; this.animOffset = Math.random() * 1000;
         this.hitFlash = 0; this.facingDir = team === TEAMS.RED ? 1 : -1;
@@ -503,7 +555,7 @@ class Minion {
         if (this.hp <= 0) { this.state = 'DEAD'; createHitEffect(this.x, this.y, '#fff'); }
     }
 
-    applySeparation(laneEntities, isRooted) {
+    applySeparation(laneEntities, isRooted, dtFactor) {
         const forceMult = isRooted ? 0.05 : 1.0;
         const minDist = this.radius * 2.8;
         for (let other of laneEntities) {
@@ -512,18 +564,18 @@ class Minion {
             const distSq = dx * dx + dy * dy;
             if (distSq < minDist * minDist && distSq > 0) {
                 const dist = Math.sqrt(distSq);
-                const push = (minDist - dist) / dist * CONFIG.SEPARATION_FORCE * forceMult;
+                const push = (minDist - dist) / dist * CONFIG.SEPARATION_FORCE * forceMult * dtFactor;
                 this.x += dx * push; this.y += dy * push * 0.5;
             }
         }
     }
 
-    update(dt, currentTime, laneEntities) {
+    update(dt, currentTime, laneEntities, dtFactor) {
         if (this.state === 'DEAD' || !gameRunning) return;
-        if (this.hitFlash > 0) this.hitFlash--;
+        if (this.hitFlash > 0) this.hitFlash = Math.max(0, this.hitFlash - dtFactor);
         const timeSinceAttack = currentTime - this.lastAttackTime;
         const isRooted = timeSinceAttack < this.stats.attackDuration;
-        this.applySeparation(laneEntities, isRooted);
+        this.applySeparation(laneEntities, isRooted, dtFactor);
 
         let bestTarget = null; let lowestHP = Infinity; let minDistToTarget = Infinity;
         const detectionRange = this.stats.range + 140;
@@ -543,8 +595,8 @@ class Minion {
                 this.facingDir = this.team === TEAMS.RED ? 1 : -1;
                 if (bestTarget) this.state = 'ATTACK';
                 else {
-                    if (Math.abs(this.y - this.laneY) < CONFIG.LANE_ADHERENCE_THRESHOLD) this.x += this.facingDir * this.stats.speed;
-                    this.y += (this.laneY - this.y) * 0.1;
+                    if (Math.abs(this.y - this.laneY) < CONFIG.LANE_ADHERENCE_THRESHOLD) this.x += this.facingDir * this.stats.speed * dtFactor;
+                    this.y += (this.laneY - this.y) * 0.1 * dtFactor;
                 }
                 break;
             case 'ATTACK':
@@ -566,15 +618,15 @@ class Minion {
                         }
                     } 
                     else if (!isRooted) {
-                        this.x += ((bestTarget.x - this.x) / minDistToTarget) * this.stats.speed;
-                        this.y += ((bestTarget.y - this.y) / minDistToTarget) * this.stats.speed * 0.5 + (this.laneY - this.y) * 0.05;
+                        this.x += ((bestTarget.x - this.x) / minDistToTarget) * this.stats.speed * dtFactor;
+                        this.y += ((bestTarget.y - this.y) / minDistToTarget) * this.stats.speed * 0.5 * dtFactor + (this.laneY - this.y) * 0.05 * dtFactor;
                     }
                 }
                 break;
         }
         this.y = Math.max(this.laneY - CONFIG.LANE_MAX_DRIFT, Math.min(this.laneY + CONFIG.LANE_MAX_DRIFT, this.y));
-        this.x = Math.max(15, Math.min(canvas.width - 15, this.x));
-        this.lungeOffset *= 0.85;
+        this.x = Math.max(15, Math.min(canvas.logicalWidth - 15, this.x));
+        this.lungeOffset *= Math.pow(0.85, dtFactor);
     }
 
     draw(currentTime) {
@@ -584,14 +636,24 @@ class Minion {
         ctx.save();
         ctx.translate(this.x + this.lungeOffset * this.facingDir, this.y);
         ctx.scale(this.facingDir, 1);
-        if (this.hitFlash > 0) ctx.filter = 'brightness(5) contrast(2)';
+        // 성능: ctx.filter(brightness/contrast)는 매 프레임 비용이 커서, 대신 흰색으로
+        // 채우거나(MELEE) source-atop 흰색 오버레이(RANGED)로 저비용 히트플래시를 표현한다.
         if (this.type === UNIT_TYPES.MELEE) {
             let angle = isRooted ? (1 - timeSinceAttack/this.stats.attackDuration) * 0.45 * Math.PI : (Math.sin(currentTime * 0.015 + this.animOffset) + 1)/2 * 0.25 * Math.PI;
-            ctx.fillStyle = this.teamColor; ctx.beginPath(); ctx.arc(0, 0, 10, angle, 2 * Math.PI - angle); ctx.lineTo(0,0); ctx.fill();
+            ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.teamColor;
+            ctx.beginPath(); ctx.arc(0, 0, 10, angle, 2 * Math.PI - angle); ctx.lineTo(0,0); ctx.fill();
         } else {
             const bob = Math.sin(currentTime * 0.01 + this.animOffset) * 2;
             ctx.rotate(Math.sin(currentTime * 0.008 + this.animOffset) * (isRooted ? 0.4 : 0.15));
             ctx.drawImage(spriteCache[`${this.team}_${this.type}`], -20, -20 + bob);
+            if (this.hitFlash > 0) {
+                ctx.globalCompositeOperation = 'source-atop';
+                ctx.globalAlpha = Math.min(1, this.hitFlash / 3);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-20, -20 + bob, 40, 40);
+                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over';
+            }
         }
         ctx.restore();
         const hpPct = this.hp / this.maxHp;
@@ -611,25 +673,42 @@ function spawn() {
 }
 
 function update(currentTime) {
-    const dt = currentTime - lastTime; lastTime = currentTime;
+    const rawDt = currentTime - lastTime;
+    lastTime = currentTime;
+    // dt 상한 클램프: 첫 프레임/백그라운드 탭 복귀 시 스폰·이동·FPS 표시가 튀지 않게 한다.
+    const dt = Math.min(rawDt, 50);
+    // 프레임레이트 독립화: 60fps 기준 1프레임(1000/60ms) 대비 경과 배율. 상한 3프레임.
+    const dtFactor = Math.min(dt / (1000 / 60), 3);
+
     if (gameRunning) {
         spawnTimer += dt; if (spawnTimer > CONFIG.SPAWN_INTERVAL) { spawn(); spawnTimer = 0; }
         const laneMap = Array.from({ length: CONFIG.LANE_COUNT }, () => []);
         entities.forEach(e => { if (e.state !== 'DEAD') laneMap[e.laneIndex].push(e); });
-        entities.forEach(m => m.update(dt, currentTime, laneMap[m.laneIndex]));
+        entities.forEach(m => m.update(dt, currentTime, laneMap[m.laneIndex], dtFactor));
         entities = entities.filter(m => m.state !== 'DEAD');
-        projectiles.forEach(p => p.update()); projectiles = projectiles.filter(p => p.active);
-        particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0);
+        projectiles.forEach(p => p.update(dtFactor)); projectiles = projectiles.filter(p => p.active);
+        particles.forEach(p => p.update(dtFactor)); particles = particles.filter(p => p.life > 0);
     }
-    entityCountEl.innerText = entities.length;
-    fpsEl.innerText = Math.round(1000 / dt) || 0;
+
+    // 매 프레임 DOM 쓰기 최소화: 값이 실제로 바뀔 때만 기록한다.
+    if (entities.length !== lastEntityCount) {
+        lastEntityCount = entities.length;
+        entityCountEl.innerText = lastEntityCount;
+    }
+    fpsAccumTime += dt; fpsAccumFrames++;
+    if (fpsAccumTime >= 250) {
+        const fps = Math.round(1000 * fpsAccumFrames / fpsAccumTime) || 0;
+        if (fps !== lastFps) { lastFps = fps; fpsEl.innerText = fps; }
+        fpsAccumTime = 0; fpsAccumFrames = 0;
+    }
+
     draw(currentTime);
     requestAnimationFrame(update);
 }
 
 function draw(currentTime) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#111';
-    lanes.forEach(y => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); });
+    ctx.clearRect(0, 0, canvas.logicalWidth, canvas.logicalHeight); ctx.strokeStyle = '#111';
+    lanes.forEach(y => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.logicalWidth, y); ctx.stroke(); });
     entities.forEach(m => m.draw(currentTime));
     projectiles.forEach(p => p.draw());
     particles.forEach(p => p.draw());
