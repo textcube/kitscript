@@ -56,6 +56,7 @@
 
     <div id="ui">
         <div class="text-2xl font-bold text-red-500">SCORE: <span id="score-val" class="text-white">0</span></div>
+        <div class="text-xs font-bold opacity-70">BEST: <span id="best-val">0</span></div>
         <div class="mt-2 text-sm font-bold">SHIELD ENERGY</div>
         <div class="energy-bar-container">
             <div id="energy-fill"></div>
@@ -88,6 +89,8 @@
     <!-- Game Over Notification -->
     <div id="msg-box" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white flex-col z-10 hidden">
         <h1 class="text-6xl font-black mb-4 italic tracking-tighter text-red-600" id="main-title">SYSTEM FAILURE</h1>
+        <p class="text-3xl font-bold mb-1">FINAL SCORE: <span id="final-score" class="text-yellow-400">0</span></p>
+        <p class="text-lg mb-6 opacity-70">BEST: <span id="final-best">0</span></p>
         <p class="text-2xl mb-8 opacity-90" id="sub-title">Restarting in 7s...</p>
         
         <div class="flex gap-4 mb-6">
@@ -115,10 +118,13 @@
         
         const mainTitle = document.getElementById('main-title');
         const subTitle = document.getElementById('sub-title');
-        
+        const bestValEl = document.getElementById('best-val');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalBestEl = document.getElementById('final-best');
+
         // --- Sound System ---
         let audioCtx = null;
-        let isMuted = true; 
+        let isMuted = true;
 
         function initAudio() {
             if (!audioCtx) {
@@ -139,7 +145,7 @@
             osc.frequency.setValueAtTime(160, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
             
-            gain.gain.setValueAtTime(4.8, audioCtx.currentTime); 
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
             
             osc.connect(gain);
@@ -174,7 +180,21 @@
             initAudio();
             isMuted = !isMuted;
             updateSoundUI();
+            saveSoundPref();
         });
+
+        function loadSoundPref() {
+            try { return localStorage.getItem('bird_sound_on'); } catch (e) { return null; }
+        }
+        function saveSoundPref() {
+            try { localStorage.setItem('bird_sound_on', isMuted ? 'off' : 'on'); } catch (e) {}
+        }
+        // Restore sound preference without creating an AudioContext at parse time
+        // (creation/resume stays deferred to the first user gesture in initAudio()).
+        if (loadSoundPref() === 'on') {
+            isMuted = false;
+            updateSoundUI();
+        }
 
         function updateSoundUI() {
             if (isMuted) {
@@ -194,7 +214,8 @@
         const INVADER_SIZE = 48; 
         const COLUMN_SPACING = 480; 
         const INVINCIBILITY_TIME = 25;
-        const AUTO_RESTART_TIME = 7000; 
+        const AUTO_RESTART_TIME = 7000;
+        const IDLE_AUTO_RETURN_TIME = 7000;
 
         const BASE_SPEED = 3.5;
         const SPEED_INCREMENT = 0.15;
@@ -204,8 +225,20 @@
         let score = 0;
         let energy = 100;
         let lastHitFrame = -100;
-        let gameOverTime = 0; 
+        let gameOverTime = 0;
         let isAutoMode = true;
+        let lastInputTime = 0;
+        let lastDisplayedRemaining = null;
+        let logicalWidth = window.innerWidth;
+        let logicalHeight = window.innerHeight;
+
+        function loadBestScore() {
+            try { return parseInt(localStorage.getItem('bird_best_score'), 10) || 0; } catch (e) { return 0; }
+        }
+        function saveBestScore() {
+            try { localStorage.setItem('bird_best_score', String(bestScore)); } catch (e) {}
+        }
+        let bestScore = loadBestScore();
 
         class ParallaxLayer {
             constructor(count, size, speedMult, color) {
@@ -215,8 +248,8 @@
                 this.color = color;
                 for (let i = 0; i < count; i++) {
                     this.stars.push({
-                        x: Math.random() * window.innerWidth,
-                        y: Math.random() * window.innerHeight
+                        x: Math.random() * logicalWidth,
+                        y: Math.random() * logicalHeight
                     });
                 }
             }
@@ -224,7 +257,7 @@
                 const moveDist = gameSpeed * this.speedMult;
                 this.stars.forEach(s => {
                     s.x -= moveDist;
-                    if (s.x < -this.size) s.x = canvas.width;
+                    if (s.x < -this.size) s.x = logicalWidth;
                 });
             }
             draw() {
@@ -261,19 +294,19 @@
                 ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2; ctx.stroke();
                 ctx.restore();
             },
-            update() {
+            update(frameScale) {
                 if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
-                    this.vy += GRAVITY; this.y += this.vy;
-                    if (this.vy < 0) { this.angle = Math.max(-0.2, this.vy * 0.02); } 
+                    this.vy += GRAVITY * frameScale; this.y += this.vy * frameScale;
+                    if (this.vy < 0) { this.angle = Math.max(-0.2, this.vy * 0.02); }
                     else if (gameState === 'PLAYING') {
-                        this.angle += 0.025;
+                        this.angle += 0.025 * frameScale;
                         if (this.angle > Math.PI / 4) this.angle = Math.PI / 4;
                     }
                 }
                 if (gameState === 'PLAYING' && isAutoMode) this.applyAutoAI();
                 const centerY = this.y + this.height / 2;
-                if (centerY > canvas.height) {
-                    this.y = canvas.height - this.height / 2; this.vy = 0;
+                if (centerY > logicalHeight) {
+                    this.y = logicalHeight - this.height / 2; this.vy = 0;
                     if (gameState === 'PLAYING') endGame();
                 }
                 if (this.y < 0) { this.y = 0; this.vy = 0; }
@@ -282,7 +315,7 @@
                 const upcomingPipes = columns.filter(col => col.x + col.width > this.x);
                 const p1 = upcomingPipes[0]; const p2 = upcomingPipes[1];
                 const centerY = this.y + this.height / 2;
-                let targetY = canvas.height / 2;
+                let targetY = logicalHeight / 2;
                 if (p1) {
                     const distToP1 = (p1.x + p1.width) - this.x;
                     const p1Center = p1.gapY + p1.gapSize / 2;
@@ -337,8 +370,8 @@
         class Column {
             constructor(x) {
                 this.x = x; this.invaders = []; this.width = 100; this.passed = false;
-                this.gapSize = 310; this.gapY = Math.random() * (canvas.height - this.gapSize - 200) + 100;
-                for (let yy = 0; yy < canvas.height; yy += INVADER_SIZE + 10) {
+                this.gapSize = 310; this.gapY = Math.random() * (logicalHeight - this.gapSize - 200) + 100;
+                for (let yy = 0; yy < logicalHeight; yy += INVADER_SIZE + 10) {
                     if (yy < this.gapY || yy > this.gapY + this.gapSize) {
                         for(let xx = 0; xx < this.width; xx += INVADER_SIZE + 10) {
                             this.invaders.push(new Invader(this.x + xx, yy));
@@ -356,7 +389,7 @@
                 this.vx = (Math.random() - 0.5) * 15; this.vy = (Math.random() - 0.5) * 15;
                 this.size = Math.random() * 8 + 4; this.life = 1.0;
             }
-            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.025; }
+            update(frameScale) { this.x += this.vx * frameScale; this.y += this.vy * frameScale; this.life -= 0.025 * frameScale; }
             draw() {
                 ctx.globalAlpha = this.life; ctx.fillStyle = '#ff0055';
                 ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1;
@@ -375,22 +408,35 @@
 
         function init() {
             resize();
-            player.y = canvas.height / 2; player.vy = 0; player.angle = 0;
+            player.y = logicalHeight / 2; player.vy = 0; player.angle = 0;
             columns = []; particles = [];
             score = 0; energy = 100; frameCount = 0; lastHitFrame = -100;
-            isAutoMode = true; 
+            isAutoMode = true;
+            lastInputTime = Date.now();
             scoreEl.innerText = score;
             updateEnergyUI();
             updateModeUI();
+            updateBestUI();
         }
 
         function resize() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const dpr = window.devicePixelRatio || 1;
+            logicalWidth = window.innerWidth;
+            logicalHeight = window.innerHeight;
+            canvas.width = logicalWidth * dpr;
+            canvas.height = logicalHeight * dpr;
+            canvas.style.width = logicalWidth + 'px';
+            canvas.style.height = logicalHeight + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             bgLayers = [
                 new ParallaxLayer(80, 2, 0.1, 'rgba(255,255,255,0.2)'),
                 new ParallaxLayer(40, 3, 0.3, 'rgba(255,255,255,0.4)'),
                 new ParallaxLayer(20, 5, 0.6, 'rgba(255,255,255,0.7)')
             ];
+        }
+
+        function updateBestUI() {
+            bestValEl.innerText = bestScore;
         }
 
         function updateEnergyUI() {
@@ -417,30 +463,37 @@
         }
 
         function spawnColumn() {
-            const lastX = columns.length > 0 ? columns[columns.length - 1].x : canvas.width;
+            const lastX = columns.length > 0 ? columns[columns.length - 1].x : logicalWidth;
             columns.push(new Column(lastX + COLUMN_SPACING));
         }
 
         function endGame() {
-            if (gameState === 'GAMEOVER') return; 
-            gameState = 'GAMEOVER'; gameOverTime = Date.now(); 
+            if (gameState === 'GAMEOVER') return;
+            gameState = 'GAMEOVER'; gameOverTime = Date.now();
+            lastDisplayedRemaining = null;
+            if (score > bestScore) { bestScore = score; saveBestScore(); updateBestUI(); }
+            finalScoreEl.innerText = score;
+            finalBestEl.innerText = bestScore;
             msgBox.classList.remove('hidden');
         }
 
-        function update() {
+        function update(frameScale) {
             const currentSpeed = (gameState === 'PLAYING') ? BASE_SPEED + (score * SPEED_INCREMENT) : 0;
             if (gameState === 'PLAYING') {
-                frameCount++;
-                if (columns.length === 0 || columns[columns.length - 1].x < canvas.width + COLUMN_SPACING) spawnColumn();
+                frameCount += frameScale;
+                if (!isAutoMode && Date.now() - lastInputTime > IDLE_AUTO_RETURN_TIME) {
+                    isAutoMode = true; updateModeUI();
+                }
+                if (columns.length === 0 || columns[columns.length - 1].x < logicalWidth + COLUMN_SPACING) spawnColumn();
                 const circleCollider = { x: player.x + player.width / 2, y: player.y + player.height / 2, r: player.collisionRadius };
                 columns.forEach(col => {
-                    col.update(currentSpeed);
+                    col.update(currentSpeed * frameScale);
                     col.invaders.forEach(inv => {
                         if (inv.active) {
                             const invRect = { x: inv.x, y: inv.y, w: INVADER_SIZE, h: INVADER_SIZE };
                             if (checkCircleRectCollision(circleCollider, invRect)) {
                                 inv.active = false; createExplosion(inv.x, inv.y); playHitSound();
-                                if (frameCount - lastHitFrame > 8) {
+                                if (frameCount - lastHitFrame > INVINCIBILITY_TIME) {
                                     energy -= 10; lastHitFrame = frameCount;
                                     if (energy <= 0) energy = 0;
                                     updateEnergyUI();
@@ -454,26 +507,39 @@
             } else if (gameState === 'GAMEOVER') {
                 const elapsed = Date.now() - gameOverTime;
                 const remaining = Math.ceil((AUTO_RESTART_TIME - elapsed) / 1000);
-                if (remaining <= 0) startMission(); else subTitle.innerText = `Restarting in ${remaining}s...`;
+                if (remaining <= 0) startMission();
+                else if (remaining !== lastDisplayedRemaining) {
+                    lastDisplayedRemaining = remaining;
+                    subTitle.innerText = `Restarting in ${remaining}s...`;
+                }
             }
-            bgLayers.forEach(layer => layer.update(currentSpeed || BASE_SPEED * 0.5));
-            player.update();
-            particles.forEach(p => p.update()); particles = particles.filter(p => p.life > 0);
+            bgLayers.forEach(layer => layer.update((currentSpeed || BASE_SPEED * 0.5) * frameScale));
+            player.update(frameScale);
+            particles.forEach(p => p.update(frameScale)); particles = particles.filter(p => p.life > 0);
         }
 
         function draw() {
-            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, logicalWidth, logicalHeight);
             bgLayers.forEach(layer => layer.draw());
             ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
-            for(let i=0; i<canvas.height; i+=6) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+            for(let i=0; i<logicalHeight; i+=6) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(logicalWidth, i); ctx.stroke(); }
             columns.forEach(col => col.draw());
             particles.forEach(p => p.draw()); player.draw();
-            const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+            const grad = ctx.createRadialGradient(logicalWidth/2, logicalHeight/2, 0, logicalWidth/2, logicalHeight/2, logicalWidth);
             grad.addColorStop(0, 'transparent'); grad.addColorStop(1, 'rgba(0,0,0,0.5)');
-            ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.fillStyle = grad; ctx.fillRect(0,0,logicalWidth, logicalHeight);
         }
 
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        let lastTime = 0;
+        function loop(time) {
+            if (!lastTime) lastTime = time;
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            lastTime = time;
+            const frameScale = dt * 60;
+            update(frameScale);
+            draw();
+            requestAnimationFrame(loop);
+        }
 
         function startMission() {
             initAudio();
@@ -489,19 +555,36 @@
             if (gameState === 'START' || gameState === 'GAMEOVER') {
                 startMission();
             } else {
+                lastInputTime = Date.now();
                 if (isAutoMode) { isAutoMode = false; updateModeUI(); }
                 player.jump();
             }
         }
 
-        window.addEventListener('keydown', (e) => { if (e.code === 'Space') handleInput(e); });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (e.repeat) return;
+                e.preventDefault();
+                handleInput(e);
+            }
+        });
         window.addEventListener('mousedown', handleInput);
-        window.addEventListener('resize', resize);
+        window.addEventListener('touchstart', (e) => {
+            const onUiBtn = e.target && e.target.closest && e.target.closest('.ui-btn');
+            if (!onUiBtn) e.preventDefault();
+            handleInput(e);
+        }, { passive: false });
+        window.addEventListener('resize', () => {
+            resize();
+            const centerY = player.y + player.height / 2;
+            if (centerY > logicalHeight) player.y = logicalHeight - player.height / 2;
+            if (player.y < 0) player.y = 0;
+        });
 
         init();
-        gameState = 'PLAYING'; 
+        gameState = 'PLAYING';
         msgBox.classList.add('hidden');
-        loop();
+        requestAnimationFrame(loop);
     </script>
 </body>
 </html>
