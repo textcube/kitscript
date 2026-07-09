@@ -121,6 +121,30 @@ When a homepage becomes a battlefield.
 13. **Google Fonts 로딩에 `preconnect` 미사용** — `<link href="https://fonts.googleapis.com/...">`만 있고 `rel="preconnect"`가 없어 폰트 로딩이 지연될 수 있습니다. `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`을 추가하면 초기 렌더링이 개선됩니다.
 14. **캔버스 게임 콘텐츠의 대체 텍스트 부재** — `#gameCanvas`는 시각적으로만 정보를 전달하며 `aria-label`이나 대체 설명이 없습니다. 스크린리더 사용자를 위한 최소한의 설명(예: 배경 장식 요소이며 상호작용은 하단 버튼으로 가능하다는 안내)을 `aria-hidden`/`aria-label` 조합으로 보강하는 것을 고려하세요.
 
+## 성능·비주얼 개선 계획 (Performance & Visual, 2026-07-10)
+
+이번 패스는 **성능과 비주얼 이슈만** 다룹니다. 접근성/SEO/시맨틱/보안(위 "개선 사항" 1~8, 11~14번)은 이번 범위 밖이며 손대지 않습니다. 게임 규칙·밸런스·기능은 변경하지 않습니다. 아래 항목은 실제 `index.html` 코드에서 확인된 성능·렌더링 문제만 다룹니다.
+
+### P1 — 성능 (Performance)
+
+1. **적 분리 로직이 O(n²)** — `update()`의 적 분리(`ENEMY_SEPARATION`) 루프(약 337~348번 줄)가 매 프레임 모든 적 쌍에 대해 `Math.hypot`를 계산합니다. 스폰 간격이 시간·레벨에 따라 `SPAWN_INTERVAL_MIN`(200ms)까지 줄어들어 화면의 적 수가 늘어나면 프레임당 연산이 제곱으로 폭증해 프레임 드랍이 발생합니다. 공간 분할(그리드/버킷 해시)로 인접 적만 검사하거나, 분리 검사 대상 수를 제한해 근사하세요. **분리 동작(밀어내는 결과)은 시각적으로 동일하게 유지**하고 계산량만 줄여야 합니다.
+2. **백그라운드 탭에서도 게임 루프 전체 실행** — `gameLoop`이 `requestAnimationFrame`만으로 반복되고 `state.active`는 게임오버 때만 false가 됩니다. 탭이 숨겨져도 스폰·이동·충돌·파티클 연산이 계속되어 CPU/배터리를 낭비합니다. `document.visibilitychange`로 탭이 숨겨지면 업데이트를 일시정지하고, 복귀 시 `lastSpawnTime`/타이머 기준시각을 보정해 복귀 직후 폭발적 스폰이 없도록 하세요. (배경 유튜브 영상 정책과 무관하게 캔버스 시뮬레이션만 제어)
+3. **`updateHUD()` 과다 호출 + DOM 재조회** — `updateHUD()`가 적 충돌 루프 내부(약 353번 줄)에서 충돌 중인 적마다·매 프레임 호출되고, 매 호출마다 `document.getElementById`를 6회 수행합니다(HP/EXP/score/level/tickets/aoe 버튼). DOM 레이아웃 스래싱의 원인입니다. HUD 요소 참조를 최초 1회 캐싱하고, HUD 갱신은 프레임당 최대 1회(또는 값이 바뀔 때만)로 합치세요.
+4. **DOM 요소 반복 조회 전반** — `updateHUD`, `showToast`, `renderModules`, `gameOver`, `toggleSound` 등에서 `getElementById`를 반복 호출합니다. 자주 접근하는 정적 요소 참조를 모듈 상단에서 한 번만 캐싱하세요.
+5. **프레임마다 `ctx.shadowBlur` 남용** — 적(skeleton/mummy/pumpkin)·영웅·요정 렌더가 매 프레임 다수의 `ctx.shadowBlur` glow를 그립니다. `shadowBlur`는 캔버스에서 가장 비싼 연산 중 하나라, 적이 많아지면 렌더 비용이 급증합니다. glow를 영웅·요정 등 소수 대상으로 제한하거나 적의 glow는 생략/약화하고, 화면상 적 개수가 임계치를 넘으면 glow를 자동으로 끄는 식으로 가드하세요. **평상시 비주얼 톤은 최대한 유지**합니다.
+
+### P2 — 비주얼 (Visual)
+
+6. **HiDPI(레티나) 미대응** — `resize()`가 백킹 스토어를 CSS 픽셀(`window.innerWidth/Height`)로만 설정해, 고해상도 디스플레이에서 범위 표시 원(1px arc), 파티클, 발사체가 흐릿하게 렌더됩니다. `devicePixelRatio`(상한 ~2)로 백킹 스토어를 확대하고 `ctx.setTransform`으로 스케일하되, 모든 게임 좌표 연산은 논리(CSS) 픽셀 기준으로 유지하세요. 픽셀아트는 `image-rendering: pixelated`가 이미 있어 선명함이 유지됩니다.
+7. **프레임레이트 종속 애니메이션(고주사율에서 2.4배 빠름)** — `playerPos.anim += 0.04`, 적 이동(`e.x += vx`), 발사체·파티클 이동, 쿨다운(`shootCd`, `f.cd`) 등이 모두 `requestAnimationFrame` 틱 단위로 진행됩니다. 120/144Hz 화면에서는 애니메이션과 이동이 60fps 대비 2~2.4배 빠르게 재생되어 부자연스럽습니다. 클램프한 delta(예: 3프레임 상한)를 계산해 이동·애니메이션·쿨다운을 `dt*60` 기준으로 스케일, 어떤 주사율에서도 60fps 튜닝과 동일한 속도로 보이게 하세요. *주의: 이 변경은 렌더 타이밍 정규화가 목적이며 적 속도·스폰 규칙 등 게임 밸런스 수치 자체는 바꾸지 않습니다(현재 60fps 기준 동작을 기준값으로 보존).*
+8. **소스 한글 주석 인코딩 깨짐(mojibake)** — 약 437·606번 줄 등의 한글 주석이 `?쒕꽕?쒖뒪 踰꾩뒪??`처럼 깨져 저장돼 있습니다. 정상 UTF-8 한글(또는 영문)으로 복구하세요. 런타임 영향은 없으나 파일 가독성을 해칩니다. (위 개선 사항 10번과 동일)
+
+### 비범위 (Out of scope, 이번 패스에서 손대지 않음)
+
+- 접근성(줌 차단 해제, 폰트 크기, ARIA, `prefers-reduced-motion`), SEO/OG/파비콘, 시맨틱 태그, 외부 링크 `rel`, 잠긴 모듈 `href="#"`, `CONFIG.MODULES`↔폴더 동기화 등은 별도 패스에서 처리합니다.
+- 게임 규칙·밸런스·신규 기능·레이아웃 재설계.
+- 단일 파일/인라인 철학은 유지(프레임워크·빌드 도입 금지).
+
 ## Hub Menu Order
 
 `index.html`의 `CONFIG.MODULES` 기준 실제 해금 순서(레벨 1~24):

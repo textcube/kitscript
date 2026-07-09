@@ -221,14 +221,30 @@
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        // 자주 조회하는 정적 DOM 요소는 한 번만 캐싱해 매 호출마다의 getElementById 비용을 없앤다
+        const dom = {
+            hpBar: document.getElementById('hp-bar'),
+            expBar: document.getElementById('exp-bar'),
+            score: document.getElementById('score'),
+            statLevel: document.getElementById('stat-level'),
+            statTickets: document.getElementById('stat-tickets'),
+            aoeButton: document.getElementById('aoe-button'),
+            soundToggle: document.getElementById('sound-toggle'),
+            toastContainer: document.getElementById('toast-container'),
+            leftModules: document.getElementById('left-modules'),
+            rightModules: document.getElementById('right-modules')
+        };
         let playerPos = { x: 0, y: 0, anim: 0, shootCd: 0 };
-        let fairies = []; 
+        let fairies = [];
         let enemies = [];
         let projectiles = [];
         let particles = [];
         let ytPlayer;
         let videoBackgroundEnabled = true;
         let usingIframeFallback = false;
+        let viewW = window.innerWidth, viewH = window.innerHeight; // 캔버스 백킹 스토어가 아닌 논리(CSS) 픽셀 기준 크기
+        let lastTime = 0;
+        let hiddenAt = 0; // 탭이 숨겨진 시각(복귀 시 스폰/난이도 타이머 보정용)
 
         function drawPixel(x, y, w, h, color) {
             ctx.fillStyle = color;
@@ -290,19 +306,40 @@
             resize();
             state.startTime = performance.now();
             window.addEventListener('resize', resize);
-            document.getElementById('aoe-button').addEventListener('click', triggerAOE);
-            document.getElementById('sound-toggle').addEventListener('click', toggleSound);
+            dom.aoeButton.addEventListener('click', triggerAOE);
+            dom.soundToggle.addEventListener('click', toggleSound);
+            document.addEventListener('visibilitychange', handleVisibilityChange);
             renderModules();
             updateHUD();
             requestAnimationFrame(gameLoop);
         }
 
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                hiddenAt = performance.now();
+            } else {
+                const now = performance.now();
+                const pausedDuration = hiddenAt ? now - hiddenAt : 0;
+                // 숨겨져 있던 시간만큼 기준 시각을 밀어서 복귀 직후 스폰 폭주/난이도 급증을 방지
+                state.startTime += pausedDuration;
+                state.lastSpawnTime = now;
+                hiddenAt = 0;
+            }
+        }
+
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            playerPos.x = canvas.width / 2;
-            playerPos.y = canvas.height / 2;
-            const turretOffset = 135; 
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            viewW = window.innerWidth;
+            viewH = window.innerHeight;
+            // 백킹 스토어만 dpr배로 확대하고, 게임 좌표 연산은 계속 논리(CSS) 픽셀(viewW/viewH) 기준으로 유지
+            canvas.width = viewW * dpr;
+            canvas.height = viewH * dpr;
+            canvas.style.width = viewW + 'px';
+            canvas.style.height = viewH + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            playerPos.x = viewW / 2;
+            playerPos.y = viewH / 2;
+            const turretOffset = 135;
             fairies = [
                 { x: playerPos.x - turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: 0 },
                 { x: playerPos.x + turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: Math.PI/2 },
@@ -312,19 +349,38 @@
         }
 
         function gameLoop(time) {
-            if (state.active) { update(time); draw(); }
+            const delta = lastTime ? time - lastTime : 16.667;
+            lastTime = time;
+            // 탭이 숨겨진 동안은 시뮬레이션을 멈춰 불필요한 연산을 아낀다
+            if (state.active && !document.hidden) {
+                const dtf = Math.min(delta / 16.667, 3); // 60fps 기준으로 정규화한 프레임 배율(상한 3)
+                update(time, dtf);
+                draw();
+            }
             requestAnimationFrame(gameLoop);
         }
 
-        function update(time) {
-            playerPos.anim += 0.04; 
-            playerPos.shootCd--;
+        function update(time, dtf) {
+            playerPos.anim += 0.04 * dtf;
+            playerPos.shootCd -= dtf;
 
             const elapsedTimeInSeconds = (time - state.startTime) / 1000;
             const timeReduction = elapsedTimeInSeconds * CONFIG.TIME_DIFFICULTY_FACTOR;
             const currentSpawnInterval = Math.max(CONFIG.SPAWN_INTERVAL_MIN, CONFIG.SPAWN_INTERVAL_BASE - (state.level * 80) - timeReduction);
 
             if (time - state.lastSpawnTime > currentSpawnInterval) { spawnEnemy(); state.lastSpawnTime = time; }
+
+            // 적 분리(separation)를 매 프레임 O(n^2) 전수조사하는 대신, 균일 그리드 버킷으로
+            // 인접 셀의 적만 검사해 연산량을 줄인다. 분리 결과(밀어내는 동작)는 동일하게 유지.
+            const cellSize = CONFIG.ENEMY_SEPARATION_RADIUS;
+            const grid = new Map();
+            for (let i = 0; i < enemies.length; i++) {
+                const en = enemies[i];
+                const key = Math.floor(en.x / cellSize) + ',' + Math.floor(en.y / cellSize);
+                let bucket = grid.get(key);
+                if (!bucket) { bucket = []; grid.set(key, bucket); }
+                bucket.push(i);
+            }
 
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const e = enemies[i];
@@ -334,23 +390,31 @@
                 let vx = (dx / distToPlayer) * e.speed;
                 let vy = (dy / distToPlayer) * e.speed;
 
-                for (let j = 0; j < enemies.length; j++) {
-                    if (i === j) continue;
-                    const other = enemies[j];
-                    const distToOther = Math.hypot(e.x - other.x, e.y - other.y);
-                    if (distToOther < CONFIG.ENEMY_SEPARATION_RADIUS) {
-                        const diffX = e.x - other.x;
-                        const diffY = e.y - other.y;
-                        const force = (CONFIG.ENEMY_SEPARATION_RADIUS - distToOther) / CONFIG.ENEMY_SEPARATION_RADIUS;
-                        vx += (diffX / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
-                        vy += (diffY / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
+                const cx = Math.floor(e.x / cellSize);
+                const cy = Math.floor(e.y / cellSize);
+                for (let ox = -1; ox <= 1; ox++) {
+                    for (let oy = -1; oy <= 1; oy++) {
+                        const bucket = grid.get((cx + ox) + ',' + (cy + oy));
+                        if (!bucket) continue;
+                        for (let k = 0; k < bucket.length; k++) {
+                            const j = bucket[k];
+                            if (i === j) continue;
+                            const other = enemies[j];
+                            const distToOther = Math.hypot(e.x - other.x, e.y - other.y);
+                            if (distToOther < CONFIG.ENEMY_SEPARATION_RADIUS) {
+                                const diffX = e.x - other.x;
+                                const diffY = e.y - other.y;
+                                const force = (CONFIG.ENEMY_SEPARATION_RADIUS - distToOther) / CONFIG.ENEMY_SEPARATION_RADIUS;
+                                vx += (diffX / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
+                                vy += (diffY / (distToOther || 1)) * force * CONFIG.ENEMY_SEPARATION_FORCE;
+                            }
+                        }
                     }
                 }
-                e.x += vx; e.y += vy; e.tick++;
+                e.x += vx * dtf; e.y += vy * dtf; e.tick += dtf;
                 if (distToPlayer < 45) {
-                    state.hp -= 0.5;
+                    state.hp -= 0.5 * dtf;
                     if (state.hp <= 0) gameOver();
-                    updateHUD();
                 }
             }
 
@@ -368,7 +432,7 @@
             }
 
             fairies.forEach(f => {
-                f.cd--;
+                f.cd -= dtf;
                 if (f.cd <= 0 && enemies.length > 0) {
                     let closestEnemy = null;
                     let minTargetDist = CONFIG.FAIRY_RANGE;
@@ -389,19 +453,22 @@
                 const dy = p.ty - p.y;
                 const dist = Math.hypot(dx, dy);
                 if (dist < 15) { killEnemy(p.targetRef); projectiles.splice(i, 1); continue; }
-                p.x += (dx / dist) * p.speed; p.y += (dy / dist) * p.speed;
+                p.x += (dx / dist) * p.speed * dtf; p.y += (dy / dist) * p.speed * dtf;
             }
-            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; return (p.life -= 0.05) > 0; });
+            particles = particles.filter(p => { p.x += p.vx * dtf; p.y += p.vy * dtf; return (p.life -= 0.05 * dtf) > 0; });
+
+            // HUD는 프레임당 최대 1회만 갱신 (이전에는 충돌한 적마다/킬/경험치/AOE마다 개별 호출됨)
+            updateHUD();
         }
 
         function spawnEnemy() {
             const side = Math.floor(Math.random() * 4);
             let x, y;
             const buffer = CONFIG.ENEMY_SPAWN_BUFFER;
-            if (side === 0) { x = Math.random() * canvas.width; y = -buffer; }
-            else if (side === 1) { x = canvas.width + buffer; y = Math.random() * canvas.height; }
-            else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + buffer; }
-            else { x = -buffer; y = Math.random() * canvas.height; }
+            if (side === 0) { x = Math.random() * viewW; y = -buffer; }
+            else if (side === 1) { x = viewW + buffer; y = Math.random() * viewH; }
+            else if (side === 2) { x = Math.random() * viewW; y = viewH + buffer; }
+            else { x = -buffer; y = Math.random() * viewH; }
             const type = CONFIG.ENEMY_TYPES[Math.floor(Math.random() * CONFIG.ENEMY_TYPES.length)];
             enemies.push({ ...type, x, y, tick: 0 });
         }
@@ -414,12 +481,11 @@
                 state.kills++;
                 gainExp(50);
                 // 10 Kills = 1 Charge
-                if (state.kills % 10 === 0 && state.tickets < CONFIG.MAX_TICKETS) { 
-                    state.tickets++; 
+                if (state.kills % 10 === 0 && state.tickets < CONFIG.MAX_TICKETS) {
+                    state.tickets++;
                     showToast("CHARGE ACQUIRED!");
                 }
                 enemies.splice(idx, 1);
-                updateHUD();
             }
         }
 
@@ -429,12 +495,12 @@
                 state.exp = 0; state.level++;
                 state.maxExp = Math.floor(state.maxExp * 1.3);
                 showToast(`LEVEL UP: ${state.level}`);
-                renderModules(); updateHUD();
+                renderModules();
             }
         }
 
         /**
-         * ?쒕꽕?쒖뒪 踰꾩뒪??諛쒖궗 濡쒖쭅 蹂듦뎄
+         * 제네시스 버스트(광역 공격) 발사 로직
          */
         function triggerAOE() {
             if (state.tickets < CONFIG.TICKETS_FOR_AOE) { 
@@ -454,16 +520,19 @@
         }
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, viewW, viewH);
             ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(playerPos.x, playerPos.y, CONFIG.PLAYER_RANGE, 0, Math.PI * 2);
             ctx.stroke();
 
+            // 화면상 적이 많을 때는 shadowBlur 글로우를 생략해 렌더 비용 급증을 막는다 (평상시 톤은 유지)
+            const enemyGlowEnabled = enemies.length <= 25;
+
             projectiles.forEach(p => { drawPixel(p.x - 3, p.y - 3, 6, 6, p.color); drawPixel(p.x - 1, p.y - 1, 2, 2, '#fff'); });
             fairies.forEach(f => drawSubtleFairy(f.x, f.y, playerPos.anim, f.offset));
-            enemies.forEach(e => drawEnhancedPixelEnemy(e));
+            enemies.forEach(e => drawEnhancedPixelEnemy(e, enemyGlowEnabled));
             drawGrandPixelHero(playerPos.x, playerPos.y, playerPos.anim);
             particles.forEach(p => { ctx.globalAlpha = p.life; drawPixel(p.x, p.y, 4, 4, p.color); });
             ctx.globalAlpha = 1;
@@ -531,7 +600,7 @@
             ctx.restore();
         }
 
-        function drawEnhancedPixelEnemy(e) {
+        function drawEnhancedPixelEnemy(e, glowEnabled) {
             const p = CONFIG.PIXEL_SIZE;
             const walkFrame = Math.floor(e.tick / 8) % 4;
             const bob = (walkFrame % 2 === 1) ? -2 : 0;
@@ -542,8 +611,8 @@
             if (walkFrame === 0) legR_Y -= p; if (walkFrame === 2) legL_Y -= p; 
             switch(e.name) {
                 case 'skeleton':
-                    drawPixel(p*2, 0, p*4, p*4, '#eee'); drawPixel(p*2.5, p*0.5, p, p, '#ccc'); drawPixel(p*3, p*4, p*2, p*4, '#ddd'); 
-                    ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#0ff';
+                    drawPixel(p*2, 0, p*4, p*4, '#eee'); drawPixel(p*2.5, p*0.5, p, p, '#ccc'); drawPixel(p*3, p*4, p*2, p*4, '#ddd');
+                    if (glowEnabled) { ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#0ff'; }
                     drawPixel(p*2.8, p*1.5, p*0.8, p*0.8, '#0ff'); drawPixel(p*4.4, p*1.5, p*0.8, p*0.8, '#0ff');
                     ctx.shadowBlur = 0; drawPixel(p*2, legL_Y, p, p, '#eee'); drawPixel(p*5, legR_Y, p, p, '#eee');
                     break;
@@ -555,7 +624,7 @@
                 case 'mummy':
                     drawPixel(p*1, 0, p*6, p*8, '#fbc02d'); ctx.fillStyle = '#f9a825'; ctx.fillRect(Math.floor(p*1), Math.floor(p*2.5), Math.floor(p*6), 1.5);
                     ctx.fillRect(Math.floor(p*1), Math.floor(p*5.5), Math.floor(p*6), 1.5);
-                    ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#f00';
+                    if (glowEnabled) { ctx.shadowBlur = 5 * breathe; ctx.shadowColor = '#f00'; }
                     drawPixel(p*2.5, p*2, p*0.8, p*0.8, '#f00'); drawPixel(p*4.7, p*2, p*0.8, p*0.8, '#f00');
                     ctx.shadowBlur = 0; drawPixel(p*7, p*4 + (breathe * p), p, p*2, '#fbc02d');
                     drawPixel(p*2, legL_Y, p, p, '#fbc02d'); drawPixel(p*5, legR_Y, p, p, '#fbc02d');
@@ -582,8 +651,8 @@
         }
 
         function renderModules() {
-            const leftCont = document.getElementById('left-modules');
-            const rightCont = document.getElementById('right-modules');
+            const leftCont = dom.leftModules;
+            const rightCont = dom.rightModules;
             if(!leftCont || !rightCont) return;
             leftCont.innerHTML = ''; rightCont.innerHTML = '';
             CONFIG.MODULES.forEach(m => {
@@ -596,14 +665,14 @@
         }
 
         function updateHUD() {
-            document.getElementById('hp-bar').style.width = `${state.hp}%`;
-            document.getElementById('exp-bar').style.width = `${(state.exp / state.maxExp) * 100}%`;
-            document.getElementById('score').innerText = state.score.toString().padStart(9, '0');
-            document.getElementById('stat-level').innerText = `LV.${state.level} HERO`;
-            document.getElementById('stat-tickets').innerText = `SALVO CHARGE: ${state.tickets} / 3`;
-            
-            const aoeBtn = document.getElementById('aoe-button');
-            // 踰꾪듉 ?곹깭 ?낅뜲?댄듃 濡쒖쭅 蹂듦뎄
+            dom.hpBar.style.width = `${state.hp}%`;
+            dom.expBar.style.width = `${(state.exp / state.maxExp) * 100}%`;
+            dom.score.innerText = state.score.toString().padStart(9, '0');
+            dom.statLevel.innerText = `LV.${state.level} HERO`;
+            dom.statTickets.innerText = `SALVO CHARGE: ${state.tickets} / 3`;
+
+            const aoeBtn = dom.aoeButton;
+            // 차지 게이지가 가득 찼는지에 따라 AOE 버튼의 활성/비활성 상태를 갱신
             if (state.tickets >= CONFIG.TICKETS_FOR_AOE) {
                 aoeBtn.classList.add('active');
                 aoeBtn.classList.remove('disabled');
@@ -614,7 +683,7 @@
         }
 
         function showToast(msg) {
-            const cont = document.getElementById('toast-container');
+            const cont = dom.toastContainer;
             const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
             cont.appendChild(t); setTimeout(() => t.remove(), 2500);
         }
@@ -624,7 +693,7 @@
         function toggleSound() {
             if (!videoBackgroundEnabled || usingIframeFallback || !ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("VIDEO UNAVAILABLE"); return; }
             state.isMuted = !state.isMuted;
-            const btn = document.getElementById('sound-toggle');
+            const btn = dom.soundToggle;
             if (state.isMuted) { ytPlayer.mute(); btn.innerText = "SOUND: OFF"; }
             else { ytPlayer.unMute(); ytPlayer.setVolume(100); ytPlayer.playVideo(); btn.innerText = "SOUND: ON"; showToast("SOUND ACTIVATED"); }
         }
