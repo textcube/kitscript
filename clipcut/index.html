@@ -4,7 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClipCut Pro - 8-BIT EDITION</title>
+    <meta name="description" content="ClipCut Pro is a browser-only, no-upload 8-bit retro video editor. Trim, add text/sprite overlays, mix BGM, and export to WebM entirely on your device.">
+    <meta property="og:title" content="ClipCut Pro - 8-BIT EDITION">
+    <meta property="og:description" content="Browser-only 8-bit retro video editor. Trim, overlay text/sprites, mix BGM, and export to WebM client-side.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="ClipCut Pro - 8-BIT EDITION">
+    <meta name="twitter:description" content="Browser-only 8-bit retro video editor. Trim, overlay text/sprites, mix BGM, and export to WebM client-side.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000000'/%3E%3Crect x='1' y='1' width='14' height='14' fill='none' stroke='%2300ff00' stroke-width='2'/%3E%3Cpath d='M6 4l6 4-6 4z' fill='%2300ff00'/%3E%3C/svg%3E">
     <!-- Retro Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -22,11 +32,17 @@
             --yt-red: #ff0000;
         }
 
-        * { 
-            box-sizing: border-box; 
-            margin: 0; padding: 0; 
-            outline: none; 
-            image-rendering: pixelated; 
+        * {
+            box-sizing: border-box;
+            margin: 0; padding: 0;
+            outline: none;
+            image-rendering: pixelated;
+        }
+
+        /* Keyboard-only focus indicator (retro neon), mouse clicks stay clean */
+        *:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
         }
 
         body {
@@ -159,6 +175,11 @@
             50% { opacity: 0; }
         }
 
+        @media (prefers-reduced-motion: reduce) {
+            .blink { animation: none; opacity: 1; }
+            body::before { opacity: 0.35; }
+        }
+
         .bottom-shelf { background-color: var(--bg-surface); border-top: 4px solid var(--border); padding: 1rem 1.5rem; }
         .timeline-container { position: relative; margin-bottom: 1rem; padding: 10px 0; }
         .timeline-track { 
@@ -271,10 +292,10 @@
         <span>LVL. 25-DEV</span>
     </div>
     <div class="header-links">
-        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" title="YouTube Channel">
+        <a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="icon-link youtube" title="YouTube Channel">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.342 1.12.338 3.44.338 3.44s.004 2.32-.338 3.44a2.01 2.01 0 0 1-1.415 1.419c-1.123.302-5.288.332-6.11.335h-.088c-.822-.003-4.987-.033-6.11-.335a2.01 2.01 0 0 1-1.415-1.42C.301 9.26.305 6.94.305 6.94s-.004-2.32.338-3.44a2.01 2.01 0 0 1 1.415-1.419c1.123-.302 5.288-.332 6.11-.335zM6.5 5.5v3l2.65-1.5L6.5 5.5z"/></svg>
         </a>
-        <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="KitScript Home">
+        <a href="https://kitscript.com/game/" target="_blank" rel="noopener noreferrer" class="icon-link" title="KitScript Home">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 2.146 7.854L3 7.707V14.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V7.707l.854.147a.5.5 0 0 0 .708-.708l-6-6zM13 13.5H4V6.207l4-4 4 4V13.5z"/></svg>
         </a>
     </div>
@@ -299,9 +320,9 @@
             </label>
             <div id="audio-controls" class="hidden" style="margin-top:15px">
                 <div class="layer-card">
-                    <label style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">BGM_VOL</label>
+                    <label for="music-vol" style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">BGM_VOL</label>
                     <input type="range" id="music-vol" min="0" max="1" step="0.05" value="0.5" style="margin-bottom: 12px;">
-                    <label style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">VID_VOL</label>
+                    <label for="video-vol" style="font-size:0.5rem; color:#00ff00; margin-bottom: 8px; display: block;">VID_VOL</label>
                     <input type="range" id="video-vol" min="0" max="1" step="0.05" value="1">
                 </div>
             </div>
@@ -316,7 +337,7 @@
 
     <section class="viewport">
         <div class="canvas-wrap">
-            <canvas id="preview-canvas"></canvas>
+            <canvas id="preview-canvas" aria-label="Video preview canvas"></canvas>
             <div id="empty-state">
                 <div class="no-signal-content">
                     <p class="blink" style="font-family: 'Press Start 2P'; margin-bottom: 20px; color: var(--accent);">[ NO SIGNAL ]</p>
@@ -350,7 +371,7 @@
 
                 <!-- Sound Toggle -->
                 <div class="btn-group">
-                    <button class="btn btn-icon-only" id="mute-btn" title="Toggle Sound">
+                    <button class="btn btn-icon-only" id="mute-btn" title="Toggle Sound" aria-pressed="false">
                         <svg id="mute-icon" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/>
                             <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89l.706.706z"/>
@@ -367,11 +388,11 @@
             <div class="panel-head">TRIM_CONFIG</div>
             <div class="input-row">
                 <div>
-                    <label style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">IN_PT</label>
+                    <label for="trim-in" style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">IN_PT</label>
                     <input type="number" id="trim-in" value="0" step="0.1" min="0">
                 </div>
                 <div>
-                    <label style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">OUT_PT</label>
+                    <label for="trim-out" style="font-size:0.5rem; color:var(--text-muted); margin-bottom: 6px; display: block;">OUT_PT</label>
                     <input type="number" id="trim-out" value="0" step="0.1">
                 </div>
             </div>
@@ -379,7 +400,7 @@
         </section>
         <section>
             <div class="panel-head">SPEED_RATE</div>
-            <select id="speed-select">
+            <select id="speed-select" aria-label="Playback and export speed">
                 <option value="0.5">0.5x SLOW</option>
                 <option value="1" selected>1.0x NORM</option>
                 <option value="2">2.0x FAST</option>
@@ -414,10 +435,9 @@
         canvas: document.getElementById('preview-canvas'),
         ctx: document.getElementById('preview-canvas').getContext('2d'),
         exporting: false, exportCancelled: false,
-        audioCtx: null, vSource: null, mSource: null,
+        audioCtx: null, vSource: null, mSource: null, vGain: null, mGain: null,
         activeHandle: null, resizingLayer: null, draggingLayer: null,
         fonts: [
-            { name: "Black Han Sans", value: "'Black Han Sans', sans-serif" },
             { name: "Retro Pixel", value: "'DotGothic16', sans-serif" },
             { name: "8-Bit Latin", value: "'Press Start 2P', cursive" },
             { name: "Mono Code", value: "'JetBrains Mono', monospace" }
@@ -466,10 +486,12 @@
         document.getElementById('reset-trim').addEventListener('click', () => { if(state.video){ UI.trimIn.value=0; UI.trimOut.value=state.duration.toFixed(2); updateTrimFromInputs(); } });
         
         UI.speedSelect.addEventListener('change', e => { state.speed = parseFloat(e.target.value); if(state.video) state.video.playbackRate = state.speed; });
-        UI.muteBtn.addEventListener('click', () => { 
-            state.isMuted = !state.isMuted; 
+        UI.muteBtn.addEventListener('click', () => {
+            state.isMuted = !state.isMuted;
             UI.muteIcon.innerHTML = state.isMuted ? ICONS.soundOff : ICONS.soundOn;
-            if(state.video) state.video.muted = state.isMuted; 
+            UI.muteBtn.setAttribute('aria-pressed', String(state.isMuted));
+            if(state.video) state.video.muted = state.isMuted;
+            if(state.vGain) state.vGain.gain.value = state.isMuted ? 0 : state.music.videoVolume;
         });
         document.getElementById('add-text-btn').addEventListener('click', addTextOverlay);
         UI.exportBtn.addEventListener('click', startExport);
@@ -516,7 +538,7 @@
             const l = state.resizingLayer;
             if (l.img) l.w = Math.max(5, mx - l.x);
             else l.size = Math.max(10, (my - l.y) * (state.canvas.height / 100));
-            renderLayers(); return;
+            return; // canvas already redraws via renderLoop; avoid rebuilding the sidebar every mousemove
         }
         if (state.draggingLayer) {
             state.draggingLayer.x = mx - state.dragOffset.x;
@@ -524,7 +546,11 @@
         }
     }
 
-    function handleGlobalMouseUp() { state.activeHandle = null; state.resizingLayer = null; state.draggingLayer = null; }
+    function handleGlobalMouseUp() {
+        const wasResizing = state.resizingLayer;
+        state.activeHandle = null; state.resizingLayer = null; state.draggingLayer = null;
+        if (wasResizing) renderLayers(); // sync sidebar numeric fields once resize gesture ends
+    }
 
     function updateTrimFromInputs() { state.trim.start = parseFloat(UI.trimIn.value); state.trim.end = parseFloat(UI.trimOut.value); updateTrimVisual(); }
     
@@ -540,7 +566,10 @@
 
     function handleVideoUpload(e) {
         const file = e.target.files[0]; if(!file) return;
+        if (state.videoURL) URL.revokeObjectURL(state.videoURL);
         state.videoURL = URL.createObjectURL(file);
+        // A fresh <video> element needs a fresh MediaElementSource (one is only ever allowed per element)
+        state.vSource = null; state.vGain = null;
         state.video = document.createElement('video');
         state.video.src = state.videoURL;
         state.video.onloadeddata = () => {
@@ -568,11 +597,23 @@
         reader.readAsDataURL(file);
     }
 
-    function handleAudioUpload(e) { const file = e.target.files[0]; if(!file) return; state.audioURL = URL.createObjectURL(file); state.audio = new Audio(state.audioURL); state.music.enabled = true; UI.audioControls.classList.remove('hidden'); showToast("BGM_ATTACHED"); }
+    function handleAudioUpload(e) {
+        const file = e.target.files[0]; if(!file) return;
+        if (state.audioURL) URL.revokeObjectURL(state.audioURL);
+        state.audioURL = URL.createObjectURL(file);
+        // A fresh <audio> element needs a fresh MediaElementSource (one is only ever allowed per element)
+        state.mSource = null; state.mGain = null;
+        state.audio = new Audio(state.audioURL);
+        state.music.enabled = true; UI.audioControls.classList.remove('hidden'); showToast("BGM_ATTACHED");
+    }
 
     function addTextOverlay() { 
         state.textOverlays.push({ id: Date.now(), content: "INSERT_COIN", x: 20, y: 20, size: 80, color: "#00ff00", font: "'Press Start 2P', cursive", start: 0, end: state.duration }); 
         renderLayers(); 
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     }
 
     function renderLayers() {
@@ -580,12 +621,12 @@
         state.textOverlays.forEach((txt, idx) => {
             const el = document.createElement('div'); el.className = `layer-card ${state.selectedLayerId === txt.id ? 'selected' : ''}`;
             el.innerHTML = `
-                <input type="text" value="${txt.content}" oninput="state.textOverlays[${idx}].content=this.value">
+                <input type="text" value="${escapeHtml(txt.content)}" aria-label="Overlay text" oninput="state.textOverlays[${idx}].content=this.value">
                 <div class="input-row" style="margin-top:8px">
-                    <select onchange="state.textOverlays[${idx}].font=this.value">
-                        ${state.fonts.map(f=>`<option value="${f.value}" ${txt.font===f.value?'selected':''}>${f.name}</option>`).join('')}
+                    <select aria-label="Overlay font" onchange="state.textOverlays[${idx}].font=this.value">
+                        ${state.fonts.map(f=>`<option value="${escapeHtml(f.value)}" ${txt.font===f.value?'selected':''}>${escapeHtml(f.name)}</option>`).join('')}
                     </select>
-                    <input type="color" value="${txt.color}" oninput="state.textOverlays[${idx}].color=this.value">
+                    <input type="color" value="${escapeHtml(txt.color)}" aria-label="Overlay color" oninput="state.textOverlays[${idx}].color=this.value">
                 </div>
                 <button class="btn" style="width:100%; border-color:var(--danger); color:var(--danger); font-size: 0.5rem;" onclick="state.textOverlays.splice(${idx}, 1); renderLayers();">DELETE</button>
             `;
@@ -594,8 +635,8 @@
         UI.imageList.innerHTML = '';
         state.imageOverlays.forEach((img, idx) => {
             const el = document.createElement('div'); el.className = `layer-card ${state.selectedLayerId === img.id ? 'selected' : ''}`;
-            el.innerHTML = `<label style="font-size:0.5rem; color:#00ff00">SIZE</label><input type="number" value="${img.w.toFixed(1)}" oninput="state.imageOverlays[${idx}].w=parseFloat(this.value)">
-            <label style="font-size:0.5rem; color:#00ff00; margin-top:8px; display:block">ALPHA</label><input type="range" min="0" max="1" step="0.05" value="${img.opacity}" oninput="state.imageOverlays[${idx}].opacity=parseFloat(this.value)">
+            el.innerHTML = `<label style="font-size:0.5rem; color:#00ff00">SIZE</label><input type="number" value="${escapeHtml(img.w.toFixed(1))}" aria-label="Sprite size" oninput="state.imageOverlays[${idx}].w=parseFloat(this.value)">
+            <label style="font-size:0.5rem; color:#00ff00; margin-top:8px; display:block">ALPHA</label><input type="range" min="0" max="1" step="0.05" value="${escapeHtml(img.opacity)}" aria-label="Sprite opacity" oninput="state.imageOverlays[${idx}].opacity=parseFloat(this.value)">
             <button class="btn" style="width:100%; border-color:var(--danger); color:var(--danger); margin-top:12px; font-size: 0.5rem;" onclick="state.imageOverlays.splice(${idx}, 1); renderLayers();">DELETE</button>`;
             UI.imageList.appendChild(el);
         });
@@ -649,7 +690,9 @@
 
     function togglePlay() {
         if (!state.video) return;
-        if (state.isPlaying) { 
+        ensureAudioGraph();
+        if (state.audioCtx && state.audioCtx.state === 'suspended') state.audioCtx.resume();
+        if (state.isPlaying) {
             state.video.pause(); 
             if(state.audio) state.audio.pause(); 
             state.isPlaying = false; 
@@ -666,11 +709,14 @@
         }
     }
 
+    let lastPlayheadLeft = null, lastTimeText = null;
     function renderLoop() {
         if (state.video && !state.exporting) {
             const cur = state.video.currentTime;
-            UI.playhead.style.left = (cur / state.duration) * 100 + '%';
-            UI.timeDisplay.textContent = `${formatTime(cur)}  ${formatTime(state.duration)}`;
+            const leftPct = (cur / state.duration) * 100 + '%';
+            if (leftPct !== lastPlayheadLeft) { UI.playhead.style.left = leftPct; lastPlayheadLeft = leftPct; }
+            const timeText = `${formatTime(cur)}  ${formatTime(state.duration)}`;
+            if (timeText !== lastTimeText) { UI.timeDisplay.textContent = timeText; lastTimeText = timeText; }
             if(cur >= state.trim.end) state.video.currentTime = state.trim.start;
             drawFrame(state.ctx, cur);
         }
@@ -714,47 +760,173 @@
     function showToast(msg) { UI.toast.textContent = msg; UI.toast.style.display = 'block'; setTimeout(() => UI.toast.style.display = 'none', 2000); }
     function cancelExport() { if (state.exporting) { state.exportCancelled = true; showToast("CMD_ABORTED"); } }
 
+    // Create each MediaElementSource exactly once per media element and keep it
+    // permanently routed to the speakers. Export temporarily re-points the gain
+    // node's output to the recording destination, then restores it afterward.
+    function ensureAudioGraph() {
+        if (!state.audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            state.audioCtx = new AC();
+        }
+        if (!state.vSource && state.video) {
+            state.vSource = state.audioCtx.createMediaElementSource(state.video);
+            state.vGain = state.audioCtx.createGain();
+            state.vGain.gain.value = state.isMuted ? 0 : state.music.videoVolume;
+            state.vSource.connect(state.vGain);
+            state.vGain.connect(state.audioCtx.destination);
+        }
+        if (!state.mSource && state.audio) {
+            state.mSource = state.audioCtx.createMediaElementSource(state.audio);
+            state.mGain = state.audioCtx.createGain();
+            state.mGain.gain.value = state.music.volume;
+            state.mSource.connect(state.mGain);
+            state.mGain.connect(state.audioCtx.destination);
+        }
+    }
+
+    function restoreAudioRouting(hadVideoAudio, hadMusic) {
+        if (hadVideoAudio && state.vGain) { state.vGain.disconnect(); state.vGain.connect(state.audioCtx.destination); }
+        if (hadMusic && state.mGain) { state.mGain.disconnect(); state.mGain.connect(state.audioCtx.destination); }
+    }
+
+    function pickSupportedMimeType() {
+        const candidates = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp8',
+            'video/webm'
+        ];
+        if (typeof MediaRecorder === 'undefined') return null;
+        if (typeof MediaRecorder.isTypeSupported !== 'function') return 'video/webm';
+        for (const c of candidates) {
+            try { if (MediaRecorder.isTypeSupported(c)) return c; } catch (err) { /* keep trying */ }
+        }
+        return null;
+    }
+
+    function waitForSeek(mediaEl, timeout = 500) {
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = () => { if (done) return; done = true; mediaEl.removeEventListener('seeked', onSeeked); resolve(); };
+            const onSeeked = () => finish();
+            mediaEl.addEventListener('seeked', onSeeked);
+            setTimeout(finish, timeout);
+        });
+    }
+
     async function startExport() {
         if (!state.video) return;
+        if (typeof MediaRecorder === 'undefined') { showToast("EXPORT_UNSUPPORTED"); return; }
+        const mimeType = pickSupportedMimeType();
+        if (!mimeType) { showToast("EXPORT_UNSUPPORTED"); return; }
+
         state.exporting = true; state.exportCancelled = false;
         UI.exportOverlay.style.display = 'flex';
-        if (!state.audioCtx) state.audioCtx = new AudioContext();
+        UI.progressFill.style.width = '0%'; UI.progressPercent.textContent = '0%';
+
+        ensureAudioGraph();
+        if (!state.audioCtx) { showToast("EXPORT_UNSUPPORTED"); state.exporting = false; UI.exportOverlay.style.display = 'none'; return; }
         await state.audioCtx.resume();
-        let dest = state.audioCtx.createMediaStreamDestination();
-        if (!state.isMuted) {
-            if (!state.vSource) state.vSource = state.audioCtx.createMediaElementSource(state.video);
-            const vg = state.audioCtx.createGain(); vg.gain.value = state.music.videoVolume;
-            state.vSource.disconnect(); state.vSource.connect(vg); vg.connect(dest);
-            state.video.currentTime = state.trim.start; state.video.play(); 
-        }
-        if (state.audio && state.music.enabled) {
-            if (!state.mSource) state.mSource = state.audioCtx.createMediaElementSource(state.audio);
-            const mg = state.audioCtx.createGain(); mg.gain.value = state.music.volume;
-            state.mSource.disconnect(); state.mSource.connect(mg); mg.connect(dest);
-            state.audio.currentTime = state.trim.start; state.audio.play();
-        }
-        const fps = 30, ft = 1/fps, totalDur = state.trim.end - state.trim.start;
+
+        const dest = state.audioCtx.createMediaStreamDestination();
+        const includeVideoAudio = !state.isMuted && !!state.vGain;
+        const includeMusic = state.music.enabled && !!state.audio && !!state.mGain;
+        if (includeVideoAudio) { state.vGain.disconnect(); state.vGain.connect(dest); }
+        if (includeMusic) { state.mGain.disconnect(); state.mGain.connect(dest); }
+
+        const fps = 30;
+        const speed = state.speed || 1;
         const ec = document.createElement('canvas'); ec.width = state.canvas.width; ec.height = state.canvas.height;
         const ectx = ec.getContext('2d');
         const comb = new MediaStream([...ec.captureStream(fps).getVideoTracks(), ...dest.stream.getAudioTracks()]);
-        const rec = new MediaRecorder(comb, { mimeType: 'video/webm;codecs=vp9' });
+        const rec = new MediaRecorder(comb, { mimeType });
         const chunks = [];
-        rec.ondataavailable = e => chunks.push(e.data);
-        rec.onstop = () => {
-            if (!state.exportCancelled) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = `8BIT_STG_${Date.now()}.webm`; a.click(); }
-            state.exporting = false; UI.exportOverlay.style.display = 'none';
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+
+        let cleaned = false;
+        let watchdogId = null;
+        const cleanup = () => {
+            if (cleaned) return; cleaned = true;
+            if (watchdogId !== null) { clearInterval(watchdogId); watchdogId = null; }
+            state.video.pause();
+            state.video.playbackRate = state.speed;
+            if (state.audio) { state.audio.pause(); state.audio.playbackRate = 1; }
+            restoreAudioRouting(includeVideoAudio, includeMusic);
+            state.exporting = false;
+            UI.exportOverlay.style.display = 'none';
         };
-        rec.start(); state.video.play(); 
-        let elapsed = 0;
-        while (elapsed <= totalDur) {
-            if (state.exportCancelled) { rec.stop(); state.video.pause(); if(state.audio) state.audio.pause(); return; }
-            const avt = state.trim.start + elapsed; state.video.currentTime = avt;
-            await new Promise(res => { const os=()=>{state.video.removeEventListener('seeked',os); requestAnimationFrame(()=>requestAnimationFrame(res));}; state.video.addEventListener('seeked',os); });
-            drawFrame(ectx, avt);
-            const p = (elapsed/totalDur)*100; UI.progressFill.style.width = p+'%'; UI.progressPercent.textContent = Math.floor(p)+'%';
-            elapsed += ft; await new Promise(r => setTimeout(r, 10));
-        }
-        rec.stop(); state.video.pause(); if(state.audio) state.audio.pause();
+
+        rec.onstop = () => {
+            if (!state.exportCancelled && chunks.length) {
+                const url = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = `8BIT_STG_${Date.now()}.webm`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+            cleanup();
+        };
+
+        state.video.currentTime = state.trim.start;
+        if (state.audio) state.audio.currentTime = state.trim.start;
+        await waitForSeek(state.video);
+        if (state.audio) await waitForSeek(state.audio);
+
+        if (state.exportCancelled) { cleanup(); return; }
+
+        // Baking SPEED_RATE into the export: playing the source media itself at
+        // state.speed (instead of real-time) means the captured frames/audio are
+        // already time-scaled, so 0.5x/2x show up in the resulting file.
+        state.video.playbackRate = speed;
+        if (state.audio && includeMusic) state.audio.playbackRate = speed;
+
+        const totalWallDur = Math.max(0.05, (state.trim.end - state.trim.start) / speed);
+        const startWall = performance.now();
+
+        rec.start();
+        state.video.play();
+        if (state.audio && includeMusic) state.audio.play();
+
+        const stopRecording = () => {
+            if (watchdogId !== null) { clearInterval(watchdogId); watchdogId = null; }
+            try { if (rec.state !== 'inactive') rec.stop(); } catch (err) { cleanup(); }
+        };
+
+        const captureFrame = () => {
+            if (!state.exporting) return;
+            if (state.exportCancelled) { stopRecording(); return; }
+            const vt = state.video.currentTime;
+            if (vt >= state.trim.end || state.video.ended) { stopRecording(); return; }
+            drawFrame(ectx, vt);
+            const p = Math.min(100, ((performance.now() - startWall) / 1000 / totalWallDur) * 100);
+            UI.progressFill.style.width = p + '%'; UI.progressPercent.textContent = Math.floor(p) + '%';
+            scheduleNextFrame();
+        };
+
+        // Real-time playback capture (video plays naturally; frames + audio share
+        // the same clock) replaces the old seek-per-frame loop, which drove video
+        // position manually while audio played independently and drifted out of sync.
+        const scheduleNextFrame = () => {
+            if (state.video.requestVideoFrameCallback) {
+                state.video.requestVideoFrameCallback(captureFrame);
+            } else {
+                requestAnimationFrame(captureFrame);
+            }
+        };
+        scheduleNextFrame();
+
+        // Watchdog fallback: some browsers never deliver a final
+        // requestVideoFrameCallback once a clip reaches its natural end (no further
+        // frame is presented after the last one), which would otherwise leave the
+        // export hanging forever. Poll independently to guarantee termination.
+        watchdogId = setInterval(() => {
+            if (!state.exporting) { clearInterval(watchdogId); watchdogId = null; return; }
+            if (state.exportCancelled || state.video.currentTime >= state.trim.end || state.video.ended) {
+                stopRecording();
+            }
+        }, 150);
     }
     init();
 </script>
