@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KitScript Clock Hub</title>
+    <meta name="description" content="KitScript Clock Hub: an analog-clock tool launcher. Drag KitScript utilities onto 12 hourly slots to schedule them and get T-5m / T-0 launch alerts.">
+    <meta property="og:title" content="KitScript Clock Hub">
+    <meta property="og:description" content="Schedule KitScript tools on an analog clock and get timely T-5m / T-0 launch notifications.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2305070a' stroke='%2300f2ff' stroke-width='6'/%3E%3Cline x1='50' y1='50' x2='50' y2='24' stroke='%23e0e6ed' stroke-width='6' stroke-linecap='round'/%3E%3Cline x1='50' y1='50' x2='70' y2='58' stroke='%2300f2ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%23bc13fe'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -20,7 +28,6 @@
 
         * {
             box-sizing: border-box;
-            user-select: none;
         }
 
         body, html {
@@ -32,6 +39,22 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: 'Fira Code', monospace;
+            user-select: none; /* HUD/컨트롤 등 UI chrome은 선택 방지 */
+        }
+
+        /* 라이브러리의 툴 이름/설명은 예외적으로 텍스트 선택 허용 */
+        .tool-name,
+        .tool-desc {
+            user-select: text;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            .near-active { animation: none; }
         }
 
         /* Scanline overlay */
@@ -275,12 +298,14 @@
             color: var(--neon-blue);
             width: 28px;
             height: 28px;
+            padding: 0;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             font-size: 14px;
+            font-family: inherit;
             transition: all 0.2s;
         }
 
@@ -377,6 +402,22 @@
             border: 2px solid var(--accent-purple);
             background: rgba(188, 19, 254, 0.1);
             transform: scale(1.1);
+        }
+
+        .time-slot:focus-visible,
+        .launch-icon-btn:focus-visible,
+        .notif-close-btn:focus-visible {
+            outline: 2px solid var(--neon-blue);
+            outline-offset: 2px;
+        }
+
+        .notif-close-btn {
+            background: none;
+            border: none;
+            color: inherit;
+            font: inherit;
+            padding: 0;
+            cursor: pointer;
         }
 
         .time-slot .slot-label {
@@ -531,7 +572,7 @@
     <div class="video-background">
         <div class="yt-embed-wrap" id="yt-player">
             <iframe
-                src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&rel=0&playsinline=1&enablejsapi=1"
+                src="https://www.youtube-nocookie.com/embed/kFnxuOnbHU0?autoplay=1&mute=1&controls=0&loop=1&playlist=kFnxuOnbHU0&rel=0&playsinline=1&enablejsapi=1&origin=https://kitscript.com"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 referrerpolicy="strict-origin-when-cross-origin"
                 frameborder="0"
@@ -546,16 +587,16 @@
 
     <!-- Global HUD Bar -->
     <nav class="global-hud">
-        <a href="https://kitscript.com/" target="_blank" class="hud-btn" title="Home">
+        <a href="https://kitscript.com/" target="_blank" rel="noopener noreferrer" class="hud-btn" title="Home">
             <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
         </a>
-        <a href="https://kitscript.com/game/" target="_blank" class="hud-btn" title="Game Hub">
+        <a href="https://kitscript.com/game/" target="_blank" rel="noopener noreferrer" class="hud-btn" title="Game Hub">
             <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4M8 10v4M15 13l2-2M15 11l2 2"></path></svg>
         </a>
-        <a href="https://youtube.com/@textcube" target="_blank" class="hud-btn" title="YouTube Channel">
+        <a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="hud-btn" title="YouTube Channel">
             <svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
         </a>
-        <a href="https://github.com/textcube/kitscript" target="_blank" class="hud-btn" title="GitHub Repo">
+        <a href="https://github.com/textcube/kitscript" target="_blank" rel="noopener noreferrer" class="hud-btn" title="GitHub Repo">
             <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
         </a>
         <button type="button" class="hud-btn hud-sound-btn" id="sound-toggle-btn" title="Background Sound Toggle" aria-label="Background Sound Toggle">
@@ -613,12 +654,15 @@
             { id: 'menu-factory', icon: '🍔', name: 'Menu Factory', desc: 'Dynamic UI navigation and layout designer.', url: 'https://kitscript.com/game/shop/' },
             { id: 'clip-tool', icon: '✂️', name: 'Clip Tool', desc: 'Video snippet extraction and editing utility.', url: 'https://kitscript.com/game/clipcut/' },
             { id: 'bizcard-tool', icon: '📇', name: 'BizCard Tool', desc: 'Digital professional card and contact manager.', url: 'https://kitscript.com/game/bizcard/' },
-            { id: 'qr-generator', icon: '🏁', name: 'QR Generator', desc: 'Instant vector-based QR code generation.', url: 'https://kitscript.com/game/bizcard/' },
+            { id: 'qr-generator', icon: '🏁', name: 'QR Generator', desc: 'Instant vector-based QR code generation.', url: 'https://kitscript.com/game/bizcard/' }, // NOTE: intentionally points at bizcard until a dedicated QR page exists
             { id: 'clipboard-tool', icon: '📋', name: 'Clipboard Tool', desc: 'Enhanced multi-entry buffer management.', url: 'https://kitscript.com/game/clip/' }
         ];
 
         let slotAssignments = JSON.parse(localStorage.getItem('ks_slot_assignments')) || {};
         let notifiedSlots = new Set();
+        let cachedTimeSlots = []; // createSlots()가 갱신; rAF 루프에서 재사용
+        let lastRenderedMinute = -1;
+        let lastRenderedSecond = -1;
 
         const hr = document.getElementById('hr');
         const mn = document.getElementById('mn');
@@ -645,7 +689,7 @@
         }
 
         function buildYoutubeEmbedUrl(videoId) {
-            return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&enablejsapi=1`;
+            return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&enablejsapi=1&origin=${location.origin}`;
         }
 
         function getYoutubeVideoIdFromUrl() {
@@ -713,7 +757,7 @@
                 card.innerHTML = `
                     <div class="tool-header-row">
                         <span class="tool-icon">${tool.icon}</span>
-                        <div class="launch-icon-btn" title="Launch Now" onclick="event.stopPropagation(); launchTool('${tool.id}')">🚀</div>
+                        <button type="button" class="launch-icon-btn" title="Launch Now" aria-label="Launch ${tool.name} now" onclick="event.stopPropagation(); launchTool('${tool.id}')">🚀</button>
                     </div>
                     <div class="tool-name">${tool.name}</div>
                     <div class="tool-desc">${tool.desc}</div>
@@ -731,20 +775,38 @@
         function createSlots() {
             slotsContainer.innerHTML = '';
             const radius = 220;
+            const freshSlotElements = [];
+            let staleAssignmentsFound = false;
+
             for (let i = 1; i <= 12; i++) {
                 const angle = (i * 30 - 90) * (Math.PI / 180);
                 const x = Math.cos(angle) * radius;
                 const y = Math.sin(angle) * radius;
 
+                // 저장된 toolId가 더 이상 TOOLS 목록에 없으면(구버전 데이터 등) 빈 슬롯으로 취급하고 정리
+                const assignment = slotAssignments[i];
+                let tool = null;
+                if (assignment) {
+                    tool = getToolById(assignment.toolId);
+                    if (!tool) {
+                        delete slotAssignments[i];
+                        staleAssignmentsFound = true;
+                    }
+                }
+
                 const slot = document.createElement('div');
                 slot.className = 'time-slot';
-                if (slotAssignments[i]) slot.classList.add('active');
+                if (tool) slot.classList.add('active');
                 slot.style.left = `calc(50% + ${x}px - 30px)`;
                 slot.style.top = `calc(50% + ${y}px - 30px)`;
                 slot.innerHTML = `
                     <div class="slot-label">${i}:00</div>
-                    <div class="slot-content">${slotAssignments[i] ? getToolById(slotAssignments[i].toolId).icon : ''}</div>
+                    <div class="slot-content">${tool ? tool.icon : ''}</div>
                 `;
+
+                slot.setAttribute('role', 'button');
+                slot.setAttribute('tabindex', '0');
+                slot.setAttribute('aria-label', tool ? `${i}시 슬롯, ${tool.name} 예약됨` : `${i}시 슬롯, 비어 있음`);
 
                 slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
                 slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
@@ -756,17 +818,31 @@
                 });
 
                 slot.addEventListener('click', () => showDetails(i));
+                slot.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                        e.preventDefault();
+                        showDetails(i);
+                    }
+                });
                 slot.dataset.hour = i;
                 slotsContainer.appendChild(slot);
+                freshSlotElements.push(slot);
             }
+
+            // rAF 루프에서 매 프레임 querySelectorAll 하지 않도록 슬롯 참조 캐싱(성능)
+            cachedTimeSlots = freshSlotElements;
+
+            if (staleAssignmentsFound) saveData();
         }
 
         function assignToolToSlot(hour, toolId) {
+            const tool = getToolById(toolId);
+            if (!tool) return; // 잘못되었거나 존재하지 않는 toolId(비정상 드래그 payload 등)는 무시
             slotAssignments[hour] = { toolId: toolId };
             saveData();
             createSlots();
             showDetails(hour);
-            showNotification("SLOT UPDATED", `${getToolById(toolId).name} assigned to ${hour}:00.`);
+            showNotification("SLOT UPDATED", `${tool.name} assigned to ${hour}:00.`);
         }
 
         function removeToolFromSlot(hour) {
@@ -784,18 +860,28 @@
             const hh = now.getHours();
             const mm = now.getMinutes();
             const ss = now.getSeconds();
-            hr.style.transform = `rotate(${30 * hh + mm / 2}deg)`;
-            mn.style.transform = `rotate(${6 * mm}deg)`;
-            sc.style.transform = `rotate(${6 * ss}deg)`;
-            updateVisualAlerters(hh, mm);
+
+            // 시/분침은 분 단위로만 실제 값이 바뀌므로, 바뀔 때만 DOM에 씀(성능)
+            if (mm !== lastRenderedMinute) {
+                lastRenderedMinute = mm;
+                hr.style.transform = `rotate(${30 * hh + mm / 2}deg)`;
+                mn.style.transform = `rotate(${6 * mm}deg)`;
+                updateVisualAlerters(hh, mm);
+            }
+            // 초침은 초 단위로만 값이 바뀜 → rAF(~60fps) 매 프레임 동일 값 재기록 방지
+            if (ss !== lastRenderedSecond) {
+                lastRenderedSecond = ss;
+                sc.style.transform = `rotate(${6 * ss}deg)`;
+            }
             requestAnimationFrame(startTime);
         }
 
         function updateVisualAlerters(hh, mm) {
             const currentHour12 = (hh % 12) || 12;
             const nextHour12 = ((hh + 1) % 12) || 12;
-            document.querySelectorAll('.time-slot').forEach(slot => {
-                const hour = parseInt(slot.dataset.hour);
+            // querySelectorAll 대신 createSlots()가 캐싱해둔 슬롯 참조를 재사용(성능)
+            cachedTimeSlots.forEach(slot => {
+                const hour = parseInt(slot.dataset.hour, 10);
                 slot.classList.toggle('near-active', hour === nextHour12 && mm >= 55);
                 slot.style.borderColor = (hour === currentHour12) ? 'var(--accent-purple)' : '';
             });
@@ -808,12 +894,17 @@
             const nextH = ((now.getHours() + 1) % 12) || 12;
             const currentH = (now.getHours() % 12) || 12;
 
-            if (mm === 55 && slotAssignments[nextH] && !notifiedSlots.has(`pre-${nextH}-${hourKey}`)) {
-                showNotification("⚡ SLOT ALERT", `Session for ${getToolById(slotAssignments[nextH].toolId).name} starts in 5 minutes.`, slotAssignments[nextH].toolId);
+            const nextAssignment = slotAssignments[nextH];
+            const nextTool = nextAssignment ? getToolById(nextAssignment.toolId) : null;
+            if (mm === 55 && nextTool && !notifiedSlots.has(`pre-${nextH}-${hourKey}`)) {
+                showNotification("⚡ SLOT ALERT", `Session for ${nextTool.name} starts in 5 minutes.`, nextAssignment.toolId);
                 notifiedSlots.add(`pre-${nextH}-${hourKey}`);
             }
-            if (mm === 0 && slotAssignments[currentH] && !notifiedSlots.has(`active-${currentH}-${hourKey}`)) {
-                showNotification("🚀 SYSTEM ACTIVE", `${getToolById(slotAssignments[currentH].toolId).name} slot is now active.`, slotAssignments[currentH].toolId, true);
+
+            const currentAssignment = slotAssignments[currentH];
+            const currentTool = currentAssignment ? getToolById(currentAssignment.toolId) : null;
+            if (mm === 0 && currentTool && !notifiedSlots.has(`active-${currentH}-${hourKey}`)) {
+                showNotification("🚀 SYSTEM ACTIVE", `${currentTool.name} slot is now active.`, currentAssignment.toolId, true);
                 notifiedSlots.add(`active-${currentH}-${hourKey}`);
             }
         }
@@ -822,7 +913,7 @@
             const notif = document.createElement('div');
             notif.className = 'notification';
             notif.innerHTML = `
-                <div class="notif-header"><span>${title}</span><span style="cursor:pointer" onclick="this.parentElement.parentElement.remove()">✕</span></div>
+                <div class="notif-header"><span>${title}</span><button type="button" class="notif-close-btn" aria-label="Close notification" onclick="this.closest('.notification').remove()">✕</button></div>
                 <div class="notif-body">${message}</div>
                 <div class="notif-actions">
                     ${toolId ? `<button class="btn" onclick="launchTool('${toolId}')">Launch</button>` : ''}
@@ -838,7 +929,7 @@
         function launchTool(toolId) {
             const tool = getToolById(toolId);
             if (tool && tool.url) {
-                window.open(tool.url, '_blank');
+                window.open(tool.url, '_blank', 'noopener');
                 showNotification("EXECUTING", `Initializing ${tool.name} kernel...`);
             }
         }
@@ -876,7 +967,14 @@
             let tool = null;
             if (hour) {
                 const assignment = slotAssignments[hour];
-                if (assignment) tool = getToolById(assignment.toolId);
+                if (assignment) {
+                    tool = getToolById(assignment.toolId);
+                    if (!tool) {
+                        // 삭제된/존재하지 않는 toolId를 가리키는 오래된 배정 정리
+                        delete slotAssignments[hour];
+                        saveData();
+                    }
+                }
             } else if (toolId) {
                 tool = getToolById(toolId);
             }
