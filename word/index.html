@@ -125,11 +125,12 @@
         }
 
         .control-section { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .stats-row { display: flex; align-items: center; gap: 10px; }
+        .stats-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
         .btns-row { display: flex; align-items: center; gap: 6px; }
         .stat-container { text-align: right; }
         .stat-label { font-size: 0.45rem; color: var(--accent); letter-spacing: 1px; margin-bottom: 1px; }
         .hearts-row { font-size: 0.9rem; color: var(--civilian); text-shadow: 0 0 10px var(--civilian); }
+        .score-value { font-size: 0.75rem; color: var(--accent); text-shadow: 0 0 8px var(--accent); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
         .bar-outer { width: 60px; height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; }
         #mana-fill { width: 0%; height: 100%; background: var(--mana); box-shadow: 0 0 10px var(--mana); transition: width 0.3s; }
 
@@ -141,6 +142,7 @@
         }
         @media (max-width: 480px) {
             .icon-btn { width: 30px; height: 30px; }
+            .score-value { font-size: 0.6rem; }
         }
         .icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
         .icon-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0, 242, 255, 0.1); }
@@ -193,6 +195,7 @@
         }
         .modal h2 { font-size: 1.8rem; margin-bottom: 10px; color: var(--civilian); }
         #countdown { font-size: 3rem; color: var(--accent); margin: 10px 0; font-family: 'JetBrains Mono', monospace; }
+        #run-result-box { font-size: 0.7rem; color: var(--accent); margin-top: 6px; font-family: 'JetBrains Mono', monospace; opacity: 0.85; }
         
         textarea {
             width: 100%; height: 120px; background: #020617; color: var(--spy);
@@ -223,6 +226,10 @@
 
         <div class="control-section">
             <div class="stats-row">
+                <div class="stat-container">
+                    <div class="stat-label">SECURED · BEST</div>
+                    <div class="score-value" id="score-display">0 · 0</div>
+                </div>
                 <div class="stat-container">
                     <div class="hearts-row" id="hearts-display">❤️❤️❤️❤️❤️</div>
                 </div>
@@ -260,6 +267,7 @@
             <div class="modal">
                 <h2>DEFEATED</h2>
                 <div id="death-reason-box">REASON: UNKNOWN ERROR</div>
+                <div id="run-result-box">SECURED: 0 · BEST: 0</div>
                 <div id="countdown">7</div>
                 <button class="btn-primary" onclick="startGame()">FORCE REBOOT</button>
             </div>
@@ -299,6 +307,8 @@ QUANTUM - NEXT GEN TECH</textarea>
         const ctrlModeText = document.getElementById('ctrl-mode');
         const ctrlTimerText = document.getElementById('ctrl-timer');
         const iconAudio = document.getElementById('icon-audio');
+        const scoreDisplay = document.getElementById('score-display');
+        const runResultDisplay = document.getElementById('run-result-box');
 
         const CONFIG = {
             SPAWN_RATE: 1500,
@@ -342,16 +352,24 @@ QUANTUM - NEXT GEN TECH</textarea>
             restartTimer: null,
             deathReason: "UNKNOWN",
             lastFrameTime: 0,
-            keys: {}
+            keys: {},
+            wordsSecured: 0,
+            best: 0
         };
 
+        let viewW = 0, viewH = 0;
+
         function getCol(n) { return COLORS[n] || '#ffffff'; }
+
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = `${state.wordsSecured} · ${state.best}`;
+        }
 
         function initBackground() {
             state.background.stars = [];
             for (let i = 0; i < 60; i++) {
                 state.background.stars.push({
-                    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                    x: Math.random() * viewW, y: Math.random() * viewH,
                     size: Math.random() * 1.5, speed: 0.5 + Math.random() * 1.5, opacity: 0.1 + Math.random() * 0.4
                 });
             }
@@ -359,18 +377,19 @@ QUANTUM - NEXT GEN TECH</textarea>
 
         function drawBackground(dt) {
             const bg = state.background;
+            const dtScale = Math.min(2.0, dt / 16.6);
             bg.stars.forEach(star => {
-                star.x -= star.speed * (state.active && !state.isPaused ? state.difficulty : 0.5) * (dt / 16.6);
-                if (star.x < 0) star.x = canvas.width;
+                star.x -= star.speed * (state.active && !state.isPaused ? state.difficulty : 0.5) * dtScale;
+                if (star.x < 0) star.x = viewW;
                 ctx.fillStyle = `rgba(0, 242, 255, ${star.opacity})`;
                 ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2); ctx.fill();
             });
-            const gridH = canvas.height * 0.4, startY = canvas.height - gridH;
-            bg.gridOffset = (bg.gridOffset + 1.5 * (state.active && !state.isPaused ? state.difficulty : 0.5)) % 50;
+            const gridH = viewH * 0.4, startY = viewH - gridH;
+            bg.gridOffset = (bg.gridOffset + 1.5 * (state.active && !state.isPaused ? state.difficulty : 0.5) * dtScale) % 50;
             for (let i = 0; i <= gridH; i += 40) {
                 const y = startY + i, alpha = (i / gridH) * 0.15;
                 ctx.strokeStyle = `rgba(0, 242, 255, ${alpha})`;
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(viewW, y); ctx.stroke();
             }
         }
 
@@ -390,11 +409,25 @@ QUANTUM - NEXT GEN TECH</textarea>
         soundToggle.onclick = (e) => {
             e.stopPropagation();
             initAudio(); state.audio = !state.audio;
+            if (state.audioCtx && state.audioCtx.state === 'suspended') state.audioCtx.resume();
             soundToggle.classList.toggle('active', state.audio);
-            iconAudio.innerHTML = state.audio 
+            iconAudio.innerHTML = state.audio
                 ? '<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>'
                 : '<path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+            try { localStorage.setItem('word_sound_on', state.audio ? '1' : '0'); } catch(e) {}
         };
+
+        function setSoundIconOn() {
+            soundToggle.classList.add('active');
+            iconAudio.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+        }
+
+        function ensureAudioGesture() {
+            initAudio();
+            if (state.audioCtx && state.audioCtx.state === 'suspended') state.audioCtx.resume();
+        }
+        window.addEventListener('pointerdown', ensureAudioGesture, { once: true });
+        window.addEventListener('keydown', ensureAudioGesture, { once: true });
 
         skillBtn.addEventListener('pointerdown', (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -409,16 +442,28 @@ QUANTUM - NEXT GEN TECH</textarea>
             }
         });
 
+        function isRestartOverlayShowing() { return !state.active && restartOverlay.style.display === 'flex'; }
+
         window.addEventListener('keydown', (e) => {
+            if (isRestartOverlayShowing()) { startGame(); return; }
             state.keys[e.code] = true;
             if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) setManualMode();
             if(e.code === 'Space') triggerSkill();
         });
         window.addEventListener('keyup', (e) => state.keys[e.code] = false);
 
+        function clearInputState() {
+            state.keys = {};
+            state.isManual = false;
+            state.isDragging = false;
+        }
+        window.addEventListener('blur', clearInputState);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) clearInputState(); });
+
         function setManualMode() { state.isManual = true; state.lastInputTime = Date.now(); }
 
         const onDown = (e) => {
+            if (isRestartOverlayShowing()) { startGame(); return; }
             if (!state.active) return;
             const pos = e.touches ? e.touches[0] : e;
             state.lastMouseX = pos.clientX; state.lastMouseY = pos.clientY;
@@ -431,8 +476,8 @@ QUANTUM - NEXT GEN TECH</textarea>
             const dx = pos.clientX - state.lastMouseX;
             const dy = pos.clientY - state.lastMouseY;
             state.player.x += dx; state.player.y += dy;
-            state.player.x = Math.max(state.player.r, Math.min(canvas.width - state.player.r, state.player.x));
-            state.player.y = Math.max(state.player.r, Math.min(canvas.height - state.player.r, state.player.y));
+            state.player.x = Math.max(state.player.r, Math.min(viewW - state.player.r, state.player.x));
+            state.player.y = Math.max(state.player.r, Math.min(viewH - state.player.r, state.player.y));
             state.lastMouseX = pos.clientX; state.lastMouseY = pos.clientY;
             state.lastInputTime = Date.now();
         };
@@ -445,11 +490,18 @@ QUANTUM - NEXT GEN TECH</textarea>
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(e); }, { passive: false });
         window.addEventListener('touchmove', (e) => { e.preventDefault(); onMove(e); }, { passive: false });
         window.addEventListener('touchend', onUp);
+        restartOverlay.addEventListener('pointerdown', () => { if (isRestartOverlayShowing()) startGame(); });
 
         function resize() {
             const rect = canvas.parentNode.getBoundingClientRect();
-            canvas.width = rect.width; canvas.height = rect.height;
-            if(!state.active) state.player.y = canvas.height / 2;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            viewW = rect.width; viewH = rect.height;
+            canvas.width = Math.round(viewW * dpr);
+            canvas.height = Math.round(viewH * dpr);
+            canvas.style.width = viewW + 'px';
+            canvas.style.height = viewH + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if(!state.active) state.player.y = viewH / 2;
             initBackground();
         }
         window.addEventListener('resize', resize);
@@ -466,12 +518,22 @@ QUANTUM - NEXT GEN TECH</textarea>
                 const p = l.split('-').map(s => s.trim());
                 return p.length >= 2 ? { w: p[0].toUpperCase(), h: p[1] } : null;
             }).filter(x => x);
-            hideSettings(); startGame(); 
+            try { localStorage.setItem('word_list', input); } catch(e) {}
+            hideSettings(); startGame();
         }
 
         function nextWord() {
             if(!state.wordList.length) saveSettings();
-            state.word = state.wordList[Math.floor(Math.random() * state.wordList.length)];
+            if (state.wordList.length > 1 && state.word) {
+                let candidate, attempts = 0;
+                do {
+                    candidate = state.wordList[Math.floor(Math.random() * state.wordList.length)];
+                    attempts++;
+                } while (candidate.w === state.word.w && attempts < 10);
+                state.word = candidate;
+            } else {
+                state.word = state.wordList[Math.floor(Math.random() * state.wordList.length)];
+            }
             state.found = []; state.isWordTransitioning = false;
             hintBox.textContent = `${state.word.h}`; renderSlots();
         }
@@ -494,9 +556,15 @@ QUANTUM - NEXT GEN TECH</textarea>
         }
 
         function triggerCompleteEffect() {
-            state.shake = 20; 
+            state.shake = 20;
             state.mana = Math.min(100, state.mana + 30);
             state.hearts = Math.min(5, state.hearts + 1);
+            state.wordsSecured++;
+            if (state.wordsSecured > state.best) {
+                state.best = state.wordsSecured;
+                try { localStorage.setItem('word_best', String(state.best)); } catch(e) {}
+            }
+            updateScoreDisplay();
             playSfx(440, 'sine', 0.2);
             state.entities.fx.push({ type: 'mission_clear', life: 1.5, maxLife: 1.5 });
         }
@@ -508,8 +576,8 @@ QUANTUM - NEXT GEN TECH</textarea>
             let hp = 1; if(Math.random() * state.difficulty > 2) hp = 2;
             state.entities.letters.push({
                 char, type: isCharInTargetWord ? 'active' : 'civilian',
-                x: canvas.width + 40, y: 50 + Math.random() * (canvas.height - 100),
-                vx: (0.7 + state.difficulty * 0.3) * (0.8 + Math.random() * 0.4), r: 18, hp, maxHp: hp, hitFlash: 0 
+                x: viewW + 40, y: 50 + Math.random() * (viewH - 100),
+                vx: (0.7 + state.difficulty * 0.3) * (0.8 + Math.random() * 0.4), r: 18, hp, maxHp: hp, hitFlash: 0
             });
         }
 
@@ -642,14 +710,14 @@ QUANTUM - NEXT GEN TECH</textarea>
         }
 
         function getSafestIdleFireY(player) {
-            const baseY = canvas.height * 0.5;
+            const baseY = viewH * 0.5;
             const candidates = [
                 baseY,
                 baseY - 48,
                 baseY + 48,
                 baseY - 92,
                 baseY + 92
-            ].map(y => clamp(y, player.r, canvas.height - player.r));
+            ].map(y => clamp(y, player.r, viewH - player.r));
 
             let best = { y: baseY, risk: Infinity, distance: Infinity };
             candidates.forEach(centerY => {
@@ -682,7 +750,7 @@ QUANTUM - NEXT GEN TECH</textarea>
             let bestPlan = null;
 
             spies.forEach(spy => {
-                const urgency = clamp((canvas.width * 0.55 - spy.x) / (canvas.width * 0.55), 0, 1.4);
+                const urgency = clamp((viewW * 0.55 - spy.x) / (viewW * 0.55), 0, 1.4);
                 const charWeight = getNeededCharWeight(spy.char);
                 const shotWindow = getBestShotWindow(player, spy);
                 const shotCenterY = shotWindow ? shotWindow.centerY : spy.y;
@@ -771,12 +839,12 @@ QUANTUM - NEXT GEN TECH</textarea>
                 });
                 const blockerY = strongestBlocker.y;
                 const topClearance = blockerY - p.r;
-                const bottomClearance = canvas.height - blockerY - p.r;
+                const bottomClearance = viewH - blockerY - p.r;
                 const dodgeDirection = topClearance > bottomClearance ? -1 : 1;
                 const edgePadding = p.r + 14;
                 const dodgeTargetY = dodgeDirection < 0
                     ? Math.max(edgePadding, blockerY - frontalCorridor - 18)
-                    : Math.min(canvas.height - edgePadding, blockerY + frontalCorridor + 18);
+                    : Math.min(viewH - edgePadding, blockerY + frontalCorridor + 18);
                 const blockerPressure = frontalBlockers.reduce((sum, c) => {
                     const projectedX = c.x - c.vx * 10;
                     const xForce = 1 - clamp((projectedX - p.x) / frontalLookahead, 0, 1);
@@ -787,8 +855,8 @@ QUANTUM - NEXT GEN TECH</textarea>
                 desiredY = dodgeTargetY + avoidY * 0.35;
             }
 
-            desiredX = clamp(desiredX, p.r, Math.min(canvas.width - p.r, maxX));
-            desiredY = clamp(desiredY, p.r, canvas.height - p.r);
+            desiredX = clamp(desiredX, p.r, Math.min(viewW - p.r, maxX));
+            desiredY = clamp(desiredY, p.r, viewH - p.r);
             const easingX = frontalBlockers.length ? 0.05 : (activePlan.mode === 'collide' ? 0.16 : 0.12);
             const easingY = frontalBlockers.length ? 0.24 : (activePlan.mode === 'collide' ? 0.18 : 0.14);
             p.x += (desiredX - p.x) * easingX * deltaScale;
@@ -801,9 +869,23 @@ QUANTUM - NEXT GEN TECH</textarea>
             if (!state.lastFrameTime) state.lastFrameTime = currentTime;
             const dt = currentTime - state.lastFrameTime;
             state.lastFrameTime = currentTime;
-            if (state.active && !state.isPaused) update(dt);
+            if (state.active && !state.isPaused) {
+                update(dt);
+            } else if (!state.active) {
+                // Keep particles/FX/shake alive during the game-over countdown so the
+                // scene doesn't freeze; no gameplay logic (spawning/movement/collisions) runs.
+                updateEffects(Math.min(2.0, dt / 16.6));
+            }
             draw(dt);
             requestAnimationFrame(gameLoop);
+        }
+
+        function updateEffects(deltaScale) {
+            state.entities.parts.forEach(pa => { pa.x += pa.vx * deltaScale; pa.y += pa.vy * deltaScale; pa.life -= 0.02 * deltaScale; });
+            state.entities.parts = state.entities.parts.filter(pa => pa.life > 0);
+            state.entities.fx.forEach(f => f.life -= 0.02 * deltaScale);
+            state.entities.fx = state.entities.fx.filter(f => f.life > 0);
+            if(state.shake > 0) state.shake *= Math.pow(0.9, deltaScale);
         }
 
         function update(dt) {
@@ -834,51 +916,25 @@ QUANTUM - NEXT GEN TECH</textarea>
                     nearbyCivilianCount >= 2
                 );
                 if(state.mana >= 100 && now > state.skillActiveUntil && shouldUseSkill) triggerSkill();
-                if (false) {
-                // --- AI 오토파일럿 로직 최적화 (베테랑의 지적 반영) ---
-                // 전방 사거리 내에 있는 스파이만 인식
-                const spiesInRange = state.entities.letters.filter(l => 
-                    l.type === 'active' && 
-                    l.hp > 0 && 
-                    l.x > p.x && // 기체보다 앞에 있어야 함
-                    l.x < p.x + CONFIG.AI_DETECTION_RANGE // 근거리/중거리 감지
-                );
-
-                // 중앙 복귀 로직 삭제: 기본 타겟을 현재 위치(p.x, p.y)로 설정
-                let targetY = p.y, targetX = p.x;
-                
-                if(spiesInRange.length) {
-                    // 감지 범위 내에서 가장 가까운(왼쪽) 스파이 추격
-                    const t = spiesInRange.reduce((a, b) => a.x < b.x ? a : b);
-                    targetY = t.y; 
-                    // 적절한 사격 거리 유지 (너무 붙지 않음)
-                    targetX = Math.max(60, Math.min(canvas.width * 0.3, t.x - 120));
-                    
-                    // 이동 실행
-                    p.y += (targetY - p.y) * 0.12 * deltaScale; 
-                    p.x += (targetX - p.x) * 0.1 * deltaScale;
-                }
-                
-                // 위치 유지(Hold Position): 타겟이 없으면 p.x, p.y의 변화가 없으므로 정지함
-
-                if(state.mana >= 100 && now > state.skillActiveUntil && (spiesInRange.length > 3)) triggerSkill();
-                }
             }
 
-            p.x = Math.max(p.r, Math.min(canvas.width - p.r, p.x));
-            p.y = Math.max(p.r, Math.min(canvas.height - p.r, p.y));
+            p.x = Math.max(p.r, Math.min(viewW - p.r, p.x));
+            p.y = Math.max(p.r, Math.min(viewH - p.r, p.y));
 
             if(now - state.lastShot > CONFIG.SHOT_INTERVAL) {
                 state.entities.bullets.push({ x: p.x + 15, y: p.y - 6, startX: p.x + 15, hp: 1 }, { x: p.x + 15, y: p.y + 6, startX: p.x + 15, hp: 1 });
                 state.lastShot = now; playSfx(1000, 'sine', 0.03, 0.015);
             }
-            if(now - state.lastSpawn > Math.max(400, CONFIG.SPAWN_RATE - state.difficulty * 200)) spawn(), state.lastSpawn = now;
-            state.entities.bullets.forEach(b => { 
-                b.x += CONFIG.BULLET_SPEED * deltaScale; 
-                if(b.x > b.startX + CONFIG.ATTACK_RANGE || b.x > canvas.width) b.hp = 0; 
+            if(now - state.lastSpawn > Math.max(400, CONFIG.SPAWN_RATE - state.difficulty * 200)) {
+                spawn();
+                state.lastSpawn = now;
+            }
+            state.entities.bullets.forEach(b => {
+                b.x += CONFIG.BULLET_SPEED * deltaScale;
+                if(b.x > b.startX + CONFIG.ATTACK_RANGE || b.x > viewW) b.hp = 0;
             });
             state.entities.letters.forEach(l => {
-                l.x -= l.vx * deltaScale; if(l.hitFlash > 0) l.hitFlash--;
+                l.x -= l.vx * deltaScale; if(l.hitFlash > 0) l.hitFlash -= deltaScale;
                 if (l.hp > 0) {
                     state.entities.bullets.forEach(b => {
                         if(l.hp > 0 && b.hp && Math.hypot(l.x - b.x, l.y - b.y) < l.r + 5) { b.hp = 0; l.hp--; l.hitFlash = 5; if(l.hp <= 0) handleLetterDeath(l, "INTERFERENCE"); }
@@ -899,11 +955,7 @@ QUANTUM - NEXT GEN TECH</textarea>
             state.entities.letters = state.entities.letters.filter(l => l.hp > 0);
             state.entities.bullets = state.entities.bullets.filter(b => b.hp > 0);
             state.mana = Math.min(100, state.mana + 0.08 * deltaScale);
-            state.entities.parts.forEach(pa => { pa.x += pa.vx; pa.y += pa.vy; pa.life -= 0.02; });
-            state.entities.parts = state.entities.parts.filter(pa => pa.life > 0);
-            state.entities.fx.forEach(f => f.life -= 0.02);
-            state.entities.fx = state.entities.fx.filter(f => f.life > 0);
-            if(state.shake > 0) state.shake *= 0.9;
+            updateEffects(deltaScale);
             manaFill.style.width = state.mana + '%';
             heartsDisplay.textContent = '❤️'.repeat(Math.max(0, state.hearts));
             const isSkillActive = now < state.skillActiveUntil;
@@ -917,7 +969,7 @@ QUANTUM - NEXT GEN TECH</textarea>
         function draw(dt) {
             ctx.save();
             if(state.shake > 0.5) ctx.translate((Math.random()-0.5)*state.shake, (Math.random()-0.5)*state.shake);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, viewW, viewH);
             drawBackground(dt);
             if(state.word) {
                 const now = Date.now();
@@ -927,18 +979,22 @@ QUANTUM - NEXT GEN TECH</textarea>
                 state.entities.letters.forEach(l => {
                     let col = isSkillActive ? (l.type === 'active' ? getCol('spy') : getCol('civilian')) : getCol('accent');
                     if (l.hitFlash > 0) col = '#fff';
-                    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2); ctx.stroke(); 
+                    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2); ctx.stroke();
                     ctx.fillStyle = col; ctx.fillText(l.char, l.x, l.y);
+                    if (l.maxHp > 1) {
+                        ctx.fillStyle = l.hp >= 2 ? col : 'rgba(255,255,255,0.3)';
+                        ctx.beginPath(); ctx.arc(l.x, l.y - l.r - 6, 3, 0, Math.PI * 2); ctx.fill();
+                    }
                 });
                 const p = state.player; ctx.shadowBlur = 15; ctx.shadowColor = getCol('accent'); ctx.fillStyle = getCol('accent');
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
                 state.entities.parts.forEach(pa => { ctx.globalAlpha = pa.life; ctx.fillStyle = pa.c; ctx.fillRect(pa.x, pa.y, pa.size, pa.size); });
                 state.entities.fx.forEach(f => {
                     if(f.type === 'miss') { ctx.globalAlpha = f.life; ctx.fillStyle = getCol('civilian'); ctx.font = 'bold 14px Orbitron'; ctx.fillText(`BREACH: ${f.char}`, f.x + 50, f.y); }
-                    else if(f.type === 'mission_clear') { ctx.globalAlpha = f.life; ctx.fillStyle = '#fff'; ctx.font = 'bold 32px Orbitron'; ctx.fillText("SECURED", canvas.width/2, canvas.height/2); }
-                    else if(f.type === 'bonus_hit') { ctx.globalAlpha = f.life; ctx.fillStyle = varColor('--spy'); ctx.font = 'bold 10px JetBrains Mono'; ctx.fillText("OVER-SYNC", f.x, f.y - 20); }
+                    else if(f.type === 'mission_clear') { ctx.globalAlpha = f.life; ctx.fillStyle = '#fff'; ctx.font = 'bold 32px Orbitron'; ctx.fillText("SECURED", viewW/2, viewH/2); }
+                    else if(f.type === 'bonus_hit') { ctx.globalAlpha = f.life; ctx.fillStyle = getCol('spy'); ctx.font = 'bold 10px JetBrains Mono'; ctx.fillText("OVER-SYNC", f.x, f.y - 20); }
                     else if(f.type === 'scan_wave') {
-                        const radius = (1 - f.life) * canvas.width * 1.5;
+                        const radius = (1 - f.life) * viewW * 1.5;
                         ctx.strokeStyle = `rgba(188, 19, 254, ${f.life})`; ctx.lineWidth = 5;
                         ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2); ctx.stroke();
                     }
@@ -948,25 +1004,46 @@ QUANTUM - NEXT GEN TECH</textarea>
             ctx.restore();
         }
 
-        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-
         function startGame() {
             state.active = false; resize(); if(state.restartTimer) clearInterval(state.restartTimer);
             state.hearts = 5; state.mana = 0; state.difficulty = 1; state.startTime = Date.now();
             state.entities = { bullets: [], letters: [], fx: [], parts: [] };
-            state.player.x = 80; state.player.y = canvas.height/2; state.isManual = false; 
+            state.player.x = 80; state.player.y = viewH/2; state.isManual = false;
+            state.wordsSecured = 0; updateScoreDisplay();
             restartOverlay.style.display = 'none'; nextWord(); state.active = true;
         }
 
         function endGame() {
-            state.active = false; restartOverlay.style.display = 'flex'; 
+            state.active = false; restartOverlay.style.display = 'flex';
             deathReasonDisplay.textContent = `REASON: ${state.deathReason}`;
+            runResultDisplay.textContent = `SECURED: ${state.wordsSecured} · BEST: ${state.best}`;
             let count = CONFIG.RESTART_TIME; countdownEl.textContent = count;
             state.restartTimer = setInterval(() => { count--; countdownEl.textContent = count; if(count <= 0) { clearInterval(state.restartTimer); startGame(); } }, 1000);
         }
 
+        function loadPersistedState() {
+            try {
+                const savedList = localStorage.getItem('word_list');
+                if (savedList && savedList.trim()) wordInput.value = savedList;
+            } catch(e) {}
+            try {
+                if (localStorage.getItem('word_sound_on') === '1') {
+                    state.audio = true;
+                    setSoundIconOn();
+                }
+            } catch(e) {}
+            try {
+                const savedBest = parseInt(localStorage.getItem('word_best'), 10);
+                state.best = Number.isFinite(savedBest) ? savedBest : 0;
+            } catch(e) { state.best = 0; }
+            updateScoreDisplay();
+        }
+
         requestAnimationFrame(gameLoop);
-        window.onload = () => { resize(); saveSettings(); startGame(); };
+        window.onload = () => {
+            loadPersistedState();
+            saveSettings(); // parses the (possibly restored) word list and starts the game exactly once
+        };
     </script>
 </body>
 </html>
