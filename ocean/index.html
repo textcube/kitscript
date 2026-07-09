@@ -88,12 +88,21 @@
         .canvas-container {
             position: relative;
             margin-top: 15px;
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            justify-content: center;
         }
         canvas {
             background: #000;
             box-shadow: 0 0 50px rgba(0, 250, 255, 0.15);
             border: 1px solid #1a1d23;
             cursor: crosshair;
+            width: 100%;
+            max-width: min(960px, calc(100vw - 40px));
+            height: auto;
+            aspect-ratio: 16 / 9;
+            display: block;
         }
     </style>
 </head>
@@ -145,8 +154,22 @@ let score = 0;
 let gameTime = 0;
 let lastTime = 0;
 let restartTimer = 7.0;
+let idleTime = 0; // 플레이어 입력이 없었던 경과 시간 (attract 모드용)
 
 const restartBtn = { x: WIDTH / 2 - 100, y: 380, w: 200, h: 50 };
+
+// --- 최고 점수 (localStorage) ---
+let bestScore = 0;
+try {
+    bestScore = parseInt(localStorage.getItem('ocean_best_score'), 10) || 0;
+} catch (e) {}
+
+function updateBestScore() {
+    if (score > bestScore) {
+        bestScore = score;
+        try { localStorage.setItem('ocean_best_score', String(bestScore)); } catch (e) {}
+    }
+}
 
 // --- 사운드 엔진 ---
 let audioCtx = null;
@@ -215,6 +238,27 @@ const sfx = {
 };
 
 const soundToggle = document.getElementById('soundToggle');
+
+// 저장된 사운드 설정 복원 (AudioContext는 첫 사용자 제스처 전까지 생성하지 않음)
+try {
+    if (localStorage.getItem('ocean_sound_on') === 'on') {
+        isSoundOn = true;
+        soundToggle.textContent = "Sound: ON";
+        soundToggle.classList.add('active');
+    }
+} catch (e) {}
+
+function unlockAudioOnGesture() {
+    if (isSoundOn) {
+        initAudio();
+        if (audioCtx) audioCtx.resume();
+    }
+    window.removeEventListener('click', unlockAudioOnGesture);
+    window.removeEventListener('keydown', unlockAudioOnGesture);
+}
+window.addEventListener('click', unlockAudioOnGesture);
+window.addEventListener('keydown', unlockAudioOnGesture);
+
 soundToggle.addEventListener('click', () => {
     initAudio();
     isSoundOn = !isSoundOn;
@@ -226,12 +270,15 @@ soundToggle.addEventListener('click', () => {
         soundToggle.textContent = "Sound: OFF";
         soundToggle.classList.remove('active');
     }
+    try { localStorage.setItem('ocean_sound_on', isSoundOn ? 'on' : 'off'); } catch (e) {}
 });
 
 // 입력 관리
 const keys = {};
+const GAME_KEYS = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR' && (currentState !== GameState.PLAYING)) resetGame();
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
@@ -239,8 +286,10 @@ window.addEventListener('keyup', e => keys[e.code] = false);
 canvas.addEventListener('mousedown', e => {
     if (currentState !== GameState.PLAYING) {
         const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
         if (mouseX >= restartBtn.x && mouseX <= restartBtn.x + restartBtn.w &&
             mouseY >= restartBtn.y && mouseY <= restartBtn.y + restartBtn.h) {
             resetGame();
@@ -343,25 +392,28 @@ class Missile {
 }
 
 class Bomb {
-    constructor(x, y, type) { 
+    constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type;
         this.vy = type === 'air' ? 1.7 : 1.0;
         this.active = true;
-        this.timer = type === 'depth' ? 4.0 : 999; 
+        this.timer = type === 'depth' ? 4.0 : 999;
     }
     update(dt) {
         this.y += this.vy * dt * 60;
         if (this.type === 'depth') {
             this.timer -= dt;
-            if (this.timer <= 0) this.explode();
+            if (this.timer <= 0) this.explode(85);
+        } else if (this.type === 'air' && this.y >= SURFACE_LAYER) {
+            createSplash(this.x, SURFACE_LAYER, 10);
+            this.explode(55);
         }
         if (this.y > HEIGHT) this.active = false;
     }
-    explode() {
+    explode(radius = 85) {
         if (!this.active) return;
         this.active = false;
-        explosions.push(new Explosion(this.x, this.y, 85));
-        checkExplosionDamage(this.x, this.y, 85);
+        explosions.push(new Explosion(this.x, this.y, radius));
+        checkExplosionDamage(this.x, this.y, radius);
         sfx.explosion(0.3, 0.6, 120);
     }
     draw() {
@@ -400,7 +452,7 @@ class Enemy {
             this.shootTimer = (3 + Math.random() * 5) / (1 + gameTime / 150);
         }
         if (this.x < 80) {
-            base.hp -= 15; 
+            base.hp = Math.max(0, base.hp - 15);
             this.active = false;
             explosions.push(new Explosion(this.x, this.y, 80));
             checkExplosionDamage(this.x, this.y, 80);
@@ -409,7 +461,7 @@ class Enemy {
     }
     shoot() {
         bombs.push(new Bomb(this.x, this.y, this.type === 'air' ? 'air' : 'depth'));
-        if (isSoundOn) sfx.launch(120);
+        sfx.launch(120);
     }
     draw() {
         ctx.save();
@@ -449,7 +501,7 @@ class EscortShip {
             let target = getNearestEnemy(this.x, this.y, 650);
             if (target) {
                 this.gunAngle = Math.atan2(target.y - this.y, target.x - this.x);
-                if (Math.random() < 0.012) {
+                if (Math.random() < 0.72 * dt) { // 0.012/frame @60fps -> per-second rate
                     missiles.push(new Missile(this.x, this.y - 15, target, false));
                     this.heat += 20;
                     if (this.heat >= 100) this.overheated = true;
@@ -485,7 +537,7 @@ let sub, base, escorts = [];
 let enemies = [], missiles = [], bombs = [], explosions = [], particles = [];
 
 function resetGame() {
-    score = 0; gameTime = 0; restartTimer = 7.0;
+    score = 0; gameTime = 0; restartTimer = 7.0; idleTime = 0;
     enemies = []; missiles = []; bombs = []; explosions = []; particles = [];
     sub = { x: 250, y: 460, hp: 100, manualCooldown: 0, autoCooldown: 0 };
     base = { x: 60, y: 450, hp: 120 }; 
@@ -500,8 +552,8 @@ function createSplash(x, y, count) {
 }
 
 function checkExplosionDamage(ex, ey, er) {
-    if (dist(sub.x, sub.y, ex, ey) < er + 20) sub.hp -= 12; 
-    if (dist(base.x, base.y, ex, ey) < er + 55) base.hp -= 10;
+    if (dist(sub.x, sub.y, ex, ey) < er + 20) sub.hp = Math.max(0, sub.hp - 12);
+    if (dist(base.x, base.y, ex, ey) < er + 55) base.hp = Math.max(0, base.hp - 10);
     enemies.forEach(e => {
         if (e.active && dist(e.x, e.y, ex, ey) < er + 30) {
             e.hp -= 2.5; 
@@ -524,15 +576,33 @@ function update(time) {
     }
     gameTime += dt;
 
-    if (Math.random() < 0.12) {
+    if (Math.random() < 7.2 * dt) { // 0.12/frame @60fps -> per-second rate
         particles.push(new Particle(Math.random() * WIDTH, HEIGHT + 10, 'rgba(255,255,255,0.15)', Math.random() * 2 + 1, 0, -1, 5, 'bubble'));
     }
 
     const subSpeed = 2.6;
-    if (keys['ArrowLeft'] || keys['KeyA']) sub.x -= subSpeed * dt * 60;
-    if (keys['ArrowRight'] || keys['KeyD']) sub.x += subSpeed * dt * 60;
-    if (keys['ArrowUp'] || keys['KeyW']) sub.y -= subSpeed * 0.7 * dt * 60;
-    if (keys['ArrowDown'] || keys['KeyS']) sub.y += subSpeed * 0.7 * dt * 60;
+    const movementInput = keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] ||
+        keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS'] || keys['Space'];
+    if (movementInput) {
+        idleTime = 0;
+    } else {
+        idleTime += dt;
+    }
+
+    if (idleTime > 6) {
+        // 6초 이상 입력이 없으면 잠수함이 느린 사인파 궤적으로 순찰 (attract 모드)
+        const patrolCenterX = (160 + (WIDTH - 50)) / 2;
+        const patrolRangeX = ((WIDTH - 50) - 160) / 2 * 0.7;
+        const patrolCenterY = (SURFACE_LAYER + 40 + (HEIGHT - 40)) / 2;
+        const patrolRangeY = ((HEIGHT - 40) - (SURFACE_LAYER + 40)) / 2 * 0.6;
+        sub.x = patrolCenterX + Math.sin(gameTime * 0.3) * patrolRangeX;
+        sub.y = patrolCenterY + Math.sin(gameTime * 0.15) * patrolRangeY;
+    } else {
+        if (keys['ArrowLeft'] || keys['KeyA']) sub.x -= subSpeed * dt * 60;
+        if (keys['ArrowRight'] || keys['KeyD']) sub.x += subSpeed * dt * 60;
+        if (keys['ArrowUp'] || keys['KeyW']) sub.y -= subSpeed * 0.7 * dt * 60;
+        if (keys['ArrowDown'] || keys['KeyS']) sub.y += subSpeed * 0.7 * dt * 60;
+    }
 
     sub.x = Math.max(160, Math.min(WIDTH - 50, sub.x));
     sub.y = Math.max(SURFACE_LAYER + 40, Math.min(HEIGHT - 40, sub.y));
@@ -551,8 +621,8 @@ function update(time) {
 
     escorts.forEach(e => e.update(dt));
 
-    let spawnProb = 0.007 + (gameTime / 1500);
-    if (Math.random() < spawnProb) {
+    let spawnRate = (0.007 + (gameTime / 1500)) * 60; // per-frame(60fps) 확률을 초당 발생률로 환산
+    if (Math.random() < spawnRate * dt) {
         const lane = Math.floor(Math.random() * 3);
         const type = Math.random() > 0.4 ? 'air' : 'surface';
         enemies.push(new Enemy(type, lane));
@@ -588,6 +658,7 @@ function update(time) {
     explosions = explosions.filter(e => e.life > 0);
     particles = particles.filter(p => p.life > 0);
 
+    updateBestScore();
     if (sub.hp <= 0 || base.hp <= 0) currentState = GameState.LOSE;
     if (gameTime >= TARGET_TIME || score >= TARGET_SCORE) currentState = GameState.WIN;
 }
@@ -644,9 +715,11 @@ function draw() {
     ctx.fillStyle = 'rgba(0, 250, 255, 0.9)';
     ctx.font = 'bold 20px Segoe UI';
     ctx.fillText(`SCORE: ${score.toLocaleString()} / ${TARGET_SCORE.toLocaleString()}`, 25, 40);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#ffd700';
     ctx.font = '13px Segoe UI';
-    ctx.fillText(`PROGRESS: ${gameTime.toFixed(1)}s / ${TARGET_TIME}s`, 25, 65);
+    ctx.fillText(`BEST: ${bestScore.toLocaleString()}`, 25, 60);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`PROGRESS: ${gameTime.toFixed(1)}s / ${TARGET_TIME}s`, 25, 80);
 
     drawGauge(WIDTH - 190, 25, 160, "M-LAUNCH", 1 - sub.manualCooldown / 1.1, sub.manualCooldown <= 0 ? '#0f0' : '#f80');
     drawGauge(WIDTH - 190, 50, 160, "A-LAUNCH", 1 - sub.autoCooldown / 2.2, '#0af');
@@ -661,7 +734,10 @@ function draw() {
 function drawGauge(x, y, w, label, ratio, color) {
     ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x, y, w, 15);
     ctx.fillStyle = color; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), 15);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Segoe UI'; ctx.fillText(label, x - 90, y + 12);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Segoe UI';
+    ctx.textAlign = 'right';
+    ctx.fillText(label, x - 10, y + 12); // 라벨을 게이지 바로 앞에 우측 정렬해 겹침/캔버스 밖 이탈 방지
+    ctx.textAlign = 'left';
 }
 
 function drawGameOverOverlay() {
@@ -674,7 +750,10 @@ function drawGameOverOverlay() {
     ctx.fillText(win ? "MISSION SUCCESS" : "MISSION FAILED", WIDTH / 2, HEIGHT / 2 - 40);
     ctx.font = '22px Segoe UI'; ctx.fillStyle = '#fff';
     ctx.fillText(`SCORE: ${score.toLocaleString()}`, WIDTH / 2, HEIGHT / 2 + 10);
-    ctx.fillText(`${restartTimer.toFixed(1)}s to Auto-Reboot...`, WIDTH / 2, HEIGHT / 2 + 50);
+    ctx.font = '16px Segoe UI'; ctx.fillStyle = '#ffd700';
+    ctx.fillText(`BEST: ${bestScore.toLocaleString()}`, WIDTH / 2, HEIGHT / 2 + 34);
+    ctx.font = '22px Segoe UI'; ctx.fillStyle = '#fff';
+    ctx.fillText(`${restartTimer.toFixed(1)}s to Auto-Reboot...`, WIDTH / 2, HEIGHT / 2 + 62);
     ctx.fillStyle = '#1a1d23'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
     ctx.fillRect(restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
     ctx.strokeRect(restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
