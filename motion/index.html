@@ -72,7 +72,7 @@
 
         .toolbar-group { display: flex; gap: 10px; align-items: center; padding: 0 15px; border-right: 1px solid var(--border); }
 
-        main { flex: 1; display: flex; overflow: hidden; background: #000; position: relative; }
+        main { flex: 1; min-height: 0; display: flex; overflow: hidden; background: #000; position: relative; }
 
         .panel-header {
             padding: 18px 20px;
@@ -91,7 +91,7 @@
 
         aside {
             width: 320px; background: var(--bg-dark); border-right: 1px solid var(--border);
-            display: flex; flex-direction: column; flex-shrink: 0;
+            display: flex; flex-direction: column; flex-shrink: 0; min-height: 0;
         }
         #layer-list { flex: 1; overflow-y: auto; padding: 12px; }
         
@@ -130,16 +130,16 @@
         .action-btn.delete:hover { color: #ff4444; border-color: #ff4444; }
 
         #viewport-area {
-            flex: 1; display: flex; flex-direction: column; background: #000; position: relative; overflow: hidden;
+            flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #000; position: relative; overflow: hidden;
         }
         #canvas-container {
-            flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px;
+            flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 20px;
             background-image: radial-gradient(circle, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
             background-size: 30px 30px;
         }
         canvas { 
             box-shadow: 0 0 100px rgba(0,0,0,1); background: transparent;
-            max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;
+            display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #222;
         }
 
         #timeline-editor {
@@ -216,12 +216,13 @@
         </div>
 
         <a href="https://kitscript.com/game/" target="_blank" class="icon-link" title="Kitscript Games" style="text-decoration: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text);"><i data-lucide="home" size="18"></i></a>
-        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" style="text-decoration: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text);"><i data-lucide="youtube" size="18"></i></a>
+        <a href="https://youtube.com/@textcube" target="_blank" class="icon-link youtube" title="TextCube YouTube" style="text-decoration: none; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--bg-light); border: 1px solid var(--border); color: var(--text);"><i data-lucide="play" size="18"></i></a>
 
         <div class="toolbar-group">
             <button class="btn primary" onclick="document.getElementById('fileInput').click()"><i data-lucide="plus"></i> ASSET</button>
             <input type="file" id="fileInput" hidden accept="image/*" multiple>
             <button class="btn" onclick="app.addTextLayer()"><i data-lucide="type"></i> TEXT</button>
+            <button class="btn" onclick="app.resetWorkspace()" title="Reset workspace"><i data-lucide="rotate-ccw"></i> RESET</button>
         </div>
 
         <div class="toolbar-group">
@@ -293,7 +294,7 @@
 
     <div id="restore-modal">
         <h3 style="color: var(--accent);">이전 작업 발견</h3>
-        <p style="font-size: 13px; color: var(--text-muted);">종료 전의 작업 내용이 남아있습니다. 불러오시겠습니까?</p>
+        <p style="font-size: 13px; color: var(--text-muted);">마지막으로 저장된 작업이 있습니다. 복구해서 이어서 편집할까요?</p>
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button class="btn" onclick="app.dismissRestore()">새로 시작</button>
             <button class="btn primary" onclick="app.restoreWork()">복구하기</button>
@@ -339,6 +340,16 @@
                     req.onsuccess = () => resolve(req.result);
                     req.onerror = (e) => reject(e);
                 });
+            },
+            async delete(key) {
+                if (!this.db) await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(this.storeName, 'readwrite');
+                    const store = tx.objectStore(this.storeName);
+                    store.delete(key);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = (e) => reject(e);
+                });
             }
         };
 
@@ -375,10 +386,12 @@
             user: null,
             db: null,
             isCloudEnabled: false,
+            isDemoMode: false,
+            suppressAutoSave: false,
             appId: typeof __app_id !== 'undefined' ? __app_id : 'default-factory-id',
 
             async init() {
-                this.setResolution("1280x720");
+                this.setResolution("1280x720", { silent: true });
                 this.renderLoop();
                 lucide.createIcons();
                 this.setupEventListeners();
@@ -450,16 +463,20 @@
                     if (data && data.layers && data.layers.length > 0) {
                         document.getElementById('restore-modal').style.display = 'flex';
                         this.existingData = data;
+                    } else if (this.layers.length === 0) {
+                        await this.startDemoMode();
                     }
                 } catch(e) { console.error("Restore Check Failed", e); }
             },
 
-            dismissRestore() {
+            async dismissRestore() {
                 document.getElementById('restore-modal').style.display = 'none';
                 this.existingData = null;
+                await this.resetWorkspace();
             },
 
             async restoreWork() {
+                this.stopDemoMode();
                 if (!this.existingData) return;
                 const data = this.existingData;
                 
@@ -494,6 +511,7 @@
             },
 
             triggerAutoSave() {
+                if (this.suppressAutoSave || this.isDemoMode) return;
                 if (this.saveTimeout) clearTimeout(this.saveTimeout);
                 this.saveTimeout = setTimeout(() => this.saveWork(), 1000);
             },
@@ -545,7 +563,9 @@
 
             setupEventListeners() {
                 document.getElementById('fileInput').addEventListener('change', (e) => {
+                    this.stopDemoMode();
                     Array.from(e.target.files).forEach(file => this.importImage(file));
+                    e.target.value = '';
                 });
                 canvas.addEventListener('mousedown', e => this.handleCanvasDown(e));
                 window.addEventListener('mousemove', e => this.handleCanvasMove(e));
@@ -558,6 +578,7 @@
 
                 const tc = document.getElementById('timeline-content');
                 tc.onmousedown = (e) => {
+                    this.stopDemoMode();
                     if(e.target.closest('.anim-bar')) return;
                     const rect = tc.getBoundingClientRect();
                     const labelW = 160;
@@ -570,20 +591,23 @@
                 };
             },
 
-            setResolution(val) {
+            setResolution(val, options = {}) {
+                if (!options.silent) this.stopDemoMode();
                 const [w, h] = val.split('x').map(Number);
                 this.width = w; this.height = h;
                 canvas.width = w; canvas.height = h;
-                this.triggerAutoSave();
+                if (!options.silent) this.triggerAutoSave();
             },
 
             setGlobalDuration(val) {
+                this.stopDemoMode();
                 this.duration = Math.max(1, parseFloat(val));
                 this.updateTimelineUI();
                 this.triggerAutoSave();
             },
 
-            importImage(file) {
+            importImage(file, options = {}) {
+                if (!options.silent) this.stopDemoMode();
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const img = new Image();
@@ -596,7 +620,7 @@
                             animation: this.getDefaultAnim()
                         });
                         this.selectLayer(this.layers[this.layers.length-1].id);
-                        this.triggerAutoSave();
+                        if (!options.silent) this.triggerAutoSave();
                     };
                     img.src = e.target.result;
                 };
@@ -604,6 +628,7 @@
             },
 
             addTextLayer() {
+                this.stopDemoMode();
                 this.layers.push({
                     id: Date.now() + Math.random(),
                     type: 'text', name: 'TEXT', text: 'MOTION FACTORY',
@@ -637,6 +662,152 @@
                 }, 50);
             },
 
+            createImageLayer({ name, img, x, y, scale, animation, opacity = 1 }) {
+                return {
+                    id: Date.now() + Math.random(),
+                    type: 'image',
+                    name,
+                    img,
+                    x,
+                    y,
+                    scale,
+                    rotation: 0,
+                    opacity,
+                    visible: true,
+                    chroma: { mode: 'none', threshold: 45, softness: 10 },
+                    animation: { ...this.getDefaultAnim(), ...animation }
+                };
+            },
+
+            loadImageAsset(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error(`Failed to load ${src}`));
+                    img.src = src;
+                });
+            },
+
+            async startDemoMode() {
+                if (this.layers.length > 0) return;
+                this.suppressAutoSave = true;
+                try {
+                    const assetNames = [
+                        'performance-hall.png',
+                        'harpist.png',
+                        'pianist.png',
+                        'soprano.png',
+                        'cellist.png',
+                        'flutist.png',
+                        'trumpeter.png'
+                    ];
+                    const loaded = await Promise.all(assetNames.map(name => this.loadImageAsset(`images/${name}`)));
+                    const assets = Object.fromEntries(assetNames.map((name, index) => [name, loaded[index]]));
+                    this.setResolution('1024x1024', { silent: true });
+                    this.duration = 6;
+                    this.fps = 30;
+                    document.getElementById('resPresets').value = '1024x1024';
+                    document.getElementById('globalDuration').value = this.duration;
+                    document.getElementById('globalFPS').value = this.fps;
+                    this.layers = [
+                        this.createImageLayer({
+                            name: 'performance-hall.png',
+                            img: assets['performance-hall.png'],
+                            x: 512, y: 512, scale: 0.82,
+                            animation: { type: 'none', duration: 6, amplitude: 0 }
+                        }),
+                        this.createImageLayer({
+                            name: 'harpist.png',
+                            img: assets['harpist.png'],
+                            x: 300, y: 710, scale: 0.43,
+                            animation: { type: 'float', duration: 3.2, delay: 0.15, amplitude: 55 }
+                        }),
+                        this.createImageLayer({
+                            name: 'pianist.png',
+                            img: assets['pianist.png'],
+                            x: 520, y: 720, scale: 0.46,
+                            animation: { type: 'bounce', duration: 2.4, delay: 0.35, amplitude: 42 }
+                        }),
+                        this.createImageLayer({
+                            name: 'cellist.png',
+                            img: assets['cellist.png'],
+                            x: 760, y: 700, scale: 0.43,
+                            animation: { type: 'float', duration: 3.5, delay: 0.5, amplitude: 50 }
+                        }),
+                        this.createImageLayer({
+                            name: 'flutist.png',
+                            img: assets['flutist.png'],
+                            x: 410, y: 515, scale: 0.36,
+                            animation: { type: 'wobble', duration: 2.8, delay: 0.2, amplitude: 34 }
+                        }),
+                        this.createImageLayer({
+                            name: 'soprano.png',
+                            img: assets['soprano.png'],
+                            x: 560, y: 520, scale: 0.38,
+                            animation: { type: 'zoom', duration: 2.6, delay: 0.1, amplitude: 115 }
+                        }),
+                        this.createImageLayer({
+                            name: 'trumpeter.png',
+                            img: assets['trumpeter.png'],
+                            x: 710, y: 520, scale: 0.36,
+                            animation: { type: 'wobble', duration: 2.7, delay: 0.4, amplitude: 30 }
+                        })
+                    ];
+                    this.selectedId = null;
+                    this.currentTime = 0;
+                    this.isDemoMode = true;
+                    this.isPlaying = true;
+                    this.lastFrameTime = performance.now();
+                    this.updateLayerUI();
+                    this.updatePropertiesUI();
+                    this.updateTimelineUI();
+                    this.updateTimeUI();
+                    this.updatePlayButton();
+                } catch (e) {
+                    console.warn('Demo assets unavailable', e);
+                } finally {
+                    this.suppressAutoSave = false;
+                }
+            },
+
+            stopDemoMode() {
+                if (!this.isDemoMode) return;
+                this.isDemoMode = false;
+                this.isPlaying = false;
+                this.updatePlayButton();
+            },
+
+            async resetWorkspace() {
+                this.stopDemoMode();
+                if (this.saveTimeout) clearTimeout(this.saveTimeout);
+                this.suppressAutoSave = true;
+                this.layers = [];
+                this.selectedId = null;
+                this.currentTime = 0;
+                this.setResolution('1280x720', { silent: true });
+                this.duration = 5;
+                this.fps = 30;
+                document.getElementById('resPresets').value = '1280x720';
+                document.getElementById('globalDuration').value = this.duration;
+                document.getElementById('globalFPS').value = this.fps;
+                try {
+                    await ProStorage.delete(`factory_save_${this.appId}`);
+                    if (this.isCloudEnabled && this.user && this.db) {
+                        const { doc, setDoc } = window.firebaseCore;
+                        const docRef = doc(this.db, 'artifacts', this.appId, 'users', this.user.uid, 'sessions', 'current');
+                        await setDoc(docRef, { layers: [], duration: this.duration, fps: this.fps, width: this.width, height: this.height, updatedAt: Date.now() });
+                    }
+                } catch (e) {
+                    console.warn('Reset storage cleanup failed', e);
+                }
+                this.updateLayerUI();
+                this.updatePropertiesUI();
+                this.updateTimelineUI();
+                this.updateTimeUI();
+                this.suppressAutoSave = false;
+                await this.startDemoMode();
+            },
+
             updateLayerUI() {
                 const container = document.getElementById('layer-list');
                 container.innerHTML = '';
@@ -650,31 +821,38 @@
                         thumbContent = `<img src="${layer.img.src}" alt="thumb">`;
                     }
 
+                    const displayName = layer.type === 'text' ? layer.text : layer.name;
                     div.innerHTML = `
                         <div class="layer-thumb-container">
                             <div class="layer-thumb">${thumbContent}</div>
                             <div class="layer-info">
-                                <div class="layer-name" title="${layer.type === 'text' ? layer.text : layer.name}">${layer.type === 'text' ? layer.text : layer.name}</div>
-                                <div class="layer-type-tag">${layer.type}</div>
+                                <div class="layer-name"></div>
+                                <div class="layer-type-tag"></div>
                                 <div class="layer-actions">
-                                    <button class="action-btn" title="레이어 위로" onclick="app.moveLayer(${layer.id}, 1); event.stopPropagation();">
+                                    <button class="action-btn layer-up" title="Move layer up">
                                         <i data-lucide="chevron-up" size="14"></i>
                                     </button>
-                                    <button class="action-btn" title="레이어 아래로" onclick="app.moveLayer(${layer.id}, -1); event.stopPropagation();">
+                                    <button class="action-btn layer-down" title="Move layer down">
                                         <i data-lucide="chevron-down" size="14"></i>
                                     </button>
-                                    <button class="action-btn delete" title="삭제" onclick="app.deleteLayer(${layer.id}); event.stopPropagation();">
+                                    <button class="action-btn delete layer-delete" title="Delete layer">
                                         <i data-lucide="trash-2" size="14"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                     `;
+                    const nameEl = div.querySelector('.layer-name');
+                    nameEl.textContent = displayName;
+                    nameEl.title = displayName;
+                    div.querySelector('.layer-type-tag').textContent = layer.type;
+                    div.querySelector('.layer-up').onclick = (event) => { event.stopPropagation(); this.moveLayer(layer.id, 1); };
+                    div.querySelector('.layer-down').onclick = (event) => { event.stopPropagation(); this.moveLayer(layer.id, -1); };
+                    div.querySelector('.layer-delete').onclick = (event) => { event.stopPropagation(); this.deleteLayer(layer.id); };
                     container.appendChild(div);
                 });
                 lucide.createIcons();
             },
-
             updateTimelineUI() {
                 const container = document.getElementById('timeline-tracks');
                 if(!container) return;
@@ -730,6 +908,7 @@
             },
 
             moveLayer(id, dir) {
+                this.stopDemoMode();
                 const idx = this.layers.findIndex(l => l.id === id);
                 const nIdx = idx + dir;
                 if (nIdx >= 0 && nIdx < this.layers.length) {
@@ -742,6 +921,7 @@
             },
 
             deleteLayer(id) {
+                this.stopDemoMode();
                 this.layers = this.layers.filter(l => l.id !== id);
                 if (this.selectedId === id) this.selectedId = null;
                 this.updateLayerUI(); this.updatePropertiesUI(); this.updateTimelineUI();
@@ -831,6 +1011,7 @@
             },
 
             updateProp(k, v) {
+                this.stopDemoMode();
                 const l = this.layers.find(l => l.id === this.selectedId);
                 if (l) l[k] = (isNaN(v) || k==='text') ? v : parseFloat(v);
                 if (k === 'text') { this.updateLayerUI(); this.updateTimelineUI(); }
@@ -838,6 +1019,7 @@
             },
 
             updateChroma(k, v) {
+                this.stopDemoMode();
                 const l = this.layers.find(l => l.id === this.selectedId);
                 if (l) {
                     l.chroma[k] = isNaN(v) ? v : parseFloat(v);
@@ -847,6 +1029,7 @@
             },
 
             updateAnim(k, v) {
+                this.stopDemoMode();
                 const l = this.layers.find(l => l.id === this.selectedId);
                 if (l) {
                     l.animation[k] = isNaN(v) ? v : parseFloat(v);
@@ -880,11 +1063,17 @@
             },
 
             togglePlayback() {
+                if (this.isDemoMode) this.isDemoMode = false;
                 this.isPlaying = !this.isPlaying;
+                this.updatePlayButton();
+                if (this.isPlaying) this.lastFrameTime = performance.now();
+            },
+
+            updatePlayButton() {
                 const btn = document.getElementById('playBtn');
+                if (!btn) return;
                 btn.innerHTML = this.isPlaying ? '<i data-lucide="pause" fill="currentColor"></i>' : '<i data-lucide="play" fill="currentColor"></i>';
                 lucide.createIcons();
-                if (this.isPlaying) this.lastFrameTime = performance.now();
             },
 
             draw(targetCtx, timeOffset = -1, isExportPass = false) {
@@ -1015,6 +1204,7 @@
             },
 
             handleCanvasDown(e) {
+                this.stopDemoMode();
                 const rect = canvas.getBoundingClientRect();
                 const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
                 const my = (e.clientY - rect.top) * (canvas.height / rect.height);
