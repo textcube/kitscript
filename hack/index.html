@@ -2,8 +2,13 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Eternal Invasion: Hacking Drone Edition</title>
+    <meta name="description" content="우주 정거장 방어 관전형(attract) 게임. 침공하는 드론 함대를 해킹 드론으로 전향시켜 아군으로 만들고, 웨이브가 오를수록 격화되는 공세로부터 기지를 방어하라.">
+    <meta property="og:title" content="Eternal Invasion: Hacking Drone Edition">
+    <meta property="og:description" content="적을 전향시켜 아군으로 만드는 자동 해킹 드론 방어 시뮬레이션. 웨이브가 오를수록 위협이 격화된다.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23010208'/%3E%3Cpolygon points='32,10 50,32 32,54 14,32' fill='none' stroke='%2300f2ff' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%2300f2ff'/%3E%3C/svg%3E">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;700&display=swap');
 
@@ -20,6 +25,8 @@
             --panel-border: rgba(0, 242, 255, 0.3);
         }
 
+        html, body { overscroll-behavior: none; }
+
         body {
             margin: 0;
             padding: 0;
@@ -28,6 +35,7 @@
             font-family: 'JetBrains Mono', monospace;
             overflow: hidden;
             user-select: none;
+            touch-action: manipulation;
         }
 
         /* CRT/비네팅 효과 */
@@ -71,6 +79,30 @@
 
         .nav-links { display: flex; gap: 10px; }
 
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--accent);
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.2s;
+        }
+        .icon-btn:hover {
+            background: rgba(0, 242, 255, 0.25);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .icon-btn:hover svg { stroke: #fff; }
+
         button {
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--panel-border);
@@ -95,66 +127,99 @@
             position: relative;
             width: 100vw;
             height: calc(100vh - 60px);
+            height: calc(100dvh - 60px);
             margin-top: 60px;
             background: #000;
         }
 
-        canvas { display: block; }
+        canvas { display: block; touch-action: manipulation; }
 
-        /* HUD 패널 */
+        /* HUD — 슬림 단일 통합 바 */
         #hud {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(94vw, 880px);
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            align-items: center;
+            gap: 18px;
+            padding: 8px 16px;
+            box-sizing: border-box;
+            background: var(--ui-panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
             pointer-events: none;
             z-index: 180;
+            transition: opacity 0.6s ease;
         }
+        #hud.idle { opacity: 0.35; }
 
-        .stat-card {
-            background: var(--ui-panel);
-            padding: 15px 20px;
-            border-radius: 4px;
-            border: 1px solid var(--panel-border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            min-width: 280px;
-            backdrop-filter: blur(10px);
+        .hud-seg { display: flex; align-items: center; gap: 8px; min-width: 0; }
+        .hud-bar-seg { flex: 1 1 0; }
+        .hud-label {
+            font-size: 0.58rem; letter-spacing: 2px; color: var(--accent);
+            font-weight: 700; text-transform: uppercase; white-space: nowrap;
         }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--accent);
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 700;
+        .hud-num {
+            font-size: 0.65rem; font-family: 'Orbitron', sans-serif; font-weight: 700;
+            min-width: 36px; text-align: right; white-space: nowrap;
         }
-
-        .stat-value { font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; font-family: 'Orbitron', sans-serif; }
-
-        .bar-bg { width: 100%; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+        .hud-track {
+            flex: 1 1 0; height: 5px; min-width: 40px;
+            background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;
+        }
         .bar-fill { height: 100%; transition: width 0.3s ease; }
 
         #hp-bar { background: linear-gradient(90deg, #0055ff, var(--ally)); box-shadow: 0 0 10px var(--ally); }
         #energy-bar { background: linear-gradient(90deg, #00c2cc, var(--accent)); box-shadow: 0 0 10px var(--accent); }
+        #energy-bar.flash { animation: energyFlash 0.4s ease; }
+        @keyframes energyFlash {
+            0%, 100% { filter: none; }
+            50% { filter: brightness(2.5) saturate(2); }
+        }
 
-        /* 유닛 선택 카드 */
+        .hud-stats { gap: 14px; flex-shrink: 0; }
+        .hud-stat { font-size: 0.55rem; letter-spacing: 1px; opacity: 0.9; white-space: nowrap; }
+        .hud-stat b {
+            font-family: 'Orbitron', sans-serif; font-size: 0.72rem;
+            color: var(--accent); margin-left: 4px;
+        }
+        .lbl-short { display: none; }
+
+        .wave-banner {
+            position: absolute;
+            top: 32%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.85);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            letter-spacing: 8px;
+            color: var(--enemy);
+            text-shadow: 0 0 30px var(--enemy-glow);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 190;
+            text-align: center;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .wave-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .wave-banner .sub { display: block; font-size: 0.8rem; letter-spacing: 3px; opacity: 0.8; margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+
+        /* 유닛 선택 카드 (컴팩트, 8초 무조작 시 자동 닫힘) */
         #selection-card {
             position: absolute;
-            top: 30px;
-            right: 30px;
+            top: 20px;
+            right: 20px;
             background: var(--ui-panel);
             border: 1px solid var(--panel-border);
-            padding: 25px;
+            padding: 12px 14px;
             border-radius: 4px;
             display: none;
             flex-direction: column;
-            gap: 15px;
-            min-width: 260px;
+            gap: 6px;
+            min-width: 200px;
             z-index: 180;
             box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
@@ -163,12 +228,12 @@
             background: linear-gradient(135deg, #ff2d55, #cc0022);
             border: none;
             color: white;
-            padding: 14px;
+            padding: 9px;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.72rem;
             width: 100%;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 4px;
             font-family: 'JetBrains Mono', monospace;
             box-shadow: 0 0 20px var(--enemy-glow);
             transition: all 0.2s;
@@ -220,6 +285,54 @@
             0% { top: -10px; }
             100% { top: 100%; }
         }
+
+        @media (max-width: 480px) {
+            #top-bar { padding: 0 8px; height: 50px; gap: 6px; }
+            .brand { min-width: 0; overflow: hidden; flex-shrink: 1; }
+            .title-main {
+                font-size: 0.65rem; letter-spacing: 1px;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            .title-sub { display: none; }
+            .nav-links { gap: 2px; flex-shrink: 0; }
+
+            #game-container { height: calc(100vh - 50px); height: calc(100dvh - 50px); margin-top: 50px; }
+
+            #hud {
+                bottom: 4px;
+                width: calc(100vw - 8px);
+                gap: 8px;
+                padding: 4px 8px;
+            }
+            .hud-label { font-size: 0.45rem; letter-spacing: 1px; }
+            .hud-num { font-size: 0.5rem; min-width: 26px; }
+            .hud-track { min-width: 24px; }
+            .hud-stats { gap: 7px; }
+            .hud-stat { font-size: 0.45rem; letter-spacing: 0; }
+            .hud-stat b { font-size: 0.55rem; margin-left: 2px; }
+            .lbl-long { display: none; }
+            .lbl-short { display: inline; }
+
+            #selection-card {
+                top: auto; bottom: 0; left: 0; right: 0;
+                width: 100%; min-width: 0;
+                box-sizing: border-box;
+                border-radius: 12px 12px 0 0;
+                padding: 10px 12px;
+                gap: 4px;
+                z-index: 250;
+            }
+
+            #auto-status {
+                top: 10px; font-size: 0.55rem; padding: 6px 14px;
+                max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+
+            .wave-banner { font-size: 1.4rem; letter-spacing: 4px; }
+            .wave-banner .sub { font-size: 0.6rem; }
+
+            #game-over h1 { font-size: 2.4rem; letter-spacing: 6px; }
+        }
     </style>
 </head>
 <body>
@@ -230,40 +343,71 @@
             <div class="title-sub">Orbit Command Station // Deployment v6.6</div>
         </div>
         <div class="nav-links">
-            <button id="sound-toggle">Audio: Off</button>
-            <button onclick="window.open('https://kitscript.com/game', '_blank')">Home</button>
-            <button onclick="window.open('https://www.youtube.com/@textcube', '_blank')">YouTube</button>
+            <button id="sound-toggle" class="icon-btn" aria-label="오디오 켜기" title="Audio">
+                <svg class="icon-audio-off" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 5 6 9H3v6h3l5 4z"/>
+                    <line x1="16" y1="9.5" x2="21" y2="14.5"/>
+                    <line x1="21" y1="9.5" x2="16" y2="14.5"/>
+                </svg>
+                <svg class="icon-audio-on" viewBox="0 0 24 24" aria-hidden="true" style="display:none">
+                    <path d="M11 5 6 9H3v6h3l5 4z"/>
+                    <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+                    <path d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/>
+                </svg>
+            </button>
+            <button class="icon-btn" aria-label="kitscript 게임 홈으로 이동" title="Home" onclick="window.open('https://kitscript.com/game', '_blank')">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 11 12 3l9 8"/>
+                    <path d="M5 10v10h14V10"/>
+                </svg>
+            </button>
+            <button class="icon-btn" aria-label="YouTube 채널 열기" title="YouTube" onclick="window.open('https://www.youtube.com/@textcube', '_blank')">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/>
+                    <path d="M10 9.2v5.6l4.8-2.8z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
     <div id="game-container">
         <div class="scanline"></div>
         <div id="auto-status">HACKING_DRONE_PROTOCOL_ACTIVE // READY_FOR_DEVIATION</div>
+        <div id="wave-banner" class="wave-banner"></div>
         <canvas id="gameCanvas"></canvas>
-        
+
         <div id="hud">
-            <div class="stat-card">
-                <div class="stat-label"><span>Base Integrity</span><span id="base-hp-pct">100%</span></div>
-                <div class="stat-value" id="base-hp-text">1000 / 1000</div>
-                <div class="bar-bg"><div id="hp-bar" class="bar-fill" style="width: 100%;"></div></div>
+            <div class="hud-seg hud-bar-seg">
+                <span class="hud-label">Base</span>
+                <div class="hud-track"><div id="hp-bar" class="bar-fill" style="width: 100%;"></div></div>
+                <span class="hud-num" id="base-hp-pct">100%</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-label"><span>Reactor Energy</span><span id="energy-pct">100%</span></div>
-                <div class="stat-value" id="energy-text">100</div>
-                <div class="bar-bg"><div id="energy-bar" class="bar-fill" style="width: 100%;"></div></div>
+            <div class="hud-seg hud-bar-seg">
+                <span class="hud-label">Pwr</span>
+                <div class="hud-track"><div id="energy-bar" class="bar-fill" style="width: 100%;"></div></div>
+                <span class="hud-num" id="energy-pct">100%</span>
+            </div>
+            <div class="hud-seg hud-stats">
+                <span class="hud-stat"><span class="lbl-long">WAVE</span><span class="lbl-short">W</span><b id="wave-label">1</b></span>
+                <span class="hud-stat"><span class="lbl-long">KILL</span><span class="lbl-short">K</span><b id="kill-count">0</b></span>
+                <span class="hud-stat"><span class="lbl-long">CONV</span><span class="lbl-short">C</span><b id="convert-count">0</b></span>
+                <span class="hud-stat"><span class="lbl-long">ALLY</span><span class="lbl-short">A</span><b id="ally-count">0/6</b></span>
+                <span class="hud-stat"><span class="lbl-long">SCORE</span><span class="lbl-short">S</span><b id="score-count">0</b></span>
             </div>
         </div>
 
         <div id="selection-card">
-            <div id="selection-header" style="color:var(--accent); font-weight:700; font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;">TARGET_LOCK</div>
-            <div id="selection-body" style="font-size: 0.8rem; opacity: 0.9; margin: 15px 0; line-height: 1.8; border-top: 1px solid rgba(0,242,255,0.2); padding-top: 15px;">Scanning unit data...</div>
+            <div id="selection-header" style="color:var(--accent); font-weight:700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px;">TARGET_LOCK</div>
+            <div id="selection-body" style="font-size: 0.68rem; opacity: 0.9; margin: 4px 0; line-height: 1.5; border-top: 1px solid rgba(0,242,255,0.2); padding-top: 6px;">Scanning unit data...</div>
             <button id="destruct-btn">OVERRIDE: FORCE_SELF_DESTRUCT</button>
         </div>
 
         <div id="game-over">
             <h1>STATION_LOST</h1>
             <p style="letter-spacing: 8px; opacity: 0.7; font-size: 1rem; margin-top: 15px;">TOTAL_BASE_COLLAPSE_DETECTED</p>
-            <div id="restart-timer" style="margin-top: 50px; font-size: 1.2rem; color: var(--accent); font-weight: 700; font-family: 'Orbitron', sans-serif;">INITIATING REBOOT IN 7...</div>
+            <p id="final-score" style="letter-spacing: 3px; opacity: 0.9; font-size: 0.95rem; margin-top: 25px; color: var(--accent);">SCORE 0 // BEST 0</p>
+            <p id="final-wave" style="letter-spacing: 3px; opacity: 0.9; font-size: 0.85rem; margin-top: 8px; color: var(--hacked);">WAVE 1 REACHED // BEST WAVE 1</p>
+            <div id="restart-timer" style="margin-top: 40px; font-size: 1.2rem; color: var(--accent); font-weight: 700; font-family: 'Orbitron', sans-serif;">INITIATING REBOOT IN 7...</div>
         </div>
     </div>
 
@@ -365,17 +509,37 @@ let particles = [];
 let stars = [];
 
 let gameActive = true;
-let baseHp = 1000;
-let maxBaseHp = 1000;
+let baseHp = 800;
+let maxBaseHp = 800;
 let energy = 100;
-let difficulty = 1;
-let spawnTimer = 0;
 let elapsedTime = 0;
 let selectedUnit = null;
 
 const HACK_COST = 25;
 const ENERGY_RECHARGE = 0.15;
 const SPEED_DIVIDER = 5;
+const ALLY_CAP = 6;
+const MAX_ATTACKERS_PER_TARGET = 3; // up to 3 enemies mob one ally (melee clusters); overflow pushes past toward the base
+const FIXED_DT = 1000 / 60;
+const MAX_UPDATES_PER_FRAME = 5;
+const WAVE_INTERMISSION_TICKS = 60 * 3; // 3s breather between waves
+const WAVE_OVERRUN_TICKS = 60 * 45;     // uncleared wave: after 45s the next wave crashes in on top
+
+// Wave / scoring state
+let wave = 1;
+let waveState = 'SPAWNING'; // SPAWNING | ACTIVE | INTERMISSION
+let waveSpawnQueue = [];
+let waveSpawnTimer = 0;
+let intermissionTimer = 0;
+let waveStartTick = 0; // elapsedTime when the current wave began (for the overrun cap)
+
+let killCount = 0;
+let conversionCount = 0;
+let score = 0;
+let bestScore = parseInt(localStorage.getItem('eih_bestScore') || '0', 10) || 0;
+let bestWave = parseInt(localStorage.getItem('eih_bestWave') || '0', 10) || 0;
+
+const colorCache = {};
 
 const UNIT_TYPES = {
     SCOUT:  { hp: 50,  speed: 3.2/SPEED_DIVIDER, range: 100, vision: 400, bSpeed: 9, power: 6,  hackDiff: 0.6, color: '#ff2d55', size: 16 },
@@ -383,6 +547,9 @@ const UNIT_TYPES = {
     HEAVY:  { hp: 500, speed: 1.0/SPEED_DIVIDER, range: 125, vision: 420, bSpeed: 5, power: 50, hackDiff: 3.0, color: '#cc0022', size: 32 },
     ELITE:  { hp: 900, speed: 1.4/SPEED_DIVIDER, range: 250, vision: 700, bSpeed: 10, power: 40, hackDiff: 5.0, color: '#ff00ff', size: 26 }
 };
+
+const KILL_SCORE = { SCOUT: 10, SOLDIER: 25, HEAVY: 60, ELITE: 150 };
+const HACK_SCORE = { SCOUT: 25, SOLDIER: 60, HEAVY: 150, ELITE: 400 }; // hacking pays more than killing — that's the game's identity
 
 class FloatingText {
     constructor(x, y, text, color) {
@@ -414,9 +581,12 @@ class Particle {
 }
 
 class Explosion {
-    constructor(x, y, radius, damage) {
+    constructor(x, y, radius, damage, sourceSide) {
         this.x = x; this.y = y; this.maxRadius = radius; this.currentRadius = 0;
         this.damage = damage; this.life = 1.0; this.applied = false;
+        // sourceSide: who exploded. Enemy blasts are a threat (hit allies + base);
+        // ally/returning blasts are a weapon (hit enemies only, never the station).
+        this.sourceSide = sourceSide;
         AudioController.playExplosion();
         for(let i=0; i<35; i++) particles.push(new Particle(x, y, '#ff9900', 4, 0.02));
     }
@@ -424,11 +594,15 @@ class Explosion {
         this.currentRadius += (this.maxRadius - this.currentRadius) * 0.25;
         this.life -= 0.045;
         if (!this.applied) {
+            const sourceIsAllyLike = (this.sourceSide === 'ally' || this.sourceSide === 'returning');
             units.forEach(u => {
                 const dist = Math.hypot(u.x - this.x, u.y - this.y);
-                if (dist < this.maxRadius) u.takeDamage(this.damage);
+                if (dist >= this.maxRadius) return;
+                const isOpposing = (this.sourceSide === 'enemy' && (u.side === 'ally' || u.side === 'returning')) ||
+                                    (sourceIsAllyLike && u.side === 'enemy');
+                if (isOpposing) u.takeDamage(this.damage);
             });
-            if (this.x < 150) baseHp -= this.damage * 0.35;
+            if (this.sourceSide === 'enemy' && this.x < 150) baseHp -= this.damage * 0.35;
             this.applied = true;
         }
     }
@@ -442,11 +616,12 @@ class Explosion {
 }
 
 class Projectile {
-    constructor(x, y, targetX, targetY, speed, power, side, maxRange) {
+    constructor(x, y, targetX, targetY, speed, power, side, maxRange, owner) {
         this.startX = x; this.startY = y; this.x = x; this.y = y;
         const angle = Math.atan2(targetY - y, targetX - x);
         this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed;
         this.power = power; this.side = side; this.active = true; this.maxRange = maxRange;
+        this.owner = owner || null; // who fired it — passed to takeDamage for retaliation targeting
     }
     update() {
         this.x += this.vx; this.y += this.vy;
@@ -463,7 +638,7 @@ class Projectile {
             if (u.isHacking || u.dead) continue;
             let hit = (this.side === 'ally' && u.side === 'enemy') || (this.side === 'enemy' && (u.side === 'ally' || u.side === 'returning'));
             if (hit && Math.hypot(u.x - this.x, u.y - this.y) < u.size * 0.8) {
-                u.takeDamage(this.power); 
+                u.takeDamage(this.power, this.owner);
                 this.active = false;
                 for(let i=0; i<4; i++) particles.push(new Particle(this.x, this.y, u.color, 2, 0.1));
                 break;
@@ -472,8 +647,15 @@ class Projectile {
     }
     draw() {
         ctx.save();
-        ctx.shadowBlur = 12; ctx.shadowColor = this.side === 'enemy' ? varColor('--enemy') : varColor('--ally');
-        ctx.fillStyle = this.side === 'enemy' ? varColor('--enemy') : varColor('--ally');
+        const c = this.side === 'enemy' ? varColor('--enemy') : varColor('--ally');
+        // short tracer tail behind the round
+        ctx.strokeStyle = c; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - this.vx * 2.2, this.y - this.vy * 2.2);
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = c;
         ctx.beginPath();
         ctx.ellipse(this.x, this.y, 8, 4, Math.atan2(this.vy, this.vx), 0, Math.PI * 2);
         ctx.fill();
@@ -496,7 +678,10 @@ class Drone {
                 this.x += Math.cos(angle) * this.speed; this.y += Math.sin(angle) * this.speed;
             }
         } else {
-            this.progress += (0.015 / this.target.hackDiff);
+            // Later waves' enemies resist hacking longer, so conversion throughput can't
+            // scale forever with the growing invasion — the defense has to give ground eventually.
+            const effectiveHackDiff = this.target.hackDiff * (1 + (wave - 1) * 0.14);
+            this.progress += (0.015 / effectiveHackDiff);
             if (this.progress >= 1) { this.target.convert(); this.active = false; }
         }
     }
@@ -522,47 +707,102 @@ class Unit {
         const config = UNIT_TYPES[typeKey];
         this.type = typeKey; this.side = side;
         this.hp = config.hp; this.maxHp = config.hp;
-        this.speed = config.speed; this.range = config.range;
-        this.vision = config.vision; this.bSpeed = config.bSpeed; this.power = config.power;
-        this.hackDiff = config.hackDiff; this.size = config.size;
+        // Narrow-screen world scale: shrink combat geometry proportionally below 900px width so
+        // the three battlefield zones (spawn / boundary standoff / base) still fit on a phone.
+        // Movement speed scales too — otherwise the shorter distances make the whole invasion
+        // run ~2.5x faster in wall-time on a phone and the defeat curve collapses below 2 min.
+        const ws = Math.min(1, Math.max(0.5, width / 900));
+        this.ws = ws;
+        this.speed = config.speed * ws; this.range = config.range * ws;
+        this.vision = config.vision * ws; this.bSpeed = config.bSpeed * ws; this.power = config.power;
+        this.hackDiff = config.hackDiff; this.size = config.size * ws;
         this.color = side === 'enemy' ? config.color : varColor('--ally');
         this.x = side === 'enemy' ? width + 100 : 80;
         this.y = 100 + Math.random() * (height - 200);
         this.shootTimer = 0; this.isHacking = false; this.dead = false; this.target = null;
-        this.pulse = 0; this.rot = 0; 
-        this.angle = this.side === 'enemy' ? Math.PI : 0; 
+        this.pulse = 0; this.rot = 0;
+        this.angle = this.side === 'enemy' ? Math.PI : 0;
         this.engineFlame = 0;
-        this.vx = 0; this.vy = 0; 
+        this.vx = 0; this.vy = 0;
+        this._wiggleSeed = Math.random() * 1000;
+        this.allySince = 0;
+        this.attackerCount = 0; // how many enemies are currently focused on this unit as a target
+        this.breacher = false;  // wave-assigned: ignores allies, drives at the station, retaliates when hit
+        this.healReturn = false; // true while a mauled ally is flying home to repair (vs conversion return)
+        this.muzzleFlash = 0;   // ticks of muzzle flash left after firing
+        this.hitFlash = 0;      // ticks of white damage flash left
+        this.strafeSeed = Math.random() * Math.PI * 2;
     }
 
-    takeDamage(amt) {
+    takeDamage(amt, attacker) {
         if (this.dead) return;
         this.hp = Math.max(0, this.hp - amt);
+        if (attacker) this.hitFlash = 2;
+        // Retaliation: a unit under fire with no current target turns on its attacker —
+        // this is what makes breachers (and anyone ambushed deep in the field) fight back
+        // instead of ignoring combat entirely.
+        if (attacker && !attacker.dead && !this.target && !this.isHacking) {
+            const enemyRetaliates = this.side === 'enemy' && (attacker.side === 'ally' || attacker.side === 'returning');
+            const allyRetaliates = this.side === 'ally' && attacker.side === 'enemy';
+            if (enemyRetaliates || allyRetaliates) {
+                this.target = attacker;
+                if (this.side === 'enemy') attacker.attackerCount = (attacker.attackerCount || 0) + 1;
+            }
+        }
         if (this.hp <= 0) this.selfDestruct();
     }
 
     selfDestruct() {
         if (this.dead) return;
-        this.dead = true; 
+        if (this.side === 'enemy') {
+            killCount++;
+            score += (KILL_SCORE[this.type] || 10);
+        }
+        if (this.side === 'enemy' && this.target) {
+            this.target.attackerCount = Math.max(0, (this.target.attackerCount || 0) - 1);
+        }
+        this.dead = true;
         const aoeRadius = this.size * 6;
         const aoeDamage = this.power * 5;
-        explosions.push(new Explosion(this.x, this.y, aoeRadius, aoeDamage));
+        explosions.push(new Explosion(this.x, this.y, aoeRadius, aoeDamage, this.side));
         if (selectedUnit === this) selectUnit(null);
     }
 
-    convert() { 
-        this.side = 'returning'; this.isHacking = false; this.color = varColor('--hacked'); this.target = null; 
+    convert() {
+        if (this.target) this.target.attackerCount = Math.max(0, (this.target.attackerCount || 0) - 1);
+        this.side = 'returning'; this.isHacking = false; this.color = varColor('--hacked'); this.target = null;
+        this.healReturn = false;
+        conversionCount++;
+        score += (HACK_SCORE[this.type] || 25);
+        floatingTexts.push(new FloatingText(this.x, this.y - 30, "CONVERTED", varColor('--hacked')));
         if (selectedUnit === this) selectUnit(this);
     }
 
     injectDefense() {
+        const wasRepair = this.healReturn;
         this.side = 'ally'; this.hp = this.maxHp; this.color = varColor('--ally');
-        floatingTexts.push(new FloatingText(this.x, this.y - 35, "SYS_LOCKED", varColor('--ally')));
+        this.healReturn = false;
+        this.allySince = elapsedTime;
+        floatingTexts.push(new FloatingText(this.x, this.y - 35, wasRepair ? "REPAIRED // REDEPLOY" : "SYS_LOCKED", varColor('--ally')));
         if (selectedUnit === this) selectUnit(this);
+        enforceAllyCap();
     }
 
     update() {
+        if (this.muzzleFlash > 0) this.muzzleFlash--;
+        if (this.hitFlash > 0) this.hitFlash--;
         if (this.isHacking || this.dead) return;
+
+        // HP only ever changes through fire and self-destructs. A mauled ally doesn't decay —
+        // it disengages, returns to the station dock, repairs to full, and redeploys.
+        if (this.side === 'ally' && this.hp <= this.maxHp * 0.3) {
+            this.side = 'returning';
+            this.healReturn = true;
+            this.target = null;
+            floatingTexts.push(new FloatingText(this.x, this.y - 30, "RTB // REPAIR", varColor('--ally')));
+            if (selectedUnit === this) selectUnit(this);
+        }
+
         this.pulse += 0.08; this.rot += 0.02;
         this.engineFlame = (Math.sin(elapsedTime * 0.5) + 1) * 2.5;
 
@@ -575,30 +815,48 @@ class Unit {
             if (this.side === 'enemy' && (this.target.side !== 'ally' && this.target.side !== 'returning')) targetLost = true;
         }
 
-        if (targetLost && this.side !== 'returning') {
-            let possible = (this.side === 'ally') ? 
+        const boundaryX = width * 0.4;
+
+        if (targetLost && this.side === 'enemy' && this.target) {
+            // Release the aggro slot on the target we're dropping so it doesn't stay "full" forever.
+            this.target.attackerCount = Math.max(0, (this.target.attackerCount || 0) - 1);
+        }
+        if (targetLost) this.target = null;
+
+        // Engagement is the default: any non-breacher unit with a valid target in vision fights.
+        // Breachers skip target-seeking entirely (they only acquire a target via retaliation in
+        // takeDamage), which replaces the old permanent-commit mechanic as the anti-stalemate valve.
+        const seeksTargets = this.side !== 'returning' && !(this.side === 'enemy' && this.breacher);
+        if (targetLost && seeksTargets) {
+            // Enemies cap how many of them can pile onto a single ally at once (focus-fire limit):
+            // up to MAX_ATTACKERS_PER_TARGET form a melee cluster, the overflow keeps pressing on.
+            let possible = (this.side === 'ally') ?
                 units.filter(u => u.side === 'enemy' && !u.isHacking && !u.dead) :
-                units.filter(u => (u.side === 'ally' || u.side === 'returning') && !u.isHacking && !u.dead);
-            
-            let minDist = this.vision; this.target = null;
+                units.filter(u => (u.side === 'ally' || u.side === 'returning') && !u.isHacking && !u.dead && (u.attackerCount || 0) < MAX_ATTACKERS_PER_TARGET);
+
+            let minDist = this.vision;
             possible.forEach(p => {
                 let d = Math.hypot(p.x - this.x, p.y - this.y);
                 if (d < minDist) { minDist = d; this.target = p; }
             });
+            if (this.side === 'enemy' && this.target) this.target.attackerCount = (this.target.attackerCount || 0) + 1;
         }
 
-        const boundaryX = width * 0.4;
         if (this.side === 'enemy') {
             if (this.target) {
                 const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
                 if (Math.hypot(this.target.x - this.x, this.target.y - this.y) > this.range * 0.8) {
                     this.x += Math.cos(angle) * this.speed; this.y += Math.sin(angle) * this.speed;
+                } else {
+                    // Holding at firing range: micro-strafe so the standoff still looks alive.
+                    this.y += Math.sin(elapsedTime * 0.06 + this.strafeSeed) * 0.35;
                 }
             } else {
-                if (this.x > boundaryX + 20) this.x -= this.speed;
-                else {
-                    this.y += this.speed * (this.patrolDir || 1);
-                    if (this.y < 100 || this.y > height - 100) this.patrolDir = (this.patrolDir || 1) * -1;
+                // No engagement (breacher, or all ally aggro slots full): the boundary is a front
+                // line, not a stop line — keep pressing toward the station.
+                this.x -= this.speed;
+                if (this.x <= boundaryX + 20) {
+                    this.y += Math.sin((elapsedTime + this._wiggleSeed) * 0.03) * 1.3;
                 }
             }
             if (this.x < 50) this.selfDestruct();
@@ -609,20 +867,52 @@ class Unit {
                 const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
                 if (Math.hypot(this.target.x - this.x, this.target.y - this.y) > this.range * 0.8) {
                     this.x += Math.cos(angle) * this.speed; this.y += Math.sin(angle) * this.speed;
+                } else {
+                    this.y += Math.sin(elapsedTime * 0.06 + this.strafeSeed) * 0.35;
                 }
             } else {
-                if (this.x < boundaryX - 60) this.x += this.speed;
+                // Idle allies form a defensive line just behind the boundary, spread vertically
+                // so they read as a picket line rather than an overlapping blob.
+                const lineX = boundaryX - 60;
+                if (Math.abs(this.x - lineX) > 4) this.x += Math.sign(lineX - this.x) * this.speed;
+                let push = 0;
+                units.forEach(o => {
+                    if (o !== this && !o.dead && o.side === 'ally' && !o.target) {
+                        const dy = this.y - o.y;
+                        const gap = this.size + o.size + 24;
+                        if (Math.abs(dy) < gap && Math.abs(this.x - o.x) < 90) {
+                            push += (dy >= 0 ? 1 : -1) * (1 - Math.abs(dy) / gap);
+                        }
+                    }
+                });
+                this.y += push * 1.2;
+                this.y = Math.max(60, Math.min(height - 60, this.y));
             }
         }
 
         this.vx = this.x - prevX;
         this.vy = this.y - prevY;
-        if (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1) {
-            let targetAngle = Math.atan2(this.vy, this.vx);
-            let diff = targetAngle - this.angle;
+
+        // Facing is state-based, not movement-based: an engaged unit aims at its target
+        // (an enemy shelling the base aims at the station), and only an unengaged unit
+        // faces its direction of travel. Micro-strafe / separation nudges therefore never
+        // touch the aim, which is what caused the old "head-shaking" during standoffs.
+        let desiredAngle = null;
+        let turnRate = 0.1;
+        if (this.target && !this.target.dead) {
+            desiredAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+            turnRate = 0.25; // engaged: converge onto the aim quickly
+        } else if (this.side === 'enemy' && this.x < this.range + 100 * this.ws) {
+            desiredAngle = Math.PI; // shelling the station: face it
+            turnRate = 0.25;
+        } else if (Math.abs(this.vx) > 0.1 || Math.abs(this.vy) > 0.1) {
+            desiredAngle = Math.atan2(this.vy, this.vx);
+        }
+        if (desiredAngle !== null) {
+            let diff = desiredAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * 0.1;
+            this.angle += diff * turnRate;
         }
 
         if (Math.random() < 0.4) {
@@ -635,11 +925,11 @@ class Unit {
             this.shootTimer++;
             if (this.shootTimer > 60) {
                 if (this.target && Math.hypot(this.target.x - this.x, this.target.y - this.y) < this.range) {
-                    projectiles.push(new Projectile(this.x, this.y, this.target.x, this.target.y, this.bSpeed, this.power, this.side, this.range));
-                    this.shootTimer = 0; AudioController.playShoot();
-                } else if (this.side === 'enemy' && this.x < this.range + 100) {
-                    projectiles.push(new Projectile(this.x, this.y, 0, this.y, this.bSpeed, this.power, 'enemy', this.range));
-                    this.shootTimer = 0; AudioController.playShoot();
+                    projectiles.push(new Projectile(this.x, this.y, this.target.x, this.target.y, this.bSpeed, this.power, this.side, this.range, this));
+                    this.shootTimer = 0; this.muzzleFlash = 3; AudioController.playShoot();
+                } else if (this.side === 'enemy' && this.x < this.range + 100 * this.ws) {
+                    projectiles.push(new Projectile(this.x, this.y, 0, this.y, this.bSpeed, this.power, 'enemy', this.range, this));
+                    this.shootTimer = 0; this.muzzleFlash = 3; AudioController.playShoot();
                 }
             }
         }
@@ -666,9 +956,11 @@ class Unit {
         ctx.fillStyle = this.color;
         
         if (this.side === 'returning') {
-            ctx.shadowBlur = 20; ctx.shadowColor = varColor('--hacked');
+            // conversion return glows hacked-yellow; repair return keeps the ally-blue identity
+            ctx.shadowBlur = 20; ctx.shadowColor = this.healReturn ? varColor('--ally') : varColor('--hacked');
             ctx.beginPath(); ctx.arc(0, 0, this.size + (Math.sin(this.pulse*4)*4), 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 204, 0, 0.15)'; ctx.fill();
+            ctx.fillStyle = this.healReturn ? 'rgba(0, 122, 255, 0.18)' : 'rgba(255, 204, 0, 0.15)';
+            ctx.fill();
         }
 
         let s = this.size;
@@ -720,11 +1012,27 @@ class Unit {
             ctx.restore();
         }
 
+        if (this.muzzleFlash > 0) {
+            ctx.fillStyle = `rgba(255,255,255,${0.3 + this.muzzleFlash * 0.2})`;
+            ctx.beginPath(); ctx.arc(s + 5, 0, 2.5 + this.muzzleFlash * 1.5, 0, Math.PI*2); ctx.fill();
+        }
+        if (this.hitFlash > 0) {
+            ctx.fillStyle = `rgba(255,255,255,${0.35 * this.hitFlash})`;
+            ctx.beginPath(); ctx.arc(0, 0, s * 1.15, 0, Math.PI*2); ctx.fill();
+        }
+
         const hpPct = Math.max(0, this.hp / this.maxHp);
         ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(0, 0, s + 6, 0, Math.PI*2); ctx.stroke();
         ctx.strokeStyle = this.color;
         ctx.beginPath(); ctx.arc(0, 0, s + 6, -Math.PI/2, -Math.PI/2 + (Math.PI*2*hpPct)); ctx.stroke();
+
+        if (this.breacher && this.side === 'enemy') {
+            // hardened breacher marker: dashed outer ring
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]);
+            ctx.beginPath(); ctx.arc(0, 0, s + 11, 0, Math.PI*2); ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         ctx.restore();
     }
@@ -733,33 +1041,172 @@ class Unit {
 /**
  * 전술 인터페이스 유틸리티
  */
-function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function cacheColors() {
+    const style = getComputedStyle(document.documentElement);
+    ['--accent', '--enemy', '--ally', '--hacked', '--accent-glow', '--enemy-glow', '--text', '--panel-border', '--bg-color', '--ui-panel'].forEach(name => {
+        colorCache[name] = style.getPropertyValue(name).trim();
+    });
+}
+function varColor(name) { return colorCache[name] || ''; }
 
 function resize() {
-    width = window.innerWidth; height = window.innerHeight - 60;
+    const topBar = document.getElementById('top-bar');
+    const topH = topBar ? topBar.offsetHeight : 60; // media query shrinks the bar to 50px on phones
+    const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+    width = window.innerWidth; height = vh - topH;
     canvas.width = width; canvas.height = height;
+    cacheColors();
 }
 
-function spawnEnemy() {
-    const r = Math.random();
-    let type = r < 0.5 ? 'SCOUT' : (r < 0.8 ? 'SOLDIER' : (r < 0.95 ? 'HEAVY' : 'ELITE'));
-    units.push(new Unit(type));
+/**
+ * Wave system: composition drifts from SCOUT-heavy to HEAVY/ELITE-heavy as waves climb,
+ * enemy HP/power scale slightly per wave, and a short intermission separates waves.
+ */
+function waveWeights(w) {
+    const t = Math.min(1, (w - 1) / 14);
+    return {
+        SCOUT:   Math.max(0.15, 0.5 - t * 0.35),
+        SOLDIER: 0.3 + t * 0.05,
+        HEAVY:   0.15 + t * 0.20,
+        ELITE:   0.05 + t * 0.10
+    };
 }
+function pickWeightedType(weights) {
+    const total = weights.SCOUT + weights.SOLDIER + weights.HEAVY + weights.ELITE;
+    let r = Math.random() * total;
+    if ((r -= weights.SCOUT) < 0) return 'SCOUT';
+    if ((r -= weights.SOLDIER) < 0) return 'SOLDIER';
+    if ((r -= weights.HEAVY) < 0) return 'HEAVY';
+    return 'ELITE';
+}
+function waveEnemyCount(w) { return Math.min(42, 6 + Math.floor(w * 2.2)); }
+function waveScale(w) { return 1 + (w - 1) * 0.20; }
+// Breachers ignore allies and drive straight at the station (they still retaliate when shot).
+// This is the anti-stalemate valve: 0% on wave 1 so the early game is pure frontline standoff,
+// with the ratio climbing each wave so late waves leak unstoppable pressure past the battle line.
+function breacherRatio(w) { return Math.min(0.5, Math.max(0, (w - 1) * 0.08)); }
 
-function autoHack() {
-    if (energy >= HACK_COST) {
-        let targets = units.filter(u => u.side === 'enemy' && !u.isHacking && !u.dead && u.x < (width * 0.45));
-        if (targets.length > 0) {
-            let closest = targets.sort((a,b) => a.x - b.x)[0];
-            if (!drones.some(d => d.target === closest)) {
-                energy -= HACK_COST; drones.push(new Drone(closest));
-            }
-        }
+function buildWaveQueue(w) {
+    const weights = waveWeights(w);
+    const count = waveEnemyCount(w);
+    const ratio = breacherRatio(w);
+    const queue = [];
+    for (let i = 0; i < count; i++) {
+        queue.push({ type: pickWeightedType(weights), breacher: Math.random() < ratio });
     }
+    return queue;
+}
+
+function spawnWaveEnemy(entry) {
+    const u = new Unit(entry.type, 'enemy');
+    u.breacher = entry.breacher;
+    const s = waveScale(wave);
+    u.maxHp = Math.round(u.maxHp * s); u.hp = u.maxHp;
+    u.power = Math.round(u.power * s);
+    units.push(u);
+}
+
+function showWaveBanner(w) {
+    const el = document.getElementById('wave-banner');
+    el.innerHTML = `WAVE ${w}<span class="sub">BREACH DETECTED</span>`;
+    el.classList.add('show');
+    clearTimeout(showWaveBanner._t);
+    showWaveBanner._t = setTimeout(() => el.classList.remove('show'), 1400);
+    hudWake();
+}
+
+function startNextWave() {
+    wave++;
+    waveSpawnQueue = buildWaveQueue(wave);
+    waveSpawnTimer = 0;
+    waveStartTick = elapsedTime;
+    waveState = 'SPAWNING';
+    showWaveBanner(wave);
+}
+
+function updateWaveSystem() {
+    // Overrun cap (structural anti-stalemate): if the current wave hasn't been cleared within
+    // WAVE_OVERRUN_TICKS of starting, the next wave crashes in ON TOP of the survivors. The
+    // heal-return loop can otherwise hold a handful of tough breachers in a perpetual pursuit
+    // equilibrium — the wave never clears, scaling freezes, and no viewport-dependent luck can
+    // break it. With the cap, pressure accumulates unconditionally and the collapse always comes.
+    if (waveState !== 'INTERMISSION' && elapsedTime - waveStartTick >= WAVE_OVERRUN_TICKS) {
+        startNextWave();
+        return;
+    }
+
+    if (waveState === 'SPAWNING') {
+        waveSpawnTimer++;
+        // Slow trickle on early waves so the first conversions can form a line before the
+        // field saturates; late waves compress toward a dense assault.
+        const interval = Math.max(14, 105 - wave * 12);
+        if (waveSpawnTimer >= interval && waveSpawnQueue.length > 0) {
+            waveSpawnTimer = 0;
+            spawnWaveEnemy(waveSpawnQueue.shift());
+        }
+        if (waveSpawnQueue.length === 0) waveState = 'ACTIVE';
+    } else if (waveState === 'ACTIVE') {
+        const enemiesLeft = units.some(u => u.side === 'enemy' && !u.dead);
+        if (!enemiesLeft) {
+            score += 100 * wave;
+            energy = Math.min(100, energy + 20);
+            waveState = 'INTERMISSION';
+            intermissionTimer = 0;
+        }
+    } else if (waveState === 'INTERMISSION') {
+        intermissionTimer++;
+        if (intermissionTimer >= WAVE_INTERMISSION_TICKS) startNextWave();
+    }
+}
+
+function enforceAllyCap() {
+    const allies = units.filter(u => u.side === 'ally' && !u.dead);
+    if (allies.length > ALLY_CAP) {
+        allies.sort((a, b) => (a.allySince || 0) - (b.allySince || 0));
+        for (let i = 0; i < allies.length - ALLY_CAP; i++) allies[i].selfDestruct();
+    }
+}
+
+/**
+ * Auto hacking: dispatch drones at the highest-threat target (proximity to base + firepower),
+ * skip long-channel ELITE targets unless energy is ample, and respect the ally population cap.
+ */
+function autoHack() {
+    if (energy < HACK_COST) return;
+    const committed = units.filter(u => (u.side === 'ally' || u.side === 'returning') && !u.dead).length;
+    if (committed >= ALLY_CAP) return;
+
+    // Breachers are hardened against remote intrusion — the auto protocol skips them, so the
+    // breach stream stays a real threat instead of feeding the defense (manual hacks still work).
+    const candidates = units.filter(u => u.side === 'enemy' && !u.breacher && !u.isHacking && !u.dead && u.x < (width * 0.5) && !drones.some(d => d.target === u));
+    if (candidates.length === 0) return;
+
+    let best = null, bestScore = -Infinity;
+    candidates.forEach(u => {
+        if (u.hackDiff >= 4 && energy < 60) return; // save long channels for when we can spare the time
+        const proximity = Math.max(0, (width * 0.5) - u.x);
+        const s = proximity * 1.0 + u.power * 4 - u.hackDiff * 15;
+        if (s > bestScore) { bestScore = s; best = u; }
+    });
+    if (!best) return;
+
+    energy -= HACK_COST;
+    drones.push(new Drone(best));
+}
+
+function flashEnergyBar() {
+    const bar = document.getElementById('energy-bar');
+    bar.classList.add('flash');
+    setTimeout(() => bar.classList.remove('flash'), 400);
 }
 
 function selectUnit(unit) {
     selectedUnit = unit;
+    renderSelectionCard();
+}
+
+function renderSelectionCard() {
+    const unit = selectedUnit;
     const card = document.getElementById('selection-card');
     const header = document.getElementById('selection-header');
     const body = document.getElementById('selection-body');
@@ -771,18 +1218,68 @@ function selectUnit(unit) {
         header.innerText = side + ' :: ' + unit.type;
         header.style.color = unit.side === 'enemy' ? varColor('--enemy') : (unit.side === 'returning' ? varColor('--hacked') : varColor('--ally'));
         body.innerHTML = `INTEGRITY_INDEX: ${Math.ceil(unit.hp)} / ${unit.maxHp}<br>HACK_THRESHOLD: ${unit.hackDiff}x<br>TACTICAL_ROLE: ${unit.type}`;
-        
+
         dBtn.style.display = unit.side === 'enemy' ? 'none' : 'block';
-    } else card.style.display = 'none';
+    } else {
+        card.style.display = 'none';
+        if (unit && unit.dead) selectedUnit = null;
+    }
 }
+
+// HUD idle fade: the battlefield is the star while spectating. Any input, base damage,
+// or wave start wakes the bar; after a few quiet seconds it fades back.
+let hudWakeAt = performance.now();
+let lastInputAt = performance.now();
+let lastSeenBaseHp = null;
+function hudWake() { hudWakeAt = performance.now(); }
+function noteInput() { lastInputAt = performance.now(); hudWake(); }
 
 function updateUI() {
     document.getElementById('hp-bar').style.width = `${(baseHp/maxBaseHp)*100}%`;
     document.getElementById('base-hp-pct').innerText = `${Math.max(0, Math.floor((baseHp/maxBaseHp)*100))}%`;
-    document.getElementById('base-hp-text').innerText = `${Math.max(0, Math.floor(baseHp))} / ${maxBaseHp}`;
     document.getElementById('energy-bar').style.width = `${energy}%`;
     document.getElementById('energy-pct').innerText = `${Math.floor(energy)}%`;
-    document.getElementById('energy-text').innerText = Math.floor(energy);
+
+    if (lastSeenBaseHp !== null && baseHp < lastSeenBaseHp) hudWake();
+    lastSeenBaseHp = baseHp;
+    document.getElementById('hud').classList.toggle('idle', performance.now() - hudWakeAt > 4000);
+
+    // selection card auto-close after 8s without user input
+    if (selectedUnit && performance.now() - lastInputAt > 8000) selectUnit(null);
+}
+
+function updateMissionUI() {
+    document.getElementById('wave-label').innerText = wave;
+    document.getElementById('kill-count').innerText = killCount;
+    document.getElementById('convert-count').innerText = conversionCount;
+    const allies = units.filter(u => u.side === 'ally' && !u.dead).length;
+    document.getElementById('ally-count').innerText = `${allies}/${ALLY_CAP}`;
+    document.getElementById('score-count').innerText = score;
+}
+
+function updateAutoStatusDisplay() {
+    const el = document.getElementById('auto-status');
+    const channeling = drones.filter(d => d.arrived && d.target);
+    if (channeling.length > 0) {
+        const lead = channeling.reduce((a, b) => (a.progress > b.progress ? a : b));
+        el.innerText = `CONVERTING: ${Math.floor(lead.progress * 100)}% // ${lead.target.type}`;
+        return;
+    }
+    const enroute = drones.find(d => !d.arrived && d.target);
+    if (enroute) {
+        el.innerText = `DISPATCHING DRONE → ${enroute.target.type}`;
+        return;
+    }
+    const committed = units.filter(u => (u.side === 'ally' || u.side === 'returning') && !u.dead).length;
+    if (committed >= ALLY_CAP) {
+        el.innerText = `ALLY_CAPACITY_FULL (${committed}/${ALLY_CAP}) // HOLDING`;
+        return;
+    }
+    if (energy < HACK_COST) {
+        el.innerText = `ENERGY_CHARGING // ${Math.floor(energy)}%`;
+        return;
+    }
+    el.innerText = `HACKING_DRONE_PROTOCOL_ACTIVE // WAVE ${wave} STANDBY`;
 }
 
 /**
@@ -837,9 +1334,7 @@ function drawTacticalBG() {
     ctx.fillStyle = `rgba(0, 242, 255, ${0.3 + pulse * 0.4})`;
     for(let y=20; y<height; y+=100) {
         ctx.beginPath(); ctx.arc(80, y, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 10; ctx.shadowColor = varColor('--accent');
         ctx.fillRect(80, y-1, 40, 2);
-        ctx.shadowBlur = 0;
     }
 
     ctx.strokeStyle = `rgba(0, 242, 255, ${0.1 + pulse * 0.1})`;
@@ -851,16 +1346,16 @@ function drawTacticalBG() {
 function update() {
     if (!gameActive) return;
     elapsedTime++;
-    difficulty = 1 + (elapsedTime / 5000);
     if (energy < 100) energy = Math.min(100, energy + ENERGY_RECHARGE);
-    
+
+    updateWaveSystem();
     autoHack();
     updateUI();
+    updateMissionUI();
+    updateAutoStatusDisplay();
+    renderSelectionCard();
 
-    if (baseHp <= 0) gameOver();
-
-    spawnTimer++;
-    if (spawnTimer > Math.max(100, 600 / difficulty)) { spawnEnemy(); spawnTimer = 0; }
+    if (baseHp <= 0) { gameOver(); return; }
 
     units.forEach(u => u.update());
     drones.forEach(d => d.update());
@@ -874,6 +1369,7 @@ function update() {
     projectiles = projectiles.filter(p => p.active);
     explosions = explosions.filter(e => e.life > 0);
     particles = particles.filter(p => p.life > 0);
+    if (particles.length > 300) particles.splice(0, particles.length - 300);
     floatingTexts = floatingTexts.filter(t => t.life > 0);
 }
 
@@ -892,51 +1388,124 @@ function draw() {
     floatingTexts.forEach(t => t.draw());
 }
 
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+let lastTime = null;
+let accumulator = 0;
+
+function loop(timestamp) {
+    if (lastTime === null) lastTime = timestamp;
+    let frameTime = timestamp - lastTime;
+    lastTime = timestamp;
+    if (frameTime > 250) frameTime = 250; // clamp huge gaps (tab away) instead of spiraling
+    accumulator += frameTime;
+
+    let updates = 0;
+    while (accumulator >= FIXED_DT && updates < MAX_UPDATES_PER_FRAME) {
+        update();
+        accumulator -= FIXED_DT;
+        updates++;
+    }
+    draw();
+    requestAnimationFrame(loop);
+}
 
 function gameOver() {
-    gameActive = false; document.getElementById('game-over').style.display = 'flex';
+    gameActive = false;
+    if (score > bestScore) { bestScore = score; localStorage.setItem('eih_bestScore', String(bestScore)); }
+    if (wave > bestWave) { bestWave = wave; localStorage.setItem('eih_bestWave', String(bestWave)); }
+    document.getElementById('final-score').innerText = `SCORE ${score} // BEST ${bestScore}`;
+    document.getElementById('final-wave').innerText = `WAVE ${wave} REACHED // BEST WAVE ${bestWave}`;
+    document.getElementById('game-over').style.display = 'flex';
     let count = 7;
+    document.getElementById('restart-timer').innerText = `INITIATING REBOOT IN ${count}...`;
     const itv = setInterval(() => {
         count--; document.getElementById('restart-timer').innerText = `INITIATING REBOOT IN ${count}...`;
-        if (count <= 0) { clearInterval(itv); location.reload(); }
+        if (count <= 0) { clearInterval(itv); resetGame(); }
     }, 1000);
 }
 
-window.addEventListener('resize', () => { resize(); stars = []; for(let i=0; i<80; i++) stars.push(new Star()); });
+function resetGame() {
+    // Soft reset (no location.reload): preserves audio setting and best-score/wave records,
+    // matches the attract loop's "defeat -> 7s -> fresh run" cycle without a full reload.
+    units = []; drones = []; projectiles = []; explosions = []; floatingTexts = []; particles = [];
+    baseHp = maxBaseHp; energy = 100; elapsedTime = 0; selectedUnit = null;
+    killCount = 0; conversionCount = 0; score = 0;
+    wave = 1; waveState = 'SPAWNING'; waveSpawnQueue = buildWaveQueue(wave); waveSpawnTimer = 0; intermissionTimer = 0; waveStartTick = 0;
+    lastTime = null; accumulator = 0;
 
-canvas.addEventListener('mousedown', (e) => {
+    document.getElementById('game-over').style.display = 'none';
+    renderSelectionCard();
+    updateUI();
+    updateMissionUI();
+    showWaveBanner(wave);
+    gameActive = true;
+}
+
+function handleResize() {
+    resize();
+    stars = []; for (let i = 0; i < 80; i++) stars.push(new Star());
+}
+window.addEventListener('resize', handleResize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', handleResize);
+
+function handlePointer(clientX, clientY, isTouch) {
+    noteInput();
+    if (!gameActive) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+    const mx = clientX - rect.left; const my = clientY - rect.top;
+    const hitPad = isTouch ? 30 : 20;
     let clicked = null;
-    units.forEach(u => { if (Math.hypot(u.x - mx, u.y - my) < u.size + 20) clicked = u; });
-    
+    units.forEach(u => { if (!u.dead && Math.hypot(u.x - mx, u.y - my) < u.size + hitPad) clicked = u; });
+
     if (clicked) {
         if (selectedUnit === clicked) {
-            if (!clicked.isHacking && clicked.side !== 'returning' && energy >= HACK_COST) {
+            if (clicked.isHacking || clicked.side === 'returning') {
+                // already mid-hack or already converted; nothing to do
+            } else if (drones.some(d => d.target === clicked)) {
+                // a drone is already inbound for this target — avoid wasting energy twice
+            } else if (energy >= HACK_COST) {
                 energy -= HACK_COST; drones.push(new Drone(clicked));
-                floatingTexts.push(new FloatingText(mx, my - 20, "STATION_UPLINK_ESTABLISHED", varColor('--accent')));
+                floatingTexts.push(new FloatingText(clicked.x, clicked.y - 20, "STATION_UPLINK_ESTABLISHED", varColor('--accent')));
+            } else {
+                flashEnergyBar();
+                floatingTexts.push(new FloatingText(clicked.x, clicked.y - 20, "INSUFFICIENT_ENERGY", varColor('--enemy')));
             }
         } else selectUnit(clicked);
     } else selectUnit(null);
-});
+}
+
+canvas.addEventListener('mousedown', (e) => handlePointer(e.clientX, e.clientY, false));
+canvas.addEventListener('touchstart', (e) => {
+    if (!gameActive) return;
+    e.preventDefault();
+    if (e.touches.length > 0) handlePointer(e.touches[0].clientX, e.touches[0].clientY, true);
+}, { passive: false });
 
 document.getElementById('destruct-btn').addEventListener('click', () => {
-    if (selectedUnit && selectedUnit.side !== 'enemy') { 
-        selectedUnit.selfDestruct(); 
-        selectUnit(null); 
+    noteInput();
+    if (!gameActive) return;
+    if (selectedUnit && selectedUnit.side !== 'enemy') {
+        selectedUnit.selfDestruct();
+        selectUnit(null);
     }
 });
 
+window.addEventListener('mousemove', hudWake, { passive: true });
+
 document.getElementById('sound-toggle').addEventListener('click', function() {
     const isEnabled = AudioController.toggle();
-    this.innerText = `Audio: ${isEnabled ? 'On' : 'Off'}`;
+    this.querySelector('.icon-audio-on').style.display = isEnabled ? 'block' : 'none';
+    this.querySelector('.icon-audio-off').style.display = isEnabled ? 'none' : 'block';
+    this.setAttribute('aria-label', isEnabled ? '오디오 끄기' : '오디오 켜기');
 });
 
+cacheColors();
 resize();
 for(let i=0; i<80; i++) stars.push(new Star());
-for (let i = 0; i < 10; i++) spawnEnemy();
-loop();
+waveSpawnQueue = buildWaveQueue(wave);
+updateUI();
+updateMissionUI();
+showWaveBanner(wave);
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
