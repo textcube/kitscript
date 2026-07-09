@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A self-running canvas defense game where merge-built drones sortie against escalating enemy waves.">
+    <meta property="og:title" content="Eternal Invasion: Drone Edition">
+    <meta property="og:description" content="Merge drones, launch sorties, and defend the core against escalating waves.">
+    <meta property="og:type" content="website">
     <title>Eternal Invasion: Drone Edition</title>
     <style>
         :root {
@@ -21,7 +25,8 @@
             color: #e0e0e0;
             font-family: 'Segoe UI', 'Share Tech Mono', monospace;
             overflow: hidden;
-            display: flex; flex-direction: column; height: 100vh;
+            display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+            touch-action: manipulation;
         }
 
         header {
@@ -37,7 +42,7 @@
         .brand-sub { font-size: 10px; letter-spacing: 5px; color: var(--neon-blue); font-weight: bold; text-transform: uppercase; }
         .brand-title { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px var(--neon-blue); }
 
-        .nav-buttons { display: flex; gap: 15px; }
+        .nav-buttons { display: flex; gap: 10px; align-items: center; }
         button {
             background: rgba(0, 242, 255, 0.05); border: 1px solid var(--neon-blue);
             color: var(--neon-blue); padding: 10px 20px; cursor: pointer;
@@ -46,9 +51,21 @@
         }
         button:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
         button.active { background: rgba(0, 242, 255, 0.2); border-color: #fff; }
+        .icon-button {
+            width: 38px; height: 38px; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(0, 242, 255, 0.05); border: 1px solid var(--neon-blue);
+            color: var(--neon-blue); border-radius: 2px; cursor: pointer;
+            transition: all 0.2s ease; text-decoration: none;
+        }
+        .icon-button:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
+        .icon-button.active { background: rgba(0, 242, 255, 0.2); border-color: #fff; color: #fff; }
+        .icon-button svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-button .youtube-icon { fill: currentColor; stroke: none; width: 21px; height: 21px; }
+        .icon-button .youtube-icon .play-mark { fill: #020205; }
 
-        main { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; }
-        #gameCanvas { max-width: 100%; max-height: 100%; border: 1px solid #1a1a1a; cursor: crosshair; }
+        main { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; min-height: 0; }
+        #gameCanvas { max-width: 100%; max-height: 100%; border: 1px solid #1a1a1a; cursor: crosshair; touch-action: none; }
 
         .side-panel {
             position: absolute; right: 25px; top: 25px; bottom: 25px;
@@ -81,6 +98,31 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
         .prep-timer { color: var(--neon-purple); font-weight: bold; font-size: 20px; }
+        .event-log { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .event-line { color: #b8c8cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .score-line { color: #fff; font-size: 18px; font-weight: bold; }
+        #restartNow { margin-top: 28px; pointer-events: auto; }
+
+        @media (max-width: 720px) {
+            header { padding: 10px 12px; gap: 10px; align-items: flex-start; }
+            .brand-sub { font-size: 8px; letter-spacing: 2px; }
+            .brand-title { font-size: 16px; letter-spacing: 1px; }
+            .nav-buttons { gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+            button { padding: 8px 10px; font-size: 10px; }
+            .icon-button { width: 34px; height: 34px; padding: 0; }
+            .side-panel {
+                top: 8px; right: 8px; left: 8px; bottom: auto; width: auto;
+                padding: 8px 10px; flex-direction: row; flex-wrap: wrap; gap: 10px;
+            }
+            .side-panel .stat-box { margin-bottom: 0; min-width: 86px; }
+            .side-panel .stat-label { font-size: 8px; }
+            .ui-panel {
+                left: 8px; right: 8px; bottom: 8px; width: auto;
+                padding: 10px; font-size: 10px; line-height: 1.45;
+            }
+            .event-line { white-space: normal; }
+            #gameOverOverlay h1 { font-size: 30px !important; text-align: center; }
+        }
     </style>
 </head>
 <body>
@@ -91,8 +133,21 @@
         <div class="brand-title">Eternal Invasion: Drone Edition</div>
     </div>
     <div class="nav-buttons">
-        <button id="soundToggle">Audio: Off</button>
-        <button id="autoDeployToggle">Auto-Sortie: On</button>
+        <a class="icon-button" href="https://kitscript.com/pickme/" target="_blank" rel="noopener noreferrer" title="Homepage" aria-label="Open homepage">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 10.5 12 3l9 7.5"></path>
+                <path d="M5 9.5V21h14V9.5"></path>
+                <path d="M9 21v-7h6v7"></path>
+            </svg>
+        </a>
+        <a class="icon-button" href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="Open YouTube channel">
+            <svg class="youtube-icon" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M21.5 7.1a3 3 0 0 0-2.1-2.1C17.6 4.5 12 4.5 12 4.5s-5.6 0-7.4.5a3 3 0 0 0-2.1 2.1C2 8.9 2 12 2 12s0 3.1.5 4.9a3 3 0 0 0 2.1 2.1c1.8.5 7.4.5 7.4.5s5.6 0 7.4-.5a3 3 0 0 0 2.1-2.1c.5-1.8.5-4.9.5-4.9s0-3.1-.5-4.9Z"></path>
+                <path class="play-mark" d="M10 15.5v-7l6 3.5-6 3.5Z"></path>
+            </svg>
+        </a>
+        <button id="soundToggle" class="icon-button" title="Audio off" aria-label="Audio off"></button>
+        <button id="autoDeployToggle" class="icon-button" title="Auto-sortie on" aria-label="Auto-sortie on"></button>
     </div>
 </header>
 
@@ -100,11 +155,8 @@
     <canvas id="gameCanvas"></canvas>
     
     <div class="ui-panel">
-        <b style="color:#fff; font-size: 14px; letter-spacing: 1px;">STRATEGIC COMMAND LOG</b><br>
-        <span style="color:var(--neon-blue)">> AUDIO ENGINE:</span> Procedural Synth active.<br>
-        <span style="color:var(--neon-blue)">> IMPACT FX:</span> Kinetic haptics & camera shake.<br>
-        <span style="color:var(--neon-blue)">> SQUADRON OPS:</span> Sequential 1-turn sortie.<br>
-        <span style="color:var(--neon-blue)">> THREAT LEVEL:</span> Escalating spawn intensity.
+        <b style="color:#fff; font-size: 14px; letter-spacing: 1px;">STRATEGIC COMMAND LOG</b>
+        <div id="eventLog" class="event-log"></div>
     </div>
 
     <div class="side-panel">
@@ -121,6 +173,18 @@
             <div id="threatLevel" style="font-size: 18px; font-weight: bold; color: #fff;">1.00x</div>
         </div>
         <div class="stat-box">
+            <div class="stat-label">Wave</div>
+            <div id="waveCount" style="font-size: 18px; font-weight: bold; color: #fff;">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Score</div>
+            <div id="scoreCount" class="score-line">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Kills / Merges</div>
+            <div id="combatStats" style="font-size: 13px; color: #fff;">0 / 0</div>
+        </div>
+        <div class="stat-box">
             <div class="stat-label">Sortie Queue</div>
             <div id="queueCount" class="sortie-indicator">Standby</div>
         </div>
@@ -131,7 +195,9 @@
     <div id="gameOverOverlay">
         <div style="font-size: 12px; color: var(--neon-red); letter-spacing: 8px; margin-bottom: 10px;">SYSTEM FAILURE</div>
         <h1 style="color:#fff; font-size: 48px; letter-spacing: 4px; margin: 0;">CORE COMPROMISED</h1>
-        <div id="restartTimer" style="margin-top: 30px; font-size: 14px; color: var(--neon-blue);">REBOOTING COMMAND CENTER...</div>
+        <div id="finalStats" style="margin-top: 20px; font-size: 14px; color: #ddd; text-align: center; line-height: 1.8;"></div>
+        <div id="restartTimer" style="margin-top: 18px; font-size: 14px; color: var(--neon-blue);">REBOOTING COMMAND CENTER...</div>
+        <button id="restartNow">Restart Now</button>
     </div>
 </main>
 
@@ -148,6 +214,14 @@ const GRID_SIZE = 4;
 const CELL_SIZE = 80;
 const GRID_X = 60;
 const GRID_Y = 160;
+const FIXED_STEP_MS = 1000 / 60;
+const MAX_UPDATES_PER_FRAME = 5;
+const PREP_TICKS = 60 * 5;
+const TURN_TICKS = 60;
+const WAVE_TICKS = 60 * 30;
+const MAX_ENEMIES = 70;
+const MAX_PROJECTILES = 180;
+const MAX_PARTICLES = 360;
 
 const TECH_TREE = {
     1: { name: "Scout", hp: 140, dmg: 14, range: 120, color: "#999", speed: 1.5, sides: 0 },
@@ -170,6 +244,13 @@ const TECH_TREE = {
 let soundEnabled = false;
 let autoDeploy = true;
 let audioCtx = null;
+
+const ICONS = {
+    volumeOn: `<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M16 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 6a8 8 0 0 1 0 12"></path></svg>`,
+    volumeOff: `<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="m17 9 4 4"></path><path d="m21 9-4 4"></path></svg>`,
+    autoOn: `<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2.5c3 2.2 5 5.6 5 9.5 0 4.8-3.2 8.5-5 9.5-1.8-1-5-4.7-5-9.5 0-3.9 2-7.3 5-9.5Z"></path><path d="M9 13H5l2.5-3"></path><path d="M15 13h4l-2.5-3"></path><path d="M10 18h4"></path><path d="M12 8.5v3"></path></svg>`,
+    autoOff: `<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2.5c3 2.2 5 5.6 5 9.5 0 4.8-3.2 8.5-5 9.5-1.8-1-5-4.7-5-9.5 0-3.9 2-7.3 5-9.5Z"></path><path d="m4 4 16 16"></path></svg>`
+};
 
 const SoundEngine = {
     init() {
@@ -314,8 +395,7 @@ class Projectile {
         if (dist < 15) {
             this.target.hp -= this.dmg; this.dead = true; 
             SoundEngine.playHit(this.isEnemy ? 0.03 : 0.06); 
-            // 아군 탄환이 적을 맞출 때 미세한 진동
-            if (!this.isEnemy) game.shake(3, 5);
+            if (!this.isEnemy && this.dmg >= 100) game.shake(3, 5);
             return;
         }
         this.x += (dx/dist)*this.speed; this.y += (dy/dist)*this.speed;
@@ -373,9 +453,7 @@ class Drone {
             } else {
                 const dx = base.x - this.x, dy = base.y - this.y;
                 if (distToBase < 55) { 
-                    base.hp -= 0.5; 
-                    game.shake(6, 10); // 기지 데미지 시 강한 진동
-                    SoundEngine.playCoreImpact();
+                    game.handleCoreContact(this);
                 } 
                 else { this.x += (dx/distToBase)*this.speed; this.y += (dy/distToBase)*this.speed; }
             }
@@ -429,18 +507,32 @@ class Game {
         this.canvas.width = 1000; this.canvas.height = 600;
         this.mousePos = { x: 0, y: 0 };
         this.shakeX = 0; this.shakeY = 0; this.shakeTimer = 0; this.shakeIntensity = 0;
+        this.lastFrameTime = performance.now();
+        this.accumulator = 0;
+        this.restartTimeout = null;
         this.init(); this.setupListeners(); this.loop();
     }
 
     init() {
-        this.startTime = Date.now();
         this.base = { x: 500, y: 300, hp: 100 };
         this.grid = Array(16).fill(null).map(() => ({ level: 1, path: 'Basic' }));
         this.drones = []; this.enemies = []; this.projectiles = []; this.particles = [];
-        this.difficulty = 1.0; this.gameTime = 0;
-        this.lastTurnTime = 0; this.globalTurnCount = 0; this.enemySpawnTimer = 0;
+        this.difficulty = 1.0; this.gameTime = 0; this.prepTicks = PREP_TICKS;
+        this.turnTimer = 0; this.globalTurnCount = 0; this.enemySpawnTimer = 0;
         this.isGameOver = false;
-        this.sortieQueue = []; 
+        this.sortieQueue = [];
+        this.score = 0; this.kills = 0; this.merges = 0; this.wave = 0;
+        this.coreImpactCooldown = 0; this.restartCountdown = 0;
+        this.highScore = Number(localStorage.getItem('droneHighScore') || 0);
+        this.events = [];
+        this.addLog('SYSTEM: Command center online.');
+        this.addLog('AUTO: Sortie and merge routines armed.');
+        document.getElementById('gameOverOverlay').style.display = 'none';
+        if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+        this.lastFrameTime = performance.now();
+        this.accumulator = 0;
+        this.renderControlButtons();
+        this.updateUI();
     }
 
     shake(intensity, frames) {
@@ -448,36 +540,74 @@ class Game {
         this.shakeTimer = frames;
     }
 
+    addLog(message) {
+        this.events.unshift(message);
+        this.events = this.events.slice(0, 6);
+    }
+
+    handleCoreContact(enemy) {
+        this.base.hp -= 0.25 + enemy.level * 0.08;
+        if (this.coreImpactCooldown <= 0) {
+            this.coreImpactCooldown = 30;
+            this.shake(6, 10);
+            SoundEngine.playCoreImpact();
+            this.addLog(`ALERT: Core breach by L${enemy.level} hostile.`);
+        }
+    }
+
+    getDroneInfo(level, path) {
+        return level <= 2 ? TECH_TREE[level] : TECH_TREE[level][path];
+    }
+
+    renderControlButtons() {
+        const soundButton = document.getElementById('soundToggle');
+        const autoButton = document.getElementById('autoDeployToggle');
+        soundButton.innerHTML = soundEnabled ? ICONS.volumeOn : ICONS.volumeOff;
+        soundButton.title = `Audio ${soundEnabled ? 'on' : 'off'}`;
+        soundButton.setAttribute('aria-label', soundButton.title);
+        soundButton.classList.toggle('active', soundEnabled);
+        autoButton.innerHTML = autoDeploy ? ICONS.autoOn : ICONS.autoOff;
+        autoButton.title = `Auto-sortie ${autoDeploy ? 'on' : 'off'}`;
+        autoButton.setAttribute('aria-label', autoButton.title);
+        autoButton.classList.toggle('active', autoDeploy);
+    }
+
     setupListeners() {
-        this.canvas.addEventListener('mousemove', (e) => {
+        const updatePointer = (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mousePos.x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
             this.mousePos.y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
-        });
-        this.canvas.addEventListener('mousedown', () => {
+        };
+        this.canvas.addEventListener('pointermove', updatePointer);
+        this.canvas.addEventListener('pointerdown', (e) => {
+            updatePointer(e);
             if (this.isGameOver) return;
-            SoundEngine.init(); // 오디오 컨텍스트 활성화
+            e.preventDefault();
+            SoundEngine.init();
             const gx = this.mousePos.x - GRID_X, gy = this.mousePos.y - GRID_Y;
             if (gx >= 0 && gy >= 0 && gx < 4*CELL_SIZE && gy < 4*CELL_SIZE) {
                 const idx = Math.floor(gx/CELL_SIZE) + Math.floor(gy/CELL_SIZE)*4;
-                if (this.grid[idx].level > 0 && !this.sortieQueue.includes(idx)) {
+                if (this.sortieQueue.includes(idx)) {
+                    this.sortieQueue = this.sortieQueue.filter(q => q !== idx);
+                    this.addLog(`QUEUE: Slot ${idx + 1} sortie canceled.`);
+                } else if (this.grid[idx].level > 0) {
                     this.sortieQueue.push(idx);
+                    this.addLog(`QUEUE: Slot ${idx + 1} awaiting sortie.`);
                 }
             }
         });
         document.getElementById('soundToggle').onclick = (e) => { 
             SoundEngine.init();
             soundEnabled = !soundEnabled; 
-            e.target.innerText = `Audio: ${soundEnabled?'On':'Off'}`; 
-            e.target.classList.toggle('active', soundEnabled); 
+            this.renderControlButtons();
         };
         document.getElementById('autoDeployToggle').onclick = (e) => { 
             autoDeploy = !autoDeploy; 
-            e.target.innerText = `Auto-Sortie: ${autoDeploy?'On':'Off'}`; 
-            e.target.classList.toggle('active', autoDeploy); 
+            this.renderControlButtons();
+            this.addLog(`AUTO: Sortie ${autoDeploy ? 'enabled' : 'disabled'}.`);
         };
+        document.getElementById('restartNow').onclick = () => this.init();
     }
-
     processTurn() {
         this.globalTurnCount++;
         if (this.sortieQueue.length > 0) {
@@ -524,9 +654,14 @@ class Game {
             const neighbors = [i-1, i+1, i-4, i+4].filter(n => n>=0 && n<16 && Math.abs((n%4)-(i%4)) + Math.abs(Math.floor(n/4)-Math.floor(i/4)) === 1);
             for (let n of neighbors) {
                 if (this.grid[n].level === this.grid[i].level && this.grid[n].path === this.grid[i].path) {
+                    const nextLevel = this.grid[n].level + 1;
                     this.grid[n].level++;
                     if (this.grid[n].level === 3 && this.grid[n].path === 'Basic') this.grid[n].path = Math.random() > 0.5 ? 'Assault' : 'Defense';
                     this.grid[i].level = 0;
+                    this.merges++;
+                    this.score += nextLevel * 25;
+                    const info = this.getDroneInfo(this.grid[n].level, this.grid[n].path);
+                    this.addLog(`MERGE: L${nextLevel} ${info.name} assembled.`);
                     SoundEngine.playMerge();
                     if (this.grid[n].level === 5) this.launchDrone(n);
                     return true;
@@ -572,6 +707,7 @@ class Game {
             this.grid[idx].level = 1; this.grid[idx].path = 'Basic';
             const px = GRID_X + (idx%4)*CELL_SIZE + CELL_SIZE/2, py = GRID_Y + Math.floor(idx/4)*CELL_SIZE + CELL_SIZE/2;
             for(let i=0; i<10; i++) this.particles.push(new Particle(px, py, varColor("#999")));
+            if (this.globalTurnCount % 8 === 0) this.addLog(`FAB: Scout printed in slot ${idx + 1}.`);
         }
     }
 
@@ -587,7 +723,9 @@ class Game {
             case 2: x = Math.random()*1000; y = 600-offset; break;
             case 3: x = offset; y = Math.random()*600; break;
         }
-        this.enemies.push(new Drone(x, y, level, Math.random()>0.5?'Assault':'Defense', true, this.difficulty));
+        if (this.enemies.length < MAX_ENEMIES) {
+            this.enemies.push(new Drone(x, y, level, Math.random()>0.5?'Assault':'Defense', true, this.difficulty));
+        }
     }
 
     launchDrone(idx) {
@@ -595,29 +733,44 @@ class Game {
         this.grid[idx].level = 0;
         this.drones.push(new Drone(this.base.x, this.base.y, level, path, false, this.difficulty));
         SoundEngine.playLaunch();
-        const color = level <= 2 ? TECH_TREE[level].color : TECH_TREE[level][path].color;
+        const info = this.getDroneInfo(level, path);
+        const color = info.color;
+        this.addLog(`SORTIE: L${level} ${info.name} deployed.`);
         for(let i=0; i<20; i++) this.particles.push(new Particle(this.base.x, this.base.y, color));
         this.sortieQueue = this.sortieQueue.filter(q => q !== idx);
     }
 
     update() {
-        if (this.isGameOver) return;
-        const now = Date.now();
-        const prepRemaining = Math.max(0, 5000 - (now - this.startTime));
-        
-        this.gameTime++; 
-        this.difficulty = 1.0 + (this.gameTime / 9000);
-        
-        if (now - this.lastTurnTime > 1000) { this.processTurn(); this.lastTurnTime = now; }
+        if (this.isGameOver) {
+            if (this.restartCountdown > 0) this.restartCountdown--;
+            this.updateUI();
+            return;
+        }
 
-        if (prepRemaining === 0) {
-            if (++this.enemySpawnTimer > Math.max(8, 80 / this.difficulty)) { 
-                this.spawnEnemy(); 
-                this.enemySpawnTimer = 0; 
+        this.gameTime++;
+        if (this.prepTicks > 0) this.prepTicks--;
+        const activeTicks = Math.max(0, this.gameTime - PREP_TICKS);
+        const nextWave = activeTicks > 0 ? Math.floor(activeTicks / WAVE_TICKS) + 1 : 0;
+        if (nextWave !== this.wave) {
+            this.wave = nextWave;
+            if (this.wave > 0) this.addLog(`WAVE ${this.wave}: Hostiles inbound.`);
+        }
+        this.difficulty = 1.0 + (activeTicks / 7200) + (this.wave * 0.08);
+
+        if (++this.turnTimer >= TURN_TICKS) {
+            this.processTurn();
+            this.turnTimer = 0;
+        }
+
+        if (this.prepTicks === 0) {
+            const spawnInterval = Math.max(20, Math.floor(96 / this.difficulty));
+            if (++this.enemySpawnTimer >= spawnInterval) {
+                this.spawnEnemy();
+                this.enemySpawnTimer = 0;
             }
         }
 
-        // --- Screen Shake Logic ---
+        if (this.coreImpactCooldown > 0) this.coreImpactCooldown--;
         if (this.shakeTimer > 0) {
             this.shakeX = (Math.random() - 0.5) * this.shakeIntensity;
             this.shakeY = (Math.random() - 0.5) * this.shakeIntensity;
@@ -626,33 +779,67 @@ class Game {
             this.shakeX = 0; this.shakeY = 0;
         }
 
-        this.enemies.forEach(e => { let r = e.update(this.drones, this.base, this); if (r) this.projectiles.push(r); });
-        this.drones.forEach(d => { let r = d.update(this.enemies, this.base, this); if (r) this.projectiles.push(r); });
+        this.enemies.forEach(e => { const r = e.update(this.drones, this.base, this); if (r) this.projectiles.push(r); });
+        this.drones.forEach(d => { const r = d.update(this.enemies, this.base, this); if (r) this.projectiles.push(r); });
         this.projectiles.forEach(p => p.update(this));
         this.particles.forEach(p => p.update());
-        
-        this.projectiles = this.projectiles.filter(p => !p.dead);
-        this.particles = this.particles.filter(p => p.life > 0);
-        this.enemies.forEach(e => { if (e.hp <= 0) { for(let i=0; i<25; i++) this.particles.push(new Particle(e.x, e.y, "#ff3355", 3)); }});
+
+        this.projectiles = this.projectiles.filter(p => !p.dead).slice(-MAX_PROJECTILES);
+        this.particles = this.particles.filter(p => p.life > 0).slice(-MAX_PARTICLES);
+        this.enemies.forEach(e => {
+            if (e.hp <= 0) {
+                this.kills++;
+                this.score += e.level * 100;
+                this.addLog(`KILL: L${e.level} hostile neutralized.`);
+                for(let i=0; i<25; i++) this.particles.push(new Particle(e.x, e.y, "#ff3355", 3));
+            }
+        });
         this.enemies = this.enemies.filter(e => e.hp > 0);
         this.drones.forEach(d => { if (d.hp <= 0) { for(let i=0; i<20; i++) this.particles.push(new Particle(d.x, d.y, "#ffffff", 2)); }});
         this.drones = this.drones.filter(d => d.hp > 0);
 
-        // UI Stats Update
-        document.getElementById('hpFill').style.width = this.base.hp + '%';
-        document.getElementById('hpFill').classList.toggle('danger', this.base.hp < 30);
+        this.updateUI();
+        if (this.base.hp <= 0) this.endGame();
+    }
+
+    updateUI() {
+        const hp = Math.max(0, Math.min(100, this.base.hp));
+        document.getElementById('hpFill').style.width = hp + '%';
+        document.getElementById('hpFill').classList.toggle('danger', hp < 30);
         document.getElementById('threatLevel').innerText = this.difficulty.toFixed(2) + 'x';
         document.getElementById('queueCount').innerText = this.sortieQueue.length > 0 ? `DEPLOYING ${this.sortieQueue.length}` : 'STANDBY';
-        
+        document.getElementById('waveCount').innerText = this.wave || 'PREP';
+        document.getElementById('scoreCount').innerText = this.score.toLocaleString();
+        document.getElementById('combatStats').innerText = `${this.kills} / ${this.merges}`;
+        document.getElementById('eventLog').innerHTML = this.events.map(line => `<div class="event-line">&gt; ${line}</div>`).join('');
+
         const prepDisp = document.getElementById('prepCountdown');
-        if (prepRemaining > 0) {
-            prepDisp.innerText = (prepRemaining / 1000).toFixed(2) + "s";
+        if (this.prepTicks > 0) {
+            prepDisp.innerText = (this.prepTicks / 60).toFixed(2) + "s";
             document.getElementById('prepBox').style.display = 'block';
         } else {
             document.getElementById('prepBox').style.display = 'none';
         }
 
-        if (this.base.hp <= 0) { this.base.hp = 0; this.isGameOver = true; document.getElementById('gameOverOverlay').style.display='flex'; setTimeout(() => location.reload(), 7000); }
+        if (this.isGameOver) {
+            document.getElementById('restartTimer').innerText = `REBOOTING IN ${(this.restartCountdown / 60).toFixed(1)}s`;
+        }
+    }
+
+    endGame() {
+        this.base.hp = 0;
+        this.isGameOver = true;
+        this.restartCountdown = 7 * 60;
+        const best = Math.max(this.highScore, this.score);
+        const isRecord = best > this.highScore;
+        localStorage.setItem('droneHighScore', String(best));
+        this.highScore = best;
+        document.getElementById('finalStats').innerHTML =
+            `Score ${this.score.toLocaleString()}${isRecord ? ' - New Record' : ''}<br>` +
+            `Wave ${this.wave} / Kills ${this.kills} / Merges ${this.merges}<br>` +
+            `Best ${this.highScore.toLocaleString()}`;
+        document.getElementById('gameOverOverlay').style.display='flex';
+        this.restartTimeout = setTimeout(() => this.init(), 7000);
     }
 
     draw() {
@@ -706,7 +893,20 @@ class Game {
         this.ctx.fillText(item.level, x, y);
         this.ctx.restore();
     }
-    loop() { this.update(); this.draw(); requestAnimationFrame(() => this.loop()); }
+    loop(now = performance.now()) {
+        const elapsed = Math.min(250, now - this.lastFrameTime);
+        this.lastFrameTime = now;
+        this.accumulator += elapsed;
+        let updates = 0;
+        while (this.accumulator >= FIXED_STEP_MS && updates < MAX_UPDATES_PER_FRAME) {
+            this.update();
+            this.accumulator -= FIXED_STEP_MS;
+            updates++;
+        }
+        if (updates === MAX_UPDATES_PER_FRAME) this.accumulator = 0;
+        this.draw();
+        requestAnimationFrame((time) => this.loop(time));
+    }
 }
 window.onload = () => new Game();
 </script>
