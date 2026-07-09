@@ -253,6 +253,21 @@
 
         #timelineContent {
             overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        #timelineRuler {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        #timelineRuler::-webkit-scrollbar { display: none; }
+
+        .ruler-tick-label {
+            font-size: 8px !important;
+            color: #64748b;
+            line-height: 1;
         }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -372,7 +387,8 @@
         </div>
         <div class="flex-1 timeline-track-bg" id="timelineContent"></div>
         <div class="h-8 bg-black relative border-t border-[#30363d] cursor-crosshair" id="timelineRuler" onclick="engine.seekTimeline(event)">
-            <div class="absolute left-0 top-0 h-full bg-[#0d1117] border-r border-[#30363d] z-10" style="width: var(--timeline-label-w)"></div>
+            <div class="sticky left-0 top-0 h-full bg-[#0d1117] border-r border-[#30363d] z-10" style="width: var(--timeline-label-w)"></div>
+            <div id="timelineRulerTicks" class="absolute top-0 h-full" style="left: var(--timeline-label-w)"></div>
             <div id="playhead" class="absolute top-0 bottom-0 w-[1px] bg-rose-500 z-20 pointer-events-none transition-none">
                 <div class="w-3.5 h-3.5 bg-rose-500 rounded-full -ml-[6.5px] -mt-[5px] border-2 border-white shadow-lg"></div>
             </div>
@@ -464,6 +480,7 @@
                 this.dragStartNodePos = { x: 0, y: 0 };
                 this.timelineEdit = null;
                 this.timelineSnap = 0.1;
+                this.uiUpdateScheduled = false;
 
                 this.init();
             }
@@ -563,36 +580,78 @@
                 indicator.classList.add('modified');
                 text.innerText = "MODIFIED";
                 dot.className = "w-1.5 h-1.5 rounded-full bg-yellow-500";
-                this.saveTimeout = setTimeout(async () => {
-                    indicator.classList.remove('modified');
-                    indicator.classList.add('saving', 'saving-active');
-                    text.innerText = "SAVING...";
-                    dot.className = "w-1.5 h-1.5 rounded-full bg-cyan-400";
-                    const success = await this.storage.save(this.getProjectData());
+                this.saveTimeout = setTimeout(() => {
+                    this.saveTimeout = null;
+                    this.performSave();
+                }, 4000);
+            }
+
+            async performSave() {
+                const indicator = document.getElementById('saveIndicator');
+                const text = document.getElementById('saveStatusText');
+                const dot = document.getElementById('saveDot');
+                indicator.classList.remove('modified');
+                indicator.classList.add('saving', 'saving-active');
+                text.innerText = "SAVING...";
+                dot.className = "w-1.5 h-1.5 rounded-full bg-cyan-400";
+                const success = await this.storage.save(this.getProjectData());
+                setTimeout(() => {
+                    indicator.classList.remove('saving', 'saving-active');
+                    if (success) {
+                        indicator.classList.add('success');
+                        text.innerText = "SAVED";
+                        dot.className = "w-1.5 h-1.5 rounded-full bg-green-500";
+                    } else {
+                        indicator.classList.add('error');
+                        text.innerText = "SAVE ERROR";
+                        dot.className = "w-1.5 h-1.5 rounded-full bg-red-500";
+                    }
                     setTimeout(() => {
-                        indicator.classList.remove('saving', 'saving-active');
-                        if (success) {
-                            indicator.classList.add('success');
-                            text.innerText = "SAVED";
-                            dot.className = "w-1.5 h-1.5 rounded-full bg-green-500";
-                        } else {
-                            indicator.classList.add('error');
-                            text.innerText = "SAVE ERROR";
-                            dot.className = "w-1.5 h-1.5 rounded-full bg-red-500";
-                        }
-                        setTimeout(() => {
-                            indicator.classList.remove('success', 'error');
-                            text.innerText = "STORAGE READY";
-                            dot.className = "w-1.5 h-1.5 rounded-full bg-slate-600";
-                        }, 2000);
-                    }, 600);
-                }, 4000); 
+                        indicator.classList.remove('success', 'error');
+                        text.innerText = "STORAGE READY";
+                        dot.className = "w-1.5 h-1.5 rounded-full bg-slate-600";
+                    }, 2000);
+                }, 600);
+                return success;
+            }
+
+            flushPendingSave() {
+                if (this.saveTimeout) {
+                    clearTimeout(this.saveTimeout);
+                    this.saveTimeout = null;
+                    this.performSave();
+                }
+            }
+
+            flashStatusError(message) {
+                const indicator = document.getElementById('saveIndicator');
+                const text = document.getElementById('saveStatusText');
+                const dot = document.getElementById('saveDot');
+                indicator.classList.remove('modified', 'saving', 'saving-active', 'success');
+                indicator.classList.add('error');
+                text.innerText = message;
+                dot.className = "w-1.5 h-1.5 rounded-full bg-red-500";
+                setTimeout(() => {
+                    indicator.classList.remove('error');
+                    text.innerText = "STORAGE READY";
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-slate-600";
+                }, 2000);
             }
 
             async exportVideo() {
                 if (this.isRecording) return;
+                if (typeof MediaRecorder === 'undefined') {
+                    this.flashStatusError("VIDEO UNSUPPORTED");
+                    return;
+                }
+                const mimeCandidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+                const mimeType = mimeCandidates.find(type => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type));
+                if (!mimeType) {
+                    this.flashStatusError("VIDEO UNSUPPORTED");
+                    return;
+                }
                 this.isRecording = true;
-                this.isExporting = true; 
+                this.isExporting = true;
                 const indicator = document.getElementById('saveIndicator');
                 const text = document.getElementById('saveStatusText');
                 const dot = document.getElementById('saveDot');
@@ -602,7 +661,7 @@
                 this.setGlobalTime(0);
                 this.isPlaying = true;
                 const stream = this.canvas.captureStream(this.fps);
-                const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+                const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 });
                 const chunks = [];
                 recorder.ondataavailable = (e) => chunks.push(e.data);
                 recorder.onstop = () => {
@@ -628,6 +687,14 @@
                 this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                 window.addEventListener('mousemove', (e) => this.handlePointerMove(e));
                 window.addEventListener('mouseup', () => this.handlePointerUp());
+                document.addEventListener('visibilitychange', () => { if (document.hidden) this.flushPendingSave(); });
+                window.addEventListener('pagehide', () => this.flushPendingSave());
+                const timelineContent = document.getElementById('timelineContent');
+                const timelineRuler = document.getElementById('timelineRuler');
+                if (timelineContent && timelineRuler) {
+                    timelineContent.addEventListener('scroll', () => { timelineRuler.scrollLeft = timelineContent.scrollLeft; });
+                    timelineRuler.addEventListener('scroll', () => { timelineContent.scrollLeft = timelineRuler.scrollLeft; });
+                }
             }
 
             getMousePos(e) {
@@ -641,11 +708,17 @@
                     const node = this.nodes[i];
                     const world = this.getGlobalTransform(node);
                     const visual = node.visual;
-                    let w = visual.width, h = visual.height;
-                    if (visual.type === 'CIRCLE') w = h = visual.radius * 2;
-                    const dx = Math.abs(mouse.x - world.x);
-                    const dy = Math.abs(mouse.y - world.y);
-                    if (dx < (w * world.scaleX) / 2 && dy < (h * world.scaleY) / 2) {
+                    const dx = mouse.x - world.x;
+                    const dy = mouse.y - world.y;
+                    let hit;
+                    if (visual.type === 'CIRCLE') {
+                        const r = visual.radius * ((Math.abs(world.scaleX) + Math.abs(world.scaleY)) / 2);
+                        hit = (dx * dx + dy * dy) <= (r * r);
+                    } else {
+                        const w = visual.width, h = visual.height;
+                        hit = Math.abs(dx) < (w * world.scaleX) / 2 && Math.abs(dy) < (h * world.scaleY) / 2;
+                    }
+                    if (hit) {
                         this.selectedNodeId = node.id;
                         this.isDragging = true;
                         this.dragStartMousePos = { x: mouse.x, y: mouse.y };
@@ -678,7 +751,7 @@
                     node.transform.y = this.dragStartNodePos.y + dy;
                 }
                 this.requestSave();
-                this.updateUI();
+                this.scheduleUIUpdate();
             }
 
             handleTimelineDrag(e) {
@@ -695,7 +768,7 @@
                 } else if (this.timelineEdit.mode === 'resize-end') {
                     motion.duration = this.clamp(this.snapTime(this.timelineEdit.startDuration + deltaSec), minDuration, Math.max(minDuration, this.totalDuration - motion.delay));
                 }
-                this.updateUI();
+                this.scheduleUIUpdate();
                 this.requestSave();
             }
 
@@ -708,8 +781,19 @@
             }
 
             handlePointerUp() {
+                const wasDragging = this.isDragging || !!this.timelineEdit;
                 this.isDragging = false;
                 this.timelineEdit = null;
+                if (wasDragging) this.updateUI();
+            }
+
+            scheduleUIUpdate() {
+                if (this.uiUpdateScheduled) return;
+                this.uiUpdateScheduled = true;
+                requestAnimationFrame(() => {
+                    this.uiUpdateScheduled = false;
+                    this.updateUI();
+                });
             }
 
             updateGlobalSettings() {
@@ -730,8 +814,9 @@
             }
 
             seekTimeline(event) {
-                const rect = document.getElementById('timelineRuler').getBoundingClientRect();
-                const x = event.clientX - rect.left - TIMELINE_LABEL_W; 
+                const ruler = document.getElementById('timelineRuler');
+                const rect = ruler.getBoundingClientRect();
+                const x = event.clientX - rect.left - TIMELINE_LABEL_W + ruler.scrollLeft;
                 if (x >= 0) {
                     const time = x / PX_PER_SEC;
                     this.setGlobalTime(time);
@@ -815,7 +900,8 @@
                 if (!m || m.target === 'NONE') return { x: 0, y: 0, rotation: 0, scale: 1 };
                 let elapsed = this.globalTime - (m.delay || 0);
                 if (elapsed < 0) return { x: 0, y: 0, rotation: 0, scale: 1 };
-                if (m.loop > 0 && elapsed >= m.duration * m.loop) elapsed = m.duration * m.loop; 
+                if (!(m.duration > 0)) return { x: 0, y: 0, rotation: 0, scale: 1 };
+                if (m.loop > 0 && elapsed >= m.duration * m.loop) elapsed = m.duration * m.loop;
                 let t = (elapsed % m.duration) / m.duration;
                 if (m.loop > 0 && elapsed >= m.duration * m.loop) t = 1.0; 
                 const easeFn = Easing[m.easing || 'linear'] || Easing.linear;
@@ -876,9 +962,9 @@
                     if (visual.type === 'RECTANGLE') this.ctx.fillRect(-drawW/2, -drawH/2, drawW, drawH);
                     else if (visual.type === 'CIRCLE') { this.ctx.beginPath(); this.ctx.arc(0, 0, visual.radius, 0, Math.PI * 2); this.ctx.fill(); drawW = drawH = visual.radius * 2; }
                 }
-                if (!this.isExporting && this.selectedNodeId === node.id) { 
-                    this.ctx.strokeStyle = 'var(--pro-cyan)'; this.ctx.lineWidth = 2; 
-                    this.ctx.strokeRect(-drawW/2 - 2, -drawH/2 - 2, drawW + 4, drawH + 4); 
+                if (!this.isExporting && this.selectedNodeId === node.id) {
+                    this.ctx.strokeStyle = '#00e5ff'; this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(-drawW/2 - 2, -drawH/2 - 2, drawW + 4, drawH + 4);
                 }
                 this.ctx.restore();
             }
@@ -898,7 +984,6 @@
             }
 
             updateUI() {
-                {
                 const list = document.getElementById('nodeList');
                 list.innerHTML = '';
                 const render = (parentId, depth) => {
@@ -954,13 +1039,14 @@
                         row.className = `flex items-center h-9 timeline-track-row ${this.selectedNodeId === node.id ? 'bg-slate-900/40' : ''}`;
 
                         const label = document.createElement('div');
-                        label.className = 'border-r border-[#30363d] px-6 text-slate-500 truncate shrink-0';
+                        label.className = 'border-r border-[#30363d] px-6 text-slate-500 truncate shrink-0 sticky left-0 z-10 bg-[#0d1117]';
                         label.style.width = `${TIMELINE_LABEL_W}px`;
                         label.style.paddingLeft = `${depth * 15 + 24}px`;
                         label.textContent = node.id;
 
                         const track = document.createElement('div');
                         track.className = 'flex-1 relative h-full';
+                        track.style.minWidth = `${Math.max(1, this.totalDuration) * PX_PER_SEC}px`;
 
                         const bar = document.createElement('div');
                         const isNone = !node.motion || node.motion.target === 'NONE';
@@ -995,6 +1081,7 @@
                     });
                 };
                 renderTimeline(null, 0);
+                this.updateTimelineRuler();
 
                 const panel = document.getElementById('editorPanel');
                 const active = this.nodes.find(node => node.id === this.selectedNodeId);
@@ -1082,131 +1169,36 @@
                         </section>
                     </div>
                 `;
-                }
-                return;
-                const list = document.getElementById('nodeList');
-                list.innerHTML = '';
-                const render = (p, d) => {
-                    this.nodes.filter(n => n.parent === p).forEach(node => {
-                        const div = document.createElement('div');
-                        div.className = `node-item flex items-center justify-between cursor-pointer ${this.selectedNodeId === node.id ? 'active-node' : 'text-slate-400 opacity-60'}`;
-                        div.style.paddingLeft = `${d * 24 + 20}px`;
-                        div.innerHTML = `<span class="truncate">${p ? '↳' : '•'} ${node.id}</span>
-                                         <div class="node-action-btn flex gap-1">
-                                             <button onclick="event.stopPropagation(); engine.addNode('${node.id}')" class="w-4 h-4 bg-slate-800 hover:bg-pro hover:text-black rounded text-[9px]">+</button>
-                                             ${node.id !== 'BODY' ? `<button onclick="event.stopPropagation(); engine.deleteNode('${node.id}')" class="w-4 h-4 bg-slate-800 hover:bg-rose-600 rounded text-[9px]">×</button>` : ''}
-                                         </div>`;
-                        div.onclick = () => { this.selectedNodeId = node.id; this.updateUI(); };
-                        list.appendChild(div);
-                        render(node.id, d + 1);
-                    });
-                };
-                render(null, 0);
+            }
 
-                const tl = document.getElementById('timelineContent');
-                tl.innerHTML = '';
-                const renderTL = (p, d) => {
-                    this.nodes.filter(n => n.parent === p).forEach(node => {
-                        const row = document.createElement('div');
-                        row.className = `flex items-center h-9 timeline-track-row ${this.selectedNodeId === node.id ? 'bg-slate-900/40' : ''}`;
-                        const isNone = !node.motion || node.motion.target === 'NONE';
-                        row.innerHTML = `<div class="border-r border-[#30363d] px-6 text-slate-500 truncate shrink-0" style="width:${TIMELINE_LABEL_W}px; padding-left:${d*15+24}px">${node.id}</div>
-                                         <div class="flex-1 relative h-full">
-                                             <div class="timeline-bar ${isNone ? 'none-bar' : ''}" style="left:${node.motion.delay*PX_PER_SEC}px; width:${node.motion.duration*PX_PER_SEC}px">
-                                                 ${isNone ? '' : node.motion.target}
-                                             </div>
-                                         </div>`;
-                        row.onclick = () => { this.selectedNodeId = node.id; this.updateUI(); };
-                        tl.appendChild(row);
-                        renderTL(node.id, d + 1);
-                    });
-                };
-                renderTL(null, 0);
-
-                const panel = document.getElementById('editorPanel');
-                const active = this.nodes.find(n => n.id === this.selectedNodeId);
-                if (active) {
-                    if (!active.motion) active.motion = { target: 'NONE', type: 'FLOAT', easing: 'linear', direction: 'TOP', strength: 10, delay: 0, duration: 2, loop: 0 };
-                    panel.innerHTML = `
-                        <div class="space-y-8">
-                            <section>
-                                <h3 class="inspector-group-title">NODE INFO</h3>
-                                <input type="text" value="${active.id}" onchange="engine.updateNodeId(this.value)" class="pro-input">
-                            </section>
-                            <section>
-                                <h3 class="inspector-group-title">XFORM (LOCAL)</h3>
-                                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                                    <div><label class="inspector-label">POS X</label><input type="number" value="${Math.round(active.transform.x)}" oninput="engine.updateTransform('x', this.value)" class="pro-input"></div>
-                                    <div><label class="inspector-label">POS Y</label><input type="number" value="${Math.round(active.transform.y)}" oninput="engine.updateTransform('y', this.value)" class="pro-input"></div>
-                                    <div><label class="inspector-label">SCL X</label><input type="number" step="0.1" value="${active.transform.scaleX}" oninput="engine.updateTransform('scaleX', this.value)" class="pro-input"></div>
-                                    <div><label class="inspector-label">SCL Y</label><input type="number" step="0.1" value="${active.transform.scaleY}" oninput="engine.updateTransform('scaleY', this.value)" class="pro-input"></div>
-                                    <div class="col-span-2">
-                                        <div class="flex justify-between items-center mb-1"><label class="inspector-label">ROT</label><span class="text-pro text-[10px]">${active.transform.rotation}°</span></div>
-                                        <input type="range" min="-360" max="360" value="${active.transform.rotation}" oninput="engine.updateTransform('rotation', this.value); engine.updateUI()" class="w-full">
-                                    </div>
-                                </div>
-                            </section>
-                            <section>
-                                <h3 class="inspector-group-title">VISUAL</h3>
-                                <select onchange="engine.updateVisual('type', this.value); engine.updateUI()" class="pro-input mb-3">
-                                    <option value="RECTANGLE" ${active.visual.type==='RECTANGLE'?'selected':''}>RECTANGLE</option>
-                                    <option value="CIRCLE" ${active.visual.type==='CIRCLE'?'selected':''}>CIRCLE</option>
-                                    <option value="SPRITE_ASSET" ${active.visual.type==='SPRITE_ASSET'?'selected':''}>SPRITE</option>
-                                </select>
-                                <button onclick="document.getElementById('spriteLoader').click()" class="pro-btn w-full mb-2">LOAD IMAGE</button>
-                                <input type="file" id="spriteLoader" class="hidden" onchange="engine.handleUpload(event)">
-                                ${active.visual.type !== 'SPRITE_ASSET' ? '<div class="mt-2"><label class="inspector-label">COLOR</label><input type="color" value="'+active.visual.color+'" oninput="engine.updateVisual(\'color\', this.value)" class="pro-input !p-1 h-9"></div>' : ''}
-                            </section>
-                            <section>
-                                <h3 class="inspector-group-title">ANIMATION</h3>
-                                <div class="space-y-4">
-                                    <div>
-                                        <label class="inspector-label">TARGET</label>
-                                        <select onchange="engine.updateMotion('target', this.value); engine.updateUI()" class="pro-input">
-                                            <option value="NONE" ${active.motion.target==='NONE'?'selected':''}>NONE</option>
-                                            <option value="POSITION" ${active.motion.target==='POSITION'?'selected':''}>POS (XY)</option>
-                                            <option value="ROTATION" ${active.motion.target==='ROTATION'?'selected':''}>ROT (DEG)</option>
-                                            <option value="SCALE" ${active.motion.target==='SCALE'?'selected':''}>SCL (%)</option>
-                                        </select>
-                                    </div>
-                                    ${active.motion.target === 'POSITION' ? `
-                                    <div>
-                                        <label class="inspector-label">TYPE</label>
-                                        <select onchange="engine.updateMotion('type', this.value); engine.updateUI()" class="pro-input">
-                                            <option value="FLOAT" ${active.motion.type==='FLOAT'?'selected':''}>FLOAT</option>
-                                            <option value="BOUNCE" ${active.motion.type==='BOUNCE'?'selected':''}>BOUNCE</option>
-                                            <option value="SLIDE" ${active.motion.type==='SLIDE'?'selected':''}>SLIDE</option>
-                                        </select>
-                                    </div>` : ''}
-                                    ${active.motion.type === 'SLIDE' && active.motion.target === 'POSITION' ? `
-                                    <div>
-                                        <label class="inspector-label">DIR</label>
-                                        <select onchange="engine.updateMotion('direction', this.value)" class="pro-input">
-                                            <option value="TOP" ${active.motion.direction==='TOP'?'selected':''}>TOP</option><option value="BOTTOM" ${active.motion.direction==='BOTTOM'?'selected':''}>BOTTOM</option><option value="LEFT" ${active.motion.direction==='LEFT'?'selected':''}>LEFT</option><option value="RIGHT" ${active.motion.direction==='RIGHT'?'selected':''}>RIGHT</option>
-                                        </select>
-                                    </div>` : ''}
-                                    <div>
-                                        <label class="inspector-label">EASING</label>
-                                        <select onchange="engine.updateMotion('easing', this.value)" class="pro-input">
-                                            <option value="linear" ${active.motion.easing==='linear'?'selected':''}>LINEAR</option><option value="easeIn" ${active.motion.easing==='easeIn'?'selected':''}>EASE-IN</option><option value="easeOut" ${active.motion.easing==='easeOut'?'selected':''}>EASE-OUT</option><option value="easeInOut" ${active.motion.easing==='easeInOut'?'selected':''}>EASE-INOUT</option><option value="bounce" ${active.motion.easing==='bounce'?'selected':''}>BOUNCE</option>
-                                        </select>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                                        <div><label class="inspector-label">DUR (S)</label><input type="number" step="0.1" value="${active.motion.duration}" oninput="engine.updateMotion('duration', this.value)" class="pro-input"></div>
-                                        <div><label class="inspector-label">STR</label><input type="number" value="${active.motion.strength}" oninput="engine.updateMotion('strength', this.value)" class="pro-input"></div>
-                                        <div><label class="inspector-label">DLY (S)</label><input type="number" step="0.1" value="${active.motion.delay}" oninput="engine.updateMotion('delay', this.value)" class="pro-input"></div>
-                                        <div><label class="inspector-label">LP (0=∞)</label><input type="number" value="${active.motion.loop}" oninput="engine.updateMotion('loop', this.value)" class="pro-input"></div>
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                    `;
+            updateTimelineRuler() {
+                const ticks = document.getElementById('timelineRulerTicks');
+                if (!ticks) return;
+                const totalSeconds = Math.max(1, Math.ceil(this.totalDuration));
+                ticks.style.width = `${totalSeconds * PX_PER_SEC}px`;
+                ticks.innerHTML = '';
+                for (let s = 0; s <= totalSeconds; s++) {
+                    const tick = document.createElement('div');
+                    tick.className = 'absolute top-0 h-full flex flex-col justify-between items-start py-1 pointer-events-none';
+                    tick.style.left = `${s * PX_PER_SEC}px`;
+                    const labelEl = document.createElement('span');
+                    labelEl.className = 'ruler-tick-label';
+                    labelEl.textContent = `${s}S`;
+                    const mark = document.createElement('div');
+                    mark.className = 'w-px h-2 bg-slate-600';
+                    tick.appendChild(labelEl);
+                    tick.appendChild(mark);
+                    ticks.appendChild(tick);
                 }
             }
 
             updateNodeId(v) {
                 const node = this.getNode(this.selectedNodeId);
                 if (!node) return;
+                if (node.parent === null && node.id === 'BODY') {
+                    this.updateUI();
+                    return;
+                }
                 const prevId = node.id;
                 const baseId = (v.trim() || node.id).toUpperCase().replace(/[^A-Z0-9_]/g, '_') || prevId;
                 let nextId = baseId;
@@ -1224,10 +1216,10 @@
                 this.requestSave();
                 this.updateUI();
             }
-            updateTransform(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.transform[k] = parseFloat(v); this.requestSave(); } }
-            updateVisual(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.visual[k] = (k==='type'||k==='imageSrc'||k==='color') ? v : parseFloat(v); this.requestSave(); } }
-            updateMotion(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.motion[k] = (k==='target'||k==='type'||k==='easing'||k==='direction') ? v : parseFloat(v); this.requestSave(); this.updateUI(); } }
-            async loadImgAsync(src) { if (this.imageCache.has(src)) return this.imageCache.get(src); return new Promise(res => { const img = new Image(); img.onload = () => { this.imageCache.set(src, img); res(img); }; img.src = src; }); }
+            updateTransform(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { const parsed = parseFloat(v); n.transform[k] = Number.isNaN(parsed) ? n.transform[k] : parsed; this.requestSave(); } }
+            updateVisual(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { if (k==='type'||k==='imageSrc'||k==='color') { n.visual[k] = v; } else { const parsed = parseFloat(v); n.visual[k] = Number.isNaN(parsed) ? n.visual[k] : parsed; } this.requestSave(); } }
+            updateMotion(k, v) { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { if (k==='target'||k==='type'||k==='easing'||k==='direction') { n.motion[k] = v; } else { const parsed = parseFloat(v); n.motion[k] = Number.isNaN(parsed) ? n.motion[k] : parsed; } this.requestSave(); this.updateUI(); } }
+            async loadImgAsync(src) { if (this.imageCache.has(src)) return this.imageCache.get(src); return new Promise(res => { const img = new Image(); img.onload = () => { this.imageCache.set(src, img); res(img); }; img.onerror = () => { res(null); }; img.src = src; }); }
             processImg(blob) { const MAX_W = 480; const reader = new FileReader(); reader.onload = e => { const dataUrl = e.target.result; const img = new Image(); img.onload = () => { const n = this.nodes.find(n => n.id === this.selectedNodeId); if (n) { n.visual.type = 'SPRITE_ASSET'; n.visual.imageSrc = dataUrl; const ratio = img.width > MAX_W ? MAX_W / img.width : 1; n.visual.width = img.width * ratio; n.visual.height = img.height * ratio; this.imageCache.set(dataUrl, img); this.requestSave(); this.updateUI(); } }; img.src = dataUrl; }; reader.readAsDataURL(blob); }
             handleUpload(e) { if (e.target.files[0]) this.processImg(e.target.files[0]); }
             addNode(p) {
@@ -1252,20 +1244,31 @@
                 a.download = `avatar_project_${Date.now()}.json`; a.click(); 
             }
 
-            loadJSON(e) { 
-                const reader = new FileReader(); 
-                reader.onload = async ev => { 
+            loadJSON(e) {
+                const fileInput = e.target;
+                const file = fileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async ev => {
                     try {
                         const raw = JSON.parse(ev.target.result);
                         await this.applyProjectData(raw);
                         this.selectedNodeId = this.nodes[0]?.id || null;
-                        this.requestSave(); 
-                        this.updateUI(); 
+                        this.requestSave();
+                        this.updateUI();
                     } catch (err) {
                         console.error("Failed to load project:", err);
+                        this.flashStatusError("LOAD ERROR");
+                    } finally {
+                        fileInput.value = '';
                     }
-                }; 
-                reader.readAsText(e.target.files[0]); 
+                };
+                reader.onerror = () => {
+                    console.error("Failed to read project file");
+                    this.flashStatusError("LOAD ERROR");
+                    fileInput.value = '';
+                };
+                reader.readAsText(file);
             }
             
             exportPNG() { this.isExporting = true; this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.nodes.forEach(node => this.drawNode(node)); const a = document.createElement('a'); a.href = this.canvas.toDataURL(); a.download = 'snapshot.png'; a.click(); this.isExporting = false; }

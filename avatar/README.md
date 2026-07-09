@@ -88,6 +88,36 @@ The current build focuses on a usable single-page editor with a preset-first wor
 - Improved node renaming so child references follow the renamed parent.
 - Added clearer editor guidance about combining motion through child nodes.
 
+## Code Review & Improvement Plan (2026-07-09)
+
+Full review of `avatar/index.html` (1,277 lines). Items are ordered by priority. None of these change product scope; they fix defects and harden the existing feature set.
+
+### P1 — Bugs (fix first)
+
+1. **Dead code in `updateUI()`**: everything after the `return;` near line 1086 (the old node list / timeline / inspector rendering, ~120 lines) is unreachable legacy code. Delete it entirely.
+2. **Canvas selection highlight is broken**: `drawNode()` sets `this.ctx.strokeStyle = 'var(--pro-cyan)'`. Canvas 2D does not resolve CSS variables, so the selection outline renders black. Use the literal color `#00e5ff`.
+3. **App can hang on startup**: `loadImgAsync()` never settles if an image fails to load (no `onerror`). A corrupted `imageSrc` in the IndexedDB autosave makes `applyProjectData()`'s `Promise.all` wait forever, so `init()` never reaches `setupEvents()` / `renderLoop()` and the app is dead. Resolve (or resolve-with-null) on error and skip drawing that sprite.
+4. **NaN poisoning from numeric inputs**: `updateTransform` / `updateVisual` / `updateMotion` store raw `parseFloat(v)`; clearing an input writes `NaN` into the model, which then persists to autosave. Guard with a fallback to the previous value (or 0). Also guard `getMotionOffset()` against `motion.duration <= 0` (division by zero → NaN transforms).
+5. **Root node protection is incomplete**: `deleteNode` refuses `'BODY'` and the delete-button check is hardcoded to `'BODY'`, but `updateNodeId` allows renaming it. After a rename the root becomes deletable and `selectedNodeId = 'BODY'` fallbacks break. Either block renaming the root node or track the root by reference instead of the hardcoded id.
+6. **JSON load UX**: on parse failure the error goes only to `console.error` — surface it in the status pill. Also reset `fileInput.value` after load so the same file can be loaded twice.
+
+### P2 — Robustness / UX hardening
+
+7. **Video export compatibility**: `MediaRecorder` with `video/webm;codecs=vp9` throws on Safari and older browsers. Feature-detect with `MediaRecorder.isTypeSupported`, fall back vp9 → vp8 → default webm, and show an error pill when recording is unsupported instead of throwing.
+8. **Autosave data-loss window**: `requestSave()` debounces 4 s; closing the tab inside that window loses changes. Flush the pending save on `visibilitychange` (hidden) / `pagehide`.
+9. **Drag performance**: `handleMouseMove` and timeline drags call `updateUI()` on every mousemove, rebuilding the node list, timeline, and inspector DOM each frame. During drags, update only what changed (e.g. throttle the full rebuild, or update the inspector numbers and bar positions directly).
+10. **Timeline usability**: the ruler has no second markers and the tracks do not scroll horizontally when duration × 50 px exceeds the viewport. Add tick marks with second labels on `#timelineRuler` and shared horizontal scrolling for tracks + ruler (this also covers part of the V2.2 plan).
+11. **Circle hit-testing**: canvas picking uses the bounding box for circles; use radial distance for `CIRCLE` visuals.
+
+### P3 — Deferred (tracked in the roadmap below)
+
+- More starter presets, motion copy/paste, compact mobile layout, inspector simplification — see V2.2–V2.4. Do not start these as part of the bug-fix pass.
+
+### Non-goals for this pass
+
+- No keyframe/curve/graph editor features (see "What This Tool Should Not Become").
+- No framework or build-step introduction; the tool stays a single self-contained HTML file. Replacing the Tailwind CDN with static CSS is acceptable later but out of scope for the bug-fix pass.
+
 ## Next Version Plan
 
 ### V2.2
