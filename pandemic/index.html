@@ -115,6 +115,8 @@
             border: 1px solid #1e272e;
             background: #000;
             box-shadow: 0 0 60px rgba(0,0,0,0.9);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
         /* Tactical HUD */
@@ -212,7 +214,7 @@
         <div class="nav-section">
             <button id="soundToggle" class="btn btn-sound">SOUND: OFF</button>
             <a href="https://youtube.com/@textcube" target="_blank" class="btn">YouTube</a>
-            <a href="https://example.com" target="_blank" class="btn">Homepage</a>
+            <a href="https://kitscript.com/game" target="_blank" class="btn">Homepage</a>
         </div>
     </header>
 
@@ -233,6 +235,14 @@
                 <span class="stat-label">Survivor Signal</span>
                 <span id="humanValue" class="stat-value">0</span>
             </div>
+            <div class="stat-row" style="margin-top: 12px;">
+                <span class="stat-label">Resistance Time</span>
+                <span id="runTimeValue" class="stat-value">0s</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Record</span>
+                <span id="recordValue" class="stat-value">0s</span>
+            </div>
         </div>
 
         <div class="day-night-indicator">
@@ -242,6 +252,7 @@
 
         <div id="endOverlay" class="end-overlay">
             <div class="end-title">GLOBAL INFECTION COMPLETE</div>
+            <div id="endStats" style="font-size: 13px; color: #a4b0be; letter-spacing: 1px; text-align: center; margin-bottom: 20px; line-height: 1.8;"></div>
             <div id="countdownLabel" style="font-size: 14px; color: #8b949e; letter-spacing: 2px;">REINITIALIZING SYSTEM IN 7s</div>
         </div>
     </main>
@@ -284,11 +295,15 @@ const cycleDot = document.getElementById('cycleDot');
 const cycleLabel = document.getElementById('cycleLabel');
 const endOverlay = document.getElementById('endOverlay');
 const countdownLabel = document.getElementById('countdownLabel');
+const endStatsEl = document.getElementById('endStats');
 const soundBtn = document.getElementById('soundToggle');
+const runTimeEl = document.getElementById('runTimeValue');
+const recordEl = document.getElementById('recordValue');
 const body = document.body;
 
 // State
 let grid = [];
+let shelterList = [];
 let power = 100;
 let timeInCycle = 0;
 let lastFrameTime = 0;
@@ -296,6 +311,32 @@ let isNight = false;
 let isTotalDarkness = false;
 let gameActive = true;
 let isSoundEnabled = false;
+let runStartTime = 0;
+let peakSurvivors = 0;
+let recordSeconds = 0;
+let endIntervalId = null;
+
+// --- Persistence ---
+function loadPrefs() {
+    try {
+        isSoundEnabled = localStorage.getItem('pandemic_sound_on') === '1';
+    } catch (e) { isSoundEnabled = false; }
+    try {
+        const stored = parseFloat(localStorage.getItem('pandemic_record'));
+        recordSeconds = isNaN(stored) ? 0 : stored;
+    } catch (e) { recordSeconds = 0; }
+    soundBtn.textContent = isSoundEnabled ? "SOUND: ON" : "SOUND: OFF";
+    soundBtn.classList.toggle('on', isSoundEnabled);
+    recordEl.textContent = `${Math.floor(recordSeconds)}s`;
+}
+
+function saveSoundPref() {
+    try { localStorage.setItem('pandemic_sound_on', isSoundEnabled ? '1' : '0'); } catch (e) {}
+}
+
+function saveRecord() {
+    try { localStorage.setItem('pandemic_record', String(recordSeconds)); } catch (e) {}
+}
 
 // --- Sound Engine ---
 let audioCtx = null;
@@ -341,9 +382,11 @@ const playSfx = {
 
 soundBtn.onclick = () => {
     initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     isSoundEnabled = !isSoundEnabled;
     soundBtn.textContent = isSoundEnabled ? "SOUND: ON" : "SOUND: OFF";
     soundBtn.classList.toggle('on', isSoundEnabled);
+    saveSoundPref();
 };
 
 // --- Core Simulation Logic ---
@@ -363,6 +406,17 @@ function initGrid() {
     for (let i = 0; i < CONFIG.blockCount; i++) {
         placeBlock(CELL.POWERED_HOUSE);
         placeBlock(CELL.ABANDONED_HOUSE);
+    }
+
+    // Shelters never move after this point - cache their coordinates once.
+    shelterList = [];
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const t = grid[y][x].type;
+            if (t === CELL.POWERED_HOUSE || t === CELL.ABANDONED_HOUSE) {
+                shelterList.push({ x, y });
+            }
+        }
     }
 
     let mx, my;
@@ -401,16 +455,12 @@ function placeBlock(type) {
 function findNearestShelter(sx, sy) {
     let bestDist = Infinity;
     let target = null;
-    const size = CONFIG.gridSize;
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            if (grid[y][x].type === CELL.POWERED_HOUSE || grid[y][x].type === CELL.ABANDONED_HOUSE) {
-                const d = Math.abs(x - sx) + Math.abs(y - sy);
-                if (d < bestDist) {
-                    bestDist = d;
-                    target = { x, y };
-                }
-            }
+    for (let i = 0; i < shelterList.length; i++) {
+        const s = shelterList[i];
+        const d = Math.abs(s.x - sx) + Math.abs(s.y - sy);
+        if (d < bestDist) {
+            bestDist = d;
+            target = s;
         }
     }
     return target;
@@ -438,8 +488,25 @@ function findNearestSurvivor(zx, zy) {
 function tick() {
     if (!gameActive) return;
 
-    const nextGrid = JSON.parse(JSON.stringify(grid));
     const size = CONFIG.gridSize;
+
+    // Lighter per-cell copy instead of JSON.parse(JSON.stringify(grid)).
+    const nextGrid = new Array(size);
+    for (let y = 0; y < size; y++) {
+        const row = new Array(size);
+        const srcRow = grid[y];
+        for (let x = 0; x < size; x++) {
+            const c = srcRow[x];
+            row[x] = { type: c.type, data: c.data, subType: c.subType };
+        }
+        nextGrid[y] = row;
+    }
+
+    // Occupancy guard: tracks which nextGrid cells were already claimed by a
+    // mover this tick, so entities can't be duplicated or overwritten/lost.
+    const claimed = new Array(size);
+    for (let y = 0; y < size; y++) claimed[y] = new Array(size).fill(false);
+
     let anyInfection = false;
 
     power = Math.max(0, power - CONFIG.powerDecay);
@@ -449,6 +516,10 @@ function tick() {
         for (let x = 0; x < size; x++) {
             const cell = grid[y][x];
 
+            // This cell's original occupant was already consumed/overwritten
+            // by an earlier mover this tick - don't let it act on stale data.
+            if (claimed[y][x]) continue;
+
             // 1. Human AI
             if (cell.type === CELL.HUMAN) {
                 if (timeInCycle >= CONFIG.duskThreshold && timeInCycle < CONFIG.dayDuration) {
@@ -457,22 +528,24 @@ function tick() {
                         const dx = shelter.x > x ? 1 : (shelter.x < x ? -1 : 0);
                         const dy = shelter.y > y ? 1 : (shelter.y < y ? -1 : 0);
                         const nx = x + dx, ny = y + dy;
-                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size && !claimed[ny][nx]) {
                             const targetCell = nextGrid[ny][nx];
                             if (targetCell.type === CELL.EMPTY || targetCell.type === CELL.POWERED_HOUSE || targetCell.type === CELL.ABANDONED_HOUSE) {
                                 const prevSubType = cell.subType || CELL.EMPTY;
                                 nextGrid[ny][nx] = { type: CELL.HUMAN, data: 0, subType: (targetCell.type === CELL.EMPTY ? CELL.EMPTY : targetCell.type) };
+                                claimed[ny][nx] = true;
                                 nextGrid[y][x] = { type: prevSubType, data: 0 };
                             }
                         }
                     }
-                } 
+                }
                 else if (timeInCycle < CONFIG.duskThreshold && Math.random() < 0.35) {
                     const directions = [[0,1],[0,-1],[1,0],[-1,0]];
                     const dir = directions[Math.floor(Math.random() * 4)];
                     const nx = x + dir[0], ny = y + dir[1];
-                    if (nx >= 0 && nx < size && ny >= 0 && ny < size && nextGrid[ny][nx].type === CELL.EMPTY) {
+                    if (nx >= 0 && nx < size && ny >= 0 && ny < size && !claimed[ny][nx] && nextGrid[ny][nx].type === CELL.EMPTY) {
                         nextGrid[ny][nx] = { type: CELL.HUMAN, data: 0, subType: CELL.EMPTY };
+                        claimed[ny][nx] = true;
                         nextGrid[y][x] = { type: cell.subType || CELL.EMPTY, data: 0 };
                     }
                 }
@@ -504,16 +577,17 @@ function tick() {
                         }
 
                         const nx = x + dir[0], ny = y + dir[1];
-                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
-                            const nextCellTarget = grid[ny][nx];
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size && !claimed[ny][nx]) {
+                            const nextCellTarget = nextGrid[ny][nx];
                             if (!(nextCellTarget.type === CELL.POWERED_HOUSE && !isTotalDarkness)) {
                                 if (nextCellTarget.type === CELL.EMPTY || nextCellTarget.type === CELL.HUMAN || nextCellTarget.type === CELL.ABANDONED_HOUSE || (nextCellTarget.type === CELL.POWERED_HOUSE && isTotalDarkness)) {
                                     const prevSubType = cell.subType || CELL.EMPTY;
-                                    nextGrid[ny][nx] = { 
-                                        type: CELL.ZOMBIE, 
-                                        data: 0, 
-                                        subType: (nextCellTarget.type === CELL.HUMAN ? nextCellTarget.subType : nextCellTarget.type) 
+                                    nextGrid[ny][nx] = {
+                                        type: CELL.ZOMBIE,
+                                        data: 0,
+                                        subType: (nextCellTarget.type === CELL.HUMAN ? nextCellTarget.subType : nextCellTarget.type)
                                     };
+                                    claimed[ny][nx] = true;
                                     nextGrid[y][x] = { type: prevSubType, data: 0 };
                                 }
                             }
@@ -526,7 +600,7 @@ function tick() {
 
                     neighbors.forEach(dir => {
                         const nx = x + dir[0], ny = y + dir[1];
-                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size && !claimed[ny][nx]) {
                             const target = grid[ny][nx];
                             if (target.type === CELL.HUMAN) {
                                 if (Math.random() < chance) {
@@ -562,19 +636,37 @@ function updateStats() {
     powerBar.style.width = `${power}%`;
     humanEl.textContent = humans;
 
+    if (humans > peakSurvivors) peakSurvivors = humans;
+
     if (rate >= 100 && gameActive) triggerEnd();
 }
 
 function triggerEnd() {
+    if (!gameActive || endIntervalId !== null) return;
     gameActive = false;
+
+    const elapsedSeconds = (performance.now() - runStartTime) / 1000;
+    const beatRecord = elapsedSeconds > recordSeconds;
+    if (beatRecord) {
+        recordSeconds = elapsedSeconds;
+        saveRecord();
+    }
+    recordEl.textContent = `${Math.floor(recordSeconds)}s`;
+
+    endStatsEl.innerHTML =
+        `HUMANITY LASTED <strong>${Math.floor(elapsedSeconds)}s</strong><br>` +
+        `PEAK SURVIVORS <strong>${peakSurvivors}</strong><br>` +
+        (beatRecord ? `<span style="color: var(--accent-yellow);">NEW RECORD</span>` : `RECORD <strong>${Math.floor(recordSeconds)}s</strong>`);
+
     endOverlay.style.display = 'flex';
     let count = 7;
-    const itv = setInterval(() => {
+    endIntervalId = setInterval(() => {
         count--;
         countdownLabel.textContent = `REINITIALIZING SYSTEM IN ${count}s`;
         playSfx.beep();
         if (count <= 0) {
-            clearInterval(itv);
+            clearInterval(endIntervalId);
+            endIntervalId = null;
             endOverlay.style.display = 'none';
             resetSimulation();
         }
@@ -585,24 +677,39 @@ function resetSimulation() {
     power = 100;
     timeInCycle = 0;
     lastFrameTime = performance.now();
+    runStartTime = performance.now();
+    peakSurvivors = 0;
     gameActive = true;
     initGrid();
 }
 
 // --- High Fidelity Rendering ---
 
+let logicalCanvasSize = 0;
+
 function resize() {
     const parent = document.getElementById('mainWrapper');
     const size = Math.min(parent.clientWidth * 0.95, parent.clientHeight * 0.95);
-    canvas.width = size;
-    canvas.height = size;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    logicalCanvasSize = size;
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+
+    // All render math below stays in logical (CSS) pixels; this transform
+    // scales it up to the higher-resolution backing store.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 window.addEventListener('resize', resize);
 resize();
 
 function render(now) {
-    const delta = now - lastFrameTime;
+    // Clamp the delta so a backgrounded tab regaining focus can't skip a
+    // whole day/night transition in one huge jump.
+    const delta = Math.min(now - lastFrameTime, 100);
     lastFrameTime = now;
 
     if (gameActive) {
@@ -615,21 +722,23 @@ function render(now) {
             body.style.backgroundColor = isNight ? 'var(--bg-night)' : 'var(--bg-day)';
             playSfx.cycle(isNight);
         }
+        runTimeEl.textContent = `${Math.floor((now - runStartTime) / 1000)}s`;
     }
 
-    const cellSize = canvas.width / CONFIG.gridSize;
+    const canvasSize = logicalCanvasSize || (canvas.width / (window.devicePixelRatio || 1));
+    const cellSize = canvasSize / CONFIG.gridSize;
 
     // Background base
     ctx.fillStyle = isNight ? '#020406' : '#1a2a3a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
 
     // Grid Scanlines Effect
     ctx.strokeStyle = isNight ? 'rgba(30, 39, 46, 0.3)' : 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     for(let i=0; i<=CONFIG.gridSize; i+=8) {
-        ctx.moveTo(i * cellSize, 0); ctx.lineTo(i * cellSize, canvas.height);
-        ctx.moveTo(0, i * cellSize); ctx.lineTo(canvas.width, i * cellSize);
+        ctx.moveTo(i * cellSize, 0); ctx.lineTo(i * cellSize, canvasSize);
+        ctx.moveTo(0, i * cellSize); ctx.lineTo(canvasSize, i * cellSize);
     }
     ctx.stroke();
 
@@ -643,9 +752,12 @@ function render(now) {
                 ctx.fillStyle = isTotalDarkness ? '#161b22' : 'rgba(243, 156, 18, 0.25)';
                 ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
                 
-                // Procedural Windows
+                // Procedural Windows - stable per-cell twinkle driven by time,
+                // not re-rolled every frame, so it shimmers instead of strobing.
                 if (!isTotalDarkness && (x+y) % 3 === 0) {
-                    ctx.fillStyle = Math.random() > 0.1 ? '#f1c40f' : '#34495e';
+                    const windowSeed = (x * 928371 + y * 5273) % 1000;
+                    const twinkle = Math.sin(now / 500 + windowSeed) * 0.5 + 0.5;
+                    ctx.fillStyle = twinkle > 0.15 ? '#f1c40f' : '#34495e';
                     ctx.fillRect(x * cellSize + cellSize*0.3, y * cellSize + cellSize*0.3, cellSize*0.4, cellSize*0.4);
                 }
             } else if (effectiveType === CELL.ABANDONED_HOUSE) {
@@ -675,9 +787,11 @@ function render(now) {
                     ctx.stroke();
                     break;
                 case CELL.INFECTED:
-                    // Jittery Square
-                    const jx = (Math.random()-0.5) * 2;
-                    const jy = (Math.random()-0.5) * 2;
+                    // Jittery Square - driven by time + a per-cell phase so the
+                    // vibration looks the same regardless of display refresh rate.
+                    const jitterSeed = (x * 7919 + y * 104729) % 1000;
+                    const jx = Math.sin(now / 60 + jitterSeed) * 1;
+                    const jy = Math.cos(now / 55 + jitterSeed * 1.3) * 1;
                     ctx.fillStyle = '#ffa502';
                     ctx.fillRect(cx - size + jx, cy - size + jy, size*1.5, size*1.5);
                     break;
@@ -699,22 +813,24 @@ function render(now) {
     }
 
     // Vignette / Post Processing
-    const grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width*0.2, canvas.width/2, canvas.height/2, canvas.width*0.7);
+    const grd = ctx.createRadialGradient(canvasSize/2, canvasSize/2, canvasSize*0.2, canvasSize/2, canvasSize/2, canvasSize*0.7);
     grd.addColorStop(0, 'rgba(0,0,0,0)');
     grd.addColorStop(1, 'rgba(0,0,0,0.6)');
     ctx.fillStyle = grd;
-    ctx.fillRect(0,0, canvas.width, canvas.height);
+    ctx.fillRect(0,0, canvasSize, canvasSize);
 
     if (isTotalDarkness) {
         ctx.fillStyle = 'rgba(255, 0, 0, 0.08)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
     }
 
     requestAnimationFrame(render);
 }
 
+loadPrefs();
 initGrid();
 lastFrameTime = performance.now();
+runStartTime = performance.now();
 setInterval(tick, CONFIG.tickRate);
 requestAnimationFrame(render);
 
