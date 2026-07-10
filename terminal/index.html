@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0c0c0c">
+    <meta name="description" content="브라우저 안에서 동작하는 가짜 리눅스 웹셸. 가상 파일시스템 명령어와 Gemini 기반 AI 어시스턴트를 체험하는 관전형 데모.">
+    <meta property="og:title" content="root@webshell: ~ - BuntGames">
+    <meta property="og:description" content="가상 파일시스템 위에서 ls/cd/cat 같은 명령과 AI 어시스턴트를 흉내 내는 브라우저 터미널 데모.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230c0c0c'/%3E%3Cpath d='M18 20 L34 32 L18 44' stroke='%2300ff41' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Crect x='38' y='40' width='16' height='6' rx='2' fill='%2300ff41'/%3E%3C/svg%3E">
     <title>root@webshell: ~</title>
     <style>
         :root {
@@ -147,21 +154,7 @@
             margin: 0;
             width: 0ch;
             min-width: 1px;
-            caret-color: transparent; 
-        }
-
-        .cursor {
-            display: inline-block;
-            width: 8px;
-            height: 16px;
-            background-color: var(--cursor-color);
-            animation: blink 1s step-end infinite;
-            vertical-align: middle;
-        }
-
-        @keyframes blink {
-            from, to { opacity: 1; }
-            50% { opacity: 0; }
+            caret-color: var(--cursor-color);
         }
 
         .dir-item { color: #729fcf; font-weight: bold; }
@@ -186,14 +179,20 @@
             border-bottom: 1px dashed #444;
             padding-bottom: 10px;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .loading {
+                animation: none;
+            }
+        }
     </style>
 </head>
 <body>
 
 <div id="desktop">
-    <div class="terminal-window" onclick="focusInput()">
+    <div class="terminal-window" id="terminal-window">
         <div class="window-header">
-            <div class="window-buttons">
+            <div class="window-buttons" aria-hidden="true">
                 <div class="dot red"></div>
                 <div class="dot yellow"></div>
                 <div class="dot green"></div>
@@ -201,13 +200,13 @@
             <div class="window-title">root@webshell: ~</div>
         </div>
         <div id="terminal">
-            <div id="output"></div>
+            <div id="output" aria-live="polite"></div>
             <div class="prompt-container" id="input-line">
                 <span class="prompt-text" id="main-prompt">
                     <span class="user">root</span>@<span class="host">webshell</span>:<span class="dir" id="display-cwd">~</span>#
                 </span>
-                <input type="text" id="command-input" spellcheck="false" autocomplete="off">
-                <span class="cursor"></span>
+                <span class="prompt-text" id="redir-prompt" style="display:none;">&gt;</span>
+                <input type="text" id="command-input" spellcheck="false" autocomplete="off" aria-label="Terminal command input">
             </div>
         </div>
     </div>
@@ -215,7 +214,12 @@
 
 <script>
     // --- Configuration ---
-    const apiKey = ""; 
+    // IMPORTANT: never hardcode a real API key here. This is a static, publicly
+    // served file — anything assigned to `apiKey` ships in plain text to every
+    // visitor. Real AI functionality requires a server-side proxy that holds the
+    // key and forwards requests; this client only calls the proxy, never the
+    // Generative Language API directly with a bundled secret.
+    const apiKey = "";
     const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
     const SYSTEM_PROMPT = `당신은 'webshell'이라는 리눅스 서버의 root 계정 AI 어시스턴트입니다. 사용자는 베테랑 개발자입니다. 간결하고 전문적인 답변을 터미널 출력 형식으로 제공하세요.`;
 
@@ -246,6 +250,7 @@
     
     let isRedirectionMode = false;
     let redirectionFile = '';
+    let redirectionAppend = false;
     let redirectionBuffer = [];
 
     const outputEl = document.getElementById('output');
@@ -253,6 +258,8 @@
     const cwdEl = document.getElementById('display-cwd');
     const terminalEl = document.getElementById('terminal');
     const mainPromptEl = document.getElementById('main-prompt');
+    const redirPromptEl = document.getElementById('redir-prompt');
+    const terminalWindowEl = document.getElementById('terminal-window');
 
     function focusInput() { inputEl.focus(); }
     function syncInputWidth() { inputEl.style.width = inputEl.value.length + "ch"; }
@@ -266,6 +273,23 @@
         return div;
     }
 
+    // Appends a line built from a mix of plain strings (rendered as text nodes,
+    // never parsed as markup) and pre-built DOM nodes (e.g. colored <span>s).
+    // This is the only way user- or model-derived text should ever reach the
+    // DOM here — nothing untrusted is ever assigned to innerHTML.
+    function printNodes(nodes, className = '') {
+        const div = document.createElement('div');
+        div.className = 'output-line ' + className;
+        nodes.forEach(n => {
+            div.appendChild(typeof n === 'string' ? document.createTextNode(n) : n);
+        });
+        outputEl.appendChild(div);
+        terminalEl.scrollTop = terminalEl.scrollHeight;
+        return div;
+    }
+
+    // Only for trusted, fully-static markup authored in this file (e.g. the
+    // MOTD banner). Never pass user- or model-derived text through this.
     function printHTML(html, className = '') {
         const div = document.createElement('div');
         div.className = 'output-line ' + className;
@@ -273,6 +297,13 @@
         outputEl.appendChild(div);
         terminalEl.scrollTop = terminalEl.scrollHeight;
         return div;
+    }
+
+    function makeSpan(text, cls) {
+        const span = document.createElement('span');
+        if (cls) span.className = cls;
+        span.textContent = text;
+        return span;
     }
 
     function getDir(pathArray) {
@@ -286,14 +317,24 @@
     }
 
     function formatCwd() {
-        const pathStr = '/' + currentPath.join('/');
-        return pathStr === '/root' ? '~' : (pathStr.startsWith('/root') ? '~' + pathStr.substring(5) : pathStr);
+        // Segment-wise comparison, not a string prefix check — a directory
+        // literally named "rootkit" must not get mistaken for a child of /root.
+        if (currentPath.length === 0) return '/';
+        if (currentPath[0] === 'root') {
+            const rest = currentPath.slice(1);
+            return rest.length === 0 ? '~' : '~/' + rest.join('/');
+        }
+        return '/' + currentPath.join('/');
     }
 
     function updatePrompt() { cwdEl.textContent = formatCwd(); }
     async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
     async function callGemini(userQuery) {
+        // Never call out with an empty/missing key — that would just burn five
+        // retries with backoff before failing. Callers should already guard on
+        // apiKey, but this is a defense-in-depth stop as well.
+        if (!apiKey) return "AI is not configured (requires a server-side proxy for the API key).";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
         const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] } };
         let retries = 0;
@@ -323,6 +364,33 @@
         return getDir(newPath) ? newPath : null;
     }
 
+    // Resolves a path string to its containing directory node + final segment
+    // name, the same way ls/cd resolve directories — so file-targeting commands
+    // (cat/tail/head/rm) can accept absolute paths, "..", "." and "~" instead of
+    // only bare names in the current directory.
+    function resolveFile(pathStr) {
+        if (!pathStr) return { parent: null, name: null, node: null };
+        let parts = pathStr.split('/').filter(p => p !== '');
+        let basePath = pathStr.startsWith('/') ? [] : [...currentPath];
+        if (pathStr.startsWith('~')) {
+            basePath = ['root'];
+            parts = pathStr.substring(1).split('/').filter(p => p !== '');
+        }
+        if (parts.length === 0) return { parent: null, name: null, node: null };
+        const name = parts[parts.length - 1];
+        if (name === '.' || name === '..') return { parent: null, name: null, node: null };
+        let newPath = [...basePath];
+        for (const part of parts.slice(0, -1)) {
+            if (part === '.') continue;
+            if (part === '..') { if (newPath.length > 0) newPath.pop(); }
+            else newPath.push(part);
+        }
+        const parentDir = getDir(newPath);
+        if (!parentDir || parentDir.type !== 'dir') return { parent: null, name, node: null };
+        const node = (parentDir.children && parentDir.children[name]) || null;
+        return { parent: parentDir, name, node };
+    }
+
     function parseArgs(args) {
         const options = [];
         const params = [];
@@ -343,8 +411,8 @@
             print("Usage: [command] [options] [arguments]");
             print("Basic: ls (-la), cd, pwd, mkdir (-p), rmdir, touch, rm (-rf), cat (-n), tail (-n), head (-n), clear, whoami, uname (-a), id, ifconfig, w, ps (-aux), last, ping (-c)");
             print("System: exit, reboot, shutdown");
-            print("AI: ✨-ask [q], ✨-genfile [n] [d]");
-            print("Input: cat > filename (Enter lines, Ctrl+D to save)");
+            print("AI: ask [q] (alias ✨-ask), gen [name] [desc] (alias ✨-genfile)");
+            print("Input: cat > filename / cat >> filename (append) — Enter lines, Ctrl+D to save");
         },
         pwd: () => print('/' + currentPath.join('/')),
         whoami: () => print('root'),
@@ -443,32 +511,41 @@
         ls: (args) => {
             const { options, params } = parseArgs(args);
             const targetPath = resolvePath(params[0]);
-            const dir = getDir(targetPath);
-            if (!dir || dir.type !== 'dir') { print(`ls: cannot access '${params[0] || ""}': No such directory`, 'error'); return; }
+            const node = getDir(targetPath);
+            if (!node) { print(`ls: cannot access '${params[0] || ""}': No such file or directory`, 'error'); return; }
+            if (node.type === 'file') {
+                const fileName = targetPath[targetPath.length - 1] || params[0];
+                printNodes([makeSpan(fileName, 'file-item')]);
+                return;
+            }
+            const dir = node;
             const showAll = options.includes('a');
             const showLong = options.includes('l');
             let items = Object.keys(dir.children).sort();
-            if (showAll) { items = ['.', '..', ...items]; } 
+            if (showAll) { items = ['.', '..', ...items]; }
             else { items = items.filter(name => !name.startsWith('.')); }
             if (showLong) {
                 print(`total ${items.length * 4}`);
                 items.forEach(name => {
                     let item;
                     if (name === '.') item = dir;
-                    else if (name === '..') item = { type: 'dir', date: 'Oct 12 10:24' }; 
+                    else if (name === '..') item = { type: 'dir', date: 'Oct 12 10:24' };
                     else item = dir.children[name];
                     const typeChar = item.type === 'dir' ? 'd' : '-';
                     const perms = item.type === 'dir' ? 'rwxr-xr-x' : 'rw-r--r--';
                     const date = item.date || 'Mar 19 21:44';
                     const size = item.type === 'dir' ? 4096 : (item.content ? item.content.length : 0);
-                    const nameSpan = `<span class="${item.type === 'dir' ? 'dir-item' : 'file-item'}">${name}</span>`;
-                    printHTML(`${typeChar}${perms} 1 root root ${String(size).padStart(5)} ${date} ${nameSpan}`);
+                    const nameSpan = makeSpan(name, item.type === 'dir' ? 'dir-item' : 'file-item');
+                    printNodes([`${typeChar}${perms} 1 root root ${String(size).padStart(5)} ${date} `, nameSpan]);
                 });
             } else {
-                printHTML(items.map(n => {
-                    const item = (n === '.' || n === '..') ? {type:'dir'} : dir.children[n];
-                    return `<span class="${item.type === 'dir' ? 'dir-item' : 'file-item'}">${n}</span>`;
-                }).join('  '));
+                const nodes = [];
+                items.forEach((n, idx) => {
+                    const item = (n === '.' || n === '..') ? { type: 'dir' } : dir.children[n];
+                    nodes.push(makeSpan(n, item.type === 'dir' ? 'dir-item' : 'file-item'));
+                    if (idx < items.length - 1) nodes.push('  ');
+                });
+                printNodes(nodes);
             }
         },
         cd: (args) => {
@@ -516,13 +593,13 @@
         rm: (args) => {
             const { options, params } = parseArgs(args);
             if (!params[0]) return;
-            const parent = getDir(currentPath);
-            const target = parent.children[params[0]];
+            const { parent, name, node: target } = resolveFile(params[0]);
+            if (!parent) { print(`rm: cannot remove '${params[0]}': No such file or directory`, 'error'); return; }
             if (options.includes('r') || options.includes('f')) {
-                if (target) delete parent.children[params[0]];
+                if (target) delete parent.children[name];
                 else if (!options.includes('f')) print(`rm: cannot remove '${params[0]}': No such file`, 'error');
             } else {
-                if (target && target.type !== 'dir') delete parent.children[params[0]];
+                if (target && target.type !== 'dir') delete parent.children[name];
                 else if (target && target.type === 'dir') print(`rm: cannot remove '${params[0]}': Is a directory`, 'error');
                 else print(`rm: cannot remove '${params[0]}': No such file`, 'error');
             }
@@ -530,8 +607,7 @@
         cat: (args) => {
             const { options, params } = parseArgs(args);
             if (!params[0]) return;
-            const parent = getDir(currentPath);
-            const file = parent.children[params[0]];
+            const { node: file } = resolveFile(params[0]);
             if (!file || file.type === 'dir') { print(`cat: ${params[0]}: No such file`, 'error'); return; }
             let content = file.content || "";
             if (options.includes('n')) {
@@ -549,8 +625,8 @@
                 if (cIdx !== -1 && args[cIdx+1]) { n = parseInt(args[cIdx+1]); fileName = params[0]; }
             } else { fileName = params[0]; }
             if (!fileName) return;
-            const file = getDir(currentPath).children[fileName];
-            if (!file || file.type === 'dir') return;
+            const { node: file } = resolveFile(fileName);
+            if (!file || file.type === 'dir') { print(`tail: cannot open '${fileName}': No such file`, 'error'); return; }
             const lines = (file.content || "").split('\n');
             print(lines.slice(-n).join('\n'));
         },
@@ -563,49 +639,73 @@
                 if (cIdx !== -1 && args[cIdx+1]) { n = parseInt(args[cIdx+1]); fileName = params[0]; }
             } else { fileName = params[0]; }
             if (!fileName) return;
-            const file = getDir(currentPath).children[fileName];
-            if (!file || file.type === 'dir') return;
+            const { node: file } = resolveFile(fileName);
+            if (!file || file.type === 'dir') { print(`head: cannot open '${fileName}': No such file`, 'error'); return; }
             const lines = (file.content || "").split('\n');
             print(lines.slice(0, n).join('\n'));
         },
         '✨-ask': async (args) => {
             const query = args.join(' '); if (!query) return;
-            const load = printHTML('<span class="loading">⌛</span> Analyzing...', 'ai-text');
+            if (!apiKey) { print("AI is not configured (requires a server-side proxy for the API key).", 'error'); return; }
+            const load = printNodes([makeSpan('⌛', 'loading'), ' Analyzing...'], 'ai-text');
             const res = await callGemini(query); load.remove();
-            printHTML(`✨ AI: ${res}`, 'ai-text');
+            printNodes([`✨ AI: ${res}`], 'ai-text');
         },
         '✨-genfile': async (args) => {
             const { params } = parseArgs(args);
             if (params.length < 2) return;
+            if (!apiKey) { print("AI is not configured (requires a server-side proxy for the API key).", 'error'); return; }
             const fileName = params[0]; const desc = params.slice(1).join(' ');
-            const load = printHTML(`<span class="loading">⌛</span> Writing '${fileName}'...`, 'ai-text');
+            const load = printNodes([makeSpan('⌛', 'loading'), ` Writing '${fileName}'...`], 'ai-text');
             const content = await callGemini(`Write file content for '${fileName}': ${desc}. Raw text only.`);
             load.remove(); getDir(currentPath).children[fileName] = { type: 'file', date: 'Mar 19 21:44', content };
             print(`File '${fileName}' written.`, 'success');
         }
     };
+    // ASCII aliases so the AI commands are actually typeable — nobody can type
+    // the ✨ glyph in a terminal, so `ask`/`gen` point at the same handlers.
+    commands.ask = commands['✨-ask'];
+    commands.gen = commands['✨-genfile'];
 
     function finishRedirection() {
         const parent = getDir(currentPath);
-        parent.children[redirectionFile] = { type: 'file', date: 'Mar 19 21:44', content: redirectionBuffer.join('\n') };
+        const existing = parent.children[redirectionFile];
+        const newText = redirectionBuffer.join('\n');
+        const content = (redirectionAppend && existing && existing.type === 'file' && existing.content)
+            ? existing.content + '\n' + newText
+            : newText;
+        parent.children[redirectionFile] = { type: 'file', date: 'Mar 19 21:44', content };
         isRedirectionMode = false;
         redirectionFile = '';
+        redirectionAppend = false;
         redirectionBuffer = [];
         mainPromptEl.style.display = 'inline';
+        redirPromptEl.style.display = 'none';
         syncInputWidth();
     }
 
     async function handleCommand(input) {
         const trimmed = input.trim();
-        if (isRedirectionMode) { print(input); redirectionBuffer.push(input); syncInputWidth(); return; }
+        if (isRedirectionMode) { print('> ' + input); redirectionBuffer.push(input); syncInputWidth(); return; }
         if (!trimmed) return;
-        history.push(trimmed);
+        if (history[history.length - 1] !== trimmed) { history.push(trimmed); }
         historyIndex = history.length;
-        printHTML(`<span class="user">root</span>@<span class="host">webshell</span>:<span class="dir">${formatCwd()}</span># ${trimmed}`);
-        if (trimmed.startsWith('cat >')) {
-            const parts = trimmed.split('>');
-            const filename = parts[1]?.trim();
-            if (filename) { isRedirectionMode = true; redirectionFile = filename; mainPromptEl.style.display = 'none'; syncInputWidth(); return; }
+        printNodes([
+            makeSpan('root', 'user'), '@', makeSpan('webshell', 'host'), ':', makeSpan(formatCwd(), 'dir'), `# ${trimmed}`
+        ]);
+        // Supports both `cat > file` (overwrite) and `cat >> file` (append).
+        const redirMatch = trimmed.match(/^cat\s*(>>?)\s*(.+)$/);
+        if (redirMatch) {
+            const filename = redirMatch[2].trim();
+            if (filename) {
+                isRedirectionMode = true;
+                redirectionFile = filename;
+                redirectionAppend = redirMatch[1] === '>>';
+                mainPromptEl.style.display = 'none';
+                redirPromptEl.style.display = 'inline';
+                syncInputWidth();
+                return;
+            }
         }
         const tokens = trimmed.split(/\s+/);
         const cmd = tokens[0];
@@ -615,10 +715,33 @@
         syncInputWidth();
     }
 
+    // Returns completion candidates for either a command name (isCommand) or a
+    // path fragment resolved against the current directory (or an explicit
+    // directory prefix, e.g. "scripts/se" -> completes inside "scripts").
+    function getCompletions(prefix, isCommand) {
+        if (isCommand) {
+            return Object.keys(commands).filter(c => !c.startsWith('✨') && c.startsWith(prefix));
+        }
+        let base = currentPath;
+        let partial = prefix;
+        let dirPrefix = '';
+        const lastSlash = prefix.lastIndexOf('/');
+        if (lastSlash !== -1) {
+            dirPrefix = prefix.substring(0, lastSlash + 1);
+            partial = prefix.substring(lastSlash + 1);
+            const resolved = resolvePath(prefix.substring(0, lastSlash) || '/');
+            if (!resolved) return [];
+            base = resolved;
+        }
+        const dir = getDir(base);
+        if (!dir || dir.type !== 'dir' || !dir.children) return [];
+        return Object.keys(dir.children).filter(n => n.startsWith(partial)).map(n => dirPrefix + n);
+    }
+
     inputEl.addEventListener('input', syncInputWidth);
     inputEl.addEventListener('keydown', async (e) => {
         if (e.ctrlKey && e.key === 'd') { e.preventDefault(); if (isRedirectionMode) finishRedirection(); return; }
-        if (e.key === 'Enter') { const val = inputEl.value; inputEl.value = ''; await handleCommand(val); } 
+        if (e.key === 'Enter') { const val = inputEl.value; inputEl.value = ''; await handleCommand(val); }
         else if (e.key === 'ArrowUp' && !isRedirectionMode) {
             e.preventDefault();
             if (historyIndex > 0) { historyIndex--; inputEl.value = history[historyIndex]; syncInputWidth(); }
@@ -626,7 +749,29 @@
             e.preventDefault();
             if (historyIndex < history.length - 1) { historyIndex++; inputEl.value = history[historyIndex]; syncInputWidth(); }
             else { historyIndex = history.length; inputEl.value = ''; syncInputWidth(); }
+        } else if (e.key === 'Tab' && !isRedirectionMode) {
+            e.preventDefault();
+            const val = inputEl.value;
+            const parts = val.split(' ');
+            const isCommandToken = parts.length <= 1;
+            const fragment = parts[parts.length - 1];
+            const matches = getCompletions(fragment, isCommandToken);
+            if (matches.length === 1) {
+                parts[parts.length - 1] = matches[0];
+                inputEl.value = parts.join(' ') + (isCommandToken ? ' ' : '');
+                syncInputWidth();
+            } else if (matches.length > 1) {
+                print(matches.join('  '));
+            }
         }
+    });
+
+    terminalWindowEl.addEventListener('click', () => {
+        // Don't steal focus while the user has an active text selection —
+        // that would collapse the selection and break copying terminal output.
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.toString().length > 0) return;
+        focusInput();
     });
 
     window.onload = async () => {
