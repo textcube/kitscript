@@ -83,10 +83,10 @@
             text-decoration: none;
         }
         .brand-icon-btn svg { width: 18px; height: 18px; fill: #444; transition: 0.2s; }
-        
+
         .brand-icon-btn.youtube:hover { border-color: var(--neon-red); box-shadow: var(--red-glow); }
         .brand-icon-btn.youtube:hover svg { fill: var(--neon-red); }
-        
+
         .brand-icon-btn.home:hover { border-color: var(--neon-blue); box-shadow: var(--blue-glow); }
         .brand-icon-btn.home:hover svg { fill: var(--neon-blue); }
 
@@ -182,7 +182,7 @@
         }
         .cat-tab:hover { color: #888; border-color: #333; }
         .cat-tab.active { border-color: var(--neon-magenta); color: var(--neon-magenta); background: rgba(255, 0, 255, 0.05); }
-        
+
         .cat-inline-input {
             flex-grow: 1; background: #111; border: 1px solid var(--neon-magenta);
             color: var(--neon-magenta); font-family: var(--main-font);
@@ -208,7 +208,7 @@
             gap: 50px;
             overflow-y: auto;
             background: #000;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(57, 255, 20, 0.02) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(57, 255, 20, 0.02) 1px, transparent 1px);
             background-size: 50px 50px;
@@ -225,7 +225,7 @@
             overflow: hidden;
             box-shadow: 8px 8px 0 var(--border-color);
         }
-        
+
         .card.small { min-height: 400px; grid-column: span 1; }
         .card.medium { min-height: 550px; grid-column: span 1; }
         .card.large { min-height: 550px; grid-column: span 2; }
@@ -259,7 +259,7 @@
         .large .card-desc { font-size: 15px; }
 
         .card-qr-box {
-            width: 70px; height: 70px; 
+            width: 70px; height: 70px;
             background: #fff; border: 2px solid var(--neon-green);
             padding: 3px; box-shadow: var(--green-glow);
             flex-shrink: 0;
@@ -295,6 +295,8 @@
             padding: 40px; width: 500px; box-shadow: var(--green-glow);
             max-height: 90vh; overflow-y: auto;
         }
+        .modal.confirm-modal { width: 420px; border-color: var(--neon-red); box-shadow: var(--red-glow); }
+        .confirm-message { font-family: var(--kr-font); font-size: 14px; color: #ccc; line-height: 1.7; margin: 20px 0; }
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 8px; color: #444; font-size: 8px; font-family: var(--main-font); }
         .input-group input, .input-group textarea, .input-group select {
@@ -309,7 +311,7 @@
             padding: 15px 30px; color: var(--neon-green);
             box-shadow: var(--green-glow); z-index: 9999; display: none; font-size: 9px;
         }
-        
+
         .preset-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .preset-item {
             display: flex; align-items: center; gap: 10px;
@@ -335,10 +337,12 @@
             <span style="font-size: 8px; color: #444; margin-left: 10px;" id="sysVersionDisplay">SYSTEM_v5.9_BOOTING...</span>
         </div>
         <div class="controls">
-            <button class="btn" onclick="app.newProject()">RESET</button>
-            <button class="btn" onclick="app.loadSample()">SAMPLES</button>
-            <button class="btn" onclick="app.saveToCloud()">SAVE</button>
-            <button class="btn bake" onclick="app.bakeHTML()">BAKE</button>
+            <button class="btn" id="resetBtn">RESET</button>
+            <button class="btn" id="samplesBtn">SAMPLES</button>
+            <button class="btn" id="saveBtn">SAVE</button>
+            <button class="btn" id="exportBtn">EXPORT</button>
+            <button class="btn" id="importBtn">IMPORT</button>
+            <button class="btn bake" id="bakeBtn">BAKE</button>
         </div>
     </div>
 
@@ -346,27 +350,27 @@
         <aside class="sidebar">
             <span class="sidebar-label">GLOBAL_CONFIG</span>
             <div class="config-zone">
-                <label>STORE_NAME (BAKE_TITLE)</label>
-                <input type="text" id="storeNameInput" oninput="app.updateStoreName(this.value)" placeholder="STORE_NAME...">
+                <label for="storeNameInput">STORE_NAME (BAKE_TITLE)</label>
+                <input type="text" id="storeNameInput" placeholder="STORE_NAME...">
             </div>
             <div class="config-zone">
-                <label>LANDING_PAGE_URL (QR_TARGET)</label>
-                <input type="text" id="shopUrlInput" oninput="app.updateShopUrl(this.value)" placeholder="https://...">
+                <label for="shopUrlInput">LANDING_PAGE_URL (QR_TARGET)</label>
+                <input type="text" id="shopUrlInput" placeholder="https://...">
             </div>
 
             <span class="sidebar-label">CATEGORY_MANAGER</span>
             <div class="cat-editor-zone">
                 <input type="text" id="catInput" placeholder="NEW_CAT_NAME...">
-                <button class="btn" onclick="app.addCategory()">ADD</button>
+                <button class="btn" id="addCatBtn">ADD</button>
             </div>
-            
+
             <div class="category-tabs" id="catListContainer">
                 <!-- Dynamic tabs -->
             </div>
 
             <span class="sidebar-label">
                 QUICK_PRESETS
-                <span class="add-small-btn" onclick="app.openNewItemModal()" title="CREATE_NEW_ASSET">[+]</span>
+                <span class="add-small-btn" id="newItemBtn" title="CREATE_NEW_ASSET">[+]</span>
             </span>
             <div id="presetContainer" class="preset-list">
                 <!-- Preset items rendered by JS -->
@@ -381,11 +385,11 @@
         <div class="modal">
             <div class="sidebar-label" id="modalTitle" style="color:var(--neon-green); border-color:var(--neon-green)">ASSET_PROPERTY_EDITOR</div>
             <div class="input-group">
-                <label>STRING_NAME</label>
+                <label for="editName">STRING_NAME</label>
                 <input type="text" id="editName">
             </div>
             <div class="input-group">
-                <label>LAYOUT_규격 (SIZE)</label>
+                <label for="editSize">LAYOUT_규격 (SIZE)</label>
                 <select id="editSize">
                     <option value="small">SMALL (컴팩트 / 1-Col)</option>
                     <option value="medium" selected>MEDIUM (표준 / 1-Col)</option>
@@ -393,19 +397,19 @@
                 </select>
             </div>
             <div class="input-group">
-                <label>TYPE_CATEGORY</label>
+                <label for="editCategorySelect">TYPE_CATEGORY</label>
                 <select id="editCategorySelect"></select>
             </div>
             <div class="input-group">
-                <label>VAL_PRICE (₩)</label>
+                <label for="editPrice">VAL_PRICE (₩)</label>
                 <input type="text" id="editPrice">
             </div>
             <div class="input-group">
-                <label>TEXT_DESCRIPTION</label>
+                <label for="editDesc">TEXT_DESCRIPTION</label>
                 <textarea id="editDesc" rows="3"></textarea>
             </div>
             <div class="input-group">
-                <label>FLAG_STATUS</label>
+                <label for="editBadge">FLAG_STATUS</label>
                 <select id="editBadge">
                     <option value="">NULL</option>
                     <option value="NEW">NEW</option>
@@ -414,14 +418,27 @@
                 </select>
             </div>
             <div class="controls" style="margin-top:20px;">
-                <button class="btn bake" onclick="app.saveEdit()">WRITE_COMMIT</button>
-                <button class="btn" onclick="app.closeModal()">CANCEL_OPS</button>
+                <button class="btn bake" id="saveEditBtn">WRITE_COMMIT</button>
+                <button class="btn" id="cancelEditBtn">CANCEL_OPS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog (replaces confirm()/alert()) -->
+    <div class="modal-overlay" id="confirmOverlay">
+        <div class="modal confirm-modal">
+            <div class="sidebar-label" style="color:var(--neon-red); border-color:var(--neon-red)">CONFIRM_ACTION</div>
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="controls">
+                <button class="btn bake" id="confirmYesBtn">CONFIRM</button>
+                <button class="btn" id="confirmNoBtn">CANCEL</button>
             </div>
         </div>
     </div>
 
     <div id="toast" class="toast">SYSTEM_LOG: READY</div>
     <input type="file" id="fileInput" style="display:none" accept="image/*">
+    <input type="file" id="importInput" style="display:none" accept="application/json">
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -438,28 +455,111 @@
 
         const DEFAULT_CATS = ['PIZZA', 'PASTA', 'SIDE', 'DRINK'];
         const PIZZA_DATA = [
-            { name: "Margherita", cat: "PIZZA", desc: "나폴리 정통 화덕 피자. 토마토 소스, 모짜렐라, 바질.", price: "18,000", size: "large" },
-            { name: "Diavola", cat: "PIZZA", desc: "매콤한 살라미와 페페론치노가 가미된 중독성 강한 피자.", price: "21,000", size: "medium" },
-            { name: "Pomodoro", cat: "PASTA", desc: "신선한 방울토마토와 바질로 맛을 낸 깔끔한 파스타.", price: "15,000", size: "medium" },
-            { name: "House Salad", cat: "SIDE", desc: "매일 아침 배송되는 신선한 야채와 발사믹 드레싱.", price: "9,000", size: "small" }
+            { presetId: 'preset-margherita', name: "Margherita", cat: "PIZZA", desc: "나폴리 정통 화덕 피자. 토마토 소스, 모짜렐라, 바질.", price: "18,000", size: "large" },
+            { presetId: 'preset-diavola', name: "Diavola", cat: "PIZZA", desc: "매콤한 살라미와 페페론치노가 가미된 중독성 강한 피자.", price: "21,000", size: "medium" },
+            { presetId: 'preset-pomodoro', name: "Pomodoro", cat: "PASTA", desc: "신선한 방울토마토와 바질로 맛을 낸 깔끔한 파스타.", price: "15,000", size: "medium" },
+            { presetId: 'preset-house-salad', name: "House Salad", cat: "SIDE", desc: "매일 아침 배송되는 신선한 야채와 발사믹 드레싱.", price: "9,000", size: "small" }
         ];
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function slugifyId(str, prefix, idx) {
+            const s = String(str ?? '').replace(/[^a-zA-Z0-9_-]/g, '');
+            return s || `${prefix}${idx}`;
+        }
+
+        function slugifyFilename(str) {
+            const s = String(str ?? '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            return s || 'menu';
+        }
+
+        function isDataImage(str) {
+            return typeof str === 'string' && /^data:image\//i.test(str);
+        }
+
+        function validShopUrl(url) {
+            const s = typeof url === 'string' ? url.trim() : '';
+            return /^https?:\/\//i.test(s) ? s : '#';
+        }
 
         class RetroMenuApp {
             constructor() {
-                this.state = { 
+                this.state = {
                     storeName: "OKSUDONG HWADUK PIZZA",
                     shopUrl: "https://kitscript.com/game/shop",
-                    items: [], 
-                    categories: DEFAULT_CATS,
-                    user: null, 
-                    editingId: null, 
+                    items: [],
+                    categories: [...DEFAULT_CATS],
+                    user: null,
+                    editingId: null,
                     filter: 'ALL',
                     renamingCat: null
                 };
+                this._persistTimer = null;
+                this._toastTimer = null;
+                this._shopUrlTimer = null;
+                this._unsubscribeSnapshot = null;
                 // Check if Firebase is available
                 this.isDemoMode = !firebaseConfig || !firebaseConfig.apiKey;
                 window.app = this;
+                this.bindEvents();
                 this.init();
+            }
+
+            bindEvents() {
+                document.getElementById('resetBtn').addEventListener('click', () => this.newProject());
+                document.getElementById('samplesBtn').addEventListener('click', () => this.loadSample());
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveToCloud());
+                document.getElementById('bakeBtn').addEventListener('click', () => this.bakeHTML());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportProject());
+                document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importInput').click());
+                document.getElementById('importInput').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    e.target.value = '';
+                    if (file) this.importProject(file);
+                });
+
+                document.getElementById('storeNameInput').addEventListener('input', (e) => this.updateStoreName(e.target.value));
+                document.getElementById('shopUrlInput').addEventListener('input', (e) => this.updateShopUrl(e.target.value));
+
+                document.getElementById('addCatBtn').addEventListener('click', () => this.addCategory());
+                document.getElementById('catInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); this.addCategory(); }
+                });
+
+                document.getElementById('newItemBtn').addEventListener('click', () => this.openNewItemModal());
+
+                document.getElementById('saveEditBtn').addEventListener('click', () => this.saveEdit());
+                document.getElementById('cancelEditBtn').addEventListener('click', () => this.closeModal());
+
+                document.getElementById('catListContainer').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    const action = btn.dataset.action;
+                    const cat = btn.dataset.cat;
+                    if (action === 'filter') this.setFilter(cat);
+                    else if (action === 'rename') this.startRename(cat);
+                    else if (action === 'delete') this.delCategory(cat);
+                });
+
+                document.getElementById('menuGrid').addEventListener('click', (e) => {
+                    const btn = e.target.closest('[data-action]');
+                    if (!btn) return;
+                    const id = btn.dataset.id;
+                    const action = btn.dataset.action;
+                    if (action === 'img') this.changeImage(id);
+                    else if (action === 'edit') this.openEdit(id);
+                    else if (action === 'delete') this.deleteItem(id);
+                });
+
+                document.getElementById('presetContainer').addEventListener('click', (e) => {
+                    const el = e.target.closest('[data-preset-id]');
+                    if (!el) return;
+                    this.togglePreset(el.dataset.presetId);
+                });
             }
 
             async init() {
@@ -478,15 +578,15 @@
                             await signInWithCustomToken(auth, __initial_auth_token);
                         } else { await signInAnonymously(auth); }
                     };
-                    
+
                     await initAuth();
 
                     onAuthStateChanged(auth, (user) => {
                         this.state.user = user;
-                        if (user) { 
-                            document.getElementById('sysVersionDisplay').innerText = "SYSTEM_v5.9_CLOUD_SYNC";
-                            this.syncCloud(); 
-                            this.showToast("CLOUD_SYNC_ACTIVE"); 
+                        if (user) {
+                            document.getElementById('sysVersionDisplay').textContent = "SYSTEM_v5.9_CLOUD_SYNC";
+                            this.syncCloud();
+                            this.showToast("CLOUD_SYNC_ACTIVE");
                         }
                     });
                     this.renderAll();
@@ -498,31 +598,33 @@
 
             setupLocalDemo() {
                 this.isDemoMode = true;
-                document.getElementById('sysVersionDisplay').innerText = "SYSTEM_v5.9_LOCAL_DEMO";
+                document.getElementById('sysVersionDisplay').textContent = "SYSTEM_v5.9_LOCAL_DEMO";
                 this.showToast("LOCAL_DEMO_MODE");
-                
+
                 // Load from localStorage if exists
                 const saved = localStorage.getItem('retro_menu_v5_demo');
                 if (saved) {
                     try {
                         const data = JSON.parse(saved);
                         this.state.items = data.items || [];
-                        this.state.categories = data.categories || DEFAULT_CATS;
+                        this.state.categories = data.categories || [...DEFAULT_CATS];
                         this.state.storeName = data.storeName || "OKSUDONG HWADUK PIZZA";
                         this.state.shopUrl = data.shopUrl || "https://kitscript.com/game/shop";
-                    } catch (e) { console.error("Local load fail"); }
+                    } catch (e) { console.error("Local load fail", e); }
                 }
                 this.renderAll();
             }
 
             syncCloud() {
                 if (this.isDemoMode || !this.state.user) return;
+                if (this._unsubscribeSnapshot) { this._unsubscribeSnapshot(); this._unsubscribeSnapshot = null; }
                 const userDoc = doc(this.db, 'artifacts', appId, 'users', this.state.user.uid, 'settings', 'menuData');
-                onSnapshot(userDoc, (snap) => {
+                this._unsubscribeSnapshot = onSnapshot(userDoc, (snap) => {
+                    if (this.isEditingLocally()) return;
                     if (snap.exists()) {
                         const data = snap.data();
                         this.state.items = data.items || [];
-                        this.state.categories = data.categories || DEFAULT_CATS;
+                        this.state.categories = data.categories || [...DEFAULT_CATS];
                         this.state.storeName = data.storeName || "OKSUDONG HWADUK PIZZA";
                         this.state.shopUrl = data.shopUrl || "https://kitscript.com/game/shop";
                         this.renderAll();
@@ -530,38 +632,64 @@
                 }, (err) => console.error("Snapshot error:", err));
             }
 
+            isEditingLocally() {
+                const overlay = document.getElementById('modalOverlay');
+                return overlay.style.display === 'flex' || !!this.state.renamingCat;
+            }
+
             async saveToCloud() {
+                clearTimeout(this._persistTimer);
+                await this.doSave();
+            }
+
+            persist() {
+                clearTimeout(this._persistTimer);
+                this._persistTimer = setTimeout(() => { this.doSave(); }, 300);
+            }
+
+            async doSave() {
                 if (this.isDemoMode) {
-                    localStorage.setItem('retro_menu_v5_demo', JSON.stringify({
-                        items: this.state.items,
-                        categories: this.state.categories,
-                        storeName: this.state.storeName,
-                        shopUrl: this.state.shopUrl
-                    }));
-                    this.showToast("LOCAL_STORAGE_SAVED");
+                    try {
+                        localStorage.setItem('retro_menu_v5_demo', JSON.stringify({
+                            items: this.state.items,
+                            categories: this.state.categories,
+                            storeName: this.state.storeName,
+                            shopUrl: this.state.shopUrl
+                        }));
+                        this.showToast("LOCAL_STORAGE_SAVED");
+                    } catch (e) {
+                        console.error(e);
+                        if (e && e.name === 'QuotaExceededError') this.showToast("SAVE_FAIL: STORAGE_QUOTA_EXCEEDED");
+                        else this.showToast("SAVE_FAIL: LOCAL_ERROR");
+                    }
                     return;
                 }
                 if (!this.state.user) return;
                 try {
                     const userDoc = doc(this.db, 'artifacts', appId, 'users', this.state.user.uid, 'settings', 'menuData');
-                    await setDoc(userDoc, { 
+                    await setDoc(userDoc, {
                         items: this.state.items,
                         categories: this.state.categories,
                         storeName: this.state.storeName,
                         shopUrl: this.state.shopUrl
                     });
                     this.showToast("CLOUD_SAVE_SUCCESS");
-                } catch (e) { this.showToast("SAVE_FAIL: CHECK_CONFIG"); }
+                } catch (e) { console.error(e); this.showToast("SAVE_FAIL: CHECK_CONFIG"); }
             }
 
             updateStoreName(val) {
                 this.state.storeName = val;
                 this.renderUIOnly();
+                this.persist();
             }
 
             updateShopUrl(val) {
                 this.state.shopUrl = val;
-                this.renderGrid();
+                clearTimeout(this._shopUrlTimer);
+                this._shopUrlTimer = setTimeout(() => {
+                    this.renderGrid();
+                    this.persist();
+                }, 300);
             }
 
             addCategory() {
@@ -570,8 +698,8 @@
                 if (name && !this.state.categories.includes(name)) {
                     this.state.categories.push(name);
                     input.value = '';
-                    this.renderAll(); 
-                    if (!this.isDemoMode) this.saveToCloud();
+                    this.renderAll();
+                    this.persist();
                     this.showToast(`CAT [${name}] ADDED`);
                 }
             }
@@ -579,10 +707,10 @@
             startRename(cat) {
                 this.state.renamingCat = cat;
                 this.renderCategories();
-                setTimeout(() => {
-                    const input = document.getElementById('renameInput-' + cat);
+                requestAnimationFrame(() => {
+                    const input = document.querySelector('#catListContainer .cat-inline-input');
                     if (input) { input.focus(); input.select(); }
-                }, 50);
+                });
             }
 
             handleRenameKey(e, oldName) {
@@ -598,21 +726,32 @@
                 this.state.categories = this.state.categories.map(c => c === oldName ? newName : c);
                 this.state.items = this.state.items.map(i => i.category === oldName ? { ...i, category: newName } : i);
                 if (this.state.filter === oldName) this.state.filter = newName;
-                
+
                 this.state.renamingCat = null;
-                this.renderAll(); 
-                if (!this.isDemoMode) this.saveToCloud();
+                this.renderAll();
+                this.persist();
             }
 
             delCategory(name) {
-                if (confirm(`DELETE CATEGORY [${name}]?`)) {
-                    this.state.categories = this.state.categories.filter(c => c !== name);
-                    if (this.state.filter === name) this.state.filter = 'ALL';
-                    const fallback = this.state.categories[0] || 'NONE';
-                    this.state.items = this.state.items.map(i => i.category === name ? { ...i, category: fallback } : i);
-                    this.renderAll(); 
-                    if (!this.isDemoMode) this.saveToCloud();
+                const remaining = this.state.categories.filter(c => c !== name);
+                const targetCat = remaining[0] || null;
+                const affectedCount = this.state.items.filter(i => i.category === name).length;
+                let msg = `DELETE CATEGORY [${name}]?`;
+                if (affectedCount > 0) {
+                    msg = targetCat
+                        ? `DELETE [${name}]? ${affectedCount} ITEM(S) WILL MOVE TO [${targetCat}].`
+                        : `DELETE [${name}]? ${affectedCount} ITEM(S) WILL BECOME UNCATEGORIZED.`;
                 }
+                this.confirmDialog(msg).then(ok => {
+                    if (!ok) return;
+                    this.state.categories = remaining;
+                    if (this.state.filter === name) this.state.filter = 'ALL';
+                    if (targetCat) {
+                        this.state.items = this.state.items.map(i => i.category === name ? { ...i, category: targetCat } : i);
+                    }
+                    this.renderAll();
+                    this.persist();
+                });
             }
 
             setFilter(f) { this.state.filter = f; this.renderAll(); }
@@ -628,103 +767,226 @@
             renderUIOnly() {
                 document.getElementById('storeNameInput').value = this.state.storeName;
                 document.getElementById('shopUrlInput').value = this.state.shopUrl;
+                document.getElementById('mainTitleDisplay').textContent = this.state.storeName || 'RETRO MENU FACTORY';
             }
 
             renderCategories() {
                 const container = document.getElementById('catListContainer');
-                let html = `<div class="cat-tab-wrapper">
-                    <button class="cat-tab ${this.state.filter === 'ALL' ? 'active' : ''}" onclick="app.setFilter('ALL')">ALL_RESOURCES</button>
-                </div>`;
-                
+                container.replaceChildren();
+
+                const allWrapper = document.createElement('div');
+                allWrapper.className = 'cat-tab-wrapper';
+                const allBtn = document.createElement('button');
+                allBtn.type = 'button';
+                allBtn.className = 'cat-tab' + (this.state.filter === 'ALL' ? ' active' : '');
+                allBtn.textContent = 'ALL_RESOURCES';
+                allBtn.dataset.action = 'filter';
+                allBtn.dataset.cat = 'ALL';
+                allWrapper.appendChild(allBtn);
+                container.appendChild(allWrapper);
+
                 this.state.categories.forEach(cat => {
                     const isEditing = this.state.renamingCat === cat;
-                    html += `
-                    <div class="cat-tab-wrapper">
-                        ${isEditing ? 
-                            `<input type="text" class="cat-inline-input" id="renameInput-${cat}" value="${cat}" onkeydown="app.handleRenameKey(event, '${cat}')" onblur="app.confirmRename('${cat}', this.value.trim().toUpperCase())">` : 
-                            `<button class="cat-tab ${this.state.filter === cat ? 'active' : ''}" onclick="app.setFilter('${cat}')">${cat}</button>`
-                        }
-                        <span class="cat-tool-btn" onclick="app.startRename('${cat}')">✎</span>
-                        <span class="cat-tool-btn del" onclick="app.delCategory('${cat}')">X</span>
-                    </div>`;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'cat-tab-wrapper';
+
+                    if (isEditing) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'cat-inline-input';
+                        input.value = cat;
+                        input.addEventListener('keydown', (e) => this.handleRenameKey(e, cat));
+                        input.addEventListener('blur', () => this.confirmRename(cat, input.value.trim().toUpperCase()));
+                        wrapper.appendChild(input);
+                    } else {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'cat-tab' + (this.state.filter === cat ? ' active' : '');
+                        btn.textContent = cat;
+                        btn.dataset.action = 'filter';
+                        btn.dataset.cat = cat;
+                        wrapper.appendChild(btn);
+                    }
+
+                    const renameBtn = document.createElement('span');
+                    renameBtn.className = 'cat-tool-btn';
+                    renameBtn.textContent = '✎';
+                    renameBtn.dataset.action = 'rename';
+                    renameBtn.dataset.cat = cat;
+                    wrapper.appendChild(renameBtn);
+
+                    const delBtn = document.createElement('span');
+                    delBtn.className = 'cat-tool-btn del';
+                    delBtn.textContent = 'X';
+                    delBtn.dataset.action = 'delete';
+                    delBtn.dataset.cat = cat;
+                    wrapper.appendChild(delBtn);
+
+                    container.appendChild(wrapper);
                 });
-                container.innerHTML = html;
             }
 
             updateModalSelect() {
                 const select = document.getElementById('editCategorySelect');
                 if (!select) return;
-                select.innerHTML = this.state.categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                select.replaceChildren();
+                this.state.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    select.appendChild(opt);
+                });
             }
 
             renderPresets() {
                 const container = document.getElementById('presetContainer');
-                container.innerHTML = PIZZA_DATA.map(p => `
-                    <div class="preset-item ${this.isItemInWorkspace(p.name) ? 'active' : ''}" onclick="app.togglePreset('${p.name}')">
-                        <div class="checkbox" style="width: 14px; height: 14px; border: 1px solid #333; position: relative; flex-shrink:0;">
-                            ${this.isItemInWorkspace(p.name) ? '<span style="position:absolute; left:2px; top:-1px; color:var(--neon-green); font-size:10px;">X</span>' : ''}
-                        </div>
-                        <span>${p.name.toUpperCase()}</span>
-                    </div>
-                `).join('');
+                container.replaceChildren();
+                PIZZA_DATA.forEach(p => {
+                    const active = this.isItemInWorkspace(p.presetId);
+                    const item = document.createElement('div');
+                    item.className = 'preset-item' + (active ? ' active' : '');
+                    item.dataset.presetId = p.presetId;
+
+                    const box = document.createElement('div');
+                    box.className = 'checkbox';
+                    box.style.cssText = 'width:14px;height:14px;border:1px solid #333;position:relative;flex-shrink:0;';
+                    if (active) {
+                        const mark = document.createElement('span');
+                        mark.style.cssText = 'position:absolute;left:2px;top:-1px;color:var(--neon-green);font-size:10px;';
+                        mark.textContent = 'X';
+                        box.appendChild(mark);
+                    }
+                    item.appendChild(box);
+
+                    const label = document.createElement('span');
+                    label.textContent = p.name.toUpperCase();
+                    item.appendChild(label);
+
+                    container.appendChild(item);
+                });
             }
 
-            isItemInWorkspace(name) { return this.state.items.some(i => i.name === name); }
+            isItemInWorkspace(presetId) { return this.state.items.some(i => i.presetId === presetId); }
 
-            togglePreset(name) {
-                const idx = this.state.items.findIndex(i => i.name === name);
+            togglePreset(presetId) {
+                const idx = this.state.items.findIndex(i => i.presetId === presetId);
                 if (idx > -1) {
                     this.state.items.splice(idx, 1);
                 } else {
-                    const preset = PIZZA_DATA.find(p => p.name === name);
-                    const cat = this.state.categories.includes(preset.cat) ? preset.cat : (this.state.categories[0] || 'PIZZA');
+                    const preset = PIZZA_DATA.find(p => p.presetId === presetId);
+                    if (!preset) return;
+                    const cat = this.state.categories.includes(preset.cat) ? preset.cat : (this.state.categories[0] || preset.cat);
                     this.state.items.push({
-                        id: 'ID_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+                        id: crypto.randomUUID(),
+                        presetId: preset.presetId,
                         name: preset.name, desc: preset.desc, price: preset.price,
                         category: cat, badge: "", image: "", size: preset.size || "medium"
                     });
                 }
-                this.renderAll(); 
-                if (!this.isDemoMode) this.saveToCloud();
+                this.renderAll();
+                this.persist();
             }
 
             renderGrid() {
                 const grid = document.getElementById('menuGrid');
                 const filtered = this.state.filter === 'ALL' ? this.state.items : this.state.items.filter(i => i.category === this.state.filter);
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(this.state.shopUrl)}`;
-                
+
+                grid.replaceChildren();
+
                 if (filtered.length === 0) {
-                    grid.innerHTML = `<div class="card" style="grid-column: 1/-1; height: 350px; display: flex; align-items: center; justify-content: center; border: 1px dashed #222;">
-                        <span style="color:#222; font-family:var(--main-font); font-size:10px;">ASSET_BUFFER_EMPTY</span>
-                    </div>`;
+                    const empty = document.createElement('div');
+                    empty.className = 'card';
+                    empty.style.cssText = 'grid-column: 1/-1; height: 350px; display: flex; align-items: center; justify-content: center; border: 1px dashed #222;';
+                    const span = document.createElement('span');
+                    span.style.cssText = 'color:#222; font-family:var(--main-font); font-size:10px;';
+                    span.textContent = 'ASSET_BUFFER_EMPTY';
+                    empty.appendChild(span);
+                    grid.appendChild(empty);
                     return;
                 }
-                grid.innerHTML = filtered.map(item => `
-                    <div class="card ${item.size || 'medium'}" data-id="${item.id}">
-                        ${item.badge ? `<div class="badge">${item.badge}</div>` : ''}
-                        <div class="card-img">${item.image ? `<img src="${item.image}">` : ''}</div>
-                        <div class="card-content">
-                            <div class="card-cat-tag">${item.category}</div>
-                            <div class="card-name">${item.name.toUpperCase()}</div>
-                            <div class="desc-qr-wrap">
-                                <div class="card-desc">${item.desc}</div>
-                                <div class="card-qr-box"><img src="${qrUrl}" alt="QR"></div>
-                            </div>
-                            <div class="card-price">₩ ${item.price}</div>
-                            <div class="card-actions">
-                                <button class="action-btn" onclick="app.changeImage('${item.id}')">IMG</button>
-                                <button class="action-btn" onclick="app.openEdit('${item.id}')">EDIT</button>
-                                <button class="action-btn" onclick="app.deleteItem('${item.id}')">DEL</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+
+                filtered.forEach(item => {
+                    const sizeClass = ['small', 'medium', 'large'].includes(item.size) ? item.size : 'medium';
+                    const card = document.createElement('div');
+                    card.className = `card ${sizeClass}`;
+                    card.dataset.id = item.id;
+
+                    if (item.badge) {
+                        const badge = document.createElement('div');
+                        badge.className = 'badge';
+                        badge.textContent = item.badge;
+                        card.appendChild(badge);
+                    }
+
+                    const imgWrap = document.createElement('div');
+                    imgWrap.className = 'card-img';
+                    if (item.image && isDataImage(item.image)) {
+                        const img = document.createElement('img');
+                        img.src = item.image;
+                        imgWrap.appendChild(img);
+                    }
+                    card.appendChild(imgWrap);
+
+                    const content = document.createElement('div');
+                    content.className = 'card-content';
+
+                    const catTag = document.createElement('div');
+                    catTag.className = 'card-cat-tag';
+                    catTag.textContent = item.category;
+                    content.appendChild(catTag);
+
+                    const name = document.createElement('div');
+                    name.className = 'card-name';
+                    name.textContent = (item.name || '').toUpperCase();
+                    content.appendChild(name);
+
+                    const descWrap = document.createElement('div');
+                    descWrap.className = 'desc-qr-wrap';
+                    const desc = document.createElement('div');
+                    desc.className = 'card-desc';
+                    desc.textContent = item.desc || '';
+                    descWrap.appendChild(desc);
+                    const qrBox = document.createElement('div');
+                    qrBox.className = 'card-qr-box';
+                    const qrImg = document.createElement('img');
+                    qrImg.src = qrUrl;
+                    qrImg.alt = 'QR';
+                    qrBox.appendChild(qrImg);
+                    descWrap.appendChild(qrBox);
+                    content.appendChild(descWrap);
+
+                    const price = document.createElement('div');
+                    price.className = 'card-price';
+                    price.textContent = `₩ ${item.price || ''}`;
+                    content.appendChild(price);
+
+                    const actions = document.createElement('div');
+                    actions.className = 'card-actions';
+                    [['img', 'IMG'], ['edit', 'EDIT'], ['delete', 'DEL']].forEach(([action, label]) => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'action-btn';
+                        btn.textContent = label;
+                        btn.dataset.action = action;
+                        btn.dataset.id = item.id;
+                        actions.appendChild(btn);
+                    });
+                    content.appendChild(actions);
+
+                    card.appendChild(content);
+                    grid.appendChild(card);
+                });
             }
 
             openNewItemModal() {
+                if (this.state.categories.length === 0) {
+                    this.showToast("ERR: CREATE_A_CATEGORY_FIRST");
+                    return;
+                }
                 this.state.editingId = null;
                 this.updateModalSelect();
-                document.getElementById('modalTitle').innerText = "NEW_ASSET_CREATOR";
+                document.getElementById('modalTitle').textContent = "NEW_ASSET_CREATOR";
                 document.getElementById('editName').value = "";
                 document.getElementById('editPrice').value = "";
                 document.getElementById('editDesc').value = "";
@@ -739,7 +1001,7 @@
                 if (!item) return;
                 this.state.editingId = id;
                 this.updateModalSelect();
-                document.getElementById('modalTitle').innerText = "ASSET_PROPERTY_EDITOR";
+                document.getElementById('modalTitle').textContent = "ASSET_PROPERTY_EDITOR";
                 document.getElementById('editName').value = item.name;
                 document.getElementById('editPrice').value = item.price;
                 document.getElementById('editDesc').value = item.desc;
@@ -756,7 +1018,7 @@
                 if (!nameInput) { this.showToast("ERR: NAME_REQUIRED"); return; }
                 if (this.state.editingId === null) {
                     this.state.items.push({
-                        id: 'ID_' + Date.now(), name: nameInput,
+                        id: crypto.randomUUID(), name: nameInput,
                         price: document.getElementById('editPrice').value, desc: document.getElementById('editDesc').value,
                         badge: document.getElementById('editBadge').value, category: document.getElementById('editCategorySelect').value,
                         size: document.getElementById('editSize').value, image: ""
@@ -772,27 +1034,49 @@
                         };
                     }
                 }
-                this.renderAll(); 
-                if (!this.isDemoMode) this.saveToCloud();
+                this.renderAll();
+                this.persist();
                 this.closeModal();
             }
 
             deleteItem(id) {
-                this.state.items = this.state.items.filter(i => i.id !== id);
-                this.renderAll(); 
-                if (!this.isDemoMode) this.saveToCloud();
+                const item = this.state.items.find(i => i.id === id);
+                const label = item ? item.name : 'ITEM';
+                this.confirmDialog(`DELETE ITEM [${label}]?`).then(ok => {
+                    if (!ok) return;
+                    this.state.items = this.state.items.filter(i => i.id !== id);
+                    this.renderAll();
+                    this.persist();
+                });
             }
 
             changeImage(id) {
                 const input = document.getElementById('fileInput');
                 input.onchange = (e) => {
                     const file = e.target.files[0];
+                    input.value = '';
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (re) => {
-                        this.state.items = this.state.items.map(i => i.id === id ? { ...i, image: re.target.result } : i);
-                        this.renderAll(); 
-                        if (!this.isDemoMode) this.saveToCloud();
+                        const img = new Image();
+                        img.onload = () => {
+                            const MAX = 1024;
+                            let w = img.width, h = img.height;
+                            if (w > MAX || h > MAX) {
+                                if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+                                else { w = Math.round(w * MAX / h); h = MAX; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                            this.state.items = this.state.items.map(i => i.id === id ? { ...i, image: dataUrl } : i);
+                            this.renderAll();
+                            this.persist();
+                        };
+                        img.onerror = () => this.showToast("ERR: IMAGE_LOAD_FAILED");
+                        img.src = re.target.result;
                     };
                     reader.readAsDataURL(file);
                 };
@@ -800,63 +1084,175 @@
             }
 
             newProject() {
-                if (confirm("RESET_WORKSPACE?")) {
-                    this.state.items = []; this.state.categories = DEFAULT_CATS;
+                this.confirmDialog("RESET_WORKSPACE? ALL_UNSAVED_DATA_WILL_BE_LOST.").then(ok => {
+                    if (!ok) return;
+                    this.state.items = []; this.state.categories = [...DEFAULT_CATS];
                     this.state.storeName = "OKSUDONG HWADUK PIZZA"; this.state.shopUrl = "https://kitscript.com/game/shop";
-                    this.renderAll(); 
-                    if (!this.isDemoMode) this.saveToCloud();
-                    if (this.isDemoMode) localStorage.removeItem('retro_menu_v5_demo');
-                }
+                    this.renderAll();
+                    this.persist();
+                });
             }
 
             loadSample() {
                 this.state.items = PIZZA_DATA.map(p => ({
-                    id: 'ID_' + Math.random().toString(36).substr(2, 9),
+                    id: crypto.randomUUID(), presetId: p.presetId,
                     name: p.name, desc: p.desc, price: p.price,
-                    category: p.cat, badge: p.name === "Margherita" ? "BEST" : "",
+                    category: this.state.categories.includes(p.cat) ? p.cat : (this.state.categories[0] || p.cat),
+                    badge: p.name === "Margherita" ? "BEST" : "",
                     image: "", size: p.size || "medium"
                 }));
-                this.renderAll(); 
-                if (!this.isDemoMode) this.saveToCloud();
+                this.renderAll();
+                this.persist();
                 this.showToast("SAMPLES_LOADED");
+            }
+
+            exportProject() {
+                const data = {
+                    storeName: this.state.storeName,
+                    shopUrl: this.state.shopUrl,
+                    categories: this.state.categories,
+                    items: this.state.items
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${slugifyFilename(this.state.storeName)}-project.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast("PROJECT_EXPORTED");
+            }
+
+            importProject(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!data || typeof data !== 'object') throw new Error('invalid project file');
+                        if (typeof data.storeName === 'string') this.state.storeName = data.storeName;
+                        if (typeof data.shopUrl === 'string') this.state.shopUrl = data.shopUrl;
+                        if (Array.isArray(data.categories)) this.state.categories = data.categories.map(c => String(c));
+                        if (Array.isArray(data.items)) {
+                            this.state.items = data.items.map(i => ({
+                                id: (i && typeof i.id === 'string' && i.id) ? i.id : crypto.randomUUID(),
+                                presetId: (i && typeof i.presetId === 'string') ? i.presetId : undefined,
+                                name: String((i && i.name) || ''),
+                                desc: String((i && i.desc) || ''),
+                                price: String((i && i.price) || ''),
+                                category: String((i && i.category) || ''),
+                                badge: String((i && i.badge) || ''),
+                                image: (i && isDataImage(i.image)) ? i.image : '',
+                                size: (i && ['small', 'medium', 'large'].includes(i.size)) ? i.size : 'medium'
+                            }));
+                        }
+                        this.state.editingId = null;
+                        this.state.renamingCat = null;
+                        this.state.filter = 'ALL';
+                        this.renderAll();
+                        this.persist();
+                        this.showToast("PROJECT_IMPORTED");
+                    } catch (err) {
+                        console.error(err);
+                        this.showToast("ERR: INVALID_PROJECT_FILE");
+                    }
+                };
+                reader.readAsText(file);
             }
 
             showToast(msg) {
                 const t = document.getElementById('toast');
-                t.innerText = `[SYS] ${msg}`; t.style.display = 'block';
-                setTimeout(() => { t.style.display = 'none'; }, 2000);
+                t.textContent = `[SYS] ${msg}`;
+                t.style.display = 'block';
+                if (this._toastTimer) clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => { t.style.display = 'none'; this._toastTimer = null; }, 2000);
+            }
+
+            confirmDialog(message) {
+                return new Promise(resolve => {
+                    const overlay = document.getElementById('confirmOverlay');
+                    document.getElementById('confirmMessage').textContent = message;
+                    overlay.style.display = 'flex';
+
+                    const yesBtn = document.getElementById('confirmYesBtn');
+                    const noBtn = document.getElementById('confirmNoBtn');
+
+                    const cleanup = (result) => {
+                        overlay.style.display = 'none';
+                        yesBtn.removeEventListener('click', onYes);
+                        noBtn.removeEventListener('click', onNo);
+                        overlay.removeEventListener('click', onOverlayClick);
+                        document.removeEventListener('keydown', onKey);
+                        resolve(result);
+                    };
+                    const onYes = () => cleanup(true);
+                    const onNo = () => cleanup(false);
+                    const onOverlayClick = (e) => { if (e.target === overlay) cleanup(false); };
+                    const onKey = (e) => { if (e.key === 'Escape') cleanup(false); };
+
+                    yesBtn.addEventListener('click', onYes);
+                    noBtn.addEventListener('click', onNo);
+                    overlay.addEventListener('click', onOverlayClick);
+                    document.addEventListener('keydown', onKey);
+                });
             }
 
             bakeHTML() {
                 this.showToast("BAKING...");
-                const storeName = (this.state.storeName || "RETRO MENU").toUpperCase();
-                const shopUrl = this.state.shopUrl || "#";
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shopUrl)}`;
+                const storeNameRaw = (this.state.storeName || "RETRO MENU").toUpperCase();
+                const storeName = escapeHtml(storeNameRaw);
+                const shopUrlSafe = validShopUrl(this.state.shopUrl);
+                const shopUrl = escapeHtml(shopUrlSafe);
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shopUrlSafe === '#' ? '' : shopUrlSafe)}`;
 
-                const sectionsHtml = this.state.categories.map(cat => {
-                    const catItems = this.state.items.filter(i => i.category === cat);
-                    if (catItems.length === 0) return '';
-                    const sectionId = cat.replace(/\s+/g, '_');
-                    const cards = catItems.map(item => `
-                        <div class="card ${item.size || 'medium'}">
-                            ${item.badge ? `<div class="badge">${item.badge}</div>` : ''}
-                            <div class="card-img">${item.image ? `<img src="${item.image}">` : ''}</div>
+                const knownCats = new Set(this.state.categories);
+                const usedIds = new Set();
+                const uniqueId = (base) => {
+                    let id = base, n = 2;
+                    while (usedIds.has(id)) { id = `${base}-${n++}`; }
+                    usedIds.add(id);
+                    return id;
+                };
+
+                const buildCard = (item) => {
+                    const sizeClass = ['small', 'medium', 'large'].includes(item.size) ? item.size : 'medium';
+                    const badgeHtml = item.badge ? `<div class="badge">${escapeHtml(item.badge)}</div>` : '';
+                    const imgHtml = (item.image && isDataImage(item.image)) ? `<img src="${escapeHtml(item.image)}">` : '';
+                    return `<div class="card ${sizeClass}">
+                            ${badgeHtml}
+                            <div class="card-img">${imgHtml}</div>
                             <div class="card-content">
-                                <div class="card-title">${item.name.toUpperCase()}</div>
+                                <div class="card-title">${escapeHtml((item.name || '').toUpperCase())}</div>
                                 <div class="desc-qr-wrap">
-                                    <div class="card-desc">${item.desc}</div>
+                                    <div class="card-desc">${escapeHtml(item.desc)}</div>
                                     <div class="card-qr-box"><img src="${qrUrl}" alt="QR"></div>
                                 </div>
-                                <div class="card-price">₩ ${item.price}</div>
+                                <div class="card-price">${escapeHtml('₩ ' + (item.price || ''))}</div>
                             </div>
-                        </div>`).join('');
-                    return `<section id="${sectionId}" class="menu-section"><h2 class="section-title">${cat}</h2><div class="grid">${cards}</div></section>`;
-                }).join('');
+                        </div>`;
+                };
 
-                const navLinksHtml = this.state.categories.map(cat => {
-                    if (!this.state.items.some(i => i.category === cat)) return '';
-                    return `<a href="#${cat.replace(/\s+/g, '_')}">${cat}</a>`;
-                }).join('');
+                const sectionParts = [];
+                const navParts = [];
+
+                this.state.categories.forEach((cat, idx) => {
+                    const catItems = this.state.items.filter(i => i.category === cat);
+                    if (catItems.length === 0) return;
+                    const sectionId = uniqueId(slugifyId(cat, 'cat-', idx));
+                    const cards = catItems.map(buildCard).join('');
+                    sectionParts.push(`<section id="${sectionId}" class="menu-section"><h2 class="section-title">${escapeHtml(cat)}</h2><div class="grid">${cards}</div></section>`);
+                    navParts.push(`<a href="#${sectionId}">${escapeHtml(cat)}</a>`);
+                });
+
+                const uncategorizedItems = this.state.items.filter(i => !knownCats.has(i.category));
+                if (uncategorizedItems.length > 0) {
+                    const sectionId = uniqueId('uncategorized');
+                    const cards = uncategorizedItems.map(buildCard).join('');
+                    sectionParts.push(`<section id="${sectionId}" class="menu-section"><h2 class="section-title">UNCATEGORIZED</h2><div class="grid">${cards}</div></section>`);
+                    navParts.push(`<a href="#${sectionId}">UNCATEGORIZED</a>`);
+                }
+
+                const sectionsHtml = sectionParts.join('');
+                const navLinksHtml = navParts.join('');
 
                 const template = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${storeName}</title><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css"><style>
                     :root { --ng: #39ff14; --nm: #ff00ff; --nb: #00f2ff; --bg: #050505; }
@@ -870,11 +1266,11 @@
                     .header h1 { font-size: 32px; text-shadow: 0 0 10px var(--ng); margin: 0; text-transform: uppercase; }
                     section { padding: 100px 40px; max-width: 1400px; margin: 0 auto; scroll-margin-top: 80px; }
                     .section-title { font-family: 'Press Start 2P', cursive; font-size: 18px; color: var(--nm); margin-bottom: 60px; border-left: 10px solid var(--nm); padding-left: 20px; text-transform: uppercase; }
-                    
+
                     /* BAKE GRID ENGINE (Synced with Editor) */
                     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 50px; align-content: start; }
                     .card { background: #0c0c0c; border: 1px solid #333; position: relative; box-shadow: 10px 10px 0 var(--ng); display: flex; flex-direction: column; overflow: hidden; }
-                    
+
                     /* Multi-Scale Class Definitions */
                     .card.small { min-height: 400px; grid-column: span 1; }
                     .card.medium { min-height: 550px; grid-column: span 1; }
@@ -883,12 +1279,12 @@
                     .card-img { background: #000; border-bottom: 1px solid #333; display: flex; align-items: center; justify-content: center; overflow: hidden; }
                     .small .card-img { height: 180px; }
                     .medium .card-img, .large .card-img { height: 300px; }
-                    
+
                     .card-img img { width: 100%; height: 100%; object-fit: cover; }
                     .card-content { padding: 35px; display: flex; flex-direction: column; flex-grow: 1; position: relative; }
                     .card-title { font-family: 'Press Start 2P', cursive; color: var(--nb); font-size: 16px; margin-bottom: 20px; }
                     .large .card-title { font-size: 20px; }
-                    
+
                     .desc-qr-wrap { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 30px; }
                     .card-desc { font-size: 15px; color: #888; line-height: 1.8; word-break: keep-all; flex: 1; }
                     .card-qr-box { width: 85px; height: 85px; background: #fff; border: 3px solid var(--ng); padding: 5px; box-shadow: 0 0 15px var(--ng); flex-shrink: 0; }
@@ -896,12 +1292,12 @@
                     .card-price { color: var(--ng); font-size: 26px; margin-top: auto; font-weight: bold; }
                     .large .card-price { font-size: 34px; }
                     .badge { position: absolute; top: 20px; right: 20px; background: var(--ng); color: black; padding: 10px 18px; font-size: 11px; font-weight: bold; }
-                    
+
                     /* Responsive Fallback */
-                    @media (max-width: 950px) { 
-                        .grid { grid-template-columns: 1fr; } 
-                        .card.large { grid-column: span 1; } 
-                        nav { height: auto; padding: 25px; flex-direction: column; gap: 25px; } 
+                    @media (max-width: 950px) {
+                        .grid { grid-template-columns: 1fr; }
+                        .card.large { grid-column: span 1; }
+                        nav { height: auto; padding: 25px; flex-direction: column; gap: 25px; }
                         .nav-links { flex-wrap: wrap; justify-content: center; }
                     }
                 </style></head><body>
@@ -909,12 +1305,13 @@
                     <div class="header"><h1>${storeName}</h1></div>
                     ${sectionsHtml}
                 </body></html>`;
-                
+
                 const blob = new Blob([template], { type: 'text/html' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url;
-                a.download = `${storeName.toLowerCase().replace(/\s+/g, '-')}.html`;
+                a.download = `${slugifyFilename(this.state.storeName)}.html`;
                 a.click();
+                URL.revokeObjectURL(url);
             }
         }
         const app = new RetroMenuApp();
