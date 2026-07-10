@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="참조 문서를 통째로 색인해 타이핑 중인 단어에 맞는 키워드·구·문장을 칩으로 제안하는 도메인 기반 예측 작성기. Tab으로 순환, Enter로 드릴다운.">
+    <meta property="og:title" content="Semantic Writer - BuntGames">
+    <meta property="og:description" content="붙여넣은 참조 문서가 곧 자동완성 사전이 되는 예측 작성 에디터. 키워드를 고르면 그 문맥으로 제안이 좁혀지는 드릴다운 구조.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f172a'/%3E%3Cpath d='M16 20h24M16 32h32M16 44h20' stroke='%2338bdf8' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
     <title>Semantic Writer - BuntGames</title>
     <style>
         :root {
@@ -31,6 +38,7 @@
             background-color: var(--bg-color);
             color: var(--text-primary);
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -40,6 +48,19 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         /* Top Navigation Header */
@@ -166,9 +187,9 @@
 
         .chip.keyword { background-color: var(--keyword-tag); }
         .chip.phrase { background-color: var(--phrase-tag); }
-        .chip.sentence { 
-            background-color: var(--sentence-tag); 
-            max-width: 500px;
+        .chip.sentence {
+            background-color: var(--sentence-tag);
+            max-width: min(60ch, 100%);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -284,7 +305,7 @@
         }
 
         .empty-suggestions {
-            color: var(--border);
+            color: var(--text-secondary);
             font-style: italic;
             font-size: 14px;
             text-align: center;
@@ -294,12 +315,60 @@
 
         .bread-crumbs {
             display: flex;
+            align-items: center;
             gap: 5px;
             font-size: 11px;
             color: var(--accent);
             margin-bottom: 6px;
             font-weight: bold;
             min-height: 16px;
+        }
+
+        .crumb-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .crumb-btn:hover,
+        .crumb-btn:focus-visible {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .main-workspace {
+                flex-direction: column;
+                overflow-y: auto;
+            }
+
+            .editor-side {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .editor-side, .doc-side {
+                flex: none;
+                min-height: 260px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .chip {
+                animation: none;
+                transition: none;
+            }
+
+            .icon-btn {
+                transition: none;
+            }
+
+            .suggestions-container {
+                scroll-behavior: auto;
+            }
         }
     </style>
 </head>
@@ -313,10 +382,10 @@
             <h1 class="app-title">Semantic Writer</h1>
         </div>
         <div class="icon-links">
-            <a href="https://kitscript.com/pickme/" target="_blank" class="icon-btn" title="Home">
+            <a href="https://kitscript.com/pickme/" target="_blank" rel="noopener noreferrer" class="icon-btn" title="Home">
                 <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             </a>
-            <a href="https://youtube.com/@textcube" target="_blank" class="icon-btn" title="YouTube">
+            <a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="icon-btn" title="YouTube">
                 <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
             </a>
         </div>
@@ -325,16 +394,17 @@
     <!-- Suggestions Area -->
     <div class="suggestions-container" id="suggestions-container">
         <div class="bread-crumbs" id="bread-crumbs"></div>
-        <div class="suggestion-bar" id="suggestion-bar">
+        <div class="suggestion-bar" id="suggestion-bar" role="listbox" aria-label="Suggestions">
             <div class="empty-suggestions">Suggestions will appear here based on your domain context...</div>
         </div>
+        <div class="sr-only" id="suggestion-status" aria-live="polite"></div>
     </div>
 
     <!-- Main Workspace -->
     <div class="main-workspace">
         <!-- Writing Area -->
         <section class="editor-side">
-            <textarea id="writing-area" placeholder="Start typing here... (Tab: Cycle, Click/Enter: Select)"></textarea>
+            <textarea id="writing-area" placeholder="Start typing here... (Tab: Cycle, Click/Enter: Select)" aria-autocomplete="list" aria-controls="suggestion-bar"></textarea>
         </section>
 
         <!-- Domain Reference Area -->
@@ -408,15 +478,21 @@ Writing is becoming a process of selection, not composition.</textarea>
      */
     const STOP_WORDS = new Set(['the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'else', 'to', 'for', 'with', 'in', 'of', 'by', 'as', 'has', 'have', 'had', 'be', 'been', 'being']);
 
+    // Cap on how many matched keywords get expanded into phrase/sentence suggestions —
+    // without this a single-letter query fans out into thousands of candidate objects.
+    const MAX_MATCHED_KEYWORDS = 20;
+    const STORAGE_KEYS = { writing: 'writer_writing_area', doc: 'writer_base_doc' };
+
     const state = {
         sentences: [],
-        keywords: new Map(), 
-        cooccurrence: new Map(), 
-        currentNavPath: [], 
+        keywords: new Map(),
+        cooccurrence: new Map(),
+        currentNavPath: [],
         activeSuggestions: [],
-        selectedIndex: -1, 
-        isCycling: false,  
-        lastInsertedLength: 0 
+        selectedIndex: -1,
+        isCycling: false,
+        isComposing: false,
+        cycleSnapshot: null // { value, tokenStart, tokenEnd } captured when a Tab-cycle begins
     };
 
     const writingArea = document.getElementById('writing-area');
@@ -424,30 +500,38 @@ Writing is becoming a process of selection, not composition.</textarea>
     const applyBtn = document.getElementById('apply-doc');
     const suggestionBar = document.getElementById('suggestion-bar');
     const breadCrumbs = document.getElementById('bread-crumbs');
+    const suggestionStatus = document.getElementById('suggestion-status');
     const statKeywords = document.getElementById('stat-keywords');
     const statSentences = document.getElementById('stat-sentences');
 
     function processDocument() {
         const text = baseDocInput.value;
-        if (!text.trim()) return;
-
-        state.sentences = text.split(/[.!?]\s+/).filter(s => s.trim().length > 0);
         state.keywords.clear();
         state.cooccurrence.clear();
+        state.sentences = [];
+        state.currentNavPath = [];
+
+        if (!text.trim()) {
+            statKeywords.innerText = 0;
+            statSentences.innerText = 0;
+            renderSuggestions();
+            return;
+        }
+
+        state.sentences = splitSentences(text);
 
         state.sentences.forEach((sentence, idx) => {
             const words = cleanWords(sentence);
             words.forEach((word, i) => {
                 if (!state.keywords.has(word)) {
-                    state.keywords.set(word, { count: 0, sentences: [], related: new Set() });
+                    state.keywords.set(word, { count: 0, sentences: new Set() });
                 }
                 const entry = state.keywords.get(word);
                 entry.count++;
-                entry.sentences.push(idx);
+                entry.sentences.add(idx);
 
                 const neighbors = [words[i-1], words[i+1]].filter(Boolean);
                 neighbors.forEach(n => {
-                    entry.related.add(n);
                     if (!state.cooccurrence.has(word)) state.cooccurrence.set(word, new Map());
                     const coMap = state.cooccurrence.get(word);
                     coMap.set(n, (coMap.get(n) || 0) + 1);
@@ -467,38 +551,63 @@ Writing is becoming a process of selection, not composition.</textarea>
             .filter(w => w.length > 1 && !STOP_WORDS.has(w));
     }
 
+    // Splits on terminator+whitespace but keeps the terminator attached to the
+    // sentence it ends, so chips/insertions don't lose their punctuation.
+    function splitSentences(text) {
+        const parts = text.split(/([.!?]+)\s+/);
+        const sentences = [];
+        for (let i = 0; i < parts.length; i += 2) {
+            let s = parts[i] || "";
+            if (parts[i + 1]) s += parts[i + 1];
+            s = s.trim();
+            if (s) sentences.push(s);
+        }
+        return sentences;
+    }
+
+    // Range [start, end) of the token touching the cursor: scan backwards from
+    // pos over non-whitespace. Empty range (start === end) means "insert here".
+    function getTokenRange(text, pos) {
+        let start = pos;
+        while (start > 0 && !/\s/.test(text[start - 1])) start--;
+        return { start, end: pos };
+    }
+
     function getSuggestions() {
-        const content = writingArea.value;
-        const cursorPos = writingArea.selectionStart;
-        
-        const effectiveContent = state.isCycling 
-            ? content.slice(0, cursorPos - state.lastInsertedLength)
-            : content.slice(0, cursorPos);
+        // While cycling, keep computing suggestions against the frozen pre-cycle
+        // prefix instead of the live (already-replaced) text.
+        const effectiveContent = (state.isCycling && state.cycleSnapshot)
+            ? state.cycleSnapshot.value.slice(0, state.cycleSnapshot.tokenEnd)
+            : writingArea.value.slice(0, writingArea.selectionStart);
 
         const words = effectiveContent.trim().split(/\s+/);
         const lastWord = words[words.length - 1]?.toLowerCase() || "";
 
         if (!lastWord && state.currentNavPath.length === 0) return [];
 
-        let suggestions = [];
-        const targetWord = state.currentNavPath.length > 0 
-            ? state.currentNavPath[state.currentNavPath.length - 1] 
+        const targetWord = state.currentNavPath.length > 0
+            ? state.currentNavPath[state.currentNavPath.length - 1]
             : lastWord;
 
         const allKeywords = Array.from(state.keywords.keys());
-        const matches = allKeywords.filter(k => k.includes(targetWord));
+        const scoredMatches = allKeywords
+            .filter(k => k.includes(targetWord))
+            .map(match => {
+                const info = state.keywords.get(match);
+                let matchScoreMultiplier = 2;
+                if (match === targetWord) {
+                    matchScoreMultiplier = 20;
+                } else if (match.startsWith(targetWord)) {
+                    matchScoreMultiplier = 10;
+                }
+                return { match, info, matchScoreMultiplier, keywordScore: info.count * matchScoreMultiplier };
+            })
+            .sort((a, b) => b.keywordScore - a.keywordScore)
+            .slice(0, MAX_MATCHED_KEYWORDS);
 
-        matches.forEach(match => {
-            const info = state.keywords.get(match);
-            
-            let matchScoreMultiplier = 2; 
-            if (match.startsWith(targetWord)) {
-                matchScoreMultiplier = 10; 
-            } else if (match === targetWord) {
-                matchScoreMultiplier = 20; 
-            }
-
-            suggestions.push({ type: 'keyword', text: match, score: info.count * matchScoreMultiplier });
+        let suggestions = [];
+        scoredMatches.forEach(({ match, info, matchScoreMultiplier, keywordScore }) => {
+            suggestions.push({ type: 'keyword', text: match, score: keywordScore });
 
             const coMap = state.cooccurrence.get(match);
             if (coMap) {
@@ -519,8 +628,26 @@ Writing is becoming a process of selection, not composition.</textarea>
                 seen.add(s.text);
                 return true;
             })
-            .sort((a, b) => b.score - a.score) 
-            .slice(0, 40); 
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 40);
+    }
+
+    function renderBreadcrumbs() {
+        breadCrumbs.innerHTML = '';
+        state.currentNavPath.forEach((p, i) => {
+            if (i > 0) {
+                const sep = document.createElement('span');
+                sep.textContent = ' ❯ ';
+                sep.setAttribute('aria-hidden', 'true');
+                breadCrumbs.appendChild(sep);
+            }
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'crumb-btn';
+            btn.textContent = p;
+            btn.addEventListener('click', () => navigateBack(i));
+            breadCrumbs.appendChild(btn);
+        });
     }
 
     function renderSuggestions() {
@@ -528,30 +655,59 @@ Writing is becoming a process of selection, not composition.</textarea>
         state.activeSuggestions = list;
 
         if (list.length === 0) {
-            suggestionBar.innerHTML = `<div class="empty-suggestions">Start typing to see suggestions...</div>`;
+            suggestionBar.innerHTML = '';
+            const empty = document.createElement('div');
+            empty.className = 'empty-suggestions';
+            empty.textContent = 'Start typing to see suggestions...';
+            suggestionBar.appendChild(empty);
             breadCrumbs.innerHTML = '';
+            writingArea.removeAttribute('aria-activedescendant');
+            suggestionStatus.textContent = 'No suggestions available.';
             return;
         }
 
-        breadCrumbs.innerHTML = state.currentNavPath.map((p, i) => `<span style="cursor:pointer" onclick="navigateBack(${i})">${p}</span>`).join(' ❯ ');
+        renderBreadcrumbs();
 
-        suggestionBar.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         list.forEach((s, idx) => {
             const el = document.createElement('div');
+            el.id = `chip-${idx}`;
             el.className = `chip ${s.type} ${idx === state.selectedIndex ? 'selected' : ''}`;
-            el.innerHTML = `<span class="chip-type">${s.type}</span> ${s.text}`;
-            
+            el.setAttribute('role', 'option');
+            el.setAttribute('aria-selected', idx === state.selectedIndex ? 'true' : 'false');
+
+            const typeTag = document.createElement('span');
+            typeTag.className = 'chip-type';
+            typeTag.textContent = s.type;
+            el.appendChild(typeTag);
+            el.appendChild(document.createTextNode(' ' + s.text));
+
+            if (s.type === 'sentence') {
+                el.title = s.text;
+            }
+
             el.onmousedown = (e) => {
-                e.preventDefault(); 
+                e.preventDefault();
                 handleSuggestionClick(s, idx);
             };
-            
-            suggestionBar.appendChild(el);
 
-            if (idx === state.selectedIndex) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+            fragment.appendChild(el);
         });
+        suggestionBar.innerHTML = '';
+        suggestionBar.appendChild(fragment);
+
+        if (state.selectedIndex >= 0) {
+            writingArea.setAttribute('aria-activedescendant', `chip-${state.selectedIndex}`);
+            const selectedEl = document.getElementById(`chip-${state.selectedIndex}`);
+            if (selectedEl) {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                selectedEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+            }
+        } else {
+            writingArea.removeAttribute('aria-activedescendant');
+        }
+
+        suggestionStatus.textContent = `${list.length} suggestion${list.length === 1 ? '' : 's'} available.`;
     }
 
     /**
@@ -559,8 +715,13 @@ Writing is becoming a process of selection, not composition.</textarea>
      */
     function handleSuggestionClick(suggestion, idx) {
         state.selectedIndex = idx;
-        replaceWithSuggestion(suggestion.text);
-        
+
+        if (state.isCycling && state.cycleSnapshot) {
+            applyCycleSuggestion(suggestion.text);
+        } else {
+            replaceWithSuggestion(suggestion.text);
+        }
+
         if (suggestion.type === 'keyword') {
             state.currentNavPath.push(suggestion.text);
         } else {
@@ -568,17 +729,22 @@ Writing is becoming a process of selection, not composition.</textarea>
         }
 
         state.isCycling = false;
+        state.cycleSnapshot = null;
         state.selectedIndex = -1;
-        state.lastInsertedLength = 0;
-        
+
         writingArea.focus();
         renderSuggestions();
+        scheduleSave();
     }
 
     function cycleSuggestion(direction = 1) {
         if (state.activeSuggestions.length === 0) return;
 
         if (!state.isCycling) {
+            const value = writingArea.value;
+            const pos = writingArea.selectionStart;
+            const { start, end } = getTokenRange(value, pos);
+            state.cycleSnapshot = { value, tokenStart: start, tokenEnd: end };
             state.isCycling = true;
             state.selectedIndex = 0;
         } else {
@@ -586,59 +752,66 @@ Writing is becoming a process of selection, not composition.</textarea>
         }
 
         const suggestion = state.activeSuggestions[state.selectedIndex];
-        replaceWithSuggestion(suggestion.text);
+        applyCycleSuggestion(suggestion.text);
         renderSuggestions();
+        scheduleSave();
     }
 
+    // Replaces the word touching the live cursor. Never reassigns .value wholesale —
+    // setRangeText keeps surrounding newlines/indentation intact and preserves undo.
     function replaceWithSuggestion(text) {
-        const content = writingArea.value;
-        const start = writingArea.selectionStart;
-        
-        const baseContent = content.slice(0, start - state.lastInsertedLength);
-        const afterContent = content.slice(start);
-        
-        const words = baseContent.trim().split(/\s+/);
-        const lastInputWord = words[words.length - 1] || "";
+        const value = writingArea.value;
+        const pos = writingArea.selectionStart;
+        const { start, end } = getTokenRange(value, pos);
+        writingArea.setRangeText(text + ' ', start, end, 'end');
+    }
 
-        let newBefore;
-        if (lastInputWord && text.toLowerCase().includes(lastInputWord.toLowerCase())) {
-            words[words.length - 1] = text;
-            newBefore = words.join(' ');
-        } else {
-            newBefore = baseContent + (baseContent.endsWith(' ') || baseContent === "" ? "" : " ") + text;
-        }
-
-        const insertedText = newBefore.slice(baseContent.length);
-        writingArea.value = newBefore + ' ' + afterContent;
-        
-        state.lastInsertedLength = insertedText.length + 1; 
-        const newPos = newBefore.length + 1;
-        writingArea.setSelectionRange(newPos, newPos);
+    // Each cycle step re-applies from the frozen snapshot rather than from the live
+    // value, so the replaced range stays fixed no matter how long previous candidates were.
+    function applyCycleSuggestion(text) {
+        const snap = state.cycleSnapshot;
+        if (!snap) return;
+        writingArea.value = snap.value;
+        writingArea.setRangeText(text + ' ', snap.tokenStart, snap.tokenEnd, 'end');
     }
 
     function navigateBack(index) {
         state.currentNavPath = state.currentNavPath.slice(0, index + 1);
         state.selectedIndex = -1;
         state.isCycling = false;
+        state.cycleSnapshot = null;
         renderSuggestions();
     }
 
+    let suggestDebounceTimer = null;
     writingArea.addEventListener('input', (e) => {
-        if (!state.isCycling) {
-            state.selectedIndex = -1;
-            state.lastInsertedLength = 0;
-            state.currentNavPath = []; 
-            renderSuggestions();
-        }
+        if (e.isComposing || state.isComposing) return;
+        if (state.isCycling) return;
+
+        state.selectedIndex = -1;
+        state.currentNavPath = [];
+
+        clearTimeout(suggestDebounceTimer);
+        suggestDebounceTimer = setTimeout(renderSuggestions, 70);
+        scheduleSave();
     });
 
+    writingArea.addEventListener('compositionstart', () => { state.isComposing = true; });
+    writingArea.addEventListener('compositionend', () => { state.isComposing = false; });
+
     writingArea.addEventListener('keydown', (e) => {
-        // Tab Key: Cycle through suggestions
+        // Mid-composition (Hangul jamo etc.) keys must not drive suggestions or be
+        // clobbered by Tab/Enter before the IME has committed a character.
+        if (e.isComposing || state.isComposing) return;
+
+        // Tab Key: Cycle through suggestions. With nothing to cycle, let Tab move
+        // focus normally — otherwise keyboard-only users get trapped in the field.
         if (e.key === 'Tab') {
+            if (state.activeSuggestions.length === 0) return;
             e.preventDefault();
             cycleSuggestion(e.shiftKey ? -1 : 1);
         }
-        
+
         // Enter Key: Select current highlighted suggestion
         if (e.key === 'Enter' && state.isCycling) {
             e.preventDefault(); // Prevent newline
@@ -651,27 +824,29 @@ Writing is becoming a process of selection, not composition.</textarea>
         // Space Key: Confirm without drill-down (standard end of word)
         if (e.key === ' ' && state.isCycling) {
             state.isCycling = false;
+            state.cycleSnapshot = null;
             state.selectedIndex = -1;
-            state.lastInsertedLength = 0;
             renderSuggestions();
         }
 
-        // Escape: Cancel cycling and revert to base content
+        // Escape: Cancel cycling and revert verbatim to the pre-cycle snapshot
         if (e.key === 'Escape' && state.isCycling) {
             e.preventDefault();
-            const content = writingArea.value;
-            const start = writingArea.selectionStart;
-            const baseContent = content.slice(0, start - state.lastInsertedLength);
-            writingArea.value = baseContent + content.slice(start);
+            if (state.cycleSnapshot) {
+                writingArea.value = state.cycleSnapshot.value;
+                writingArea.setSelectionRange(state.cycleSnapshot.tokenEnd, state.cycleSnapshot.tokenEnd);
+            }
             state.isCycling = false;
+            state.cycleSnapshot = null;
             state.selectedIndex = -1;
-            state.lastInsertedLength = 0;
             renderSuggestions();
+            scheduleSave();
         }
     });
 
     applyBtn.addEventListener('click', () => {
         processDocument();
+        scheduleSave();
         const btn = applyBtn;
         btn.innerText = "Applied!";
         btn.style.backgroundColor = "#22c55e";
@@ -681,7 +856,36 @@ Writing is becoming a process of selection, not composition.</textarea>
         }, 1500);
     });
 
-    window.onload = processDocument;
+    baseDocInput.addEventListener('input', scheduleSave);
+
+    let saveDebounceTimer = null;
+    function scheduleSave() {
+        clearTimeout(saveDebounceTimer);
+        saveDebounceTimer = setTimeout(() => {
+            try {
+                localStorage.setItem(STORAGE_KEYS.writing, writingArea.value);
+                localStorage.setItem(STORAGE_KEYS.doc, baseDocInput.value);
+            } catch (err) {
+                // localStorage unavailable (private mode, quota, disabled) — skip persisting
+            }
+        }, 300);
+    }
+
+    function restoreFromStorage() {
+        try {
+            const savedWriting = localStorage.getItem(STORAGE_KEYS.writing);
+            const savedDoc = localStorage.getItem(STORAGE_KEYS.doc);
+            if (savedWriting !== null) writingArea.value = savedWriting;
+            if (savedDoc !== null) baseDocInput.value = savedDoc;
+        } catch (err) {
+            // localStorage unavailable — fall back to the built-in sample document
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        restoreFromStorage();
+        processDocument();
+    });
 </script>
 </body>
 </html>
