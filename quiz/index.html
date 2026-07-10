@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RETRO QUIZ FACTORY - v6.5.27 LOCAL_STORAGE_SYNC</title>
+    <title>RETRO QUIZ FACTORY - v6.6 SECURE_A11Y_SYNC</title>
     <!-- 폰트 로드: 영문 Press Start 2P / 한글 둥근모 -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css">
@@ -52,11 +52,16 @@
 
         @keyframes flash {
             0% { background: rgba(255, 255, 255, 0); }
-            20% { background: rgba(255, 255, 255, 0.4); }
+            20% { background: rgba(255, 255, 255, 0.15); }
             100% { background: rgba(255, 255, 255, 0); }
         }
         .reveal-flash-screen { position: fixed; inset: 0; z-index: 9999; pointer-events: none; }
         .active-flash { animation: flash 0.4s ease-out; }
+
+        /* 광과민성 대응: 저감 모드에서는 명멸/흔들림 애니메이션을 전부 무효화 */
+        @media (prefers-reduced-motion: reduce) {
+            .shake, .count-slam, .active-flash { animation: none !important; }
+        }
 
         /* Top Bar */
         .top-bar {
@@ -72,6 +77,15 @@
         }
         .brand-icon-btn svg { width: 18px; height: 18px; fill: #444; }
         .brand-icon-btn:hover svg { fill: var(--neon-magenta); }
+
+        /* 구운 페이지 헤더용 (BAKE 산출물이 이 스타일 블록을 통째로 복사해 사용) */
+        .header-title { font-family: var(--main-font); color: var(--neon-green); text-shadow: var(--green-glow); font-size: 14px; letter-spacing: 1px; }
+        .header-home {
+            width: 32px; height: 32px; border: 1px solid #333; display: flex; align-items: center; justify-content: center;
+            background: #000; text-decoration: none;
+        }
+        .header-home svg { width: 18px; height: 18px; fill: #444; }
+        .header-home:hover svg { fill: var(--neon-magenta); }
 
         .mode-switcher { display: flex; background: #111; padding: 4px; border: 1px solid #222; gap: 4px; }
         .mode-btn {
@@ -102,16 +116,16 @@
 
         .config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
         .config-row label { font-size: 8px; color: #444; flex: 1; padding-right: 10px; }
-        .config-row input, .config-row select { 
-            width: 230px; background: #000; border: 1px solid #333; color: var(--neon-blue); 
+        .config-row input, .config-row select {
+            width: 230px; background: #000; border: 1px solid #333; color: var(--neon-blue);
             font-family: var(--main-font); padding: 14px; font-size: 10px; text-align: right;
             outline: none; transition: 0.2s;
         }
 
         .add-cat-zone { display: flex; gap: 5px; margin-bottom: 20px; }
-        .add-cat-zone input { 
-            flex: 1; background: #000; border: 1px solid #222; color: var(--neon-blue); padding: 14px; 
-            font-family: var(--main-font); font-size: 10px; 
+        .add-cat-zone input {
+            flex: 1; background: #000; border: 1px solid #222; color: var(--neon-blue); padding: 14px;
+            font-family: var(--main-font); font-size: 10px;
         }
 
         .category-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -151,15 +165,15 @@
             overflow: hidden; margin-bottom: 10px;
         }
 
-        .quiz-countdown-display { 
-            font-family: var(--main-font); font-size: 80px; color: var(--neon-magenta); 
+        .quiz-countdown-display {
+            font-family: var(--main-font); font-size: 80px; color: var(--neon-magenta);
             text-shadow: var(--magenta-glow); display: flex; align-items: center; justify-content: center;
         }
         .quiz-countdown-display.warning { color: var(--neon-red); text-shadow: var(--red-glow); }
 
-        .quiz-image-box { 
-            width: 100%; max-height: 45vh; min-height: 250px; background: #000; border: 2px solid #222; 
-            display: flex; align-items: center; justify-content: center; 
+        .quiz-image-box {
+            width: 100%; max-height: 45vh; min-height: 250px; background: #000; border: 2px solid #222;
+            display: flex; align-items: center; justify-content: center;
             overflow: hidden; flex-shrink: 1; position: relative;
         }
         .quiz-image-box img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
@@ -174,15 +188,15 @@
             font-size: 8px; color: var(--neon-blue); opacity: 0.6;
         }
 
-        .quiz-answer-zone { 
+        .quiz-answer-zone {
             opacity: 0; transform: translateY(20px); transition: 0.4s cubic-bezier(0.23, 1, 0.32, 1);
             display: flex; border: 2px solid var(--neon-blue); background: #000; box-shadow: var(--blue-glow);
             min-height: 110px; flex-shrink: 0;
         }
         .quiz-answer-zone.reveal { opacity: 1; transform: translateY(0); }
-        
-        .ans-side-info { 
-            flex: 0 0 30%; background: var(--neon-blue); color: #000; padding: 15px; 
+
+        .ans-side-info {
+            flex: 0 0 30%; background: var(--neon-blue); color: #000; padding: 15px;
             display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
             font-family: var(--main-font);
         }
@@ -193,25 +207,36 @@
         /* Card System */
         .card { background: #0c0c0c; border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: 0.2s; position: relative; box-shadow: 6px 6px 0 var(--border-color); }
         .card:hover { border-color: var(--neon-green); box-shadow: 6px 6px 0 var(--neon-green); }
+        .card.small { grid-column: span 1; }
+        .card.medium { grid-column: span 1; }
         .card.large { grid-column: span 2; }
-        .card-img { height: 280px; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .card-img { background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .small .card-img { height: 180px; }
+        .medium .card-img { height: 280px; }
+        .large .card-img { height: 280px; }
         .card-img img { width: 100%; height: 100%; object-fit: cover; }
+        .img-remove-btn {
+            position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; padding: 0;
+            background: #000; border: 1px solid var(--neon-red); color: var(--neon-red);
+            cursor: pointer; font-family: var(--main-font); font-size: 12px; line-height: 1; z-index: 5;
+        }
+        .img-remove-btn:hover { box-shadow: var(--red-glow); }
         .card-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
         .card-name { font-size: 12px; color: var(--neon-blue); margin-bottom: 10px; }
         .card-desc { font-family: var(--kr-font); color: #777; font-size: 13px; line-height: 1.6; flex-grow: 1; }
-        .card-price { font-size: 20px; color: var(--neon-green); font-weight: bold; margin-top: 15px; }
+        .card-year { font-size: 20px; color: var(--neon-green); font-weight: bold; margin-top: 15px; }
         .card-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; margin-top: 15px; }
-        
+
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; align-items: center; justify-content: center; }
         .modal { background: #000; border: 2px solid var(--neon-green); padding: 40px; width: 500px; box-shadow: var(--green-glow); }
-        
+
         /* 확인 모달 스타일 */
         #confirmModal { border-color: var(--neon-red); box-shadow: var(--red-glow); text-align: center; }
 
         .toast { position: fixed; bottom: 20px; right: 20px; background: #000; border: 1px solid var(--neon-green); padding: 10px 20px; color: var(--neon-green); z-index: 2000; display: none; }
     </style>
 </head>
-<body id="mainBody">
+<body>
 
     <div id="flashOverlay" class="reveal-flash-screen"></div>
 
@@ -223,55 +248,56 @@
         </div>
 
         <div class="mode-switcher">
-            <button class="mode-btn active" id="mode-edit" onclick="app.setMode('edit')">EDIT</button>
-            <button class="mode-btn" id="mode-menu" onclick="app.setMode('menu')">MENU</button>
-            <button class="mode-btn" id="mode-quiz" onclick="app.setMode('quiz')">QUIZ</button>
+            <button class="mode-btn active" id="mode-edit">EDIT</button>
+            <button class="mode-btn" id="mode-menu">MENU</button>
+            <button class="mode-btn" id="mode-quiz">QUIZ</button>
         </div>
 
         <div class="controls">
-            <button class="btn" onclick="app.saveData()">SAVE</button>
-            <button class="btn bake" onclick="app.bake('quiz')">BAKE QUIZ</button>
+            <button class="btn" id="saveBtn">SAVE</button>
+            <button class="btn bake" id="bakeBtn">BAKE QUIZ</button>
         </div>
     </div>
 
     <div class="main-container">
         <aside class="sidebar">
             <span class="sidebar-label">GLOBAL_CONFIG</span>
-            <div class="config-row"><label>STORE_NAME</label><input type="text" id="storeNameInput" oninput="app.updateStoreName(this.value)"></div>
-            <div class="config-row"><label>SHOP_URL</label><input type="text" id="shopUrlInput" oninput="app.updateShopUrl(this.value)"></div>
+            <div class="config-row"><label>STORE_NAME</label><input type="text" id="storeNameInput"></div>
+            <div class="config-row"><label>SHOP_URL</label><input type="text" id="shopUrlInput"></div>
 
             <span class="sidebar-label">QUIZ_SETTINGS</span>
-            <div class="config-row"><label>COUNTDOWN_SEC</label><input type="number" id="quizCountdownSeconds" value="5" oninput="app.updateQuizSettings()"></div>
-            <div class="config-row"><label>REVEAL_SEC</label><input type="number" id="quizRevealSeconds" value="3" oninput="app.updateQuizSettings()"></div>
+            <div class="config-row"><label>COUNTDOWN_SEC</label><input type="number" id="quizCountdownSeconds" value="5" min="2"></div>
+            <div class="config-row"><label>REVEAL_SEC</label><input type="number" id="quizRevealSeconds" value="3" min="1"></div>
 
             <span class="sidebar-label">DATA_MANAGEMENT</span>
-            <button class="btn bake" style="width: 100%; margin-bottom: 20px;" onclick="app.openNewItemModal()">[+] ADD NEW ITEM</button>
+            <button class="btn bake" style="width: 100%; margin-bottom: 10px;" id="addNewItemBtn">[+] ADD NEW ITEM</button>
+            <button class="btn" style="width: 100%; margin-bottom: 20px;" id="loadSamplesBtn">LOAD SAMPLES</button>
 
             <span class="sidebar-label">CATEGORY_MANAGER</span>
             <div class="add-cat-zone">
                 <input type="text" id="catInput" placeholder="NEW CATEGORY...">
-                <button class="btn" onclick="app.addCategory()">ADD</button>
+                <button class="btn" id="addCatBtn">ADD</button>
             </div>
             <div id="catListContainer" class="category-tabs"></div>
         </aside>
 
         <section class="content-area">
             <div class="menu-grid" id="menuGrid"></div>
-            
+
             <div id="quizPlayer">
                 <div class="quiz-card" id="quizCard">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                         <div id="quizStatus" style="font-size: 8px; color: var(--neon-blue);">QUIZ</div>
                         <div id="quizIndex" style="font-size: 8px; color: #444;">STAGE 00/00</div>
                     </div>
-                    
+
                     <div class="quiz-countdown-wrapper">
-                        <div id="quizCountdownDisplay" class="quiz-countdown-display">05</div>
+                        <div id="quizCountdownDisplay" class="quiz-countdown-display" aria-live="polite">05</div>
                     </div>
-                    
+
                     <div id="quizMedia" class="quiz-image-box"></div>
-                    
-                    <div id="quizAnswerZone" class="quiz-answer-zone">
+
+                    <div id="quizAnswerZone" class="quiz-answer-zone" aria-live="polite">
                         <div class="ans-side-info">
                             <div id="ansName" class="ans-name">ITEM_NAME</div>
                             <div id="ansMeta" class="ans-meta">INFO_META</div>
@@ -280,9 +306,10 @@
                     </div>
                 </div>
                 <div style="margin-top: 15px; display: flex; gap: 10px; flex-shrink: 0;">
-                    <button class="btn" onclick="app.setMode('edit')">EXIT</button>
-                    <button class="btn" onclick="app.nextQuiz()">SKIP</button>
-                    <button id="soundToggleBtn" class="btn" onclick="app.toggleSound()">SOUND: OFF</button>
+                    <button class="btn" id="quizExitBtn">EXIT</button>
+                    <button class="btn" id="quizSkipBtn">SKIP</button>
+                    <button class="btn" id="pauseToggleBtn">PAUSE</button>
+                    <button id="soundToggleBtn" class="btn">SOUND: OFF</button>
                 </div>
             </div>
         </section>
@@ -296,15 +323,15 @@
             <div class="config-row"><label>CATEGORY</label><select id="editCat"></select></div>
             <div class="config-row"><label>HINT</label><input type="text" id="editHint" placeholder="이미지 없을 시 힌트"></div>
             <div class="config-row"><label>META (YEAR/MAKER)</label><input type="text" id="editMeta" placeholder="1986 / TAITO"></div>
-            <div class="config-row"><label>PRICE</label><input type="text" id="editPrice"></div>
+            <div class="config-row"><label>YEAR</label><input type="text" id="editYear" placeholder="1986"></div>
             <div class="config-row"><label>SIZE</label><select id="editSize"><option value="small">SMALL</option><option value="medium">MEDIUM</option><option value="large">LARGE</option></select></div>
             <div style="margin-top: 15px;">
                 <label style="font-size: 7px; color: #444; display: block; margin-bottom: 5px;">DESCRIPTION</label>
                 <textarea id="editDesc" rows="3" style="width: 100%; background: #000; border: 1px solid #222; color: #fff; font-family: var(--kr-font); padding: 10px; outline: none;"></textarea>
             </div>
             <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn bake" onclick="app.saveEdit()">COMMIT</button>
-                <button class="btn" onclick="app.closeModal()">CANCEL</button>
+                <button class="btn bake" id="saveEditBtn">COMMIT</button>
+                <button class="btn" id="cancelEditBtn">CANCEL</button>
             </div>
         </div>
     </div>
@@ -315,8 +342,8 @@
             <div id="confirmLabel" class="sidebar-label" style="color: var(--neon-red); border-color: var(--neon-red);">CONFIRM_DELETE</div>
             <div id="confirmMsg" style="font-size: 10px; color: #ccc; margin: 30px 0; font-family: var(--kr-font);">정말 삭제하시겠습니까?</div>
             <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn" onclick="app.executeDelete()" style="color: var(--neon-red); border-color: var(--neon-red);">DELETE</button>
-                <button class="btn" onclick="app.closeConfirm()">CANCEL</button>
+                <button class="btn" id="confirmYesBtn" style="color: var(--neon-red); border-color: var(--neon-red);">DELETE</button>
+                <button class="btn" id="confirmNoBtn">CANCEL</button>
             </div>
         </div>
     </div>
@@ -327,14 +354,39 @@
     <script type="module">
         const LS_KEY = 'RETRO_QUIZ_FACTORY_DATA_v6';
 
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        function isDataImage(str) {
+            return typeof str === 'string' && /^data:image\//i.test(str);
+        }
+
+        function validShopUrl(url) {
+            const s = typeof url === 'string' ? url.trim() : '';
+            return /^https?:\/\//i.test(s) ? s : '#';
+        }
+
+        function slugifyFilename(str) {
+            const s = String(str ?? '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            return s || 'retro-quiz';
+        }
+
+        function cloneItems(list) {
+            if (typeof structuredClone === 'function') return structuredClone(list);
+            return JSON.parse(JSON.stringify(list));
+        }
+
         const SAMPLE_ITEMS = [
-            { id: 'S1', name: "Bubble Bobble", cat: "GAME", price: "1986", desc: "버블로 적을 가두고 터뜨리는 협동 액션 게임. 전설적인 스테이지 배경음악이 유명합니다.", hint: "방울을 쏘는 공룡 형제", meta: "1986 / TAITO", size: "large" },
-            { id: 'S2', name: "Galaga", cat: "GAME", price: "1981", desc: "남코의 전설적인 고정 화면형 슈팅 게임. 적의 트랙터 빔에 잡힌 기체를 되찾아 듀얼 파이터로 변신!", hint: "적에게 잡혀가면 2대가 됨", meta: "1981 / NAMCO", size: "medium" }
+            { id: 'S1', name: "Bubble Bobble", cat: "GAME", year: "1986", desc: "버블로 적을 가두고 터뜨리는 협동 액션 게임. 전설적인 스테이지 배경음악이 유명합니다.", hint: "방울을 쏘는 공룡 형제", meta: "1986 / TAITO", size: "large", image: "" },
+            { id: 'S2', name: "Galaga", cat: "GAME", year: "1981", desc: "남코의 전설적인 고정 화면형 슈팅 게임. 적의 트랙터 빔에 잡힌 기체를 되찾아 듀얼 파이터로 변신!", hint: "적에게 잡혀가면 2대가 됨", meta: "1981 / NAMCO", size: "medium", image: "" }
         ];
 
         class ArcadeSound {
-            constructor() { 
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 this.enabled = false;
             }
             playTone(freq, dur, type = 'square', vol = 0.1) {
@@ -345,10 +397,11 @@
                 osc.connect(gain); gain.connect(this.ctx.destination);
                 osc.start(); osc.stop(this.ctx.currentTime + dur);
             }
-            playTick() { if(this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(880, 0.1, 'square', 0.05); }
-            playWarning() { if(this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(1760, 0.1, 'square', 0.05); }
+            playTick() { if (!this.enabled) return; if (this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(880, 0.1, 'square', 0.05); }
+            playWarning() { if (!this.enabled) return; if (this.ctx.state === 'suspended') this.ctx.resume(); this.playTone(1760, 0.1, 'square', 0.05); }
             playReveal() {
-                if(this.ctx.state === 'suspended') this.ctx.resume();
+                if (!this.enabled) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
                 this.playTone(523.25, 0.1); setTimeout(() => this.playTone(659.25, 0.1), 100); setTimeout(() => this.playTone(783.99, 0.3), 200);
             }
         }
@@ -356,88 +409,211 @@
         class RetroMenuApp {
             constructor() {
                 this.state = {
-                    currentMode: 'edit', 
-                    storeName: "RETRO GAME FACTORY", 
+                    currentMode: 'edit',
+                    storeName: "RETRO GAME FACTORY",
                     shopUrl: "https://kitscript.com/game/quiz/",
-                    items: [], 
-                    categories: ["GAME", "SNACK", "DRINK"], 
-                    quizSettings: { countdown: 5, reveal: 3 }, 
+                    items: [],
+                    categories: ["GAME", "SNACK", "DRINK"],
+                    quizSettings: { countdown: 5, reveal: 3 },
                     filter: 'ALL'
                 };
-                this.quizState = { activeIndex: 0, shuffledItems: [], timerId: null, intervalId: null };
+                this.quizState = {
+                    activeIndex: 0, shuffledItems: [], timerId: null, intervalId: null,
+                    paused: false, phase: null, count: 0, revealDeadline: 0, revealRemainingMs: 0
+                };
+                this.editingId = null;
                 this.sound = new ArcadeSound();
-                this.pendingDelete = { id: null, type: null };
+                this._persistTimer = null;
+                this._toastTimer = null;
                 window.app = this;
+                this.bindEvents();
                 this.init();
             }
 
+            bindEvents() {
+                document.getElementById('mode-edit').addEventListener('click', () => this.setMode('edit'));
+                document.getElementById('mode-menu').addEventListener('click', () => this.setMode('menu'));
+                document.getElementById('mode-quiz').addEventListener('click', () => this.setMode('quiz'));
+
+                document.getElementById('saveBtn').addEventListener('click', () => this.manualSave());
+                document.getElementById('bakeBtn').addEventListener('click', () => this.bake('quiz'));
+
+                document.getElementById('storeNameInput').addEventListener('input', (e) => this.updateStoreName(e.target.value));
+                document.getElementById('shopUrlInput').addEventListener('input', (e) => this.updateShopUrl(e.target.value));
+                document.getElementById('quizCountdownSeconds').addEventListener('input', () => this.updateQuizSettings());
+                document.getElementById('quizRevealSeconds').addEventListener('input', () => this.updateQuizSettings());
+
+                document.getElementById('addNewItemBtn').addEventListener('click', () => this.openNewItemModal());
+                document.getElementById('loadSamplesBtn').addEventListener('click', () => this.loadSamples());
+
+                document.getElementById('addCatBtn').addEventListener('click', () => this.addCategory());
+                document.getElementById('catInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); this.addCategory(); }
+                });
+
+                document.getElementById('catListContainer').addEventListener('click', (e) => {
+                    const el = e.target.closest('[data-action]');
+                    if (!el) return;
+                    const action = el.dataset.action; const cat = el.dataset.cat;
+                    if (action === 'filter') this.setFilter(cat);
+                    else if (action === 'delete') this.delCat(cat);
+                });
+
+                document.getElementById('menuGrid').addEventListener('click', (e) => {
+                    const el = e.target.closest('[data-action]');
+                    if (!el) return;
+                    const id = el.dataset.id; const action = el.dataset.action;
+                    if (action === 'edit') this.openEdit(id);
+                    else if (action === 'img') this.pickImg(id);
+                    else if (action === 'delete') this.deleteItem(id);
+                    else if (action === 'removeimg') this.removeImage(id);
+                });
+
+                document.getElementById('saveEditBtn').addEventListener('click', () => this.saveEdit());
+                document.getElementById('cancelEditBtn').addEventListener('click', () => this.closeModal());
+
+                document.getElementById('quizExitBtn').addEventListener('click', () => this.setMode('edit'));
+                document.getElementById('quizSkipBtn').addEventListener('click', () => this.nextQuiz());
+                document.getElementById('pauseToggleBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('soundToggleBtn').addEventListener('click', () => this.toggleSound());
+
+                document.addEventListener('keydown', (e) => {
+                    const tag = (document.activeElement && document.activeElement.tagName) || '';
+                    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+                    if (this.state.currentMode !== 'quiz') return;
+                    if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); this.nextQuiz(); }
+                    else if (e.key === 'p' || e.key === 'P') { this.togglePause(); }
+                    else if (e.key === 'Escape') { this.setMode('edit'); }
+                    else if (e.key === 's' || e.key === 'S') { this.toggleSound(); }
+                });
+            }
+
+            migrateItem(raw) {
+                const item = { ...raw };
+                if (item.year === undefined && item.price !== undefined) item.year = item.price;
+                if (!item.id) item.id = crypto.randomUUID();
+                return item;
+            }
+
             init() {
-                // LocalStorage 로드
                 const localData = localStorage.getItem(LS_KEY);
                 if (localData) {
                     try {
                         const parsed = JSON.parse(localData);
-                        this.state = { ...this.state, ...parsed };
+                        if (parsed && typeof parsed === 'object') {
+                            if (typeof parsed.storeName === 'string') this.state.storeName = parsed.storeName;
+                            if (typeof parsed.shopUrl === 'string') this.state.shopUrl = parsed.shopUrl;
+                            if (Array.isArray(parsed.categories)) this.state.categories = parsed.categories.map(c => String(c));
+                            if (parsed.quizSettings && typeof parsed.quizSettings === 'object') {
+                                this.state.quizSettings = { ...this.state.quizSettings, ...parsed.quizSettings };
+                            }
+                            if (Array.isArray(parsed.items)) this.state.items = parsed.items.map(i => this.migrateItem(i));
+                        }
                     } catch (e) {
                         console.error("Data Load Error", e);
                     }
-                }
-
-                if (this.state.items.length === 0) {
-                    this.state.items = [...SAMPLE_ITEMS];
                 }
 
                 this.renderAll();
                 this.showToast("LOCAL_SYNC_READY");
             }
 
+            persist() {
+                clearTimeout(this._persistTimer);
+                this._persistTimer = setTimeout(() => this.saveData(), 300);
+            }
+
+            manualSave() {
+                clearTimeout(this._persistTimer);
+                this.saveData();
+            }
+
             saveData() {
-                // LocalStorage 저장
-                localStorage.setItem(LS_KEY, JSON.stringify({
-                    storeName: this.state.storeName,
-                    shopUrl: this.state.shopUrl,
-                    categories: this.state.categories,
-                    quizSettings: this.state.quizSettings,
-                    items: this.state.items
-                }));
-                this.showToast("DATA_SAVED_LOCALLY");
+                try {
+                    localStorage.setItem(LS_KEY, JSON.stringify({
+                        storeName: this.state.storeName,
+                        shopUrl: this.state.shopUrl,
+                        categories: this.state.categories,
+                        quizSettings: this.state.quizSettings,
+                        items: this.state.items
+                    }));
+                    this.showToast("DATA_SAVED_LOCALLY");
+                } catch (e) {
+                    console.error(e);
+                    if (e && e.name === 'QuotaExceededError') this.showToast("SAVE_FAIL: STORAGE_QUOTA_EXCEEDED");
+                    else this.showToast("SAVE_FAIL: LOCAL_ERROR");
+                }
+            }
+
+            loadSamples() {
+                const fresh = cloneItems(SAMPLE_ITEMS).map(i => ({ ...i, id: crypto.randomUUID() }));
+                this.state.items = this.state.items.concat(fresh);
+                this.renderAll();
+                this.persist();
+                this.showToast("SAMPLES_LOADED");
             }
 
             deleteItem(id) {
-                this.pendingDelete = { id: id, type: 'ITEM' };
-                document.getElementById('confirmLabel').innerText = "CONFIRM_ITEM_DELETE";
-                document.getElementById('confirmMsg').innerText = "해당 아이템을 정말 삭제하시겠습니까?";
-                document.getElementById('confirmOverlay').style.display = 'flex';
+                const item = this.state.items.find(i => i.id === id);
+                const label = item ? item.name : 'ITEM';
+                this.confirmDialog(`[${label}] 아이템을 정말 삭제하시겠습니까?`, "CONFIRM_ITEM_DELETE").then(ok => {
+                    if (!ok) return;
+                    this.state.items = this.state.items.filter(i => i.id !== id);
+                    this.renderGrid();
+                    this.persist();
+                    this.showToast("ITEM_DELETED");
+                });
             }
 
             delCat(c) {
-                this.pendingDelete = { id: c, type: 'CATEGORY' };
-                document.getElementById('confirmLabel').innerText = "CONFIRM_CAT_DELETE";
-                document.getElementById('confirmMsg').innerText = `[${c}] 카테고리를 삭제하시겠습니까?`;
-                document.getElementById('confirmOverlay').style.display = 'flex';
-            }
-
-            executeDelete() {
-                const { id, type } = this.pendingDelete;
-                if (!id) return;
-
-                if (type === 'ITEM') {
-                    this.state.items = this.state.items.filter(i => i.id !== id);
-                    this.renderGrid();
-                    this.showToast("ITEM_DELETED");
-                } else if (type === 'CATEGORY') {
-                    this.state.categories = this.state.categories.filter(x => x !== id);
-                    this.renderCategories();
-                    this.showToast("CATEGORY_REMOVED");
+                const remaining = this.state.categories.filter(x => x !== c);
+                const targetCat = remaining[0] || null;
+                const affected = this.state.items.filter(i => i.cat === c).length;
+                let msg = `[${c}] 카테고리를 삭제하시겠습니까?`;
+                if (affected > 0) {
+                    msg = targetCat
+                        ? `[${c}] 삭제 시 ${affected}개 아이템이 [${targetCat}]로 이동합니다.`
+                        : `[${c}] 삭제 시 ${affected}개 아이템이 미분류가 됩니다.`;
                 }
-                
-                this.saveData();
-                this.closeConfirm();
+                this.confirmDialog(msg, "CONFIRM_CAT_DELETE").then(ok => {
+                    if (!ok) return;
+                    this.state.categories = remaining;
+                    this.state.items = this.state.items.map(i => i.cat === c ? { ...i, cat: targetCat || '' } : i);
+                    if (this.state.filter === c) this.state.filter = 'ALL';
+                    this.renderAll();
+                    this.persist();
+                    this.showToast("CATEGORY_REMOVED");
+                });
             }
 
-            closeConfirm() {
-                this.pendingDelete = { id: null, type: null };
-                document.getElementById('confirmOverlay').style.display = 'none';
+            confirmDialog(message, label = "CONFIRM_ACTION") {
+                return new Promise(resolve => {
+                    const overlay = document.getElementById('confirmOverlay');
+                    document.getElementById('confirmLabel').textContent = label;
+                    document.getElementById('confirmMsg').textContent = message;
+                    overlay.style.display = 'flex';
+
+                    const yesBtn = document.getElementById('confirmYesBtn');
+                    const noBtn = document.getElementById('confirmNoBtn');
+
+                    const cleanup = (result) => {
+                        overlay.style.display = 'none';
+                        yesBtn.removeEventListener('click', onYes);
+                        noBtn.removeEventListener('click', onNo);
+                        overlay.removeEventListener('click', onOverlayClick);
+                        document.removeEventListener('keydown', onKey);
+                        resolve(result);
+                    };
+                    const onYes = () => cleanup(true);
+                    const onNo = () => cleanup(false);
+                    const onOverlayClick = (e) => { if (e.target === overlay) cleanup(false); };
+                    const onKey = (e) => { if (e.key === 'Escape') cleanup(false); };
+
+                    yesBtn.addEventListener('click', onYes);
+                    noBtn.addEventListener('click', onNo);
+                    overlay.addEventListener('click', onOverlayClick);
+                    document.addEventListener('keydown', onKey);
+                });
             }
 
             setMode(mode) {
@@ -445,23 +621,44 @@
                 document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
                 const btn = document.getElementById('mode-'+mode); if (btn) btn.classList.add('active');
                 const qp = document.getElementById('quizPlayer'); const mg = document.getElementById('menuGrid');
-                if (mode === 'quiz') { if (qp) qp.style.display = 'flex'; if (mg) mg.style.display = 'none'; this.startQuiz(); }
-                else { if (qp) qp.style.display = 'none'; if (mg) mg.style.display = 'grid'; this.stopQuiz(); this.renderGrid(); }
+                if (mode === 'quiz') {
+                    if (qp) qp.style.display = 'flex'; if (mg) mg.style.display = 'none';
+                    this.startQuiz();
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                } else {
+                    if (qp) qp.style.display = 'none'; if (mg) mg.style.display = 'grid';
+                    this.stopQuiz(); this.renderGrid();
+                    if (document.fullscreenElement && document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => {});
+                    }
+                }
             }
 
             toggleSound() {
                 this.sound.enabled = !this.sound.enabled;
                 const btn = document.getElementById('soundToggleBtn');
                 if (btn) {
-                    btn.innerText = `SOUND: ${this.sound.enabled ? "ON" : "OFF"}`;
+                    btn.textContent = `SOUND: ${this.sound.enabled ? "ON" : "OFF"}`;
                     if (this.sound.enabled) btn.classList.add('active-blue');
                     else btn.classList.remove('active-blue');
                 }
             }
 
+            detectAlpha(ctx, w, h) {
+                try {
+                    const data = ctx.getImageData(0, 0, w, h).data;
+                    for (let i = 3; i < data.length; i += 4 * 37) {
+                        if (data[i] < 255) return true;
+                    }
+                    return false;
+                } catch (e) { return false; }
+            }
+
             async compressImage(base64Str, maxWidth = 800, maxHeight = 800) {
-                return new Promise((resolve) => {
-                    const img = new Image(); img.src = base64Str;
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = img.width; let height = img.height;
@@ -469,40 +666,97 @@
                         else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        const hasAlpha = this.detectAlpha(ctx, width, height);
+                        const isSmall = img.width <= 512 && img.height <= 512;
+                        if (hasAlpha || isSmall) resolve(canvas.toDataURL('image/png'));
+                        else resolve(canvas.toDataURL('image/jpeg', 0.7));
                     };
+                    img.onerror = () => reject(new Error('IMAGE_LOAD_FAILED'));
+                    img.src = base64Str;
                 });
             }
 
-            startQuiz() { this.stopQuiz(); const source = this.state.items.length > 0 ? this.state.items : SAMPLE_ITEMS; this.quizState.shuffledItems = [...source].sort(() => Math.random() - 0.5); this.quizState.activeIndex = 0; this.runLoop(); }
-            stopQuiz() { if (this.quizState.timerId) clearTimeout(this.quizState.timerId); if (this.quizState.intervalId) clearInterval(this.quizState.intervalId); }
-            runLoop() { if (this.quizState.activeIndex >= this.quizState.shuffledItems.length) { this.startQuiz(); return; } this.renderQuizSlide(); }
+            startQuiz() {
+                this.stopQuiz();
+                if (this.state.items.length === 0) {
+                    this.showToast("아이템을 먼저 추가하세요");
+                    this.setMode('edit');
+                    return;
+                }
+                this.quizState.shuffledItems = [...this.state.items].sort(() => Math.random() - 0.5);
+                this.quizState.activeIndex = 0;
+                this.quizState.paused = false;
+                const btn = document.getElementById('pauseToggleBtn'); if (btn) btn.textContent = 'PAUSE';
+                this.runLoop();
+            }
+
+            stopQuiz() {
+                if (this.quizState.timerId) clearTimeout(this.quizState.timerId);
+                if (this.quizState.intervalId) clearInterval(this.quizState.intervalId);
+                this.quizState.phase = null;
+            }
+
+            runLoop() {
+                if (this.quizState.activeIndex >= this.quizState.shuffledItems.length) { this.startQuiz(); return; }
+                this.renderQuizSlide();
+            }
+
+            renderMedia(container, item) {
+                container.replaceChildren();
+                if (item.image && isDataImage(item.image)) {
+                    const img = document.createElement('img');
+                    img.src = item.image;
+                    container.appendChild(img);
+                } else {
+                    const label = document.createElement('div');
+                    label.className = 'big-hint-label';
+                    label.textContent = 'MISSION_HINT';
+                    const hint = document.createElement('div');
+                    hint.className = 'big-hint-text';
+                    hint.textContent = item.hint || 'NO HINT PROVIDED';
+                    container.appendChild(label);
+                    container.appendChild(hint);
+                }
+            }
 
             renderQuizSlide() {
                 const item = this.quizState.shuffledItems[this.quizState.activeIndex];
-                const countDisp = document.getElementById('quizCountdownDisplay');
                 const ansZone = document.getElementById('quizAnswerZone');
                 const media = document.getElementById('quizMedia');
                 const idxDisp = document.getElementById('quizIndex');
+                const statusDisp = document.getElementById('quizStatus');
                 const card = document.getElementById('quizCard');
                 if (ansZone) ansZone.classList.remove('reveal');
-                card.classList.remove('shake');
+                if (card) card.classList.remove('shake');
                 const currentStageStr = (this.quizState.activeIndex + 1).toString().padStart(2, '0');
                 const totalStagesStr = this.quizState.shuffledItems.length.toString().padStart(2, '0');
-                if (idxDisp) idxDisp.innerText = `STAGE ${currentStageStr}/${totalStagesStr}`;
-                if (media) { 
-                    if (item.image) { media.innerHTML = `<img src="${item.image}">`; } 
-                    else { media.innerHTML = `<div class="big-hint-label">MISSION_HINT</div><div class="big-hint-text">${item.hint || 'NO HINT PROVIDED'}</div>`; }
-                }
-                let count = parseInt(this.state.quizSettings.countdown) || 5; this.updateCountdownUI(count);
-                this.quizState.intervalId = setInterval(() => { count--; this.updateCountdownUI(count); if (count <= 0) { clearInterval(this.quizState.intervalId); this.revealAnswer(item); } }, 1000);
+                if (idxDisp) idxDisp.textContent = `STAGE ${currentStageStr}/${totalStagesStr}`;
+                if (statusDisp) statusDisp.textContent = item.cat || 'QUIZ';
+                if (media) this.renderMedia(media, item);
+
+                this.quizState.phase = 'countdown';
+                this.quizState.count = Math.max(2, Number(this.state.quizSettings.countdown) || 5);
+                this.updateCountdownUI(this.quizState.count);
+                if (!this.quizState.paused) this.startCountdownInterval();
+            }
+
+            startCountdownInterval() {
+                clearInterval(this.quizState.intervalId);
+                this.quizState.intervalId = setInterval(() => {
+                    this.quizState.count--;
+                    this.updateCountdownUI(this.quizState.count);
+                    if (this.quizState.count <= 0) {
+                        clearInterval(this.quizState.intervalId);
+                        this.revealAnswer(this.quizState.shuffledItems[this.quizState.activeIndex]);
+                    }
+                }, 1000);
             }
 
             updateCountdownUI(count) {
                 const el = document.getElementById('quizCountdownDisplay'); if (!el) return;
-                el.innerText = count.toString().padStart(2, '0');
+                el.textContent = count.toString().padStart(2, '0');
                 el.classList.remove('count-slam'); void el.offsetWidth; el.classList.add('count-slam');
-                if (count <= 3 && count > 0) { el.classList.add('warning'); this.sound.playWarning(); } 
+                if (count <= 3 && count > 0) { el.classList.add('warning'); this.sound.playWarning(); }
                 else { el.classList.remove('warning'); this.sound.playTick(); }
             }
 
@@ -510,81 +764,288 @@
                 const ansZone = document.getElementById('quizAnswerZone');
                 const card = document.getElementById('quizCard');
                 const flash = document.getElementById('flashOverlay');
-                document.getElementById('ansName').innerText = item.name.toUpperCase();
-                document.getElementById('ansMeta').innerText = item.meta || "UNKNOWN / 19XX";
-                document.getElementById('ansDesc').innerText = item.desc;
+                document.getElementById('ansName').textContent = (item && typeof item.name === 'string' ? item.name : '').toUpperCase();
+                document.getElementById('ansMeta').textContent = (item && item.meta) || "UNKNOWN / 19XX";
+                document.getElementById('ansDesc').textContent = (item && item.desc) || '';
                 flash.classList.add('active-flash'); card.classList.add('shake');
                 setTimeout(() => flash.classList.remove('active-flash'), 400);
                 if (ansZone) ansZone.classList.add('reveal');
                 this.sound.playReveal();
-                this.quizState.timerId = setTimeout(() => { this.quizState.activeIndex++; this.runLoop(); }, (parseInt(this.state.quizSettings.reveal) || 3) * 1000);
+                this.quizState.phase = 'reveal';
+                if (!this.quizState.paused) {
+                    this.scheduleRevealAdvance(Math.max(1, Number(this.state.quizSettings.reveal) || 3) * 1000);
+                }
             }
 
-            nextQuiz() { this.stopQuiz(); this.quizState.activeIndex++; this.runLoop(); }
+            scheduleRevealAdvance(ms) {
+                clearTimeout(this.quizState.timerId);
+                this.quizState.revealDeadline = Date.now() + ms;
+                this.quizState.timerId = setTimeout(() => {
+                    this.quizState.activeIndex++;
+                    this.runLoop();
+                }, ms);
+            }
 
-            renderAll() { this.renderGrid(); this.renderCategories(); document.getElementById('storeNameInput').value = this.state.storeName; document.getElementById('shopUrlInput').value = this.state.shopUrl; document.getElementById('quizCountdownSeconds').value = this.state.quizSettings.countdown; document.getElementById('quizRevealSeconds').value = this.state.quizSettings.reveal; }
+            togglePause() {
+                if (!this.quizState.shuffledItems.length) return;
+                this.quizState.paused = !this.quizState.paused;
+                const btn = document.getElementById('pauseToggleBtn');
+                if (btn) btn.textContent = this.quizState.paused ? 'RESUME' : 'PAUSE';
+                if (this.quizState.paused) {
+                    if (this.quizState.phase === 'countdown') clearInterval(this.quizState.intervalId);
+                    else if (this.quizState.phase === 'reveal') {
+                        clearTimeout(this.quizState.timerId);
+                        this.quizState.revealRemainingMs = Math.max(0, this.quizState.revealDeadline - Date.now());
+                    }
+                    this.showToast("PAUSED");
+                } else {
+                    if (this.quizState.phase === 'countdown') this.startCountdownInterval();
+                    else if (this.quizState.phase === 'reveal') this.scheduleRevealAdvance(this.quizState.revealRemainingMs);
+                    this.showToast("RESUMED");
+                }
+            }
+
+            nextQuiz() {
+                this.stopQuiz();
+                this.quizState.paused = false;
+                const btn = document.getElementById('pauseToggleBtn'); if (btn) btn.textContent = 'PAUSE';
+                this.quizState.activeIndex++;
+                this.runLoop();
+            }
+
+            renderAll() {
+                this.renderGrid(); this.renderCategories();
+                document.getElementById('storeNameInput').value = this.state.storeName;
+                document.getElementById('shopUrlInput').value = this.state.shopUrl;
+                document.getElementById('quizCountdownSeconds').value = this.state.quizSettings.countdown;
+                document.getElementById('quizRevealSeconds').value = this.state.quizSettings.reveal;
+            }
 
             renderGrid() {
                 const grid = document.getElementById('menuGrid'); if (!grid) return;
                 const items = this.state.items; const filtered = this.state.filter === 'ALL' ? items : items.filter(i => i.cat === this.state.filter);
-                grid.innerHTML = filtered.map(item => `<div class="card ${item.size || 'medium'}"><div class="card-img">${item.image ? `<img src="${item.image}">` : '<div style="color:#222;font-size:10px;">NO_IMAGE</div>'}</div><div class="card-content"><div style="font-size: 8px; color: var(--neon-magenta); margin-bottom: 5px;">${item.cat}</div><div class="card-name">${item.name}</div><div class="card-desc">${item.desc}</div><div class="card-price">₩ ${item.price}</div>${this.state.currentMode === 'edit' ? `<div class="card-actions"><button class="btn" onclick="app.openEdit('${item.id}')">EDIT</button><button class="btn" onclick="app.pickImg('${item.id}')">IMG</button><button class="btn" onclick="app.deleteItem('${item.id}')" style="color:var(--neon-red)">DEL</button></div>` : ''}</div></div>`).join('');
+                grid.replaceChildren();
+
+                filtered.forEach(item => {
+                    const sizeClass = ['small', 'medium', 'large'].includes(item.size) ? item.size : 'medium';
+                    const card = document.createElement('div');
+                    card.className = `card ${sizeClass}`;
+                    card.dataset.id = item.id;
+
+                    const imgWrap = document.createElement('div');
+                    imgWrap.className = 'card-img';
+                    if (item.image && isDataImage(item.image)) {
+                        const img = document.createElement('img');
+                        img.src = item.image;
+                        imgWrap.appendChild(img);
+                        if (this.state.currentMode === 'edit') {
+                            const rmBtn = document.createElement('button');
+                            rmBtn.type = 'button'; rmBtn.className = 'img-remove-btn'; rmBtn.textContent = '×'; rmBtn.title = 'REMOVE IMAGE';
+                            rmBtn.dataset.action = 'removeimg'; rmBtn.dataset.id = item.id;
+                            imgWrap.appendChild(rmBtn);
+                        }
+                    } else {
+                        const placeholder = document.createElement('div');
+                        placeholder.style.cssText = 'color:#222;font-size:10px;';
+                        placeholder.textContent = 'NO_IMAGE';
+                        imgWrap.appendChild(placeholder);
+                    }
+                    card.appendChild(imgWrap);
+
+                    const content = document.createElement('div');
+                    content.className = 'card-content';
+
+                    const catTag = document.createElement('div');
+                    catTag.style.cssText = 'font-size: 8px; color: var(--neon-magenta); margin-bottom: 5px;';
+                    catTag.textContent = item.cat || 'UNCATEGORIZED';
+                    content.appendChild(catTag);
+
+                    const name = document.createElement('div');
+                    name.className = 'card-name';
+                    name.textContent = item.name || '';
+                    content.appendChild(name);
+
+                    const desc = document.createElement('div');
+                    desc.className = 'card-desc';
+                    desc.textContent = item.desc || '';
+                    content.appendChild(desc);
+
+                    const year = document.createElement('div');
+                    year.className = 'card-year';
+                    year.textContent = item.year || '';
+                    content.appendChild(year);
+
+                    if (this.state.currentMode === 'edit') {
+                        const actions = document.createElement('div');
+                        actions.className = 'card-actions';
+                        [['edit', 'EDIT'], ['img', 'IMG'], ['delete', 'DEL']].forEach(([action, label]) => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button'; btn.className = 'btn'; btn.textContent = label;
+                            btn.dataset.action = action; btn.dataset.id = item.id;
+                            if (action === 'delete') btn.style.color = 'var(--neon-red)';
+                            actions.appendChild(btn);
+                        });
+                        content.appendChild(actions);
+                    }
+
+                    card.appendChild(content);
+                    grid.appendChild(card);
+                });
             }
 
             renderCategories() {
                 const container = document.getElementById('catListContainer'); if (!container) return;
-                container.innerHTML = `<button class="cat-tab ${this.state.filter === 'ALL' ? 'active' : ''}" onclick="app.setFilter('ALL')">ALL</button>` + this.state.categories.map(c => `<div class="cat-tab-wrapper"><button class="cat-tab ${this.state.filter === c ? 'active' : ''}" onclick="app.setFilter('${c}')">${c}</button><span class="cat-tool-btn" onclick="app.delCat('${c}')">X</span></div>`).join('');
+                container.replaceChildren();
+
+                const allBtn = document.createElement('button');
+                allBtn.type = 'button'; allBtn.className = 'cat-tab' + (this.state.filter === 'ALL' ? ' active' : '');
+                allBtn.textContent = 'ALL'; allBtn.dataset.action = 'filter'; allBtn.dataset.cat = 'ALL';
+                container.appendChild(allBtn);
+
+                this.state.categories.forEach(c => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'cat-tab-wrapper';
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button'; btn.className = 'cat-tab' + (this.state.filter === c ? ' active' : '');
+                    btn.textContent = c; btn.dataset.action = 'filter'; btn.dataset.cat = c;
+                    wrapper.appendChild(btn);
+
+                    const delBtn = document.createElement('span');
+                    delBtn.className = 'cat-tool-btn'; delBtn.textContent = 'X';
+                    delBtn.dataset.action = 'delete'; delBtn.dataset.cat = c;
+                    wrapper.appendChild(delBtn);
+
+                    container.appendChild(wrapper);
+                });
             }
 
             openNewItemModal() { this.editingId = null; this.setupModal(); const modal = document.getElementById('modalOverlay'); if (modal) modal.style.display = 'flex'; }
             openEdit(id) { const item = this.state.items.find(i => i.id === id); if (!item) return; this.editingId = id; this.setupModal(item); const modal = document.getElementById('modalOverlay'); if (modal) modal.style.display = 'flex'; }
+
             setupModal(item = null) {
-                const catSel = document.getElementById('editCat'); if (catSel) catSel.innerHTML = this.state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
-                document.getElementById('editName').value = item ? item.name : ""; document.getElementById('editCat').value = item ? item.cat : this.state.categories[0];
-                document.getElementById('editHint').value = item ? (item.hint || "") : ""; document.getElementById('editMeta').value = item ? (item.meta || "") : "";
-                document.getElementById('editPrice').value = item ? item.price : ""; document.getElementById('editDesc').value = item ? item.desc : "";
+                const catSel = document.getElementById('editCat');
+                if (catSel) {
+                    catSel.replaceChildren();
+                    this.state.categories.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c; opt.textContent = c;
+                        catSel.appendChild(opt);
+                    });
+                }
+                document.getElementById('editName').value = item ? item.name : "";
+                document.getElementById('editCat').value = item ? item.cat : this.state.categories[0];
+                document.getElementById('editHint').value = item ? (item.hint || "") : "";
+                document.getElementById('editMeta').value = item ? (item.meta || "") : "";
+                document.getElementById('editYear').value = item ? (item.year || "") : "";
+                document.getElementById('editDesc').value = item ? item.desc : "";
                 document.getElementById('editSize').value = item ? item.size : "medium";
             }
 
             saveEdit() {
-                const data = { name: document.getElementById('editName').value, cat: document.getElementById('editCat').value, hint: document.getElementById('editHint').value, meta: document.getElementById('editMeta').value, price: document.getElementById('editPrice').value, desc: document.getElementById('editDesc').value, size: document.getElementById('editSize').value };
-                if (this.editingId) { const idx = this.state.items.findIndex(i => i.id === this.editingId); if (idx > -1) this.state.items[idx] = {...this.state.items[idx], ...data}; }
-                else { this.state.items.push({...data, id: 'ID'+Date.now() + Math.random().toString(36).substr(2,4), image: ""}); }
-                this.closeModal(); this.renderGrid(); this.saveData();
+                const data = {
+                    name: document.getElementById('editName').value,
+                    cat: document.getElementById('editCat').value,
+                    hint: document.getElementById('editHint').value,
+                    meta: document.getElementById('editMeta').value,
+                    year: document.getElementById('editYear').value,
+                    desc: document.getElementById('editDesc').value,
+                    size: document.getElementById('editSize').value
+                };
+                if (this.editingId) {
+                    const idx = this.state.items.findIndex(i => i.id === this.editingId);
+                    if (idx > -1) this.state.items[idx] = { ...this.state.items[idx], ...data };
+                } else {
+                    this.state.items.push({ ...data, id: crypto.randomUUID(), image: "" });
+                }
+                this.closeModal(); this.renderGrid(); this.persist();
             }
 
             closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
             setFilter(f) { this.state.filter = f; this.renderAll(); }
-            updateStoreName(v) { this.state.storeName = v; }
-            updateShopUrl(v) { this.state.shopUrl = v; }
-            updateQuizSettings() { this.state.quizSettings.countdown = document.getElementById('quizCountdownSeconds').value; this.state.quizSettings.reveal = document.getElementById('quizRevealSeconds').value; }
-            addCategory() { const input = document.getElementById('catInput'); if (!input) return; const v = input.value.toUpperCase().trim(); if(v && !this.state.categories.includes(v)) { this.state.categories.push(v); input.value=''; this.renderCategories(); this.saveData(); } }
-            
+            updateStoreName(v) { this.state.storeName = v; this.persist(); }
+            updateShopUrl(v) { this.state.shopUrl = v; this.persist(); }
+
+            updateQuizSettings() {
+                const countdownRaw = Number(document.getElementById('quizCountdownSeconds').value);
+                const revealRaw = Number(document.getElementById('quizRevealSeconds').value);
+                const countdown = Math.max(2, Number.isFinite(countdownRaw) ? countdownRaw : 5);
+                const reveal = Math.max(1, Number.isFinite(revealRaw) ? revealRaw : 3);
+                this.state.quizSettings = { ...this.state.quizSettings, countdown, reveal };
+                this.persist();
+            }
+
+            addCategory() {
+                const input = document.getElementById('catInput'); if (!input) return;
+                const v = input.value.toUpperCase().trim();
+                if (v && !this.state.categories.includes(v)) {
+                    this.state.categories.push(v);
+                    input.value = '';
+                    this.renderCategories();
+                    this.persist();
+                    this.showToast(`CATEGORY [${v}] ADDED`);
+                }
+            }
+
             pickImg(id) {
                 const input = document.getElementById('fileInput');
                 input.onchange = (e) => {
-                    if (!e.target.files[0]) return;
+                    const file = e.target.files[0];
+                    input.value = '';
+                    if (!file) return;
                     const reader = new FileReader();
                     reader.onload = async re => {
                         const item = this.state.items.find(i => i.id === id);
-                        if (item) {
-                            this.showToast("OPTIMIZING_IMAGE...");
+                        if (!item) return;
+                        this.showToast("OPTIMIZING_IMAGE...");
+                        try {
                             const compressed = await this.compressImage(re.target.result);
-                            item.image = compressed; this.renderGrid(); this.saveData();
+                            item.image = compressed;
+                            this.renderGrid(); this.persist();
+                            this.showToast("IMAGE_UPDATED");
+                        } catch (err) {
+                            console.error(err);
+                            this.showToast("ERR: IMAGE_LOAD_FAILED");
                         }
                     };
-                    reader.readAsDataURL(e.target.files[0]);
+                    reader.onerror = () => this.showToast("ERR: FILE_READ_FAILED");
+                    reader.readAsDataURL(file);
                 };
                 input.click();
             }
-            showToast(m) { const t = document.getElementById('toast'); if (!t) return; t.innerText = `[SYS] ${m}`; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2000); }
+
+            removeImage(id) {
+                const item = this.state.items.find(i => i.id === id);
+                if (!item) return;
+                item.image = '';
+                this.renderGrid(); this.persist();
+                this.showToast("IMAGE_REMOVED");
+            }
+
+            showToast(m) {
+                const t = document.getElementById('toast'); if (!t) return;
+                t.textContent = `[SYS] ${m}`;
+                t.style.display = 'block';
+                if (this._toastTimer) clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => { t.style.display = 'none'; this._toastTimer = null; }, 2000);
+            }
 
             bake(type) {
-                this.showToast(`BUILDING_${type.toUpperCase()}_ENGINE...`);
-                const css = document.querySelector('style').innerHTML;
-                const itemsData = JSON.stringify(this.state.items);
-                const settings = JSON.stringify(this.state.quizSettings);
-                const storeName = this.state.storeName;
-                const shopUrl = this.state.shopUrl;
+                this.showToast(`BUILDING_${(type || 'quiz').toUpperCase()}_ENGINE...`);
+                const css = document.querySelector('style').textContent;
+                const storeName = escapeHtml(this.state.storeName || 'RETRO QUIZ');
+                const shopUrlSafe = validShopUrl(this.state.shopUrl);
+                const shopUrl = escapeHtml(shopUrlSafe);
+
+                const countdown = Math.max(2, Number(this.state.quizSettings.countdown) || 5);
+                const reveal = Math.max(1, Number(this.state.quizSettings.reveal) || 3);
+                const safeItems = this.state.items.map(i => ({
+                    id: i.id, name: i.name || '', cat: i.cat || '', year: i.year || '',
+                    desc: i.desc || '', hint: i.hint || '', meta: i.meta || '', size: i.size || 'medium',
+                    image: isDataImage(i.image) ? i.image : ''
+                }));
+                // 태그 탈출 차단: '<'를 유니코드 이스케이프로 치환해 데이터 안에서 스크립트 블록을 끝낼 수 없게 한다.
+                const payload = JSON.stringify({ items: safeItems, config: { countdown, reveal } }).replace(/</g, '\\u003c');
 
                 const template = `<!DOCTYPE html>
 <html lang="ko">
@@ -594,11 +1055,11 @@
     <title>${storeName} - STANDALONE QUIZ</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/NeoDunggeunmo.css">
-    <style>${css} 
+    <style>${css}
         #quizPlayer { display: flex; position: static; height: calc(100vh - 60px); overflow-x: hidden; }
-        .standalone-header { 
-            height: 60px; background: #000; border-bottom: 2px solid #333; 
-            display: flex; justify-content: space-between; align-items: center; 
+        .standalone-header {
+            height: 60px; background: #000; border-bottom: 2px solid #333;
+            display: flex; justify-content: space-between; align-items: center;
             padding: 0 30px; position: relative; z-index: 100;
         }
     </style>
@@ -612,12 +1073,12 @@
     <div id="quizPlayer">
         <div class="quiz-card" id="quizCard">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5px;">
-                <div style="font-size:8px; color:var(--neon-blue);">QUIZ</div>
+                <div id="quizStatus" style="font-size:8px; color:var(--neon-blue);">QUIZ</div>
                 <div id="quizIndex" style="font-size:8px; color:#444;">STAGE 00/00</div>
             </div>
-            <div class="quiz-countdown-wrapper"><div id="quizCountdownDisplay" class="quiz-countdown-display">00</div></div>
+            <div class="quiz-countdown-wrapper"><div id="quizCountdownDisplay" class="quiz-countdown-display" aria-live="polite">00</div></div>
             <div id="quizMedia" class="quiz-image-box"></div>
-            <div id="quizAnswerZone" class="quiz-answer-zone">
+            <div id="quizAnswerZone" class="quiz-answer-zone" aria-live="polite">
                 <div class="ans-side-info">
                     <div id="ansName" class="ans-name"></div>
                     <div id="ansMeta" class="ans-meta"></div>
@@ -626,54 +1087,128 @@
             </div>
         </div>
         <div style="margin-top:15px; display:flex; gap:10px;">
-            <button class="btn" onclick="location.reload()">RESTART</button>
+            <button class="btn" id="restartBtn">RESTART</button>
             <button class="btn" id="nextBtn">SKIP</button>
+            <button class="btn" id="pauseToggleBtn">PAUSE</button>
             <button id="soundToggleBtn" class="btn">SOUND: OFF</button>
         </div>
     </div>
+    <script type="application/json" id="quiz-data">${payload}<\/script>
     <script>
-        const items = ${itemsData}; const config = ${settings};
+        var dataEl = document.getElementById('quiz-data');
+        var payload = JSON.parse(dataEl.textContent);
+        var items = payload.items; var config = payload.config;
+        function isDataImage(s) { return typeof s === 'string' && /^data:image\\//i.test(s); }
         ${ArcadeSound.toString()}
-        const sound = new ArcadeSound();
-        let activeIndex = 0; let timerId = null; let intervalId = null;
-        const shuffled = [...items].sort(() => Math.random() - 0.5);
-        function updateCountdownUI(count) {
-            const el = document.getElementById('quizCountdownDisplay');
-            el.innerText = count.toString().padStart(2, '0');
+        var sound = new ArcadeSound();
+        var activeIndex = 0, timerId = null, intervalId = null, paused = false, phase = null, count = 0, revealDeadline = 0, revealRemainingMs = 0;
+        var shuffled = items.slice().sort(function () { return Math.random() - 0.5; });
+
+        function getCountdown() { return Math.max(2, Number(config.countdown) || 5); }
+        function getRevealMs() { return Math.max(1, Number(config.reveal) || 3) * 1000; }
+
+        function renderMedia(container, item) {
+            container.replaceChildren();
+            if (item.image && isDataImage(item.image)) {
+                var img = document.createElement('img');
+                img.src = item.image;
+                container.appendChild(img);
+            } else {
+                var label = document.createElement('div');
+                label.className = 'big-hint-label';
+                label.textContent = 'MISSION_HINT';
+                var hint = document.createElement('div');
+                hint.className = 'big-hint-text';
+                hint.textContent = item.hint || 'NO HINT PROVIDED';
+                container.appendChild(label);
+                container.appendChild(hint);
+            }
+        }
+
+        function updateCountdownUI(c) {
+            var el = document.getElementById('quizCountdownDisplay');
+            el.textContent = c.toString().padStart(2, '0');
             el.classList.remove('count-slam'); void el.offsetWidth; el.classList.add('count-slam');
-            if(count <= 3 && count > 0) { el.classList.add('warning'); sound.playWarning(); } 
+            if (c <= 3 && c > 0) { el.classList.add('warning'); sound.playWarning(); }
             else { el.classList.remove('warning'); sound.playTick(); }
         }
+
+        function startCountdownInterval() {
+            clearInterval(intervalId);
+            intervalId = setInterval(function () {
+                count--; updateCountdownUI(count);
+                if (count <= 0) { clearInterval(intervalId); revealAnswer(shuffled[activeIndex]); }
+            }, 1000);
+        }
+
+        function scheduleRevealAdvance(ms) {
+            clearTimeout(timerId);
+            revealDeadline = Date.now() + ms;
+            timerId = setTimeout(function () { activeIndex++; runLoop(); }, ms);
+        }
+
         function revealAnswer(item) {
-            document.getElementById('ansName').innerText = item.name.toUpperCase();
-            document.getElementById('ansMeta').innerText = item.meta || "UNKNOWN";
-            document.getElementById('ansDesc').innerText = item.desc;
+            document.getElementById('ansName').textContent = (item && item.name ? item.name : '').toUpperCase();
+            document.getElementById('ansMeta').textContent = (item && item.meta) || 'UNKNOWN';
+            document.getElementById('ansDesc').textContent = (item && item.desc) || '';
             document.getElementById('flashOverlay').classList.add('active-flash');
             document.getElementById('quizCard').classList.add('shake');
             document.getElementById('quizAnswerZone').classList.add('reveal');
             sound.playReveal();
-            timerId = setTimeout(() => { activeIndex++; runLoop(); }, config.reveal * 1000);
-            setTimeout(() => document.getElementById('flashOverlay').classList.remove('active-flash'), 400);
+            phase = 'reveal';
+            if (!paused) scheduleRevealAdvance(getRevealMs());
+            setTimeout(function () { document.getElementById('flashOverlay').classList.remove('active-flash'); }, 400);
         }
+
         function runLoop() {
-            if(activeIndex >= shuffled.length) { activeIndex = 0; }
-            const item = shuffled[activeIndex];
+            if (activeIndex >= shuffled.length) { activeIndex = 0; }
+            var item = shuffled[activeIndex];
             document.getElementById('quizAnswerZone').classList.remove('reveal');
             document.getElementById('quizCard').classList.remove('shake');
-            document.getElementById('quizIndex').innerText = "STAGE " + (activeIndex+1).toString().padStart(2,'0') + "/" + shuffled.length.toString().padStart(2,'0');
-            const media = document.getElementById('quizMedia');
-            if(item.image) media.innerHTML = '<img src="'+item.image+'">';
-            else media.innerHTML = '<div class="big-hint-label">MISSION_HINT</div><div class="big-hint-text">'+(item.hint||'NO HINT')+'</div>';
-            let count = config.countdown; updateCountdownUI(count);
-            clearInterval(intervalId);
-            intervalId = setInterval(() => { count--; updateCountdownUI(count); if(count <= 0) { clearInterval(intervalId); revealAnswer(item); } }, 1000);
+            document.getElementById('quizStatus').textContent = item.cat || 'QUIZ';
+            document.getElementById('quizIndex').textContent = 'STAGE ' + (activeIndex + 1).toString().padStart(2, '0') + '/' + shuffled.length.toString().padStart(2, '0');
+            renderMedia(document.getElementById('quizMedia'), item);
+            phase = 'countdown';
+            count = getCountdown();
+            updateCountdownUI(count);
+            if (!paused) startCountdownInterval();
         }
-        document.getElementById('nextBtn').onclick = () => { clearTimeout(timerId); clearInterval(intervalId); activeIndex++; runLoop(); };
-        document.getElementById('soundToggleBtn').onclick = (e) => {
+
+        function togglePause() {
+            paused = !paused;
+            var btn = document.getElementById('pauseToggleBtn');
+            if (btn) btn.textContent = paused ? 'RESUME' : 'PAUSE';
+            if (paused) {
+                if (phase === 'countdown') clearInterval(intervalId);
+                else if (phase === 'reveal') { clearTimeout(timerId); revealRemainingMs = Math.max(0, revealDeadline - Date.now()); }
+            } else {
+                if (phase === 'countdown') startCountdownInterval();
+                else if (phase === 'reveal') scheduleRevealAdvance(revealRemainingMs);
+            }
+        }
+
+        function nextQuiz() {
+            clearInterval(intervalId); clearTimeout(timerId);
+            paused = false;
+            var btn = document.getElementById('pauseToggleBtn'); if (btn) btn.textContent = 'PAUSE';
+            activeIndex++; runLoop();
+        }
+
+        document.getElementById('restartBtn').onclick = function () { location.reload(); };
+        document.getElementById('nextBtn').onclick = nextQuiz;
+        document.getElementById('pauseToggleBtn').onclick = togglePause;
+        document.getElementById('soundToggleBtn').onclick = function (e) {
             sound.enabled = !sound.enabled;
-            e.target.innerText = "SOUND: " + (sound.enabled ? "ON" : "OFF");
-            if(sound.enabled) e.target.classList.add('active-blue'); else e.target.classList.remove('active-blue');
+            e.target.textContent = 'SOUND: ' + (sound.enabled ? 'ON' : 'OFF');
+            if (sound.enabled) e.target.classList.add('active-blue'); else e.target.classList.remove('active-blue');
         };
+        document.addEventListener('keydown', function (e) {
+            var tag = (document.activeElement && document.activeElement.tagName) || '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); nextQuiz(); }
+            else if (e.key === 'p' || e.key === 'P') { togglePause(); }
+            else if (e.key === 's' || e.key === 'S') { document.getElementById('soundToggleBtn').click(); }
+        });
         window.onload = runLoop;
     <\/script>
 </body>
@@ -682,8 +1217,9 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `retro-quiz-standalone.html`;
+                a.download = `${slugifyFilename(this.state.storeName)}.html`;
                 a.click();
+                URL.revokeObjectURL(url);
             }
         }
         window.addEventListener('DOMContentLoaded', () => new RetroMenuApp());
