@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metaball Masking - YouTube & Generative Geometry</title>
+    <meta name="description" content="검은 마스크에 메타볼 모양의 구멍을 뚫어 유튜브 영상이나 제너러티브 노드 그래프를 들여다보는 단일 파일 비주얼라이저. Marching squares로 매 프레임 윤곽을 다시 계산합니다.">
+    <meta property="og:title" content="Metaball Masking - YouTube & Generative Geometry">
+    <meta property="og:description" content="검은 마스크에 메타볼 모양의 구멍을 뚫어 유튜브 영상이나 노드 그래프를 들여다보는 비주얼라이저.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23000000'/%3E%3Ccircle cx='24' cy='30' r='16' fill='none' stroke='%2300ffaa' stroke-width='4'/%3E%3Ccircle cx='42' cy='38' r='11' fill='none' stroke='%2300ffaa' stroke-width='4'/%3E%3C/svg%3E">
     <style>
         :root {
             --bg-color: #000000;
@@ -65,6 +72,24 @@
             z-index: 100;
             color: var(--text-color);
             transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+        }
+
+        #control-panel.hidden {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+
+        #panel-toggle {
+            position: absolute;
+            top: 20px; left: 20px;
+            z-index: 101;
+            width: 36px; height: 36px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            background: var(--panel-bg);
+            color: var(--accent-color);
+            font-size: 16px;
+            cursor: pointer;
         }
 
         .panel-header {
@@ -150,6 +175,11 @@
             box-sizing: border-box;
             font-size: 11px;
             outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"].input-invalid {
+            border-color: #ff4444;
         }
 
         .apply-btn {
@@ -226,82 +256,105 @@
             z-index: 100;
             letter-spacing: 1px;
         }
+
+        @media (max-width: 480px) {
+            #control-panel {
+                top: auto;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                width: auto;
+                max-height: 65vh;
+                overflow-y: auto;
+                padding: 18px;
+            }
+
+            #control-panel.hidden {
+                transform: translateY(400px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #control-panel { transition: none; }
+        }
     </style>
 </head>
 <body>
-    <div id="video-container">
+    <div id="video-container" aria-hidden="true">
         <div id="yt-player"></div>
     </div>
 
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" aria-hidden="true"></canvas>
+
+    <button id="panel-toggle" title="Toggle control panel" aria-expanded="true" aria-controls="control-panel">&#9776;</button>
 
     <div id="control-panel">
         <div class="panel-header">
             System Control
             <small style="font-size: 8px; opacity: 0.5;">v2.7 PRO</small>
         </div>
-        
+
         <div class="control-group">
-            <div class="control-label">Background Source</div>
-            <div class="select-group">
-                <button class="select-btn" onclick="setBgMode('generative')">GEN</button>
-                <button class="select-btn active" onclick="setBgMode('youtube')">YOUTUBE</button>
+            <div class="control-label" id="label-bgsource">Background Source</div>
+            <div class="select-group" role="group" aria-labelledby="label-bgsource">
+                <button class="select-btn" data-mode="generative">GEN</button>
+                <button class="select-btn active" data-mode="youtube">YOUTUBE</button>
             </div>
         </div>
 
         <div id="yt-controls" class="control-group" style="display:block;">
-            <div class="control-label">Video ID</div>
+            <div class="control-label" id="label-ytid">Video ID</div>
             <div class="input-group">
-                <input type="text" id="input-ytid" value="ahizOQx1Ovw" placeholder="Enter ID">
+                <input type="text" id="input-ytid" value="ahizOQx1Ovw" placeholder="Enter ID or URL" aria-labelledby="label-ytid">
                 <button class="apply-btn" id="btn-update-yt">SET</button>
             </div>
         </div>
 
         <div class="control-group">
             <div class="control-label">Metaballs <span id="val-count">12</span></div>
-            <input type="range" id="input-count" min="2" max="40" value="12">
+            <input type="range" id="input-count" min="2" max="40" value="12" aria-label="Metaballs count">
         </div>
 
         <div class="control-group">
             <div class="control-label">Liquid Mass <span id="val-radius">90</span></div>
-            <input type="range" id="input-radius" min="30" max="250" value="90">
+            <input type="range" id="input-radius" min="30" max="250" value="90" aria-label="Liquid mass radius">
         </div>
 
         <div class="control-group">
             <div class="control-label">Geometric Nodes <span id="val-nodes">60</span></div>
-            <input type="range" id="input-nodes" min="20" max="150" value="60">
+            <input type="range" id="input-nodes" min="20" max="150" value="60" aria-label="Geometric node count">
         </div>
 
         <div class="control-group">
             <div class="control-label">Grid Precision <span id="val-grid">16</span></div>
-            <input type="range" id="input-grid" min="10" max="40" value="16">
+            <input type="range" id="input-grid" min="10" max="40" value="16" aria-label="Grid precision cell size">
         </div>
 
         <div class="control-group">
             <div class="control-label">Opacity <span id="val-opacity">1.0</span></div>
-            <input type="range" id="input-opacity" min="0" max="1" step="0.01" value="1">
+            <input type="range" id="input-opacity" min="0" max="1" step="0.01" value="1" aria-label="Mask opacity">
         </div>
-        
+
         <div class="control-group">
             <div class="control-label">Threshold <span id="val-threshold">1.0</span></div>
-            <input type="range" id="input-threshold" min="0.4" max="2.5" step="0.1" value="1">
+            <input type="range" id="input-threshold" min="0.4" max="2.5" step="0.1" value="1" aria-label="Metaball threshold">
         </div>
 
         <div class="social-dock">
             <!-- 사운드 토글 버튼 (기본 OFF) -->
-            <button id="btn-sound" class="social-btn" onclick="toggleSound()" title="Sound On/Off">
+            <button id="btn-sound" class="social-btn" title="Sound On/Off" aria-label="Toggle sound">
                 <svg id="icon-sound-off" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
                 <svg id="icon-sound-on" viewBox="0 0 24 24" style="display:none;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
             </button>
-            
-            <a href="https://kitscript.com/pickme" target="_blank" class="social-btn" title="Home">
+
+            <a href="https://kitscript.com/pickme" target="_blank" rel="noopener noreferrer" class="social-btn" title="Home">
                 <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             </a>
-            <a href="https://youtube.com/@textcube" target="_blank" class="social-btn" title="YouTube">
+            <a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="social-btn" title="YouTube">
                 <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 4-8 4z"/></svg>
             </a>
             <!-- 정교하게 다듬어진 깃허브 아이콘 벡터 패스 적용 -->
-            <a href="https://github.com/textcube" target="_blank" class="social-btn" title="GitHub">
+            <a href="https://github.com/textcube" target="_blank" rel="noopener noreferrer" class="social-btn" title="GitHub">
                 <svg viewBox="0 0 24 24">
                     <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.167 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/>
                 </svg>
@@ -318,13 +371,10 @@
         const ctx = canvas.getContext('2d', { alpha: true });
         const ytContainer = document.getElementById('video-container');
         const panel = document.getElementById('control-panel');
-
-        // Off-screen canvas for masking logic
-        const offCanvas = document.createElement('canvas');
-        const octx = offCanvas.getContext('2d');
+        const panelToggle = document.getElementById('panel-toggle');
 
         const config = {
-            bgMode: 'youtube', 
+            bgMode: 'youtube',
             numBalls: 12,
             baseRadius: 90,
             threshold: 1.0,
@@ -334,18 +384,43 @@
             numNodes: 60,
             nodeConnectDist: 150,
             isMuted: true,
-            ytId: 'ahizOQx1Ovw' 
+            ytId: 'ahizOQx1Ovw'
         };
 
-        let width, height, rows, cols;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        let width, height, rows, cols, dpr = 1;
         let balls = [];
         let nodes = [];
-        let grid = [];
-        let player; 
+        let field = new Float32Array(0);
+        let player;
+        let ytReady = false;
+        let lastTime = 0;
 
         // --- YouTube API ---
 
+        const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+
+        function extractYouTubeId(raw) {
+            const v = raw.trim();
+            if (YT_ID_RE.test(v)) return v;
+            try {
+                const url = new URL(v);
+                if (/(^|\.)youtu\.be$/.test(url.hostname)) {
+                    const id = url.pathname.slice(1);
+                    if (YT_ID_RE.test(id)) return id;
+                } else if (/(^|\.)youtube\.com$/.test(url.hostname)) {
+                    const qId = url.searchParams.get('v');
+                    if (qId && YT_ID_RE.test(qId)) return qId;
+                    const m = url.pathname.match(/\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})/);
+                    if (m) return m[1];
+                }
+            } catch (e) { /* not a URL */ }
+            return null;
+        }
+
         function onYouTubeIframeAPIReady() {
+            ytReady = true;
             player = new YT.Player('yt-player', {
                 height: '100%',
                 width: '100%',
@@ -357,7 +432,7 @@
                     loop: 1,
                     playlist: config.ytId,
                     rel: 0,
-                    showinfo: 0,
+                    playsinline: 1,
                     modestbranding: 1,
                     iv_load_policy: 3
                 },
@@ -367,25 +442,26 @@
             });
         }
 
+        setTimeout(() => {
+            if (!ytReady && config.bgMode === 'youtube') setBgMode('generative');
+        }, 6000);
+
         function onPlayerReady(event) {
             event.target.playVideo();
         }
 
-        // --- Global Functions (Accessible from HTML onclick) ---
+        // --- Global Functions ---
 
         function setBgMode(mode) {
             config.bgMode = mode;
             document.querySelectorAll('.select-btn').forEach(btn => btn.classList.remove('active'));
-            
-            const btns = Array.from(document.querySelectorAll('.select-btn'));
+            const btn = document.querySelector(`.select-btn[data-mode="${mode}"]`);
+            if (btn) btn.classList.add('active');
+
             if (mode === 'youtube') {
-                const ytBtn = btns.find(b => b.innerText.includes('YOUTUBE'));
-                if (ytBtn) ytBtn.classList.add('active');
                 ytContainer.style.display = 'block';
                 document.getElementById('yt-controls').style.display = 'block';
             } else {
-                const genBtn = btns.find(b => b.innerText.includes('GEN'));
-                if (genBtn) genBtn.classList.add('active');
                 ytContainer.style.display = 'none';
                 document.getElementById('yt-controls').style.display = 'none';
             }
@@ -413,12 +489,21 @@
             }
         }
 
+        function flashInvalid(el) {
+            el.classList.remove('input-invalid');
+            void el.offsetWidth;
+            el.classList.add('input-invalid');
+            setTimeout(() => el.classList.remove('input-invalid'), 500);
+        }
+
         function updateYouTubeVideo() {
             const idInput = document.getElementById('input-ytid');
-            const id = idInput.value.trim();
-            if (id && player) {
-                config.ytId = id;
-                player.loadVideoById(id);
+            const id = extractYouTubeId(idInput.value);
+            if (!id) { flashInvalid(idInput); return; }
+            idInput.value = id;
+            config.ytId = id;
+            if (player && typeof player.loadPlaylist === 'function') {
+                player.loadPlaylist({ playlist: [id], loop: true });
             }
         }
 
@@ -427,17 +512,21 @@
         class Ball {
             constructor() { this.init(); }
             init() {
-                this.r = (0.7 + Math.random() * 0.7) * config.baseRadius;
+                this.scale = 0.7 + Math.random() * 0.7;
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
                 this.vx = (Math.random() - 0.5) * 5;
                 this.vy = (Math.random() - 0.5) * 5;
             }
-            update() {
-                this.x += this.vx * config.speed;
-                this.y += this.vy * config.speed;
-                if (this.x < 0 || this.x > width) this.vx *= -1;
-                if (this.y < 0 || this.y > height) this.vy *= -1;
+            update(dt) {
+                this.x += this.vx * config.speed * dt;
+                this.y += this.vy * config.speed * dt;
+                if (this.x < 0 && this.vx < 0) this.vx *= -1;
+                if (this.x > width && this.vx > 0) this.vx *= -1;
+                if (this.y < 0 && this.vy < 0) this.vy *= -1;
+                if (this.y > height && this.vy > 0) this.vy *= -1;
+                if (this.x < 0) this.x = 0; else if (this.x > width) this.x = width;
+                if (this.y < 0) this.y = 0; else if (this.y > height) this.y = height;
             }
         }
 
@@ -449,9 +538,9 @@
                 this.vx = (Math.random() - 0.5) * 1.5;
                 this.vy = (Math.random() - 0.5) * 1.5;
             }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
                 if (this.x < 0) this.x = width;
                 if (this.x > width) this.x = 0;
                 if (this.y < 0) this.y = height;
@@ -461,17 +550,24 @@
 
         // --- System Logic ---
 
+        function computeGrid() {
+            cols = Math.ceil(width / config.cellSize) + 1;
+            rows = Math.ceil(height / config.cellSize) + 1;
+            field = new Float32Array(cols * rows);
+        }
+
         function init() {
             width = window.innerWidth || 1;
             height = window.innerHeight || 1;
-            canvas.width = width;
-            canvas.height = height;
-            offCanvas.width = width;
-            offCanvas.height = height;
-            
-            cols = Math.ceil(width / config.cellSize) + 1;
-            rows = Math.ceil(height / config.cellSize) + 1;
-            
+            dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            computeGrid();
             syncBalls();
             syncNodes();
         }
@@ -488,35 +584,24 @@
             } else nodes.length = config.numNodes;
         }
 
-        function getField(x, y) {
-            let sum = 0;
-            for (let i = 0; i < balls.length; i++) {
-                const b = balls[i];
-                const dx = x - b.x;
-                const dy = y - b.y;
-                sum += (b.r * b.r) / (dx * dx + dy * dy + 1);
-            }
-            return sum;
-        }
-
         function lerp(x1, y1, x2, y2, v1, v2) {
             const t = (config.threshold - v1) / (v2 - v1);
             return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
         }
 
-        function fillPolyO(targetCtx, pts) {
+        function fillPolyO(targetPath, pts) {
             if (pts.length < 3) return;
-            targetCtx.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++) targetCtx.lineTo(pts[i].x, pts[i].y);
-            targetCtx.closePath();
+            targetPath.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) targetPath.lineTo(pts[i].x, pts[i].y);
+            targetPath.closePath();
         }
 
-        function drawGenerativeBG() {
+        function drawGenerativeBG(dt) {
             ctx.strokeStyle = 'rgba(0, 255, 170, 0.4)';
             ctx.fillStyle = 'rgba(0, 255, 170, 0.8)';
             ctx.lineWidth = 0.5;
             for (let i = 0; i < nodes.length; i++) {
-                const n1 = nodes[i]; n1.update();
+                const n1 = nodes[i]; n1.update(dt);
                 ctx.beginPath(); ctx.arc(n1.x, n1.y, 1.5, 0, Math.PI * 2); ctx.fill();
                 for (let j = i + 1; j < nodes.length; j++) {
                     const n2 = nodes[j];
@@ -531,66 +616,102 @@
             }
         }
 
-        function draw() {
-            if (width <= 0 || height <= 0) { requestAnimationFrame(draw); return; }
-            
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.clearRect(0, 0, width, height);
-            
-            if (config.bgMode === 'generative') drawGenerativeBG();
-
-            for (const b of balls) b.update();
-            
-            grid = [];
-            for (let i = 0; i < cols; i++) {
-                grid[i] = [];
-                for (let j = 0; j < rows; j++) {
-                    grid[i][j] = getField(i * config.cellSize, j * config.cellSize);
-                }
-            }
-
-            octx.globalCompositeOperation = 'source-over';
-            octx.fillStyle = `rgba(0, 0, 0, ${config.opacity})`;
-            octx.fillRect(0, 0, width, height);
-            octx.globalCompositeOperation = 'destination-out';
-            octx.beginPath();
-
+        function buildMaskPath() {
+            const path = new Path2D();
+            const th = config.threshold;
             for (let i = 0; i < cols - 1; i++) {
+                const base = i * rows, baseNext = (i + 1) * rows;
                 for (let j = 0; j < rows - 1; j++) {
-                    const x = i * config.cellSize, y = j * config.cellSize, s = config.cellSize;
-                    const v0 = grid[i][j], v1 = grid[i+1][j], v2 = grid[i+1][j+1], v3 = grid[i][j+1];
+                    const v0 = field[base + j], v1 = field[baseNext + j], v2 = field[baseNext + j + 1], v3 = field[base + j + 1];
+                    const in0 = v0 >= th, in1 = v1 >= th, in2 = v2 >= th, in3 = v3 >= th;
                     let state = 0;
-                    if (v0 >= config.threshold) state |= 8;
-                    if (v1 >= config.threshold) state |= 4;
-                    if (v2 >= config.threshold) state |= 2;
-                    if (v3 >= config.threshold) state |= 1;
+                    if (in0) state |= 8;
+                    if (in1) state |= 4;
+                    if (in2) state |= 2;
+                    if (in3) state |= 1;
                     if (state === 0) continue;
 
-                    const t = lerp(x, y, x + s, y, v0, v1), r = lerp(x + s, y, x + s, y + s, v1, v2);
-                    const b = lerp(x, y + s, x + s, y + s, v3, v2), l = lerp(x, y, x, y + s, v0, v3);
+                    const x = i * config.cellSize, y = j * config.cellSize, s = config.cellSize;
+                    let t, r, b, l;
+                    if (in0 !== in1) t = lerp(x, y, x + s, y, v0, v1);
+                    if (in1 !== in2) r = lerp(x + s, y, x + s, y + s, v1, v2);
+                    if (in3 !== in2) b = lerp(x, y + s, x + s, y + s, v3, v2);
+                    if (in0 !== in3) l = lerp(x, y, x, y + s, v0, v3);
                     const pTL = {x, y}, pTR = {x:x+s, y}, pBR = {x:x+s, y:y+s}, pBL = {x, y:y+s};
 
                     switch (state) {
-                        case 1:  fillPolyO(octx, [l, b, pBL]); break;
-                        case 2:  fillPolyO(octx, [r, b, pBR]); break;
-                        case 3:  fillPolyO(octx, [l, r, pBR, pBL]); break;
-                        case 4:  fillPolyO(octx, [t, r, pTR]); break;
-                        case 5:  fillPolyO(octx, [t, r, pTR, b, l, pBL]); break;
-                        case 6:  fillPolyO(octx, [t, b, pBR, pTR]); break;
-                        case 7:  fillPolyO(octx, [t, l, pBL, pBR, pTR]); break;
-                        case 8:  fillPolyO(octx, [t, l, pTL]); break;
-                        case 9:  fillPolyO(octx, [t, b, pBL, pTL]); break;
-                        case 10: fillPolyO(octx, [t, l, pTL, b, r, pBR]); break;
-                        case 11: fillPolyO(octx, [t, r, pBR, pBL, pTL]); break;
-                        case 12: fillPolyO(octx, [r, l, pTL, pTR]); break;
-                        case 13: fillPolyO(octx, [r, b, pBL, pTL, pTR]); break;
-                        case 14: fillPolyO(octx, [l, b, pBR, pTR, pTL]); break;
-                        case 15: fillPolyO(octx, [pTL, pTR, pBR, pBL]); break;
+                        case 1:  fillPolyO(path, [l, b, pBL]); break;
+                        case 2:  fillPolyO(path, [r, b, pBR]); break;
+                        case 3:  fillPolyO(path, [l, r, pBR, pBL]); break;
+                        case 4:  fillPolyO(path, [t, r, pTR]); break;
+                        case 5:  fillPolyO(path, [t, r, pTR]); fillPolyO(path, [b, l, pBL]); break;
+                        case 6:  fillPolyO(path, [t, b, pBR, pTR]); break;
+                        case 7:  fillPolyO(path, [t, l, pBL, pBR, pTR]); break;
+                        case 8:  fillPolyO(path, [t, l, pTL]); break;
+                        case 9:  fillPolyO(path, [t, b, pBL, pTL]); break;
+                        case 10: fillPolyO(path, [t, l, pTL]); fillPolyO(path, [b, r, pBR]); break;
+                        case 11: fillPolyO(path, [t, r, pBR, pBL, pTL]); break;
+                        case 12: fillPolyO(path, [r, l, pTL, pTR]); break;
+                        case 13: fillPolyO(path, [r, b, pBL, pTL, pTR]); break;
+                        case 14: fillPolyO(path, [l, b, pBR, pTR, pTL]); break;
+                        case 15: fillPolyO(path, [pTL, pTR, pBR, pBL]); break;
                     }
                 }
             }
-            octx.fill();
-            ctx.drawImage(offCanvas, 0, 0);
+            return path;
+        }
+
+        function updateField() {
+            field.fill(0);
+            for (let i = 0; i < balls.length; i++) {
+                const ball = balls[i];
+                const rad = ball.scale * config.baseRadius;
+                const rad2 = rad * rad;
+                const cutoff = 4 * rad;
+                const iMin = Math.max(0, Math.floor((ball.x - cutoff) / config.cellSize));
+                const iMax = Math.min(cols - 1, Math.ceil((ball.x + cutoff) / config.cellSize));
+                const jMin = Math.max(0, Math.floor((ball.y - cutoff) / config.cellSize));
+                const jMax = Math.min(rows - 1, Math.ceil((ball.y + cutoff) / config.cellSize));
+                for (let gi = iMin; gi <= iMax; gi++) {
+                    const gx = gi * config.cellSize;
+                    const dx = gx - ball.x;
+                    const base = gi * rows;
+                    for (let gj = jMin; gj <= jMax; gj++) {
+                        const gy = gj * config.cellSize;
+                        const dy = gy - ball.y;
+                        field[base + gj] += rad2 / (dx * dx + dy * dy + 1);
+                    }
+                }
+            }
+        }
+
+        function draw(now) {
+            if (width <= 0 || height <= 0) { requestAnimationFrame(draw); return; }
+            if (!lastTime) lastTime = now;
+            const elapsed = now - lastTime;
+            lastTime = now;
+            const dt = reduceMotion ? 0 : Math.min(elapsed / (1000 / 60), 2);
+
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.clearRect(0, 0, width, height);
+
+            for (const b of balls) b.update(dt);
+            updateField();
+            const maskPath = buildMaskPath();
+
+            ctx.fillStyle = `rgba(0, 0, 0, ${config.opacity})`;
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fill(maskPath);
+            ctx.globalCompositeOperation = 'source-over';
+
+            if (config.bgMode === 'generative') {
+                ctx.save();
+                ctx.clip(maskPath);
+                drawGenerativeBG(dt);
+                ctx.restore();
+            }
+
             requestAnimationFrame(draw);
         }
 
@@ -606,35 +727,59 @@
 
             controls.forEach(c => {
                 const el = document.getElementById(c.id);
+                el.setAttribute('aria-valuetext', el.value);
                 el.addEventListener('input', (e) => {
                     const val = parseFloat(e.target.value);
                     config[c.key] = val;
                     document.getElementById(c.disp).innerText = val;
+                    e.target.setAttribute('aria-valuetext', val);
                     if (c.key === 'numBalls') syncBalls();
                     if (c.key === 'numNodes') syncNodes();
-                    if (c.key === 'cellSize') init(); 
+                    if (c.key === 'cellSize') computeGrid();
                 });
             });
+
+            document.querySelectorAll('.select-btn').forEach(btn => {
+                btn.addEventListener('click', () => setBgMode(btn.dataset.mode));
+            });
+
+            document.getElementById('btn-sound').addEventListener('click', toggleSound);
 
             document.getElementById('btn-update-yt').addEventListener('click', updateYouTubeVideo);
             document.getElementById('input-ytid').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') updateYouTubeVideo();
             });
 
+            function setPanelHidden(hidden) {
+                panel.classList.toggle('hidden', hidden);
+                panel.toggleAttribute('inert', hidden);
+                panelToggle.setAttribute('aria-expanded', String(!hidden));
+            }
+
+            panelToggle.addEventListener('click', () => {
+                setPanelHidden(!panel.classList.contains('hidden'));
+            });
+
             window.addEventListener('keydown', (e) => {
+                if (e.isComposing) return;
+                if (e.target && e.target.closest && e.target.closest('input, textarea')) return;
+
                 if (e.key.toLowerCase() === 'h') {
-                    const isHidden = panel.style.transform.includes('translateX(400px)');
-                    panel.style.transform = isHidden ? 'translateX(0)' : 'translateX(400px)';
-                    panel.style.opacity = isHidden ? '1' : '0';
+                    setPanelHidden(!panel.classList.contains('hidden'));
                 }
                 if (e.key.toLowerCase() === 'r') nodes.forEach(n => n.init());
             });
         }
 
-        window.addEventListener('resize', init);
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(init, 150);
+        });
+
         setupUI();
         init();
-        draw();
+        requestAnimationFrame(draw);
     </script>
 </body>
 </html>
