@@ -410,8 +410,79 @@
             backdrop-filter: blur(14px);
             border-top: 1px solid var(--panel-border);
         }
-        .mobile-actionbar .btn { flex: 1; margin: 0; }
-        @media (max-width: 850px) { .mobile-actionbar { display: flex; } }
+        .mobile-actionbar .btn { flex: 1 1 45%; margin: 0; }
+        @media (max-width: 850px) { .mobile-actionbar { display: flex; flex-wrap: wrap; } }
+
+        /* ==== Motion (4차: 트위닝 모션) ==== */
+        .card-header { position: relative; overflow: hidden; }
+        .mo-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+        #mo-glow {
+            opacity: 0;
+            background: radial-gradient(ellipse 70% 60% at 50% 15%, var(--card-accent, #8b5cf6) 0%, transparent 70%);
+            mix-blend-mode: screen;
+        }
+        #mo-shine-name {
+            top: -60%; left: -70%; width: 70%; height: 220%;
+            background: linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.65) 50%, transparent 58%);
+            transform: translateX(-160%);
+            mix-blend-mode: overlay;
+        }
+
+        .mo-el { --mo-idx: 0; }
+
+        @keyframes moFadeUp   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes moSlideIn  { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes moPopIn    { 0% { opacity: 0; transform: scale(0.7); } 70% { opacity: 1; transform: scale(1.06); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes moFadeIn   { from { opacity: 0; } to { opacity: 1; } }
+
+        .mo-play-fadeup { animation: moFadeUp calc(520ms / var(--mo-speed, 1)) cubic-bezier(.16,.84,.44,1) both; animation-delay: calc(var(--mo-idx, 0) * 90ms / var(--mo-speed, 1)); }
+        .mo-play-slide  { animation: moSlideIn calc(520ms / var(--mo-speed, 1)) cubic-bezier(.16,.84,.44,1) both; animation-delay: calc(var(--mo-idx, 0) * 90ms / var(--mo-speed, 1)); }
+        .mo-play-pop    { animation: moPopIn calc(560ms / var(--mo-speed, 1)) cubic-bezier(.34,1.56,.64,1) both; animation-delay: calc(var(--mo-idx, 0) * 90ms / var(--mo-speed, 1)); }
+        .mo-play-shine  { animation: moFadeIn calc(480ms / var(--mo-speed, 1)) ease-out both; animation-delay: calc(var(--mo-idx, 0) * 90ms / var(--mo-speed, 1)); }
+
+        /* 앰비언트(상시 루프) — 엔트런스 완료 후에만 클래스가 붙는다 */
+        @keyframes moFloat      { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        @keyframes moGlowPulse  { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.42; } }
+        @keyframes moShineSweep { 0%, 8% { transform: translateX(-160%); } 55%, 100% { transform: translateX(180%); } }
+
+        #card-container.mo-ambient-pop #view-logo,
+        #card-container.mo-ambient-pop #view-profile {
+            animation: moFloat calc(3200ms / var(--mo-speed, 1)) ease-in-out infinite;
+        }
+        #card-container.mo-ambient-slide #mo-glow {
+            animation: moGlowPulse calc(2600ms / var(--mo-speed, 1)) ease-in-out infinite;
+        }
+        #card-container.mo-ambient-shine #mo-shine-name {
+            animation: moShineSweep calc(3200ms / var(--mo-speed, 1)) ease-in-out infinite;
+        }
+
+        /* 영상 캡처 패스 중에는 CSS 애니메이션을 완전히 끄고 인라인 스타일만 신뢰한다 */
+        #card-container.mo-capturing .mo-el,
+        #card-container.mo-capturing #mo-glow,
+        #card-container.mo-capturing #mo-shine-name {
+            animation: none !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .mo-play-fadeup, .mo-play-slide, .mo-play-pop, .mo-play-shine,
+            #card-container.mo-ambient-pop #view-logo,
+            #card-container.mo-ambient-pop #view-profile,
+            #card-container.mo-ambient-slide #mo-glow,
+            #card-container.mo-ambient-shine #mo-shine-name {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+            }
+        }
+
+        .motion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 0.75rem; }
+        #btn-replay-motion { width: 100%; margin-top: 4px; }
+        #video-progress-badge {
+            position: absolute; top: 10px; right: 10px; z-index: 46;
+            background: rgba(11,15,26,0.9); border: 1px solid var(--panel-border);
+            color: var(--text-main); font-size: 0.7rem; font-weight: 700;
+            padding: 6px 12px; border-radius: 999px; letter-spacing: 0.03em;
+        }
     </style>
 </head>
 <body data-tab="info">
@@ -423,6 +494,8 @@
     </div>
     <div class="header-actions desktop-actions">
         <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
+        <button class="btn btn-outline btn-export-video" id="btn-export-video" onclick="exportVideo()">Export Video</button>
+        <button class="btn btn-outline btn-bake-html" id="btn-bake-html" onclick="bakeHTML()">Bake HTML</button>
         <button class="btn" onclick="downloadQR()">Save QR Only</button>
     </div>
 </header>
@@ -435,26 +508,30 @@
         <div id="card-stage">
             <div id="card-container">
                 <div id="card-pattern" aria-hidden="true"></div>
+                <div id="mo-glow" class="mo-overlay" aria-hidden="true"></div>
                 <div class="card-body" id="card-main">
                     <div class="card-header" id="view-header">
-                        <img id="view-logo" src="" class="card-logo" alt="logo">
-                        <img id="view-profile" src="" class="card-profile hidden" alt="profile">
+                        <div id="mo-shine-name" class="mo-overlay mo-shine" aria-hidden="true"></div>
+                        <img id="view-logo" src="" class="card-logo mo-el" alt="logo">
+                        <img id="view-profile" src="" class="card-profile hidden mo-el" alt="profile">
                         <div>
-                            <div class="card-name" id="view-name">Tony Kim</div>
-                            <div class="card-title" id="view-title">Producer</div>
-                            <div class="card-company" id="view-company">Bunt Games</div>
+                            <div class="card-name mo-el" id="view-name">Tony Kim</div>
+                            <div id="view-meta" class="mo-el">
+                                <div class="card-title" id="view-title">Producer</div>
+                                <div class="card-company" id="view-company">Bunt Games</div>
+                            </div>
                         </div>
                     </div>
                     <div class="card-contact" id="view-contact">
-                        <div id="row-phone"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> <span id="v-phone">010-0000-0000</span></div>
-                        <div id="row-email"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span> <span id="v-email">tony@kitscript.com</span></div>
-                        <div id="row-web"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span id="v-web">kitscript.com</span></div>
-                        <div id="row-youtube"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></span> <span id="v-youtube">youtube.com/@textcube</span></div>
-                        <div id="row-addr"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span> <span id="v-addr">Seoul, South Korea</span></div>
+                        <div id="row-phone" class="mo-el"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> <span id="v-phone">010-0000-0000</span></div>
+                        <div id="row-email" class="mo-el"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span> <span id="v-email">tony@kitscript.com</span></div>
+                        <div id="row-web" class="mo-el"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span id="v-web">kitscript.com</span></div>
+                        <div id="row-youtube" class="mo-el"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></span> <span id="v-youtube">youtube.com/@textcube</span></div>
+                        <div id="row-addr" class="mo-el"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span> <span id="v-addr">Seoul, South Korea</span></div>
                     </div>
                 </div>
                 <div class="card-qr-section" id="qr-box">
-                    <div id="qrcode-wrap">
+                    <div id="qrcode-wrap" class="mo-el">
                         <img id="qr-display" src="" alt="QR code" width="105" height="105">
                         <img id="qr-logo" class="qr-logo-overlay" src="" alt="">
                     </div>
@@ -578,6 +655,22 @@
                     <input type="range" id="range-scale" min="0.7" max="1.5" step="0.05" value="1.0" style="width: 100%;">
                 </div>
             </div>
+
+            <div class="panel-title">Motion</div>
+            <div class="control-group">
+                <div class="motion-grid" id="motion-grid">
+                    <button type="button" class="temp-item" data-motion="none">None</button>
+                    <button type="button" class="temp-item" data-motion="fadeup">Fade Up</button>
+                    <button type="button" class="temp-item" data-motion="slide">Slide</button>
+                    <button type="button" class="temp-item" data-motion="pop">Pop</button>
+                    <button type="button" class="temp-item" data-motion="shine">Shine</button>
+                </div>
+                <div class="form-group">
+                    <label for="range-motion-speed">Speed (<span id="txt-motion-speed">1.0x</span>)</label>
+                    <input type="range" id="range-motion-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+                </div>
+                <button type="button" class="btn btn-outline" id="btn-replay-motion" onclick="playEntrance()">&#9654; Replay</button>
+            </div>
         </aside>
 
         <aside class="panel" id="panel-qr" data-tab="qr">
@@ -622,8 +715,10 @@
 </main>
 
 <div class="mobile-actionbar">
-    <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
-    <button class="btn" onclick="downloadQR()">Save QR Only</button>
+    <button class="btn btn-outline" onclick="exportCard()">Export Card</button>
+    <button class="btn" onclick="downloadQR()">Save QR</button>
+    <button class="btn btn-outline btn-export-video" id="btn-export-video-m" onclick="exportVideo()">Export Video</button>
+    <button class="btn btn-outline btn-bake-html" id="btn-bake-html-m" onclick="bakeHTML()">Bake HTML</button>
 </div>
 
 <!-- Hidden buffers for high-resolution QR generation (never rendered) -->
@@ -654,12 +749,19 @@
     };
 
     const TEMPLATE_DEFS = {
-        corporate: { bg1: '#ffffff', bg2: '#e2e8f0', isGrad: false, txtCol: '#0f172a', accent: '#2563eb', qrBg: '#ffffff', qrFg: '#0f172a', layout: 'row',    border: 'none', glow: 'none', fontPair: 'modern',    pattern: 'none',  patternOpacity: 0.10 },
-        minimal:   { bg1: '#fafaf9', bg2: '#fafaf9', isGrad: false, txtCol: '#18181b', accent: '#18181b', qrBg: '#fafaf9', qrFg: '#18181b', layout: 'column', border: '1px solid rgba(0,0,0,0.08)', glow: 'none', fontPair: 'editorial', pattern: 'dots',  patternOpacity: 0.08 },
-        dark:      { bg1: '#1e293b', bg2: '#0f172a', isGrad: true,  txtCol: '#f8fafc', accent: '#38bdf8', qrBg: '#1e293b', qrFg: '#f8fafc', layout: 'row',    border: 'none', glow: 'none', fontPair: 'mono',      pattern: 'grid',  patternOpacity: 0.10 },
-        luxury:    { bg1: '#151109', bg2: '#241c0d', isGrad: true,  txtCol: '#f3e3bd', accent: '#d4af37', qrBg: '#151109', qrFg: '#d4af37', layout: 'row',    border: '1px solid rgba(212,175,55,0.45)', glow: '0 0 50px -10px rgba(212,175,55,0.35)', fontPair: 'refined', pattern: 'geo',   patternOpacity: 0.10 },
-        aurora:    { bg1: '#1e1b4b', bg2: '#7c3aed', isGrad: true,  txtCol: '#ffffff', accent: '#f0abfc', qrBg: '#ffffff', qrFg: '#1e1b4b', layout: 'column', border: 'none', glow: '0 0 60px -8px rgba(168,85,247,0.55)', fontPair: 'modern', pattern: 'waves', patternOpacity: 0.14 }
+        corporate: { bg1: '#ffffff', bg2: '#e2e8f0', isGrad: false, txtCol: '#0f172a', accent: '#2563eb', qrBg: '#ffffff', qrFg: '#0f172a', layout: 'row',    border: 'none', glow: 'none', fontPair: 'modern',    pattern: 'none',  patternOpacity: 0.10, motion: 'fadeup' },
+        minimal:   { bg1: '#fafaf9', bg2: '#fafaf9', isGrad: false, txtCol: '#18181b', accent: '#18181b', qrBg: '#fafaf9', qrFg: '#18181b', layout: 'column', border: '1px solid rgba(0,0,0,0.08)', glow: 'none', fontPair: 'editorial', pattern: 'dots',  patternOpacity: 0.08, motion: 'fadeup' },
+        dark:      { bg1: '#1e293b', bg2: '#0f172a', isGrad: true,  txtCol: '#f8fafc', accent: '#38bdf8', qrBg: '#1e293b', qrFg: '#f8fafc', layout: 'row',    border: 'none', glow: 'none', fontPair: 'mono',      pattern: 'grid',  patternOpacity: 0.10, motion: 'slide' },
+        luxury:    { bg1: '#151109', bg2: '#241c0d', isGrad: true,  txtCol: '#f3e3bd', accent: '#d4af37', qrBg: '#151109', qrFg: '#d4af37', layout: 'row',    border: '1px solid rgba(212,175,55,0.45)', glow: '0 0 50px -10px rgba(212,175,55,0.35)', fontPair: 'refined', pattern: 'geo',   patternOpacity: 0.10, motion: 'shine' },
+        aurora:    { bg1: '#1e1b4b', bg2: '#7c3aed', isGrad: true,  txtCol: '#ffffff', accent: '#f0abfc', qrBg: '#ffffff', qrFg: '#1e1b4b', layout: 'column', border: 'none', glow: '0 0 60px -8px rgba(168,85,247,0.55)', fontPair: 'modern', pattern: 'waves', patternOpacity: 0.14, motion: 'pop' }
     };
+
+    // 모션 프리셋 메타 (라벨 + 엔트런스/앰비언트 타이밍 상수, ms 단위·speed로 나눠 사용)
+    const MOTION_PRESETS = ['none', 'fadeup', 'slide', 'pop', 'shine'];
+    const MOTION_LABELS = { none: 'None', fadeup: 'Fade Up', slide: 'Slide', pop: 'Pop', shine: 'Shine' };
+    const MOTION_STAGGER_MS = 90;      // 요소별 스태거 간격 (기준, speed로 나눔)
+    const MOTION_ENTRANCE_MS = { none: 0, fadeup: 520, slide: 520, pop: 560, shine: 480 };
+    const MOTION_AMBIENT_CYCLE_MS = { none: 0, fadeup: 0, slide: 2600, pop: 3200, shine: 3200 };
 
     const state = {
         name: "Tony Kim", title: "Producer", company: "Bunt Games",
@@ -669,7 +771,8 @@
         fontPair: "modern", scale: 1.0,
         pattern: "none", patternOpacity: 0.12,
         qrFg: "#000000", qrBg: "#ffffff", showQrLogo: false, qrMode: "vcard", qrRes: "1024",
-        template: "corporate"
+        template: "corporate",
+        motion: "fadeup", motionSpeed: 1.0
     };
 
     const QR_INTERNAL_SIZE = 1024; // 화면 표시용 내부 고해상도
@@ -713,6 +816,8 @@
         bindTabs();
         bindDemoTriggers();
         render();
+        playEntrance(); // 최초 로드도 모션 쇼케이스가 되도록 1회 재생 (render 자체는 트리거하지 않음)
+        checkVideoSupport();
 
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -721,6 +826,12 @@
         window.addEventListener('orientationchange', () => {
             setTimeout(() => { updateCardScale(); positionMobileTabbar(); }, 200);
         });
+
+        try {
+            window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => {
+                if (!demoActive) settleMotion();
+            });
+        } catch (err) { /* older browsers: ignore */ }
 
         // 페이지 진입 후 입력/수정이 없으면 저장분 여부와 관계없이 자동 시연 시작
         demoStartTimer = setTimeout(() => {
@@ -772,6 +883,126 @@
         }
     }
 
+    // ---- 모션 (엔트런스 + 앰비언트) ----
+
+    let entranceEndTimer = null;
+
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    /**
+     * 스태거 순서대로 현재 보이는 모션 대상 요소 목록을 반환.
+     * 로고(0) -> 이름(1) -> 직함/회사(2) -> 연락처 행(보이는 것만, 위->아래, 3..) -> QR(마지막)
+     */
+    function motionElementList() {
+        const list = [];
+        const logo = document.getElementById('view-logo');
+        const profile = document.getElementById('view-profile');
+        if (logo) list.push({ el: logo, idx: 0 });
+        if (profile && !profile.classList.contains('hidden')) list.push({ el: profile, idx: 0 });
+        const nameEl = document.getElementById('view-name');
+        if (nameEl) list.push({ el: nameEl, idx: 1 });
+        const metaEl = document.getElementById('view-meta');
+        if (metaEl) list.push({ el: metaEl, idx: 2 });
+        let rowIdx = 3;
+        ['row-phone', 'row-email', 'row-web', 'row-youtube', 'row-addr'].forEach((id) => {
+            const row = document.getElementById(id);
+            if (row && !row.classList.contains('hidden')) { list.push({ el: row, idx: rowIdx }); rowIdx++; }
+        });
+        const qr = document.getElementById('qrcode-wrap');
+        if (qr) list.push({ el: qr, idx: rowIdx });
+        return list;
+    }
+
+    const MOTION_PLAY_CLASSES = ['mo-play-fadeup', 'mo-play-slide', 'mo-play-pop', 'mo-play-shine'];
+    const MOTION_AMBIENT_CLASSES = ['mo-ambient-fadeup', 'mo-ambient-slide', 'mo-ambient-pop', 'mo-ambient-shine'];
+
+    function stopAmbient() {
+        const card = document.getElementById('card-container');
+        if (card) card.classList.remove(...MOTION_AMBIENT_CLASSES);
+    }
+
+    function startAmbient() {
+        if (prefersReducedMotion()) return;
+        const preset = state.motion;
+        if (!preset || preset === 'none') return;
+        const card = document.getElementById('card-container');
+        if (!card) return;
+        card.classList.remove(...MOTION_AMBIENT_CLASSES);
+        card.classList.add('mo-ambient-' + preset);
+    }
+
+    /**
+     * 애니메이션 없이 현재 프리셋의 "엔트런스 완료 + 앰비언트" 상태로 즉시 정착시킨다.
+     * (데모 종료 복원처럼 재생이 아니라 스냅으로 되돌려야 하는 경우 사용)
+     */
+    function settleMotion() {
+        clearTimeout(entranceEndTimer);
+        const card = document.getElementById('card-container');
+        if (!card) return;
+        motionElementList().forEach(({ el }) => {
+            el.classList.remove(...MOTION_PLAY_CLASSES);
+            el.style.opacity = '';
+            el.style.transform = '';
+        });
+        stopAmbient();
+        if (state.motion !== 'none' && !prefersReducedMotion()) startAmbient();
+    }
+
+    /**
+     * 엔트런스 재생. 호출 트리거는 반드시 다음 4가지 중 하나여야 한다:
+     * (a) 모션 프리셋 변경 (b) 템플릿 변경 (c) Replay 버튼 (d) 데모 스텝 전환
+     * render()는 절대로 이 함수를 호출하면 안 된다 (타이핑 중 재시작 방지).
+     */
+    function playEntrance() {
+        clearTimeout(entranceEndTimer);
+        const card = document.getElementById('card-container');
+        if (!card) return;
+        stopAmbient();
+        const list = motionElementList();
+        const preset = state.motion;
+        card.style.setProperty('--mo-speed', state.motionSpeed || 1);
+
+        list.forEach(({ el }) => {
+            el.classList.remove(...MOTION_PLAY_CLASSES);
+            el.style.opacity = '';
+            el.style.transform = '';
+        });
+
+        if (!preset || preset === 'none' || prefersReducedMotion()) {
+            if (preset && preset !== 'none' && !prefersReducedMotion()) startAmbient();
+            return;
+        }
+
+        // 즉시 숨김 -> 강제 리플로우 -> 애니메이션 클래스 부여 (재시작 보장)
+        list.forEach(({ el }) => { el.style.opacity = '0'; });
+        void card.offsetWidth;
+        list.forEach(({ el, idx }) => {
+            el.style.opacity = '';
+            el.style.setProperty('--mo-idx', idx);
+            el.classList.add('mo-play-' + preset);
+        });
+
+        const maxIdx = list.length ? Math.max.apply(null, list.map((x) => x.idx)) : 0;
+        const speed = state.motionSpeed || 1;
+        const totalMs = (maxIdx * MOTION_STAGGER_MS + (MOTION_ENTRANCE_MS[preset] || 520)) / speed + 60;
+        entranceEndTimer = setTimeout(() => {
+            list.forEach(({ el }) => el.classList.remove(...MOTION_PLAY_CLASSES));
+            startAmbient();
+        }, totalMs);
+    }
+
+    function syncMotionControls() {
+        document.querySelectorAll('#motion-grid .temp-item').forEach((b) => {
+            b.classList.toggle('active', b.dataset.motion === state.motion);
+        });
+        const speedEl = document.getElementById('range-motion-speed');
+        if (speedEl) speedEl.value = state.motionSpeed;
+        const txt = document.getElementById('txt-motion-speed');
+        if (txt) txt.innerText = Number(state.motionSpeed).toFixed(1) + 'x';
+    }
+
     function render() {
         // 데이터 업데이트
         document.getElementById('view-name').innerText = state.name;
@@ -803,6 +1034,7 @@
         nameEl.style.fontWeight = pair.headingWeight;
         card.style.color = state.txtCol;
         card.style.setProperty('--card-accent', state.accent || def.accent);
+        card.style.setProperty('--mo-speed', state.motionSpeed || 1); // 앰비언트/진행 중인 엔트런스 속도만 갱신 (재시작 없음)
         card.style.border = def.border;
         card.style.boxShadow = (def.glow && def.glow !== 'none') ? `${def.glow}, var(--shadow)` : 'var(--shadow)';
 
@@ -1029,6 +1261,23 @@
             render();
         });
 
+        // 모션 프리셋 변경 — 허용된 4가지 재생 트리거 중 (a)
+        document.querySelectorAll('#motion-grid .temp-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.motion = btn.dataset.motion;
+                syncMotionControls();
+                render();
+                playEntrance();
+            });
+        });
+
+        // 속도는 render()에서 --mo-speed로 즉시 반영될 뿐, 재생을 재시작하지 않는다
+        document.getElementById('range-motion-speed').addEventListener('input', (e) => {
+            state.motionSpeed = parseFloat(e.target.value);
+            document.getElementById('txt-motion-speed').innerText = state.motionSpeed.toFixed(1) + 'x';
+            render();
+        });
+
         document.getElementById('f-logo').addEventListener('change', (e) => handleFile(e, 'logo'));
         document.getElementById('f-profile').addEventListener('change', (e) => handleFile(e, 'profile'));
     }
@@ -1093,6 +1342,7 @@
         demoSnapshot = null;
         syncInputsFromState();
         render();
+        settleMotion(); // 데모 종료는 재생 트리거가 아니라 즉시 정착 — 사용자의 모션 설정 상태로 스냅 복원
         document.getElementById('demo-badge').classList.add('hidden');
         demoActive = false; // 복원 render 이후에 해제 (저장 가드 순서 중요)
         armIdleTimer();
@@ -1125,7 +1375,7 @@
         // state를 실제로 수정하는 조작 감지 (시연은 실제 이벤트를 발생시키지 않으므로 안전)
         document.addEventListener('input', markUserEdit, true);
         document.addEventListener('change', markUserEdit, true);
-        document.querySelectorAll('.template-grid .temp-item, #pattern-grid .temp-item').forEach((b) => {
+        document.querySelectorAll('.template-grid .temp-item, #pattern-grid .temp-item, #motion-grid .temp-item').forEach((b) => {
             b.addEventListener('click', markUserEdit);
         });
     }
@@ -1148,6 +1398,7 @@
         state.fontPair = def.fontPair;
         state.pattern = def.pattern;
         state.patternOpacity = def.patternOpacity;
+        state.motion = def.motion || 'none';
 
         document.getElementById('col-bg1').value = state.bg1;
         document.getElementById('col-bg2').value = state.bg2;
@@ -1158,8 +1409,10 @@
         document.getElementById('check-grad').checked = state.isGrad;
         document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
         syncPatternControls();
+        syncMotionControls();
 
         render();
+        playEntrance(); // 허용된 재생 트리거 (b) 템플릿 변경 — 데모 스텝 전환도 applyTemp를 경유하므로 (d)도 함께 충족
     }
 
     function syncPatternControls() {
@@ -1183,6 +1436,18 @@
         card.style.transform = 'scale(1)';
         card.style.transformOrigin = 'top left';
 
+        // PNG는 모션의 "최종 정지 상태"로 캡처되어야 함 — 엔트런스 진행 중이면 즉시 완료 상태로,
+        // 앰비언트 루프는 캡처 순간 정지시켜 흔들림 없는 정지 프레임을 만든다.
+        clearTimeout(entranceEndTimer);
+        const motionList = motionElementList();
+        motionList.forEach(({ el }) => {
+            el.classList.remove(...MOTION_PLAY_CLASSES);
+            el.style.opacity = '';
+            el.style.transform = '';
+        });
+        const wasAmbient = state.motion;
+        stopAmbient();
+
         try {
             const canvas = await html2canvas(card, {
                 scale: 3,
@@ -1197,6 +1462,7 @@
         } finally {
             card.style.transform = prevTransform;
             card.style.transformOrigin = prevOrigin;
+            if (wasAmbient && wasAmbient !== 'none' && !prefersReducedMotion()) startAmbient();
         }
     }
 
@@ -1214,6 +1480,412 @@
         link.download = `QR_${state.name.replace(/\s+/g, '_')}_${res}px.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+    }
+
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // ==== 11. Export Video (WebM) ====
+    // 2-pass: (1) 결정론적 타임라인을 t마다 인라인 스타일로 직접 적용하며 html2canvas로 프레임 캡처
+    //         (2) 캡처된 프레임을 실시간으로 canvas에 재생하며 captureStream()+MediaRecorder로 인코딩
+
+    function videoSupported() {
+        return typeof MediaRecorder !== 'undefined' &&
+            typeof HTMLCanvasElement !== 'undefined' &&
+            typeof HTMLCanvasElement.prototype.captureStream === 'function';
+    }
+
+    function checkVideoSupport() {
+        if (videoSupported()) return;
+        document.querySelectorAll('.btn-export-video').forEach((btn) => {
+            btn.disabled = true;
+            btn.title = 'This browser does not support video export (needs MediaRecorder + canvas.captureStream).';
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        });
+    }
+
+    function easeOutCubic(p) { return 1 - Math.pow(1 - p, 3); }
+    function easeOutBack(p) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); }
+
+    function buildMotionPlan(list, preset, speed) {
+        const s = speed || 1;
+        const stagger = MOTION_STAGGER_MS / s;
+        const dur = (MOTION_ENTRANCE_MS[preset] || 520) / s;
+        const maxIdx = list.length ? Math.max.apply(null, list.map((x) => x.idx)) : 0;
+        const entranceTotal = maxIdx * stagger + dur;
+        const ambientCycle = (MOTION_AMBIENT_CYCLE_MS[preset] || 3200) / s;
+        return { speed: s, stagger, dur, entranceTotal, ambientCycle };
+    }
+
+    /** 요소 하나의 엔트런스 진행도(0~1, delay 이전은 0, 종료 후 1)를 계산 */
+    function entranceProgress(t, idx, plan) {
+        const localT = t - idx * plan.stagger;
+        return Math.min(1, Math.max(0, localT / plan.dur));
+    }
+
+    /**
+     * 시각 t(ms, 엔트런스 시작 기준)에서의 프레임을 motionList/overlay에 인라인 스타일로 직접 적용.
+     * CSS 애니메이션에 의존하지 않는 결정론적 함수 — 캡처 패스 전용.
+     */
+    function applyFrameInline(motionList, glowEl, shineEl, logoEls, preset, plan, t) {
+        motionList.forEach(({ el, idx }) => {
+            const p = entranceProgress(t, idx, plan);
+            let opacity = 1, transform = '';
+            if (preset === 'fadeup') { opacity = p; transform = `translateY(${(1 - easeOutCubic(p)) * 14}px)`; }
+            else if (preset === 'slide') { opacity = p; transform = `translateX(${(1 - easeOutCubic(p)) * -26}px)`; }
+            else if (preset === 'pop') { const e = easeOutBack(p); opacity = Math.min(1, p * 1.3); transform = `scale(${0.7 + 0.3 * e})`; }
+            else if (preset === 'shine') { opacity = p; transform = 'none'; }
+            else { opacity = 1; transform = 'none'; }
+            el.style.opacity = String(opacity);
+            el.style.transform = transform;
+        });
+
+        const ambientT = t - plan.entranceTotal;
+        // 앰비언트: 로고 플로팅(pop), 액센트 글로우 펄스(slide), 로고/이름 광택 스윕(shine)
+        if (glowEl) glowEl.style.opacity = '0';
+        if (shineEl) shineEl.style.transform = 'translateX(-160%)';
+
+        if (ambientT >= 0) {
+            if (preset === 'pop' && plan.ambientCycle > 0) {
+                const cyc = (ambientT % plan.ambientCycle) / plan.ambientCycle;
+                const y = -4 * Math.sin(cyc * Math.PI * 2 * 0.5 + Math.PI / 2) * -1; // 0->-4->0 매끄러운 왕복
+                const floatY = -4 * (0.5 - 0.5 * Math.cos(cyc * Math.PI * 2));
+                logoEls.forEach((el) => { el.style.transform = `translateY(${floatY}px)`; });
+            } else if (preset === 'slide' && glowEl && plan.ambientCycle > 0) {
+                const cyc = (ambientT % plan.ambientCycle) / plan.ambientCycle;
+                const glow = 0.16 + (0.42 - 0.16) * (0.5 - 0.5 * Math.cos(cyc * Math.PI * 2));
+                glowEl.style.opacity = String(glow);
+            } else if (preset === 'shine' && shineEl && plan.ambientCycle > 0) {
+                const cyc = (ambientT % plan.ambientCycle) / plan.ambientCycle;
+                // moShineSweep 키프레임 근사: 0~8% -160%, 55~100% 180%, 그 사이 보간
+                let x;
+                if (cyc <= 0.08) x = -160;
+                else if (cyc >= 0.55) x = 180;
+                else x = -160 + (180 - (-160)) * ((cyc - 0.08) / (0.55 - 0.08));
+                shineEl.style.transform = `translateX(${x}%)`;
+            }
+        }
+    }
+
+    async function captureMotionFrames(onProgress) {
+        const card = document.getElementById('card-container');
+        const prevTransform = card.style.transform, prevOrigin = card.style.transformOrigin;
+        card.style.transform = 'scale(1)';
+        card.style.transformOrigin = 'top left';
+
+        clearTimeout(entranceEndTimer);
+        stopAmbient();
+        const motionList = motionElementList();
+        const glowEl = document.getElementById('mo-glow');
+        const shineEl = document.getElementById('mo-shine-name');
+        const logoEls = motionList.filter(({ el }) => el.id === 'view-logo' || el.id === 'view-profile').map((x) => x.el);
+        const preset = state.motion || 'none';
+        const speed = state.motionSpeed || 1;
+        const plan = buildMotionPlan(motionList, preset, speed);
+
+        card.classList.add('mo-capturing');
+
+        const fps = 20;
+        const frameDurMs = 1000 / fps;
+        const totalMs = preset === 'none' ? 900 : Math.max(400, Math.round(plan.entranceTotal + plan.ambientCycle));
+        const frameCount = Math.max(1, Math.round(totalMs / frameDurMs));
+
+        const frames = [];
+        try {
+            for (let i = 0; i < frameCount; i++) {
+                const t = i * frameDurMs;
+                applyFrameInline(motionList, glowEl, shineEl, logoEls, preset, plan, t);
+                // eslint-disable-next-line no-await-in-loop
+                const canvas = await html2canvas(card, { scale: 2, useCORS: true, backgroundColor: null, logging: false });
+                frames.push(canvas);
+                if (onProgress) onProgress(i + 1, frameCount);
+            }
+        } finally {
+            motionList.forEach(({ el }) => { el.style.opacity = ''; el.style.transform = ''; });
+            if (glowEl) glowEl.style.opacity = '';
+            if (shineEl) shineEl.style.transform = '';
+            card.classList.remove('mo-capturing');
+            card.style.transform = prevTransform;
+            card.style.transformOrigin = prevOrigin;
+            if (preset !== 'none' && !prefersReducedMotion()) startAmbient();
+        }
+
+        return { frames, fps };
+    }
+
+    function encodeFramesToWebm(frames, fps) {
+        return new Promise((resolve, reject) => {
+            if (!frames.length) { reject(new Error('no frames captured')); return; }
+            const canvas = document.createElement('canvas');
+            canvas.width = frames[0].width;
+            canvas.height = frames[0].height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(frames[0], 0, 0);
+
+            const stream = canvas.captureStream(fps);
+            const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+            const mime = candidates.find((m) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || 'video/webm';
+
+            let recorder;
+            try {
+                recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6000000 });
+            } catch (err) {
+                reject(err);
+                return;
+            }
+            const chunks = [];
+            recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+            recorder.onerror = (e) => reject(e.error || new Error('MediaRecorder error'));
+            recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+
+            recorder.start();
+            const frameInterval = 1000 / fps;
+            let i = 0;
+            const drawNext = () => {
+                if (i >= frames.length) {
+                    setTimeout(() => recorder.stop(), frameInterval);
+                    return;
+                }
+                ctx.drawImage(frames[i], 0, 0, canvas.width, canvas.height);
+                i++;
+                setTimeout(drawNext, frameInterval);
+            };
+            drawNext();
+        });
+    }
+
+    async function exportVideo() {
+        if (!videoSupported()) {
+            alert('This browser does not support video export. Please try a recent Chrome or Edge.');
+            return;
+        }
+        const btns = Array.from(document.querySelectorAll('.btn-export-video'));
+        if (btns.some((b) => b.disabled)) return;
+        btns.forEach((b) => { b.dataset.origText = b.dataset.origText || b.textContent; b.disabled = true; });
+        const setText = (t) => btns.forEach((b) => { b.textContent = t; });
+        try {
+            setText('Capturing 0%');
+            const { frames, fps } = await captureMotionFrames((done, total) => {
+                setText(`Capturing ${Math.round((done / total) * 100)}%`);
+            });
+            setText('Encoding…');
+            const blob = await encodeFramesToWebm(frames, fps);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BizCard_${(state.name || 'card').replace(/\s+/g, '_')}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } catch (err) {
+            console.error('BizCard Pro: video export failed', err);
+            alert('Video export failed. Please try again.');
+        } finally {
+            btns.forEach((b) => { b.disabled = false; b.textContent = b.dataset.origText; });
+        }
+    }
+
+    // ==== 12. Bake HTML (독립 실행 HTML로 내보내기) ====
+
+    function bakeMotionCss(preset) {
+        if (!preset || preset === 'none') return '';
+        const entranceKeyframes = {
+            fadeup: `@keyframes bkFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}`,
+            slide: `@keyframes bkSlideIn{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:translateX(0)}}`,
+            pop: `@keyframes bkPopIn{0%{opacity:0;transform:scale(.7)}70%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}`,
+            shine: `@keyframes bkFadeIn{from{opacity:0}to{opacity:1}}`
+        };
+        const playClass = {
+            fadeup: `.bk-play{animation:bkFadeUp 520ms cubic-bezier(.16,.84,.44,1) both;animation-delay:calc(var(--bk-idx,0)*90ms)}`,
+            slide: `.bk-play{animation:bkSlideIn 520ms cubic-bezier(.16,.84,.44,1) both;animation-delay:calc(var(--bk-idx,0)*90ms)}`,
+            pop: `.bk-play{animation:bkPopIn 560ms cubic-bezier(.34,1.56,.64,1) both;animation-delay:calc(var(--bk-idx,0)*90ms)}`,
+            shine: `.bk-play{animation:bkFadeIn 480ms ease-out both;animation-delay:calc(var(--bk-idx,0)*90ms)}`
+        };
+        const ambient = {
+            fadeup: '',
+            pop: `@keyframes bkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+#bk-card.bk-ambient #view-logo,#bk-card.bk-ambient #view-profile{animation:bkFloat 3200ms ease-in-out infinite}`,
+            slide: `@keyframes bkGlowPulse{0%,100%{opacity:.16}50%{opacity:.42}}
+#bk-card.bk-ambient #mo-glow{animation:bkGlowPulse 2600ms ease-in-out infinite}`,
+            shine: `@keyframes bkShineSweep{0%,8%{transform:translateX(-160%)}55%,100%{transform:translateX(180%)}}
+#bk-card.bk-ambient #mo-shine-name{animation:bkShineSweep 3200ms ease-in-out infinite}`
+        };
+        return `${entranceKeyframes[preset] || ''}\n${playClass[preset] || ''}\n${ambient[preset] || ''}\n@media (prefers-reduced-motion: reduce){.bk-play{animation:none!important;opacity:1!important;transform:none!important}#bk-card.bk-ambient *{animation:none!important}}`;
+    }
+
+    function bakeHTML() {
+        flushQR();
+        const qrDataUrl = qrCache.canvas ? qrCache.canvas.toDataURL('image/png') : '';
+        const def = TEMPLATE_DEFS[state.template] || TEMPLATE_DEFS.corporate;
+        const pair = FONT_PAIRS[state.fontPair] || FONT_PAIRS.modern;
+        const patGen = PATTERN_SVGS[state.pattern];
+        const patternStyle = patGen
+            ? `background-image:url("data:image/svg+xml,${encodeURIComponent(patGen(state.txtCol))}");opacity:${state.patternOpacity};display:block;`
+            : 'display:none;';
+        const isColumn = def.layout === 'column';
+        const bg = state.isGrad ? `linear-gradient(135deg, ${state.bg1}, ${state.bg2})` : state.bg1;
+        const glow = (def.glow && def.glow !== 'none') ? `${def.glow}, 0 20px 45px -14px rgba(0,0,0,0.65)` : '0 20px 45px -14px rgba(0,0,0,0.65)';
+
+        const rows = [
+            { id: 'phone', label: state.phone, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
+            { id: 'email', label: state.email, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>' },
+            { id: 'web', label: state.web, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' },
+            { id: 'youtube', label: state.youtube, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg>' },
+            { id: 'addr', label: state.addr, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' }
+        ];
+
+        // 스태거 순서: 로고(0) -> 이름(1) -> 메타(2) -> 보이는 연락처 행(3..) -> QR(마지막)
+        let idx = 3;
+        const rowsHtml = rows.map((r) => {
+            if (!r.label || !String(r.label).trim()) return '';
+            const html = `<div class="bk-row bk-el" style="--bk-idx:${idx}"><span class="c-icon">${r.icon}</span> <span>${escapeHtml(r.label)}</span></div>`;
+            idx++;
+            return html;
+        }).join('\n');
+        const qrIdx = idx;
+
+        const hasProfile = !!state.profile;
+        const vcardLines = [
+            'BEGIN:VCARD', 'VERSION:3.0',
+            `FN:${escapeVCardValue(state.name)}`, `ORG:${escapeVCardValue(state.company)}`, `TITLE:${escapeVCardValue(state.title)}`,
+            `TEL;TYPE=CELL:${escapeVCardValue(state.phone)}`, `EMAIL:${escapeVCardValue(state.email)}`, `ADR:;;${escapeVCardValue(state.addr)}`,
+            'END:VCARD'
+        ];
+        const vcardUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcardLines.join('\r\n'));
+
+        const motionCss = bakeMotionCss(state.motion);
+        const hasMotion = state.motion && state.motion !== 'none';
+        const safeName = escapeHtml(state.name || 'Card');
+        const safeCompany = escapeHtml(state.company || '');
+        const safeFileName = (state.name || 'card').replace(/\s+/g, '_');
+
+        const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>${safeName}${safeCompany ? ' — ' + safeCompany : ''}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@400;600;700&family=Manrope:wght@400;500;700&family=Cormorant+Garamond:wght@600;700&family=Marcellus&family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem;
+  font-family:'Inter',sans-serif;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(139,92,246,0.20), transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(232,198,116,0.13), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(109,40,217,0.16), transparent 55%),
+    linear-gradient(180deg, #0b0f1a 0%, #05070d 100%);
+}
+#bk-stage{ width:100%; max-width:500px; }
+#bk-card{
+  width:100%; aspect-ratio:500/317; background:${bg}; border-radius:12px; box-shadow:${glow};
+  display:flex; flex-direction:${isColumn ? 'column' : 'row'}; position:relative; overflow:hidden;
+  color:${state.txtCol}; font-family:${pair.body}; border:${def.border}; cursor:pointer;
+}
+#bk-pattern{ position:absolute; inset:0; z-index:1; pointer-events:none; background-repeat:repeat; ${patternStyle} }
+.mo-overlay{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+#mo-glow{ opacity:0; background: radial-gradient(ellipse 70% 60% at 50% 15%, ${state.accent || def.accent} 0%, transparent 70%); mix-blend-mode:screen; }
+#mo-shine-name{ top:-60%; left:-70%; width:70%; height:220%; background:linear-gradient(100deg, transparent 42%, rgba(255,255,255,0.65) 50%, transparent 58%); transform:translateX(-160%); mix-blend-mode:overlay; }
+#bk-body{ flex:1; padding:${isColumn ? '1.5rem 2rem' : '2.2rem'}; display:flex; flex-direction:column; justify-content:space-between; position:relative; z-index:5; min-height:0; }
+#bk-header{ display:flex; align-items:flex-start; gap:1rem; flex-shrink:0; position:relative; overflow:hidden; }
+#bk-logo{ width:45px; height:45px; object-fit:contain; }
+#bk-profile{ width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.2); }
+#bk-name{ font-size:1.6rem; font-weight:${pair.headingWeight}; font-family:${pair.heading}; line-height:1.1; margin-bottom:2px; }
+.bk-title{ font-size:0.9rem; font-weight:500; opacity:0.8; }
+.bk-company{ font-size:0.8rem; font-weight:700; margin-top:4px; color:${state.accent || def.accent}; }
+#bk-contact{ font-size:${isColumn ? '0.65rem' : '0.72rem'}; line-height:${isColumn ? '1.4' : '1.6'}; margin-top:${isColumn ? '0.5rem' : 'auto'}; }
+.bk-row{ display:flex; align-items:center; gap:6px; }
+.c-icon{ display:inline-flex; width:13px; height:13px; flex-shrink:0; }
+.c-icon svg{ width:100%; height:100%; display:block; }
+#bk-qr-section{ display:flex; flex-direction:column; align-items:${isColumn ? 'flex-end' : 'center'}; justify-content:center;
+  ${isColumn ? 'width:100%;padding:0 2rem 1.5rem;' : 'width:170px;padding:1.5rem;background:rgba(0,0,0,0.03);'} position:relative; z-index:5; flex-shrink:0; }
+#bk-qr-wrap{ background:${state.qrBg}; padding:6px; border-radius:8px; display:inline-block; font-size:0; }
+#bk-qr-wrap img{ display:block; width:${isColumn ? '85' : '105'}px; height:${isColumn ? '85' : '105'}px; }
+#bk-hint{ margin-top:1.1rem; text-align:center; color:rgba(255,255,255,0.45); font-size:0.72rem; }
+#bk-save{ display:inline-block; margin-top:0.6rem; color:#e8c674; font-size:0.72rem; text-decoration:none; }
+.bk-el{ --bk-idx:0; }
+${motionCss}
+@media (max-width:480px){ body{ padding:1rem; } }
+</style>
+</head>
+<body>
+<div id="bk-stage">
+<div id="bk-card" role="button" aria-label="Replay entrance animation" tabindex="0">
+<div id="bk-pattern" aria-hidden="true"></div>
+<div id="mo-glow" class="mo-overlay" aria-hidden="true"></div>
+<div id="bk-body">
+<div id="bk-header">
+<div id="mo-shine-name" class="mo-overlay" aria-hidden="true"></div>
+<img id="bk-logo" class="bk-el" src="${state.logo}" alt="logo">
+${hasProfile ? `<img id="bk-profile" class="bk-el" src="${state.profile}" alt="profile">` : ''}
+<div>
+<div id="bk-name" class="bk-el" style="--bk-idx:1">${escapeHtml(state.name)}</div>
+<div class="bk-el" style="--bk-idx:2">
+<div class="bk-title">${escapeHtml(state.title)}</div>
+<div class="bk-company">${escapeHtml(state.company)}</div>
+</div>
+</div>
+</div>
+<div id="bk-contact">
+${rowsHtml}
+</div>
+</div>
+<div id="bk-qr-section">
+<div id="bk-qr-wrap" class="bk-el" style="--bk-idx:${qrIdx}">
+${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR code">` : ''}
+</div>
+</div>
+</div>
+<p id="bk-hint">Click the card to replay the entrance.<br>
+${vcardUri ? `<a id="bk-save" href="${vcardUri}" download="${escapeHtml(safeFileName)}.vcf">Save Contact</a>` : ''}
+</p>
+</div>
+<script>
+(function () {
+  var card = document.getElementById('bk-card');
+  var els = Array.prototype.slice.call(document.querySelectorAll('.bk-el'));
+  var hasMotion = ${hasMotion ? 'true' : 'false'};
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play() {
+    card.classList.remove('bk-ambient');
+    els.forEach(function (el) { el.classList.remove('bk-play'); el.style.opacity = ''; });
+    if (!hasMotion || reduced) return;
+    els.forEach(function (el) { el.style.opacity = '0'; });
+    void card.offsetWidth;
+    els.forEach(function (el) { el.style.opacity = ''; el.classList.add('bk-play'); });
+    var maxIdx = Math.max.apply(null, els.map(function (el) { return parseInt(getComputedStyle(el).getPropertyValue('--bk-idx')) || 0; }));
+    setTimeout(function () {
+      els.forEach(function (el) { el.classList.remove('bk-play'); });
+      card.classList.add('bk-ambient');
+    }, maxIdx * 90 + 600);
+  }
+  card.addEventListener('click', play);
+  card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
+  play();
+})();
+<\/script>
+</body>
+</html>`;
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `BizCard_${safeFileName}.html`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
 
     // ---- Persistence ----
@@ -1253,6 +1925,9 @@
                 if (!FONT_PAIRS[state.fontPair]) state.fontPair = 'modern';
                 if (state.pattern !== 'none' && !PATTERN_SVGS[state.pattern]) state.pattern = 'none';
                 if (['512', '1024', '2048'].indexOf(String(state.qrRes)) === -1) state.qrRes = '1024';
+                if (MOTION_PRESETS.indexOf(state.motion) === -1) state.motion = 'fadeup';
+                const spd = Number(state.motionSpeed);
+                state.motionSpeed = (isFinite(spd) && spd >= 0.5 && spd <= 2.0) ? spd : 1.0;
             }
         } catch (err) {
             console.warn('BizCard Pro: unable to restore saved state.', err);
@@ -1279,6 +1954,7 @@
         document.getElementById('grad-col2-row').style.display = state.isGrad ? 'flex' : 'none';
         document.getElementById('qr-logo-toggle').checked = state.showQrLogo;
         syncPatternControls();
+        syncMotionControls();
 
         document.querySelectorAll('.template-grid .temp-item').forEach(b => b.classList.remove('active'));
         const activeBtn = document.getElementById('btn-' + state.template);
