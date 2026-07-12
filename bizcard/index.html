@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <!-- Html2Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF (5차: Print PDF 전용, 다른 목적 사용 금지) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         :root {
@@ -235,10 +237,22 @@
 
         #card-stage { position: relative; flex-shrink: 0; }
 
-        /* 명함 컨테이너 */
-        #card-container {
-            width: 500px;
-            height: 317px;
+        /* 앞/뒤 래퍼 — 실측 규격 기반 치수(JS)로 폭/높이 지정, scale만 여기서 적용.
+           전환은 카드 전체 회전(rotateY 180°) 금지 스펙에 따라 "앞면만" 중앙(세로 중심선)을
+           힌지로 페이지 넘김(page-turn)하는 방식: 앞면이 0→-180°로 넘어가며 backface-visibility로
+           사라지고 아래에 깔린 뒷면이 그대로 드러난다. 회전은 카드 footprint 안에서만 일어나
+           어떤 순간에도 미리보기 영역 밖으로 나가거나 clip되지 않는다. */
+        #card-flip {
+            position: absolute;
+            top: 0; left: 0;
+            transform-origin: top left;
+            perspective: 2600px;
+        }
+
+        /* 명함 컨테이너 (앞면) / 뒷면 공통 */
+        #card-container, #card-back {
+            width: 100%;
+            height: 100%;
             background: #fff;
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -247,8 +261,57 @@
             top: 0;
             left: 0;
             overflow: hidden;
-            transform-origin: top left;
         }
+        /* 앞면: 페이지 넘김 회전 대상 (중앙 세로 힌지). 90° 이후 backface가 숨어 뒷면이 보인다 */
+        #card-container {
+            z-index: 2;
+            transform-origin: 50% 50%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transition: transform 0.7s cubic-bezier(.45,.05,.35,1);
+        }
+        #card-flip.flipped #card-container { transform: rotateY(-180deg); }
+        #card-back { z-index: 1; }
+
+        /* 뒷면: brand 모드 (액센트 배경 위 로고+회사명+태그라인 중앙 배치) */
+        .back-brand {
+            position: relative;
+            z-index: 5;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            text-align: center;
+            padding: 1.5rem;
+            color: #fff;
+        }
+        .back-brand-logo { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25)); }
+        .back-brand-company { font-size: 1.15rem; font-weight: 800; letter-spacing: 0.02em; }
+        .back-brand-tagline { font-size: 0.78rem; opacity: 0.88; max-width: 80%; }
+
+        /* 카드 앞/뒤 전환 토글 — 스테이지 아래 일반 흐름에 배치 (overflow:hidden에 잘리지 않도록) */
+        #btn-flip-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--panel-glass-strong);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            min-height: 32px;
+            flex-shrink: 0;
+        }
+        #btn-flip-toggle:hover { border-color: var(--gold-dim); color: var(--gold); }
+        @media (max-width: 850px) { #btn-flip-toggle { margin-top: 8px; font-size: 0.7rem; padding: 5px 12px; } }
 
         .card-body {
             flex: 1;
@@ -334,8 +397,11 @@
         }
 
         .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+        .size-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 0.5rem; }
+        .size-grid .temp-item { font-size: 0.64rem; line-height: 1.35; padding: 8px 4px; }
         .pattern-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 10px; }
         .pattern-grid .temp-item { font-size: 0.66rem; padding: 8px 2px; }
+        .backmode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 0.75rem; }
         .temp-item {
             appearance: none;
             font-family: inherit;
@@ -410,8 +476,62 @@
             backdrop-filter: blur(14px);
             border-top: 1px solid var(--panel-border);
         }
-        .mobile-actionbar .btn { flex: 1 1 45%; margin: 0; }
+        .mobile-actionbar .btn { flex: 1 1 100%; margin: 0; }
         @media (max-width: 850px) { .mobile-actionbar { display: flex; flex-wrap: wrap; } }
+
+        /* ==== Export modal (5차) ==== */
+        #export-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(5,7,13,0.72);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .modal-box {
+            width: min(94vw, 480px);
+            max-height: 88vh;
+            overflow-y: auto;
+            background: var(--bg-deep-2);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.25rem;
+        }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+        .modal-header h2 { font-size: 1rem; font-weight: 800; color: var(--gold); }
+        #btn-modal-close {
+            appearance: none; background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border);
+            color: var(--text-main); border-radius: 8px; width: 34px; height: 34px; font-size: 1.1rem;
+            cursor: pointer; line-height: 1;
+        }
+        #btn-modal-close:hover { border-color: var(--gold-dim); color: var(--gold); }
+        .export-option {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+            padding: 0.75rem 0.15rem; border-bottom: 1px solid var(--panel-border);
+        }
+        .export-option:last-of-type { border-bottom: none; }
+        .export-option-info { display: flex; flex-direction: column; gap: 2px; flex: 1 1 55%; min-width: 140px; }
+        .export-option-info strong { font-size: 0.85rem; }
+        .export-option-info span { font-size: 0.72rem; color: var(--text-muted); }
+        .export-option-extra { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); }
+        .export-option-extra label { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 500; margin: 0; color: var(--text-muted); }
+        .export-option .btn { min-height: 40px; padding: 0.5rem 0.9rem; font-size: 0.8rem; flex-shrink: 0; }
+        .modal-disclaimer {
+            margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px solid var(--panel-border);
+            font-size: 0.7rem; color: var(--text-muted); line-height: 1.5;
+        }
+        .safe-area-warning {
+            flex: 1 1 100%; font-size: 0.72rem; color: var(--gold); background: rgba(232,198,116,0.10);
+            border: 1px solid var(--gold-dim); border-radius: 6px; padding: 6px 10px; margin-top: 4px;
+        }
+        @media (max-width: 480px) {
+            .export-option .btn { flex: 1 1 100%; }
+        }
 
         /* ==== Motion (4차: 트위닝 모션) ==== */
         .card-header { position: relative; overflow: hidden; }
@@ -493,10 +613,7 @@
         BizCard Pro
     </div>
     <div class="header-actions desktop-actions">
-        <button class="btn btn-outline" onclick="exportCard()">Export Card Image</button>
-        <button class="btn btn-outline btn-export-video" id="btn-export-video" onclick="exportVideo()">Export Video</button>
-        <button class="btn btn-outline btn-bake-html" id="btn-bake-html" onclick="bakeHTML()">Bake HTML</button>
-        <button class="btn" onclick="downloadQR()">Save QR Only</button>
+        <button class="btn" id="btn-open-export" onclick="openExportModal()">Export</button>
     </div>
 </header>
 
@@ -506,6 +623,7 @@
     <section class="preview-area" id="preview-area">
         <div id="demo-badge" class="hidden" role="status">Demo &mdash; Click to exit</div>
         <div id="card-stage">
+            <div id="card-flip">
             <div id="card-container">
                 <div id="card-pattern" aria-hidden="true"></div>
                 <div id="mo-glow" class="mo-overlay" aria-hidden="true"></div>
@@ -537,7 +655,44 @@
                     </div>
                 </div>
             </div>
+            <div id="card-back" aria-hidden="true">
+                <div id="back-pattern" aria-hidden="true"></div>
+                <!-- brand mode: accent bg + logo + company + tagline -->
+                <div class="back-brand hidden" id="back-brand">
+                    <img id="back-brand-logo" class="back-brand-logo" src="" alt="logo">
+                    <div id="back-brand-company" class="back-brand-company">Bunt Games</div>
+                    <div id="back-brand-tagline" class="back-brand-tagline"></div>
+                </div>
+                <!-- info-en mode: mirrors front layout with EN fields, shares contact/QR -->
+                <div class="card-body hidden" id="back-info">
+                    <div class="card-header" id="back-header">
+                        <img id="back-logo" src="" class="card-logo" alt="logo">
+                        <img id="back-profile" src="" class="card-profile hidden" alt="profile">
+                        <div>
+                            <div class="card-name" id="back-name">Tony Kim</div>
+                            <div id="back-meta">
+                                <div class="card-title" id="back-title">Producer</div>
+                                <div class="card-company" id="back-company">Bunt Games</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-contact" id="back-contact">
+                        <div id="back-row-phone"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span> <span id="back-v-phone"></span></div>
+                        <div id="back-row-email"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span> <span id="back-v-email"></span></div>
+                        <div id="back-row-web"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span id="back-v-web"></span></div>
+                        <div id="back-row-youtube"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></span> <span id="back-v-youtube"></span></div>
+                        <div id="back-row-addr"><span class="c-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span> <span id="back-v-addr"></span></div>
+                    </div>
+                </div>
+                <div class="card-qr-section hidden" id="back-qr-box">
+                    <div id="back-qrcode-wrap">
+                        <img id="back-qr-display" src="" alt="QR code" width="105" height="105">
+                    </div>
+                </div>
+            </div>
+            </div>
         </div>
+        <button type="button" id="btn-flip-toggle" class="hidden" onclick="toggleCardFace()">&#8635; Show back</button>
         <p class="preview-caption" id="preview-caption">Preview auto-fits to your screen.</p>
     </section>
 
@@ -589,11 +744,51 @@
             <label for="f-profile">Profile Picture</label>
             <input type="file" id="f-profile" accept="image/*" style="font-size: 0.7rem;">
         </div>
+
+        <div class="panel-title" style="margin-top: 1rem;">Back Side</div>
+        <div class="control-group">
+            <div class="backmode-grid" id="backmode-grid">
+                <button type="button" class="temp-item active" data-backmode="none">None</button>
+                <button type="button" class="temp-item" data-backmode="brand">Brand</button>
+                <button type="button" class="temp-item" data-backmode="info-en">Info (EN)</button>
+            </div>
+            <div id="back-fields-brand" class="hidden">
+                <div class="form-group">
+                    <label for="in-back-tagline">Tagline</label>
+                    <input type="text" id="in-back-tagline" value="Building playful things.">
+                </div>
+            </div>
+            <div id="back-fields-infoen" class="hidden">
+                <div class="form-group">
+                    <label for="in-name-en">Full Name (EN)</label>
+                    <input type="text" id="in-name-en" value="Tony Kim">
+                </div>
+                <div class="form-group">
+                    <label for="in-title-en">Job Title (EN)</label>
+                    <input type="text" id="in-title-en" value="Producer">
+                </div>
+                <div class="form-group">
+                    <label for="in-company-en">Company (EN)</label>
+                    <input type="text" id="in-company-en" value="Bunt Games">
+                </div>
+                <div class="form-group">
+                    <label for="in-addr-en">Address (EN)</label>
+                    <input type="text" id="in-addr-en" value="Seoul, South Korea">
+                </div>
+            </div>
+        </div>
     </aside>
 
     <!-- RIGHT: DESIGN + QR CONTROLS -->
     <div class="panel-stack" id="panel-stack">
         <aside class="panel" id="panel-design" data-tab="design">
+            <div class="panel-title">Card Size</div>
+            <div class="size-grid" id="size-grid">
+                <button type="button" class="temp-item active" data-cardsize="kr">KR<br>90×54mm</button>
+                <button type="button" class="temp-item" data-cardsize="credit">Credit<br>85.6×54mm</button>
+                <button type="button" class="temp-item" data-cardsize="us">US<br>88.9×50.8mm</button>
+            </div>
+
             <div class="panel-title">Templates</div>
             <div class="template-grid">
                 <button type="button" class="temp-item active" id="btn-corporate" onclick="applyTemp('corporate')">Corporate</button>
@@ -715,15 +910,65 @@
 </main>
 
 <div class="mobile-actionbar">
-    <button class="btn btn-outline" onclick="exportCard()">Export Card</button>
-    <button class="btn" onclick="downloadQR()">Save QR</button>
-    <button class="btn btn-outline btn-export-video" id="btn-export-video-m" onclick="exportVideo()">Export Video</button>
-    <button class="btn btn-outline btn-bake-html" id="btn-bake-html-m" onclick="bakeHTML()">Bake HTML</button>
+    <button class="btn" id="btn-open-export-m" onclick="openExportModal()">Export</button>
+</div>
+
+<!-- Export modal (5차): single entry point for all export/download paths -->
+<div id="export-modal-overlay" class="hidden" role="presentation" onclick="if(event.target===this) closeExportModal();">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+        <div class="modal-header">
+            <h2 id="export-modal-title">Export</h2>
+            <button type="button" id="btn-modal-close" aria-label="Close" onclick="closeExportModal()">&times;</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Screen PNG</strong><span>3x resolution, for web / digital use.</span></div>
+            <button type="button" class="btn btn-outline" onclick="exportCard()">Download</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Print PNG (300 DPI)</strong><span id="print-png-desc">Trim size + bleed at 300dpi, for print shops.</span></div>
+            <button type="button" class="btn btn-outline" onclick="exportPrintPNG()">Download</button>
+            <div class="export-option-extra">
+                <label><input type="checkbox" id="chk-bleed" checked> Include 3mm bleed</label>
+            </div>
+            <div id="safe-area-warning" class="safe-area-warning hidden"></div>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Print PDF</strong><span>Real-size mm page with crop marks, ready to submit.</span></div>
+            <button type="button" class="btn btn-outline" onclick="exportPrintPDF()">Download</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>QR Only</strong><span>High-resolution QR code image.</span></div>
+            <button type="button" class="btn" onclick="downloadQR()">Download</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Export Video</strong><span>Animated WebM of the entrance + ambient loop.</span></div>
+            <button type="button" class="btn btn-outline btn-export-video" id="btn-export-video" onclick="exportVideo()">Download</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Bake HTML</strong><span>Standalone, dependency-free HTML page.</span></div>
+            <button type="button" class="btn btn-outline btn-bake-html" id="btn-bake-html" onclick="bakeHTML()">Download</button>
+        </div>
+
+        <div class="export-option">
+            <div class="export-option-info"><strong>Save Contact (.vcf)</strong><span>vCard file for adding to contacts directly.</span></div>
+            <button type="button" class="btn btn-outline" onclick="downloadVCard()">Download</button>
+        </div>
+
+        <p class="modal-disclaimer">웹 도구 특성상 RGB로 출력됩니다. 인쇄소에서 CMYK 변환 시 색상이 다소 달라질 수 있습니다.<br>Web tools export in RGB — colors may shift slightly when a print shop converts to CMYK.</p>
+    </div>
 </div>
 
 <!-- Hidden buffers for high-resolution QR generation (never rendered) -->
 <div id="qr-hires" style="display: none;" aria-hidden="true"></div>
 <div id="qr-buf" style="display: none;" aria-hidden="true"></div>
+<!-- Offscreen root for print-export DOM clones (never rendered on screen) -->
+<div id="print-clone-host" style="position: absolute; left: -99999px; top: 0; overflow: hidden;" aria-hidden="true"></div>
 
 <script>
     const DEFAULT_LOGO = `data:image/svg+xml;base64,${btoa('<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="20" fill="#4f46e5"/><path d="M30 30h30a15 15 0 0 1 0 30h-30z" fill="white" opacity="0.4"/><path d="M35 35h20a10 10 0 0 1 0 20h-20z" fill="white"/></svg>')}`;
@@ -747,6 +992,16 @@
         geo:   (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><path d="M14 3 L25 14 L14 25 L3 14 Z" fill="none" stroke="${c}" stroke-width="1"/></svg>`,
         diag:  (c) => `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M-2 16 L16 -2 M-2 30 L30 -2" fill="none" stroke="${c}" stroke-width="1"/></svg>`
     };
+
+    // 실측 명함 규격 (mm). 미리보기 폭은 항상 500px 고정, 높이는 비율로 계산한다.
+    const CARD_SPECS = {
+        kr:     { id: 'kr',     label: 'KR',     wmm: 90,   hmm: 54 },
+        credit: { id: 'credit', label: 'Credit', wmm: 85.6, hmm: 54 },
+        us:     { id: 'us',     label: 'US',     wmm: 88.9, hmm: 50.8 }
+    };
+    const PREVIEW_WIDTH_PX = 500; // 미리보기 폭 고정값 (높이는 규격 비율로 계산)
+
+    const BACK_MODES = ['none', 'brand', 'info-en'];
 
     const TEMPLATE_DEFS = {
         corporate: { bg1: '#ffffff', bg2: '#e2e8f0', isGrad: false, txtCol: '#0f172a', accent: '#2563eb', qrBg: '#ffffff', qrFg: '#0f172a', layout: 'row',    border: 'none', glow: 'none', fontPair: 'modern',    pattern: 'none',  patternOpacity: 0.10, motion: 'fadeup' },
@@ -772,8 +1027,20 @@
         pattern: "none", patternOpacity: 0.12,
         qrFg: "#000000", qrBg: "#ffffff", showQrLogo: false, qrMode: "vcard", qrRes: "1024",
         template: "corporate",
-        motion: "fadeup", motionSpeed: 1.0
+        motion: "fadeup", motionSpeed: 1.0,
+        cardSize: "kr",
+        backMode: "none",
+        backTagline: "Building playful things.",
+        nameEn: "Tony Kim", titleEn: "Producer", companyEn: "Bunt Games", addrEn: "Seoul, South Korea"
     };
+
+    /** 현재 규격의 미리보기(네이티브) 픽셀 치수. 폭은 항상 고정, 높이는 실측 비율로 계산 */
+    function cardDims() {
+        const spec = CARD_SPECS[state.cardSize] || CARD_SPECS.kr;
+        const w = PREVIEW_WIDTH_PX;
+        const h = Math.round(w * spec.hmm / spec.wmm);
+        return { w: w, h: h, spec: spec };
+    }
 
     const QR_INTERNAL_SIZE = 1024; // 화면 표시용 내부 고해상도
     let saveTimer = null;
@@ -787,18 +1054,22 @@
     let DEMO_IDLE_MS = 60000;          // 유휴 판정 시간(ms)
 
     const DEMO_PERSONAS = {
-        seoyeon: { name: '김서연', title: 'Chief Design Officer', company: '스튜디오 하늘', phone: '010-2345-6789', email: 'seoyeon@haneul.studio', web: 'haneul.studio', youtube: 'youtube.com/@haneulstudio', addr: '서울특별시 성동구 성수동' },
-        james:   { name: 'James Park', title: 'Creative Director', company: 'Northlight Films', phone: '010-7777-1234', email: 'james@northlight.film', web: 'northlight.film', youtube: 'youtube.com/@northlightfilms', addr: 'Seoul, South Korea' },
-        doyoon:  { name: '이도윤', title: 'Brand Strategist', company: '문라이트 랩', phone: '010-9876-5432', email: 'doyoon@moonlight-lab.kr', web: 'moonlight-lab.kr', youtube: 'youtube.com/@moonlightlab', addr: '부산광역시 해운대구' }
+        seoyeon: { name: '김서연', title: 'Chief Design Officer', company: '스튜디오 하늘', phone: '010-2345-6789', email: 'seoyeon@haneul.studio', web: 'haneul.studio', youtube: 'youtube.com/@haneulstudio', addr: '서울특별시 성동구 성수동',
+            nameEn: 'Seoyeon Kim', titleEn: 'Chief Design Officer', companyEn: 'Haneul Studio', addrEn: 'Seongsu-dong, Seoul', backTagline: 'Design that feels like home.' },
+        james:   { name: 'James Park', title: 'Creative Director', company: 'Northlight Films', phone: '010-7777-1234', email: 'james@northlight.film', web: 'northlight.film', youtube: 'youtube.com/@northlightfilms', addr: 'Seoul, South Korea',
+            nameEn: 'James Park', titleEn: 'Creative Director', companyEn: 'Northlight Films', addrEn: 'Seoul, South Korea', backTagline: 'Stories worth watching twice.' },
+        doyoon:  { name: '이도윤', title: 'Brand Strategist', company: '문라이트 랩', phone: '010-9876-5432', email: 'doyoon@moonlight-lab.kr', web: 'moonlight-lab.kr', youtube: 'youtube.com/@moonlightlab', addr: '부산광역시 해운대구',
+            nameEn: 'Doyoon Lee', titleEn: 'Brand Strategist', companyEn: 'Moonlight Lab', addrEn: 'Haeundae-gu, Busan', backTagline: 'Brands with a quiet glow.' }
     };
 
     // 템플릿 5종 전부 순회. 한글 페르소나는 한글 지원 폰트 페어로 오버라이드.
+    // 규격/뒷면도 함께 순회하여 시연이 5차 기능(카드 규격·양면 플립)의 쇼케이스가 되도록 한다.
     const DEMO_STEPS = [
-        { persona: 'james',   template: 'corporate' },
-        { persona: 'seoyeon', template: 'luxury',  fontPair: 'serene' },
-        { persona: 'doyoon',  template: 'dark',    fontPair: 'serene' },
-        { persona: 'james',   template: 'aurora' },
-        { persona: 'seoyeon', template: 'minimal', fontPair: 'serene' }
+        { persona: 'james',   template: 'corporate', cardSize: 'kr',     backMode: 'none' },
+        { persona: 'seoyeon', template: 'luxury',  fontPair: 'serene', cardSize: 'credit', backMode: 'brand' },
+        { persona: 'doyoon',  template: 'dark',    fontPair: 'serene', cardSize: 'us',     backMode: 'info-en' },
+        { persona: 'james',   template: 'aurora', cardSize: 'kr',     backMode: 'brand' },
+        { persona: 'seoyeon', template: 'minimal', fontPair: 'serene', cardSize: 'kr', backMode: 'none' }
     ];
 
     let demoActive = false;
@@ -808,6 +1079,8 @@
     let demoStartTimer = null;
     let idleTimer = null;
     let userHasEdited = false;  // 이번 세션에서 사용자가 state를 수정했는지
+    let cardFlipped = false;    // 현재 앞/뒤 어느 면을 보고 있는지 (localStorage에는 저장하지 않음)
+    let demoFlipTimers = [];    // 데모 스텝 중 예약된 플립 타이머 (스텝 종료/데모 종료 시 정리)
 
     window.onload = () => {
         restoreState();
@@ -847,14 +1120,10 @@
             .replace(/;/g, '\\;');
     }
 
-    function generateQRData() {
+    /** QR 모드와 무관하게 항상 동일한 vCard 문자열을 생성 (QR의 vcard 모드 + .vcf 다운로드가 공유) */
+    function buildVCardText() {
         const urlSafeWeb = state.web.trim().startsWith('http') ? state.web.trim() : `https://${state.web.trim()}`;
         const urlSafeYT = state.youtube.trim().startsWith('http') ? state.youtube.trim() : `https://${state.youtube.trim()}`;
-
-        if (state.qrMode === 'url') return state.web.trim() ? urlSafeWeb : "https://kitscript.com";
-        if (state.qrMode === 'youtube') return state.youtube.trim() ? urlSafeYT : "https://youtube.com/@textcube";
-        if (state.qrMode === 'email') return `mailto:${state.email.trim()}`;
-
         const lines = [
             'BEGIN:VCARD',
             'VERSION:3.0',
@@ -869,6 +1138,31 @@
             'END:VCARD'
         ];
         return lines.join('\r\n');
+    }
+
+    function generateQRData() {
+        const urlSafeWeb = state.web.trim().startsWith('http') ? state.web.trim() : `https://${state.web.trim()}`;
+        const urlSafeYT = state.youtube.trim().startsWith('http') ? state.youtube.trim() : `https://${state.youtube.trim()}`;
+
+        if (state.qrMode === 'url') return state.web.trim() ? urlSafeWeb : "https://kitscript.com";
+        if (state.qrMode === 'youtube') return state.youtube.trim() ? urlSafeYT : "https://youtube.com/@textcube";
+        if (state.qrMode === 'email') return `mailto:${state.email.trim()}`;
+
+        return buildVCardText();
+    }
+
+    // ==== 16. vCard(.vcf) 다운로드 — QR 모드와 무관하게 항상 vCard 데이터 사용 ====
+    function downloadVCard() {
+        const text = buildVCardText();
+        const blob = new Blob([text], { type: 'text/vcard;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(state.name || 'contact').replace(/\s+/g, '_')}.vcf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
 
     /**
@@ -1110,9 +1404,129 @@
             qrLogo.style.display = 'none';
         }
 
+        renderBackSide(def, pair, qrSize);
         updateCardScale();
         positionMobileTabbar();
         scheduleSave();
+    }
+
+    /**
+     * 뒷면(양면) 렌더링. backMode === 'none'이면 플립 토글 자체를 숨긴다.
+     * brand: 액센트 배경 + 로고 + 회사명 + 태그라인. info-en: 앞면과 동일 레이아웃을 EN 필드로 미러링,
+     * 연락처(전화/이메일/웹/유튜브)와 QR은 앞면 값을 공유한다.
+     */
+    function renderBackSide(def, pair, qrSize) {
+        const flipBtn = document.getElementById('btn-flip-toggle');
+        const backEl = document.getElementById('card-back');
+        const brandEl = document.getElementById('back-brand');
+        const infoEl = document.getElementById('back-info');
+        const backQrBox = document.getElementById('back-qr-box');
+
+        if (state.backMode === 'none') {
+            if (flipBtn) flipBtn.classList.add('hidden');
+            if (cardFlipped) toggleCardFace(false); // 뒷면 없는데 뒤집힌 채로 남지 않도록
+            brandEl.classList.add('hidden');
+            infoEl.classList.add('hidden');
+            backQrBox.classList.add('hidden');
+            return;
+        }
+        if (flipBtn) flipBtn.classList.remove('hidden');
+
+        // 뒷면도 앞면과 동일한 배경/패턴을 공유해 한 벌로 보이게 한다
+        if (state.isGrad) {
+            backEl.style.background = `linear-gradient(135deg, ${state.bg1}, ${state.bg2})`;
+        } else {
+            backEl.style.background = state.bg1;
+        }
+        backEl.style.border = def.border;
+        backEl.style.boxShadow = 'var(--shadow)';
+        const backPatEl = document.getElementById('back-pattern');
+        const patGen = PATTERN_SVGS[state.pattern];
+        if (patGen) {
+            backPatEl.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(patGen(state.txtCol))}")`;
+            backPatEl.style.opacity = state.patternOpacity;
+            backPatEl.style.display = 'block';
+        } else {
+            backPatEl.style.display = 'none';
+        }
+        backPatEl.style.position = 'absolute';
+        backPatEl.style.inset = '0';
+        backPatEl.style.zIndex = '1';
+        backPatEl.style.pointerEvents = 'none';
+        backPatEl.style.backgroundRepeat = 'repeat';
+
+        if (state.backMode === 'brand') {
+            brandEl.classList.remove('hidden');
+            infoEl.classList.add('hidden');
+            backQrBox.classList.add('hidden');
+            brandEl.style.background = state.accent || def.accent;
+            document.getElementById('back-brand-logo').src = state.logo;
+            document.getElementById('back-brand-company').innerText = state.company;
+            document.getElementById('back-brand-company').style.fontFamily = pair.heading;
+            document.getElementById('back-brand-tagline').innerText = state.backTagline || '';
+        } else if (state.backMode === 'info-en') {
+            brandEl.classList.add('hidden');
+            infoEl.classList.remove('hidden');
+            backQrBox.classList.remove('hidden');
+
+            backEl.style.color = state.txtCol;
+            backEl.style.fontFamily = pair.body;
+            backEl.style.display = 'flex';
+            backEl.style.flexDirection = def.layout === 'column' ? 'column' : 'row';
+
+            const bCBody = document.getElementById('back-info');
+            const bCContact = document.getElementById('back-contact');
+            if (def.layout === 'column') {
+                bCBody.style.padding = '1.5rem 2rem';
+                bCContact.style.fontSize = '0.65rem';
+                bCContact.style.lineHeight = '1.4';
+                bCContact.style.marginTop = '0.5rem';
+                backQrBox.style.width = '100%';
+                backQrBox.style.height = 'auto';
+                backQrBox.style.padding = '0 2rem 1.5rem';
+                backQrBox.style.alignItems = 'flex-end';
+                backQrBox.style.background = 'transparent';
+            } else {
+                bCBody.style.padding = '2.2rem';
+                bCContact.style.fontSize = '0.72rem';
+                bCContact.style.lineHeight = '1.6';
+                bCContact.style.marginTop = 'auto';
+                backQrBox.style.width = '170px';
+                backQrBox.style.height = '100%';
+                backQrBox.style.padding = '1.5rem';
+                backQrBox.style.alignItems = 'center';
+                backQrBox.style.background = 'rgba(0,0,0,0.03)';
+            }
+
+            document.getElementById('back-name').innerText = state.nameEn;
+            document.getElementById('back-name').style.fontFamily = pair.heading;
+            document.getElementById('back-name').style.fontWeight = pair.headingWeight;
+            document.getElementById('back-title').innerText = state.titleEn;
+            document.getElementById('back-company').innerText = state.companyEn;
+            document.getElementById('back-company').style.color = state.accent || def.accent;
+            document.getElementById('back-logo').src = state.logo;
+            const backProf = document.getElementById('back-profile');
+            if (state.profile) { backProf.src = state.profile; backProf.classList.remove('hidden'); }
+            else { backProf.classList.add('hidden'); }
+
+            // 연락처는 앞면 값 공유 (전화/이메일/웹/유튜브), 주소만 EN 전용 필드
+            document.getElementById('back-v-phone').innerText = state.phone;
+            document.getElementById('back-v-email').innerText = state.email;
+            document.getElementById('back-v-web').innerText = state.web;
+            document.getElementById('back-v-youtube').innerText = state.youtube;
+            document.getElementById('back-v-addr').innerText = state.addrEn;
+            toggleRowVisibility('back-row-phone', state.phone);
+            toggleRowVisibility('back-row-email', state.email);
+            toggleRowVisibility('back-row-web', state.web);
+            toggleRowVisibility('back-row-youtube', state.youtube);
+            toggleRowVisibility('back-row-addr', state.addrEn);
+
+            const backQrImg = document.getElementById('back-qr-display');
+            backQrImg.width = qrSize;
+            backQrImg.height = qrSize;
+            document.getElementById('back-qrcode-wrap').style.background = state.qrBg;
+            if (qrCache.canvas) backQrImg.src = qrCache.canvas.toDataURL('image/png');
+        }
     }
 
     // ---- 고해상도 QR ----
@@ -1156,6 +1570,13 @@
      * QR 데이터/색상이 실제로 바뀐 경우에만 고해상도 canvas를 재생성.
      * 타이핑 중 렉 방지를 위해 최초 1회 이후에는 debounce.
      */
+    /** 앞면 QR과 뒷면(info-en) 공유 QR 이미지를 동일한 dataURL로 동기화 */
+    function syncQrImages(dataUrl) {
+        document.getElementById('qr-display').src = dataUrl;
+        const backQr = document.getElementById('back-qr-display');
+        if (backQr) backQr.src = dataUrl;
+    }
+
     function updateQR() {
         const text = generateQRData();
         const key = `${text}|${state.qrFg}|${state.qrBg}`;
@@ -1165,7 +1586,7 @@
             const canvas = makeQRCanvas(document.getElementById('qr-hires'), text, QR_INTERNAL_SIZE);
             if (!canvas) return;
             qrCache = { key: key, canvas: canvas };
-            document.getElementById('qr-display').src = canvas.toDataURL('image/png');
+            syncQrImages(canvas.toDataURL('image/png'));
         };
 
         clearTimeout(qrTimer);
@@ -1185,25 +1606,40 @@
         const canvas = makeQRCanvas(document.getElementById('qr-hires'), text, QR_INTERNAL_SIZE);
         if (!canvas) return;
         qrCache = { key: key, canvas: canvas };
-        document.getElementById('qr-display').src = canvas.toDataURL('image/png');
+        syncQrImages(canvas.toDataURL('image/png'));
     }
 
     function updateCardScale() {
         const stage = document.getElementById('card-stage');
         const area = document.getElementById('preview-area');
-        if (!stage || !area) return;
+        const flip = document.getElementById('card-flip');
+        if (!stage || !area || !flip) return;
+        const dims = cardDims();
         const horizontalPadding = 64; // approx preview-area left+right padding
         const availW = area.clientWidth - horizontalPadding;
-        const fit = availW > 0 ? Math.min(1, availW / 500) : 1;
+        const fit = availW > 0 ? Math.min(1, availW / dims.w) : 1;
         const finalScale = Math.max(0.1, fit * state.scale);
 
-        const card = document.getElementById('card-container');
-        card.style.transform = `scale(${finalScale})`;
-        stage.style.width = (500 * finalScale) + 'px';
-        stage.style.height = (317 * finalScale) + 'px';
+        flip.style.width = dims.w + 'px';
+        flip.style.height = dims.h + 'px';
+        flip.style.transform = `scale(${finalScale})`;
+        stage.style.width = (dims.w * finalScale) + 'px';
+        stage.style.height = (dims.h * finalScale) + 'px';
 
         const caption = document.getElementById('preview-caption');
-        if (caption) caption.innerText = `Preview auto-fit at ${Math.round(finalScale * 100)}% scale.`;
+        if (caption) caption.innerText = `Preview auto-fit at ${Math.round(finalScale * 100)}% scale — ${dims.spec.label} ${dims.spec.wmm}×${dims.spec.hmm}mm.`;
+    }
+
+    /**
+     * 앞/뒤 전환 토글 — 페이지 넘김(page-turn): 앞면만 중앙 세로 힌지로 0→-180° 회전(CSS 클래스),
+     * 뒷면은 아래에 깔려 있다가 드러난다. backMode가 none이면 토글 버튼 자체가 숨겨져 호출되지 않는다.
+     */
+    function toggleCardFace(force) {
+        cardFlipped = (typeof force === 'boolean') ? force : !cardFlipped;
+        const flip = document.getElementById('card-flip');
+        if (flip) flip.classList.toggle('flipped', cardFlipped);
+        const btn = document.getElementById('btn-flip-toggle');
+        if (btn) btn.innerHTML = cardFlipped ? '&#8635; Show front' : '&#8635; Show back';
     }
 
     function positionMobileTabbar() {
@@ -1220,7 +1656,9 @@
             'in-phone': 'phone', 'in-email': 'email', 'in-web': 'web',
             'in-youtube': 'youtube', 'in-addr': 'addr',
             'col-bg1': 'bg1', 'col-bg2': 'bg2', 'col-text': 'txtCol',
-            'sel-fontpair': 'fontPair', 'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode', 'qr-res': 'qrRes'
+            'sel-fontpair': 'fontPair', 'qr-fg': 'qrFg', 'qr-bg': 'qrBg', 'qr-mode': 'qrMode', 'qr-res': 'qrRes',
+            'in-back-tagline': 'backTagline', 'in-name-en': 'nameEn', 'in-title-en': 'titleEn',
+            'in-company-en': 'companyEn', 'in-addr-en': 'addrEn'
         };
 
         Object.entries(mapping).forEach(([id, key]) => {
@@ -1280,6 +1718,29 @@
 
         document.getElementById('f-logo').addEventListener('change', (e) => handleFile(e, 'logo'));
         document.getElementById('f-profile').addEventListener('change', (e) => handleFile(e, 'profile'));
+
+        // 카드 규격 — 레이아웃 재계산만, 색·폰트·모션 등 다른 상태는 건드리지 않는다
+        document.querySelectorAll('#size-grid .temp-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.cardSize = btn.dataset.cardsize;
+                syncCardSizeControls();
+                updateCardScale();
+                scheduleSave();
+            });
+        });
+
+        // 뒷면 모드
+        document.querySelectorAll('#backmode-grid .temp-item').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                state.backMode = btn.dataset.backmode;
+                syncBackControls();
+                render();
+            });
+        });
+
+        // 인쇄 모달: bleed 포함 여부에 따라 안전 영역 경고 재계산
+        const bleedChk = document.getElementById('chk-bleed');
+        if (bleedChk) bleedChk.addEventListener('change', updateSafeAreaWarning);
     }
 
     function bindTabs() {
@@ -1318,17 +1779,35 @@
         demoStep();
     }
 
+    function clearDemoFlipTimers() {
+        demoFlipTimers.forEach((t) => clearTimeout(t));
+        demoFlipTimers = [];
+    }
+
     function demoStep() {
         if (!demoActive) return;
+        clearDemoFlipTimers();
+        if (cardFlipped) toggleCardFace(false); // 스텝 전환 전, 이전 스텝의 뒷면 상태를 정리
         const step = DEMO_STEPS[demoStepIndex % DEMO_STEPS.length];
         Object.assign(state, DEMO_PERSONAS[step.persona]);
-        applyTemp(step.template); // 템플릿+폰트 페어+패턴+QR 스타일 일괄 전환 (render 포함)
+        state.cardSize = CARD_SPECS[step.cardSize] ? step.cardSize : state.cardSize;
+        state.backMode = BACK_MODES.indexOf(step.backMode) !== -1 ? step.backMode : 'none';
+        syncCardSizeControls();
+        syncBackControls();
+        applyTemp(step.template); // 템플릿+폰트 페어+패턴+QR 스타일 일괄 전환 (render 포함, 뒷면도 함께 갱신)
         if (step.fontPair && FONT_PAIRS[step.fontPair]) {
             state.fontPair = step.fontPair;
             document.getElementById('sel-fontpair').value = step.fontPair;
             render();
         }
         syncInputsFromState(); // 좌측 입력 패널에도 페르소나 반영
+
+        // 뒷면이 있는 스텝은 카드 플립 연출을 1회 포함해 시연 자체가 양면 쇼케이스가 되도록 한다
+        if (state.backMode !== 'none') {
+            demoFlipTimers.push(setTimeout(() => { if (demoActive) toggleCardFace(true); }, 1500));
+            demoFlipTimers.push(setTimeout(() => { if (demoActive) toggleCardFace(false); }, 2900));
+        }
+
         demoStepIndex++;
         demoStepTimer = setTimeout(demoStep, DEMO_STEP_MS);
     }
@@ -1336,10 +1815,12 @@
     function stopDemo() {
         if (!demoActive) return;
         clearTimeout(demoStepTimer);
+        clearDemoFlipTimers();
         clearTimeout(qrTimer); // 시연 데이터로 예약된 QR 재생성 취소
         // 스냅샷 복원 — demoActive가 아직 true이므로 복원 render()는 저장을 트리거하지 않음
         Object.assign(state, demoSnapshot);
         demoSnapshot = null;
+        if (cardFlipped) toggleCardFace(false); // 뒷면을 보던 중 종료돼도 사용자 상태는 항상 앞면으로 복원
         syncInputsFromState();
         render();
         settleMotion(); // 데모 종료는 재생 트리거가 아니라 즉시 정착 — 사용자의 모션 설정 상태로 스냅 복원
@@ -1375,7 +1856,7 @@
         // state를 실제로 수정하는 조작 감지 (시연은 실제 이벤트를 발생시키지 않으므로 안전)
         document.addEventListener('input', markUserEdit, true);
         document.addEventListener('change', markUserEdit, true);
-        document.querySelectorAll('.template-grid .temp-item, #pattern-grid .temp-item, #motion-grid .temp-item').forEach((b) => {
+        document.querySelectorAll('.template-grid .temp-item, #pattern-grid .temp-item, #motion-grid .temp-item, #size-grid .temp-item, #backmode-grid .temp-item').forEach((b) => {
             b.addEventListener('click', markUserEdit);
         });
     }
@@ -1425,16 +1906,75 @@
         document.getElementById('pattern-opacity-group').style.display = state.pattern === 'none' ? 'none' : 'block';
     }
 
+    function syncCardSizeControls() {
+        document.querySelectorAll('#size-grid .temp-item').forEach((b) => {
+            b.classList.toggle('active', b.dataset.cardsize === state.cardSize);
+        });
+    }
+
+    function syncBackControls() {
+        document.querySelectorAll('#backmode-grid .temp-item').forEach((b) => {
+            b.classList.toggle('active', b.dataset.backmode === state.backMode);
+        });
+        const brandFields = document.getElementById('back-fields-brand');
+        const infoFields = document.getElementById('back-fields-infoen');
+        if (brandFields) brandFields.classList.toggle('hidden', state.backMode !== 'brand');
+        if (infoFields) infoFields.classList.toggle('hidden', state.backMode !== 'info-en');
+
+        const tagIn = document.getElementById('in-back-tagline');
+        if (tagIn) tagIn.value = state.backTagline;
+        const nameEnIn = document.getElementById('in-name-en');
+        if (nameEnIn) nameEnIn.value = state.nameEn;
+        const titleEnIn = document.getElementById('in-title-en');
+        if (titleEnIn) titleEnIn.value = state.titleEn;
+        const companyEnIn = document.getElementById('in-company-en');
+        if (companyEnIn) companyEnIn.value = state.companyEn;
+        const addrEnIn = document.getElementById('in-addr-en');
+        if (addrEnIn) addrEnIn.value = state.addrEn;
+    }
+
+    /**
+     * 지정된 면(front/back) 요소를 flip 래퍼의 scale과 페이지 넘김 회전(앞면의 rotateY)을
+     * 모두 무효화한 "평평한" 상태로 만든 뒤 html2canvas로 캡처한다. 캡처 후 원상 복구.
+     * 이렇게 해야 페이지 넘김 각도가 캡처 결과에 섞여 들어가지 않는다.
+     */
+    async function captureFace(faceEl, opts) {
+        const flip = document.getElementById('card-flip');
+        const prevFlipTransform = flip.style.transform;
+        const prevFaceTransform = faceEl.style.transform;
+        const prevFaceTransition = faceEl.style.transition;
+        flip.style.transform = 'none';
+        faceEl.style.transition = 'none';
+        faceEl.style.transform = 'none'; // .flipped 클래스의 rotateY(-180deg)까지 인라인으로 무효화
+        try {
+            return await html2canvas(faceEl, opts);
+        } finally {
+            flip.style.transform = prevFlipTransform;
+            faceEl.style.transform = prevFaceTransform;
+            faceEl.style.transition = prevFaceTransition;
+        }
+    }
+
+    function downloadCanvas(canvas, filename) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    /** img.decode()가 환경에 따라 영영 resolve되지 않는 경우가 있어 타임아웃과 race */
+    function decodeSafe(img, timeoutMs) {
+        if (!img || !img.decode) return Promise.resolve();
+        return Promise.race([
+            img.decode().catch(() => {}),
+            new Promise((resolve) => setTimeout(resolve, timeoutMs || 800))
+        ]);
+    }
+
     async function exportCard() {
         flushQR();
-        const qrImg = document.getElementById('qr-display');
-        if (qrImg.decode) { try { await qrImg.decode(); } catch (e) { /* ignore */ } }
-
-        const card = document.getElementById('card-container');
-        const prevTransform = card.style.transform;
-        const prevOrigin = card.style.transformOrigin;
-        card.style.transform = 'scale(1)';
-        card.style.transformOrigin = 'top left';
+        await decodeSafe(document.getElementById('qr-display'));
+        if (state.backMode === 'info-en') await decodeSafe(document.getElementById('back-qr-display'));
 
         // PNG는 모션의 "최종 정지 상태"로 캡처되어야 함 — 엔트런스 진행 중이면 즉시 완료 상태로,
         // 앰비언트 루프는 캡처 순간 정지시켜 흔들림 없는 정지 프레임을 만든다.
@@ -1448,20 +1988,19 @@
         const wasAmbient = state.motion;
         stopAmbient();
 
+        const card = document.getElementById('card-container');
+        const back = document.getElementById('card-back');
+        const hasBack = state.backMode !== 'none';
+        const safeName = (state.name || 'Card').replace(/\s+/g, '_');
+
         try {
-            const canvas = await html2canvas(card, {
-                scale: 3,
-                useCORS: true,
-                backgroundColor: null,
-                logging: false
-            });
-            const link = document.createElement('a');
-            link.download = `BizCard_${state.name.replace(/\s+/g, '_')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const frontCanvas = await captureFace(card, { scale: 3, useCORS: true, backgroundColor: null, logging: false });
+            downloadCanvas(frontCanvas, hasBack ? `BizCard_${safeName}_front.png` : `BizCard_${safeName}.png`);
+            if (hasBack) {
+                const backCanvas = await captureFace(back, { scale: 3, useCORS: true, backgroundColor: null, logging: false });
+                downloadCanvas(backCanvas, `BizCard_${safeName}_back.png`);
+            }
         } finally {
-            card.style.transform = prevTransform;
-            card.style.transformOrigin = prevOrigin;
             if (wasAmbient && wasAmbient !== 'none' && !prefersReducedMotion()) startAmbient();
         }
     }
@@ -1480,6 +2019,274 @@
         link.download = `QR_${state.name.replace(/\s+/g, '_')}_${res}px.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+    }
+
+    // ==== 15. 내보내기 모달 ====
+
+    function openExportModal() {
+        flushQR();
+        updateSafeAreaWarning();
+        const overlay = document.getElementById('export-modal-overlay');
+        if (overlay) overlay.classList.remove('hidden');
+    }
+
+    function closeExportModal() {
+        const overlay = document.getElementById('export-modal-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const overlay = document.getElementById('export-modal-overlay');
+        if (overlay && !overlay.classList.contains('hidden')) closeExportModal();
+    });
+
+    /** ancestor 기준 누적 offset (transform의 영향을 받지 않는 레이아웃 좌표) */
+    function offsetWithin(el, ancestor) {
+        let x = 0, y = 0, cur = el;
+        while (cur && cur !== ancestor) {
+            x += cur.offsetLeft;
+            y += cur.offsetTop;
+            cur = cur.offsetParent;
+        }
+        return { x: x, y: y };
+    }
+
+    /**
+     * 실제 콘텐츠(텍스트·로고·QR) 요소들의 레이아웃 좌표를 규격 mm로 환산해
+     * 재단선에서 4mm 이내로 붙은 것이 있는지 점검 (경고만, 차단하지 않음)
+     */
+    function computeSafeAreaWarnings() {
+        const dims = cardDims();
+        const mmPerPx = dims.spec.wmm / dims.w;
+        const warnMm = 4;
+        const faces = [['front', 'card-container']];
+        if (state.backMode !== 'none') faces.push(['back', 'card-back']);
+        const selector = '.card-logo, .card-profile, .card-name, .card-title, .card-company, .card-contact > div, ' +
+            '#qrcode-wrap, #back-qrcode-wrap, .back-brand-logo, .back-brand-company, .back-brand-tagline';
+        const warnings = [];
+        faces.forEach(([label, id]) => {
+            const face = document.getElementById(id);
+            if (!face) return;
+            let minMm = Infinity;
+            face.querySelectorAll(selector).forEach((el) => {
+                if (!el.offsetWidth || !el.offsetHeight) return; // 숨겨진 요소 제외
+                const o = offsetWithin(el, face);
+                const dist = Math.min(o.x, o.y, dims.w - (o.x + el.offsetWidth), dims.h - (o.y + el.offsetHeight));
+                minMm = Math.min(minMm, dist * mmPerPx);
+            });
+            if (minMm < warnMm) warnings.push(`${label} ${Math.max(0, minMm).toFixed(1)}mm`);
+        });
+        return warnings;
+    }
+
+    function updateSafeAreaWarning() {
+        const warnEl = document.getElementById('safe-area-warning');
+        if (!warnEl) return;
+        const warnings = computeSafeAreaWarnings();
+        if (warnings.length) {
+            warnEl.textContent = `Safe-area warning: content sits within 4mm of the trim edge (${warnings.join(', ')}). Consider adding margin before sending to print.`;
+            warnEl.classList.remove('hidden');
+        } else {
+            warnEl.classList.add('hidden');
+        }
+    }
+
+    // ==== 15. 인쇄용 내보내기 — 300DPI PNG + PDF (bleed·재단선) ====
+
+    /** 재단 크기(+옵션 bleed)를 300dpi 픽셀로 환산 */
+    function printPixelDims(withBleed) {
+        const spec = CARD_SPECS[state.cardSize] || CARD_SPECS.kr;
+        const dpi = 300;
+        const bleedMm = withBleed ? 3 : 0;
+        const wmm = spec.wmm + bleedMm * 2;
+        const hmm = spec.hmm + bleedMm * 2;
+        return {
+            wmm: wmm, hmm: hmm, bleedMm: bleedMm, dpi: dpi,
+            wpx: Math.round(wmm / 25.4 * dpi), hpx: Math.round(hmm / 25.4 * dpi),
+            trimWmm: spec.wmm, trimHmm: spec.hmm
+        };
+    }
+
+    /** 진행 중인 엔트런스/앰비언트 클래스를 전부 제거해 "최종 정지 상태"로 캡처되도록 한다 */
+    function stripMotionClasses(root) {
+        [root, ...root.querySelectorAll('*')].forEach((el) => {
+            Array.from(el.classList).forEach((c) => {
+                if (/^mo-(play|ambient)-/.test(c)) el.classList.remove(c);
+            });
+        });
+    }
+
+    /**
+     * 인쇄용 오프스크린 DOM 복제본을 만든다: 배경/패턴은 bleed 끝까지 확장하고,
+     * 실제 카드 콘텐츠(clone)는 재단선 기준 원위치를 유지한다.
+     * 해상도 확장은 CSS transform이 아니라 html2canvas의 scale 옵션으로 처리한다
+     * (transform: scale()은 html2canvas가 자식 요소를 잘못 컬링하는 버그가 있음).
+     * 라이브 미리보기 DOM은 건드리지 않는다.
+     */
+    async function buildPrintCloneCanvas(faceId, withBleed) {
+        const dims = printPixelDims(withBleed);
+        const native = cardDims();
+        const pxPerMm = native.w / dims.trimWmm;          // 미리보기 px / mm
+        const bleedNativePx = dims.bleedMm * pxPerMm;      // bleed를 미리보기 스케일 px로
+        const rootW = native.w + bleedNativePx * 2;
+        const rootH = native.h + bleedNativePx * 2;
+        const captureScale = dims.wpx / rootW;             // 300dpi 환산 배율
+
+        const host = document.getElementById('print-clone-host');
+        host.innerHTML = '';
+
+        const def = TEMPLATE_DEFS[state.template] || TEMPLATE_DEFS.corporate;
+        const isBackBrand = (faceId === 'card-back' && state.backMode === 'brand');
+
+        const root = document.createElement('div');
+        root.style.position = 'relative';
+        root.style.width = rootW + 'px';
+        root.style.height = rootH + 'px';
+        root.style.overflow = 'hidden';
+        root.style.background = '#ffffff';
+
+        // 배경 레이어 — bleed 영역까지 확장
+        const bgLayer = document.createElement('div');
+        bgLayer.style.position = 'absolute';
+        bgLayer.style.inset = '0';
+        if (isBackBrand) {
+            bgLayer.style.background = state.accent || def.accent;
+        } else if (state.isGrad) {
+            bgLayer.style.background = `linear-gradient(135deg, ${state.bg1}, ${state.bg2})`;
+        } else {
+            bgLayer.style.background = state.bg1;
+        }
+        root.appendChild(bgLayer);
+
+        // 패턴 레이어 — bleed 영역까지 확장 (brand 뒷면은 패턴 생략)
+        const patGen = PATTERN_SVGS[state.pattern];
+        if (patGen && !isBackBrand) {
+            const patLayer = document.createElement('div');
+            patLayer.style.position = 'absolute';
+            patLayer.style.inset = '0';
+            patLayer.style.backgroundRepeat = 'repeat';
+            patLayer.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(patGen(state.txtCol))}")`;
+            patLayer.style.opacity = state.patternOpacity;
+            root.appendChild(patLayer);
+        }
+
+        // 실제 카드 콘텐츠 — 재단선 기준 원위치(bleed 오프셋), 미리보기와 동일한 네이티브 크기
+        const original = document.getElementById(faceId);
+        const clone = original.cloneNode(true);
+        const innerPattern = clone.firstElementChild; // #card-pattern / #back-pattern — bgLayer/patLayer가 대체하므로 숨김
+        if (innerPattern) innerPattern.style.display = 'none';
+        stripMotionClasses(clone);
+        // id는 유지한다 — 카드 레이아웃 CSS가 id 셀렉터 기반이라 제거하면 복제본 레이아웃이 깨진다.
+        // (중복 id는 캡처 동안에만 잠깐 존재하고, getElementById는 문서 순서상 앞선 원본을 반환한다)
+        clone.style.position = 'absolute';
+        clone.style.left = bleedNativePx + 'px';
+        clone.style.top = bleedNativePx + 'px';
+        clone.style.width = native.w + 'px';
+        clone.style.height = native.h + 'px';
+        clone.style.transition = 'none';
+        clone.style.transform = 'none';
+        clone.style.background = 'transparent';
+        clone.style.boxShadow = 'none';
+        clone.style.borderRadius = '0';
+        clone.style.border = 'none';
+        clone.style.opacity = '1';
+        root.appendChild(clone);
+
+        host.appendChild(root);
+
+        let captured;
+        try {
+            captured = await html2canvas(root, { scale: captureScale, useCORS: true, backgroundColor: '#ffffff', logging: false });
+        } finally {
+            host.innerHTML = '';
+        }
+
+        // 반올림 오차(±1~2px)를 정확한 목표 픽셀 치수로 정규화
+        const canvas = document.createElement('canvas');
+        canvas.width = dims.wpx;
+        canvas.height = dims.hpx;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(captured, 0, 0, captured.width, captured.height, 0, 0, dims.wpx, dims.hpx);
+        return { canvas: canvas, dims: dims };
+    }
+
+    async function exportPrintPNG() {
+        flushQR();
+        const withBleed = document.getElementById('chk-bleed').checked;
+        const hasBack = state.backMode !== 'none';
+        const safeName = (state.name || 'Card').replace(/\s+/g, '_');
+        const suffix = withBleed ? '' : '_trim';
+        try {
+            const front = await buildPrintCloneCanvas('card-container', withBleed);
+            downloadCanvas(front.canvas, hasBack ? `BizCard_Print_${safeName}_front${suffix}.png` : `BizCard_Print_${safeName}${suffix}.png`);
+            if (hasBack) {
+                const back = await buildPrintCloneCanvas('card-back', withBleed);
+                downloadCanvas(back.canvas, `BizCard_Print_${safeName}_back${suffix}.png`);
+            }
+        } catch (err) {
+            console.error('BizCard Pro: print PNG export failed', err);
+            alert('Print PNG export failed. Please try again.');
+        }
+    }
+
+    /** 재단선(crop marks) 4모서리 — bleed 박스 바깥 여백에 트림 좌표 기준으로 그린다 */
+    function drawCropMarks(doc, x, y, w, h, bleedMm) {
+        const markLen = 4, gap = 1;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.15);
+        const trimX0 = x + bleedMm, trimX1 = x + w - bleedMm;
+        const trimY0 = y + bleedMm, trimY1 = y + h - bleedMm;
+
+        [trimY0, trimY1].forEach((ty) => {
+            doc.line(x - markLen - gap, ty, x - gap, ty);
+            doc.line(x + w + gap, ty, x + w + gap + markLen, ty);
+        });
+        [trimX0, trimX1].forEach((tx) => {
+            doc.line(tx, y - markLen - gap, tx, y - gap);
+            doc.line(tx, y + h + gap, tx, y + h + gap + markLen);
+        });
+    }
+
+    async function exportPrintPDF() {
+        flushQR();
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('PDF library failed to load. Please check your connection and try again.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const spec = CARD_SPECS[state.cardSize] || CARD_SPECS.kr;
+        const bleedMm = 3;      // Print PDF는 항상 bleed 포함 (재단선 표기를 위해 필요)
+        const marginMm = 6;     // 재단선을 그릴 여백
+        const cardWmm = spec.wmm + bleedMm * 2;
+        const cardHmm = spec.hmm + bleedMm * 2;
+        const pageWmm = cardWmm + marginMm * 2;
+        const pageHmm = cardHmm + marginMm * 2;
+        const orientation = pageWmm >= pageHmm ? 'landscape' : 'portrait';
+
+        try {
+            const doc = new jsPDF({ orientation: orientation, unit: 'mm', format: [pageWmm, pageHmm] });
+
+            const addFacePage = async (faceId, isFirst) => {
+                if (!isFirst) doc.addPage([pageWmm, pageHmm], orientation);
+                const { canvas } = await buildPrintCloneCanvas(faceId, true);
+                const imgData = canvas.toDataURL('image/png');
+                doc.addImage(imgData, 'PNG', marginMm, marginMm, cardWmm, cardHmm);
+                drawCropMarks(doc, marginMm, marginMm, cardWmm, cardHmm, bleedMm);
+            };
+
+            await addFacePage('card-container', true);
+            if (state.backMode !== 'none') {
+                await addFacePage('card-back', false);
+            }
+
+            doc.save(`BizCard_Print_${(state.name || 'Card').replace(/\s+/g, '_')}.pdf`);
+        } catch (err) {
+            console.error('BizCard Pro: print PDF export failed', err);
+            alert('Print PDF export failed. Please try again.');
+        }
     }
 
     function escapeHtml(str) {
@@ -1576,9 +2383,13 @@
 
     async function captureMotionFrames(onProgress) {
         const card = document.getElementById('card-container');
-        const prevTransform = card.style.transform, prevOrigin = card.style.transformOrigin;
-        card.style.transform = 'scale(1)';
-        card.style.transformOrigin = 'top left';
+        const flip = document.getElementById('card-flip');
+        const prevFlipTransform = flip.style.transform;
+        const prevFaceTransform = card.style.transform;
+        const prevFaceTransition = card.style.transition;
+        flip.style.transform = 'none';
+        card.style.transition = 'none';
+        card.style.transform = 'none'; // 캡처는 항상 앞면 기준 (페이지 넘김으로 뒤집혀 있어도 정면으로 촬영)
 
         clearTimeout(entranceEndTimer);
         stopAmbient();
@@ -1612,8 +2423,9 @@
             if (glowEl) glowEl.style.opacity = '';
             if (shineEl) shineEl.style.transform = '';
             card.classList.remove('mo-capturing');
-            card.style.transform = prevTransform;
-            card.style.transformOrigin = prevOrigin;
+            card.style.transform = prevFaceTransform;
+            card.style.transition = prevFaceTransition;
+            flip.style.transform = prevFlipTransform;
             if (preset !== 'none' && !prefersReducedMotion()) startAmbient();
         }
 
@@ -1712,7 +2524,7 @@
         const ambient = {
             fadeup: '',
             pop: `@keyframes bkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-#bk-card.bk-ambient #view-logo,#bk-card.bk-ambient #view-profile{animation:bkFloat 3200ms ease-in-out infinite}`,
+#bk-card.bk-ambient #bk-logo,#bk-card.bk-ambient #bk-profile{animation:bkFloat 3200ms ease-in-out infinite}`,
             slide: `@keyframes bkGlowPulse{0%,100%{opacity:.16}50%{opacity:.42}}
 #bk-card.bk-ambient #mo-glow{animation:bkGlowPulse 2600ms ease-in-out infinite}`,
             shine: `@keyframes bkShineSweep{0%,8%{transform:translateX(-160%)}55%,100%{transform:translateX(180%)}}
@@ -1733,6 +2545,8 @@
         const isColumn = def.layout === 'column';
         const bg = state.isGrad ? `linear-gradient(135deg, ${state.bg1}, ${state.bg2})` : state.bg1;
         const glow = (def.glow && def.glow !== 'none') ? `${def.glow}, 0 20px 45px -14px rgba(0,0,0,0.65)` : '0 20px 45px -14px rgba(0,0,0,0.65)';
+        const dims = cardDims();
+        const hasBack = state.backMode !== 'none';
 
         const rows = [
             { id: 'phone', label: state.phone, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
@@ -1753,19 +2567,77 @@
         const qrIdx = idx;
 
         const hasProfile = !!state.profile;
-        const vcardLines = [
-            'BEGIN:VCARD', 'VERSION:3.0',
-            `FN:${escapeVCardValue(state.name)}`, `ORG:${escapeVCardValue(state.company)}`, `TITLE:${escapeVCardValue(state.title)}`,
-            `TEL;TYPE=CELL:${escapeVCardValue(state.phone)}`, `EMAIL:${escapeVCardValue(state.email)}`, `ADR:;;${escapeVCardValue(state.addr)}`,
-            'END:VCARD'
-        ];
-        const vcardUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vcardLines.join('\r\n'));
+        // 16. Save Contact — 메인 앱과 동일한 vCard 데이터 사용 (QR 모드와 무관)
+        const vcardUri = 'data:text/vcard;charset=utf-8,' + encodeURIComponent(buildVCardText());
 
         const motionCss = bakeMotionCss(state.motion);
         const hasMotion = state.motion && state.motion !== 'none';
         const safeName = escapeHtml(state.name || 'Card');
         const safeCompany = escapeHtml(state.company || '');
         const safeFileName = (state.name || 'card').replace(/\s+/g, '_');
+
+        // ---- 14. 뒷면(양면) — brand / info-en. XSS 방어를 위해 모든 텍스트는 escapeHtml() 경유 ----
+        let backCss = '';
+        let backHtml = '';
+        if (hasBack) {
+            if (state.backMode === 'brand') {
+                backCss = `
+#bk-back{ background:${escapeHtml(state.accent || def.accent)}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; text-align:center; padding:1.5rem; color:#fff; }
+#bk-back img{ width:56px; height:56px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.25)); }
+#bk-back .bkb-company{ font-family:${pair.heading}; font-size:1.15rem; font-weight:800; letter-spacing:0.02em; }
+#bk-back .bkb-tagline{ font-size:0.78rem; opacity:0.88; max-width:80%; }`;
+                backHtml = `
+<img src="${state.logo}" alt="logo">
+<div class="bkb-company">${escapeHtml(state.company)}</div>
+<div class="bkb-tagline">${escapeHtml(state.backTagline || '')}</div>`;
+            } else if (state.backMode === 'info-en') {
+                const backRowsDefs = [
+                    { label: state.phone, icon: rows[0].icon },
+                    { label: state.email, icon: rows[1].icon },
+                    { label: state.web, icon: rows[2].icon },
+                    { label: state.youtube, icon: rows[3].icon },
+                    { label: state.addrEn, icon: rows[4].icon }
+                ];
+                const backRowsHtml = backRowsDefs.map((r) => {
+                    if (!r.label || !String(r.label).trim()) return '';
+                    return `<div class="bk-row"><span class="c-icon">${r.icon}</span> <span>${escapeHtml(r.label)}</span></div>`;
+                }).join('\n');
+                backCss = `
+#bk-back{ background:${bg}; display:flex; flex-direction:${isColumn ? 'column' : 'row'}; color:${state.txtCol}; font-family:${pair.body}; border:${def.border}; }
+#bkb-body{ flex:1; padding:${isColumn ? '1.5rem 2rem' : '2.2rem'}; display:flex; flex-direction:column; justify-content:space-between; position:relative; z-index:5; min-height:0; }
+#bkb-header{ display:flex; align-items:flex-start; gap:1rem; flex-shrink:0; }
+#bkb-header img.logo{ width:45px; height:45px; object-fit:contain; }
+#bkb-header img.profile{ width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.2); }
+#bkb-name{ font-size:1.6rem; font-weight:${pair.headingWeight}; font-family:${pair.heading}; line-height:1.1; margin-bottom:2px; }
+#bkb-contact{ font-size:${isColumn ? '0.65rem' : '0.72rem'}; line-height:${isColumn ? '1.4' : '1.6'}; margin-top:${isColumn ? '0.5rem' : 'auto'}; }
+#bkb-qr-section{ display:flex; flex-direction:column; align-items:${isColumn ? 'flex-end' : 'center'}; justify-content:center;
+  ${isColumn ? 'width:100%;padding:0 2rem 1.5rem;' : 'width:170px;padding:1.5rem;background:rgba(0,0,0,0.03);'} position:relative; z-index:5; flex-shrink:0; }
+#bkb-qr-wrap{ background:${state.qrBg}; padding:6px; border-radius:8px; display:inline-block; font-size:0; }
+#bkb-qr-wrap img{ display:block; width:${isColumn ? '85' : '105'}px; height:${isColumn ? '85' : '105'}px; }`;
+                backHtml = `
+<div id="bkb-body">
+<div id="bkb-header">
+<img class="logo" src="${state.logo}" alt="logo">
+${hasProfile ? `<img class="profile" src="${state.profile}" alt="profile">` : ''}
+<div>
+<div id="bkb-name">${escapeHtml(state.nameEn)}</div>
+<div>
+<div class="bk-title">${escapeHtml(state.titleEn)}</div>
+<div class="bk-company" style="color:${state.accent || def.accent}">${escapeHtml(state.companyEn)}</div>
+</div>
+</div>
+</div>
+<div id="bkb-contact">
+${backRowsHtml}
+</div>
+</div>
+<div id="bkb-qr-section">
+<div id="bkb-qr-wrap">
+${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR code">` : ''}
+</div>
+</div>`;
+            }
+        }
 
         const html = `<!doctype html>
 <html lang="en">
@@ -1786,12 +2658,22 @@ body{
     radial-gradient(circle at 50% 100%, rgba(109,40,217,0.16), transparent 55%),
     linear-gradient(180deg, #0b0f1a 0%, #05070d 100%);
 }
-#bk-stage{ width:100%; max-width:500px; }
+#bk-stage{ width:100%; max-width:${dims.w}px; }
+#bk-flip{ position:relative; width:100%; aspect-ratio:${dims.w}/${dims.h}; perspective:2600px; }
+#bk-card, #bk-back{ position:absolute; inset:0; border-radius:12px; overflow:hidden; }
+#bk-back{ z-index:1; box-shadow:${glow}; }
 #bk-card{
-  width:100%; aspect-ratio:500/317; background:${bg}; border-radius:12px; box-shadow:${glow};
-  display:flex; flex-direction:${isColumn ? 'column' : 'row'}; position:relative; overflow:hidden;
+  z-index:2; background:${bg}; box-shadow:${glow};
+  display:flex; flex-direction:${isColumn ? 'column' : 'row'}; position:absolute; overflow:hidden;
   color:${state.txtCol}; font-family:${pair.body}; border:${def.border}; cursor:pointer;
+  transform-origin:50% 50%; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  transition:transform .7s cubic-bezier(.45,.05,.35,1);
 }
+#bk-flip.bk-flipped #bk-card{ transform:rotateY(-180deg); }
+${backCss}
+#bk-flip-btn{ display:${hasBack ? 'flex' : 'none'}; width:fit-content; align-items:center; gap:6px; margin:0.9rem auto 0; padding:6px 14px; border-radius:999px;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); color:#eef2ff; font-size:0.75rem; font-weight:600; cursor:pointer; }
+#bk-flip-btn:hover{ border-color:#e8c674; color:#e8c674; }
 #bk-pattern{ position:absolute; inset:0; z-index:1; pointer-events:none; background-repeat:repeat; ${patternStyle} }
 .mo-overlay{ position:absolute; inset:0; pointer-events:none; z-index:2; }
 #mo-glow{ opacity:0; background: radial-gradient(ellipse 70% 60% at 50% 15%, ${state.accent || def.accent} 0%, transparent 70%); mix-blend-mode:screen; }
@@ -1820,6 +2702,7 @@ ${motionCss}
 </head>
 <body>
 <div id="bk-stage">
+<div id="bk-flip">
 <div id="bk-card" role="button" aria-label="Replay entrance animation" tabindex="0">
 <div id="bk-pattern" aria-hidden="true"></div>
 <div id="mo-glow" class="mo-overlay" aria-hidden="true"></div>
@@ -1846,12 +2729,16 @@ ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR code">` : ''}
 </div>
 </div>
 </div>
+${hasBack ? `<div id="bk-back" aria-hidden="true">${backHtml}</div>` : ''}
+</div>
+${hasBack ? `<button type="button" id="bk-flip-btn">&#8635; Show back</button>` : ''}
 <p id="bk-hint">Click the card to replay the entrance.<br>
 ${vcardUri ? `<a id="bk-save" href="${vcardUri}" download="${escapeHtml(safeFileName)}.vcf">Save Contact</a>` : ''}
 </p>
 </div>
 <script>
 (function () {
+  var flip = document.getElementById('bk-flip');
   var card = document.getElementById('bk-card');
   var els = Array.prototype.slice.call(document.querySelectorAll('.bk-el'));
   var hasMotion = ${hasMotion ? 'true' : 'false'};
@@ -1868,6 +2755,13 @@ ${vcardUri ? `<a id="bk-save" href="${vcardUri}" download="${escapeHtml(safeFile
       els.forEach(function (el) { el.classList.remove('bk-play'); });
       card.classList.add('bk-ambient');
     }, maxIdx * 90 + 600);
+  }
+  var flipBtn = document.getElementById('bk-flip-btn');
+  if (flipBtn) {
+    flipBtn.addEventListener('click', function () {
+      var flipped = flip.classList.toggle('bk-flipped');
+      flipBtn.innerHTML = flipped ? '&#8635; Show front' : '&#8635; Show back';
+    });
   }
   card.addEventListener('click', play);
   card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } });
@@ -1928,6 +2822,9 @@ ${vcardUri ? `<a id="bk-save" href="${vcardUri}" download="${escapeHtml(safeFile
                 if (MOTION_PRESETS.indexOf(state.motion) === -1) state.motion = 'fadeup';
                 const spd = Number(state.motionSpeed);
                 state.motionSpeed = (isFinite(spd) && spd >= 0.5 && spd <= 2.0) ? spd : 1.0;
+                // 5차: 구버전 저장분(cardSize 없음)은 kr로 마이그레이션, backMode도 방어적으로 검증
+                if (!CARD_SPECS[state.cardSize]) state.cardSize = 'kr';
+                if (BACK_MODES.indexOf(state.backMode) === -1) state.backMode = 'none';
             }
         } catch (err) {
             console.warn('BizCard Pro: unable to restore saved state.', err);
@@ -1955,6 +2852,8 @@ ${vcardUri ? `<a id="bk-save" href="${vcardUri}" download="${escapeHtml(safeFile
         document.getElementById('qr-logo-toggle').checked = state.showQrLogo;
         syncPatternControls();
         syncMotionControls();
+        syncCardSizeControls();
+        syncBackControls();
 
         document.querySelectorAll('.template-grid .temp-item').forEach(b => b.classList.remove('active'));
         const activeBtn = document.getElementById('btn-' + state.template);
