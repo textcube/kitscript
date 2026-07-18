@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="mobile.css">
   <link rel="stylesheet" href="dark-theme.css">
   <link rel="stylesheet" href="icon-ui.css">
+  <script>(function(){try{var p=localStorage.getItem('lmd-theme')||'system',eff=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=eff;document.querySelector('meta[name=theme-color]').setAttribute('content',eff==='dark'?'#0c1019':'#17233f')}catch(e){}})()</script>
 </head>
 <body>
   <div class="app">
@@ -31,17 +32,32 @@
 
     <main class="workspace">
       <header class="topbar">
-        <div><p class="eyebrow">MESSAGE OPERATIONS</p><h1 id="pageTitle">전체 연락처</h1><p id="pageDescription">연락처와 메시지 작업을 한곳에서 관리하세요.</p></div>
+        <div><p class="eyebrow">MESSAGE OPERATIONS</p><div class="title-row"><h1 id="pageTitle">전체 연락처</h1><button id="editCampaignBtn" class="icon-button" aria-label="캠페인 편집" hidden>✎</button><button id="deleteCampaignBtn" class="icon-button" aria-label="캠페인 삭제" hidden>✕</button></div><p id="pageDescription">연락처와 메시지 작업을 한곳에서 관리하세요.</p></div>
         <div class="top-actions">
           <input id="fileInput" type="file" accept=".csv,.tsv,.json,.vcf,text/vcard,text/x-vcard,application/json,text/csv" hidden>
-          <button id="demoBtn" class="button secondary icon-label-button" aria-label="데모 불러오기"><span class="button-icon" aria-hidden="true">✦</span><span>데모</span></button>
-          <button id="pasteContactsBtn" class="button secondary icon-label-button" aria-label="클립보드에서 연락처 붙여넣기"><span class="button-icon" aria-hidden="true">▣</span><span>붙여넣기</span></button>
-          <button id="copyContactsBtn" class="button secondary icon-label-button" aria-label="연락처를 클립보드에 복사"><span class="button-icon" aria-hidden="true">⧉</span><span>복사</span></button>
           <button id="importBtn" class="button secondary icon-label-button" aria-label="연락처 파일 가져오기"><span class="button-icon" aria-hidden="true">↓</span><span>가져오기</span></button>
-          <button id="exportBtn" class="button secondary icon-label-button" aria-label="JSON 백업 내보내기"><span class="button-icon" aria-hidden="true">↑</span><span>내보내기</span></button>
           <button id="addContactBtn" class="button primary icon-label-button" aria-label="새 연락처 추가"><span class="button-icon" aria-hidden="true">＋</span><span>연락처</span></button>
+          <button id="moreActionsBtn" class="button secondary icon-label-button" aria-label="더 많은 작업" aria-haspopup="true" aria-expanded="false" aria-controls="moreActionsSheet"><span class="button-icon" aria-hidden="true">⋯</span><span>더보기</span></button>
+          <div id="moreActionsPanel">
+            <div id="moreActionsBackdrop"></div>
+            <div id="moreActionsSheet" role="dialog" aria-modal="true" aria-label="추가 작업">
+              <div class="more-sheet-grabber" aria-hidden="true"></div>
+              <button id="themeBtn" class="button secondary icon-label-button" aria-label="테마 전환"><span class="button-icon" aria-hidden="true">◐</span><span id="themeLabel">시스템</span></button>
+              <button id="demoBtn" class="button secondary icon-label-button" aria-label="데모 불러오기"><span class="button-icon" aria-hidden="true">✦</span><span>데모</span></button>
+              <button id="pasteContactsBtn" class="button secondary icon-label-button" aria-label="클립보드에서 연락처 붙여넣기"><span class="button-icon" aria-hidden="true">▣</span><span>붙여넣기</span></button>
+              <button id="copyContactsBtn" class="button secondary icon-label-button" aria-label="연락처를 클립보드에 복사"><span class="button-icon" aria-hidden="true">⧉</span><span>복사</span></button>
+              <button id="exportBtn" class="button secondary icon-label-button" aria-label="JSON 백업 내보내기"><span class="button-icon" aria-hidden="true">↑</span><span>내보내기</span></button>
+              <button id="resetBtn" class="button secondary icon-label-button" aria-label="전체 데이터 초기화"><span class="button-icon" aria-hidden="true">⟲</span><span>초기화</span></button>
+              <button id="moreActionsCancel" type="button" class="button secondary">취소</button>
+            </div>
+          </div>
         </div>
       </header>
+
+      <div id="mobileRails" class="mobile-rails">
+        <div id="campaignRail" class="chip-rail" aria-label="캠페인 전환"></div>
+        <div id="filterRail" class="chip-rail" aria-label="빠른 필터"></div>
+      </div>
 
       <section class="stats" aria-label="현황 요약">
         <article><span>전체 연락처</span><strong id="statTotal">0</strong><small>명</small></article>
@@ -57,7 +73,7 @@
             <select id="statusFilter" aria-label="상태 필터"><option value="">모든 상태</option></select>
             <select id="groupFilter" aria-label="그룹 필터"><option value="">모든 그룹</option></select>
           </div>
-          <div id="bulkBar" class="bulk-bar" hidden><strong><span id="selectedCount">0</span>명 선택</strong><button data-bulk="발송완료">발송 완료</button><button data-bulk="보류">보류</button><button data-bulk="오류">오류</button><button data-bulk="제외">제외</button></div>
+          <div id="bulkBar" class="bulk-bar" hidden><strong><span id="selectedCount">0</span>명 선택</strong><button data-bulk="발송완료">발송 완료</button><button data-bulk="발송전보류">발송전보류</button><button data-bulk="오류">오류</button><button data-bulk="제외">제외</button></div>
           <div class="table-wrap">
             <table>
               <thead><tr><th><input id="selectAll" type="checkbox" aria-label="전체 선택"></th><th>연락처</th><th>상태</th><th>그룹</th><th>마지막 작업</th><th></th></tr></thead>
@@ -69,10 +85,9 @@
 
         <aside id="detailPane" class="detail-pane">
           <div class="mobile-detail-bar"><button id="mobileDetailClose" aria-label="목록으로 돌아가기">‹</button><strong>메시지 보내기</strong><span id="mobilePosition">0 / 0</span></div>
-          <div id="gestureFeedback" class="gesture-feedback" aria-live="polite"></div>
           <div id="detailEmpty" class="detail-empty"><span>↖</span><p>연락처를 선택하면<br>상세 정보가 표시됩니다.</p></div>
           <div id="detailContent" hidden>
-            <div class="detail-head"><div class="avatar" id="detailAvatar"></div><div><h2 id="detailName"></h2><p id="detailContact"></p></div><button id="copyContactBtn" class="icon-button" aria-label="이 연락처 복사">▣</button><button id="editContactBtn" class="icon-button" aria-label="연락처 수정">✎</button></div>
+            <div class="detail-head"><div class="avatar" id="detailAvatar"></div><div><h2 id="detailName"></h2><p id="detailContact"></p></div><button id="copyContactBtn" class="icon-button" aria-label="이 연락처 복사">▣</button><button id="editContactBtn" class="icon-button" aria-label="연락처 수정">✎</button><button id="deleteContactBtn" class="icon-button danger" aria-label="연락처 삭제">✕</button></div>
             <div id="detailTags" class="chips"></div>
             <label class="field"><span>상태</span><select id="detailStatus"></select></label>
             <label class="field"><span>메모</span><textarea id="detailMemo" rows="3" placeholder="이 연락처에 대한 메모"></textarea></label>
@@ -87,17 +102,20 @@
               <button id="deferContactBtn" class="gesture-button defer-button" type="button" aria-label="연락처를 뒤로 미루기"><span>↷</span><strong>미루기</strong></button>
               <button id="nextContactBtn" class="gesture-button move-button" type="button" aria-label="다음 연락처"><span>↑</span><strong>다음</strong></button>
             </div>
+            <p class="shortcut-hint">단축키: ↑/↓ 이전·다음 연락처 · Enter 문자 보내기</p>
           </div>
         </aside>
       </section>
     </main>
   </div>
 
+  <div id="gestureFeedback" class="gesture-feedback" aria-live="polite"></div>
+
   <dialog id="contactDialog"><form id="contactForm" method="dialog"><header><div><h2 id="contactDialogTitle">연락처 추가</h2><p>연락처 정보는 브라우저에만 저장됩니다.</p></div><button type="button" class="dialog-close">×</button></header><input id="contactId" type="hidden"><div class="form-grid"><label class="field"><span>이름 *</span><input id="contactName" required></label><label class="field"><span>전화번호</span><input id="contactPhone" type="tel"></label><label class="field"><span>이메일</span><input id="contactEmail" type="email"></label><label class="field"><span>그룹</span><input id="contactTags" placeholder="VIP, 운영진"></label><label class="field full"><span>메모</span><textarea id="contactMemo" rows="3"></textarea></label></div><footer><button type="button" class="button secondary dialog-close">취소</button><button class="button primary" value="save">저장</button></footer></form></dialog>
-  <dialog id="campaignDialog"><form id="campaignForm" method="dialog"><header><div><h2>캠페인 만들기</h2><p>작업 목적과 기본 메시지를 설정하세요.</p></div><button type="button" class="dialog-close">×</button></header><label class="field"><span>캠페인 이름 *</span><input id="campaignTitle" required></label><label class="field"><span>설명</span><input id="campaignDescription"></label><label class="field"><span>메시지 템플릿</span><textarea id="campaignTemplate" rows="6">안녕하세요 {{name}}님, {{campaign}} 안내드립니다.</textarea><small>{{name}}, {{phone}}, {{group}}, {{campaign}} 사용 가능</small></label><footer><button type="button" class="button secondary dialog-close">취소</button><button class="button primary" value="save">만들기</button></footer></form></dialog>
+  <dialog id="campaignDialog"><form id="campaignForm" method="dialog"><header><div><h2 id="campaignDialogTitle">캠페인 만들기</h2><p>작업 목적과 기본 메시지를 설정하세요.</p></div><button type="button" class="dialog-close">×</button></header><input id="campaignId" type="hidden"><label class="field"><span>캠페인 이름 *</span><input id="campaignTitle" required></label><label class="field"><span>설명</span><input id="campaignDescription"></label><label class="field"><span>타깃 그룹</span><input id="campaignTargetTags" placeholder="VIP, 운영진"><small>쉼표로 구분. 비워 두면 전체 연락처가 대상입니다.</small></label><label class="field"><span>메시지 템플릿</span><textarea id="campaignTemplate" rows="6">안녕하세요 {{name}}님, {{campaign}} 안내드립니다.</textarea><small>{{name}}, {{phone}}, {{group}}, {{campaign}} 사용 가능</small></label><footer><button type="button" class="button secondary dialog-close">취소</button><button id="campaignSubmitBtn" class="button primary" value="save">만들기</button></footer></form></dialog>
   <dialog id="templateDialog"><form id="templateForm" method="dialog"><header><div><h2>메시지 템플릿</h2><p>변수는 연락처별 정보로 자동 치환됩니다.</p></div><button type="button" class="dialog-close">×</button></header><label class="field"><span>템플릿</span><textarea id="templateText" rows="9"></textarea><small>{{name}}, {{phone}}, {{group}}, {{campaign}}</small></label><footer><button type="button" class="button secondary dialog-close">취소</button><button class="button primary" value="save">적용</button></footer></form></dialog>
   <dialog id="clipboardDialog"><form id="clipboardForm"><header><div><h2>연락처 붙여넣기</h2><p>TSV, CSV, JSON 또는 아이폰·안드로이드 vCard 내용을 붙여넣으세요.</p></div><button type="button" class="dialog-close">×</button></header><label class="field"><span>연락처 데이터</span><textarea id="clipboardText" rows="12" spellcheck="false" placeholder="name&#9;phone&#9;email&#9;tags&#9;memo"></textarea><small>지원 형식: TSV · CSV · JSON · VCF</small></label><footer><button type="button" class="button secondary dialog-close">취소</button><button class="button primary" type="submit">가져오기</button></footer></form></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastAction" type="button" hidden></button></div>
   <script src="app.js"></script>
 </body>
 </html>
