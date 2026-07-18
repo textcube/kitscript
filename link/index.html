@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="mobile.css">
   <link rel="stylesheet" href="dark-theme.css">
   <link rel="stylesheet" href="icon-ui.css">
-  <script>(function(){try{var p=localStorage.getItem('lmd-theme')||'system',eff=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=eff;document.querySelector('meta[name=theme-color]').setAttribute('content',eff==='dark'?'#0c1019':'#17233f')}catch(e){}})()</script>
+  <script>(function(){try{var p=localStorage.getItem('lmd-theme')||'dark',eff=p==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.dataset.theme=eff;document.querySelector('meta[name=theme-color]').setAttribute('content',eff==='dark'?'#0c1019':'#17233f')}catch(e){}})()</script>
 </head>
 <body>
   <div class="app">
@@ -37,12 +37,12 @@
           <input id="fileInput" type="file" accept=".csv,.tsv,.json,.vcf,text/vcard,text/x-vcard,application/json,text/csv" hidden>
           <button id="importBtn" class="button secondary icon-label-button" aria-label="연락처 파일 가져오기"><span class="button-icon" aria-hidden="true">↓</span><span>가져오기</span></button>
           <button id="addContactBtn" class="button primary icon-label-button" aria-label="새 연락처 추가"><span class="button-icon" aria-hidden="true">＋</span><span>연락처</span></button>
+          <button id="themeBtn" class="button secondary icon-label-button" aria-label="테마 전환"><span class="button-icon" aria-hidden="true">◐</span><span id="themeLabel">시스템</span></button>
           <button id="moreActionsBtn" class="button secondary icon-label-button" aria-label="더 많은 작업" aria-haspopup="true" aria-expanded="false" aria-controls="moreActionsSheet"><span class="button-icon" aria-hidden="true">⋯</span><span>더보기</span></button>
           <div id="moreActionsPanel">
             <div id="moreActionsBackdrop"></div>
             <div id="moreActionsSheet" role="dialog" aria-modal="true" aria-label="추가 작업">
               <div class="more-sheet-grabber" aria-hidden="true"></div>
-              <button id="themeBtn" class="button secondary icon-label-button" aria-label="테마 전환"><span class="button-icon" aria-hidden="true">◐</span><span id="themeLabel">시스템</span></button>
               <button id="demoBtn" class="button secondary icon-label-button" aria-label="데모 불러오기"><span class="button-icon" aria-hidden="true">✦</span><span>데모</span></button>
               <button id="pasteContactsBtn" class="button secondary icon-label-button" aria-label="클립보드에서 연락처 붙여넣기"><span class="button-icon" aria-hidden="true">▣</span><span>붙여넣기</span></button>
               <button id="copyContactsBtn" class="button secondary icon-label-button" aria-label="연락처를 클립보드에 복사"><span class="button-icon" aria-hidden="true">⧉</span><span>복사</span></button>

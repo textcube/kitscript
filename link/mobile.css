@@ -23,7 +23,8 @@
  .brand small{display:none}
  #importBtn{order:1}
  #addContactBtn{order:2}
- #moreActionsBtn{order:3;display:inline-flex}
+ #themeBtn{order:3;display:inline-flex}
+ #moreActionsBtn{order:4;display:inline-flex}
  #moreActionsSheet{display:none}
  #moreActionsPanel.open #moreActionsBackdrop{display:block;position:fixed;inset:0;z-index:70;background:rgba(10,16,30,.45)}
  #moreActionsPanel.open #moreActionsSheet{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:71;padding:10px 14px calc(14px + env(safe-area-inset-bottom));background:var(--card);border-radius:18px 18px 0 0;box-shadow:0 -14px 40px rgba(20,30,55,.22);max-height:75vh;overflow-y:auto}
