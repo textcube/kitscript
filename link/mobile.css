@@ -21,6 +21,7 @@
  .brand-mark{width:28px;height:28px;border-radius:9px;font-size:13px}
  .brand strong{font-size:12px}
  .brand small{display:none}
+ .lang-toggle{min-width:40px;min-height:40px;padding:0 10px;font-size:11px}
  #importBtn{order:1}
  #addContactBtn{order:2}
  #themeBtn{order:3;display:inline-flex}
