@@ -84,6 +84,45 @@
 - **기본 메시지 템플릿**: `DEFAULT_TEMPLATE={en:'Hi {{name}}...', ko:'안녕하세요 {{name}}님...'}`을 두고 `getDefaultTemplate()`이 `localStorage('lmd-default-template')`가 있으면 그 값을, 없으면 현재 언어의 기본값을 반환한다. 캠페인 생성 다이얼로그를 열 때(`openCampaign()`)와 `campaign()`의 `'all'` 폴백 모두 이 함수를 사용한다. 사용자가 템플릿을 직접 저장한 뒤에는 언어를 전환해도 재번역되지 않는다(저장된 문자열을 그대로 사용).
 - **언어 토글 위치**: 데스크톱 사이드바 상단과 모바일 상단 브랜드 바에서 공유하는 `.brand` 요소(사이드바는 라이트/다크 테마와 무관하게 항상 짙은 남색 배경이라 별도 테마 분기 없이도 대비가 유지된다) 안에 `#langBtn` 배지 버튼을 상시 배치했다. 이전 세션에서 테마 버튼을 모바일 "더보기" 시트 안에 숨겼다가 발견성이 떨어졌던 문제를 반복하지 않기 위해, 모바일 4버튼 그리드(가져오기·연락처·테마·더보기)에도 끼워 넣지 않고 브랜드 영역의 여유 공간을 활용했다. 클릭 시 `en`↔`ko` 2단계로 토글되며, 모바일(375px)에서 40×40px 터치 타깃을 확보하도록 `mobile.css`에서 크기를 키웠다. `styles.css`에 기본 스타일을, `dark-theme.css`에 다크 테마 전용 보정을 추가했다.
 
+## v0.4
+
+### 상태 레코드 하이재킹 버그
+
+`resultFor(id)`는 `contactId+campaignId===state.campaign` 레코드가 없으면 표시용으로 `contactId+campaignId==='all'` 레코드를 폴백으로 반환한다(캠페인 전용 상태가 아직 없을 때 전체 스코프 상태를 참고용으로 보여주려는 의도된 동작). 문제는 `setStatus()`와 `deferCurrent()`가 이 반환값을 그대로 스프레드해 저장 레코드를 만들면서 `r.id||uid()`로 id를 골랐다는 점이다. `resultFor()`가 'all' 레코드를 폴백으로 돌려준 경우 `r.id`는 그 'all' 레코드의 실제 id이므로, `{...r,id:r.id,campaignId:state.campaign,...}`를 그대로 `put()`하면 **원래 'all' 레코드 자체의 `campaignId`가 현재 캠페인으로 바뀌어 덮어써진다.** 즉 캠페인 A에서 상태를 한 번 바꾸면 전체 스코프('all')에 남아 있던 기록이 캠페인 A 소속으로 변질되고, 이후 캠페인 B에서 같은 연락처를 처리하면 더는 'all' 폴백을 찾지 못한다 — 데이터가 사실상 소실된다.
+
+수정은 "이 레코드가 실제로 현재 캠페인 소속인가"를 판별해 재사용 여부를 가르는 것이다.
+
+```js
+const prev=resultFor(id), reuse=prev.id && prev.campaignId===state.campaign;
+const r={...prev, id:reuse?prev.id:uid(), campaignId:state.campaign, ...};
+```
+
+`resultFor()`의 첫 번째 `find`가 성공했다면 이미 `prev.campaignId===state.campaign`이므로 `reuse`는 참 — 기존 레코드를 그대로 갱신한다(원래 의도된 동작). 두 번째 `find`(=`'all'` 폴백)를 탄 경우는 `state.campaign!=='all'`일 때만 도달하므로 `prev.campaignId(='all') !== state.campaign`이 되어 `reuse`는 거짓 — `uid()`로 새 레코드를 만들어 현재 캠페인 소속으로 별도 저장한다. 'all' 레코드는 손대지 않고 그대로 남는다. 폴백에서 온 `memo`는 새 레코드의 초깃값으로만 이어받고(사용자가 이미 적어둔 메모를 잃지 않도록), `campaignId`는 항상 `state.campaign`으로 새로 지정한다. `setStatus()`와 `deferCurrent()` 양쪽에 동일한 패턴을 적용했다. `excludeCurrent()`와 일괄 처리(`data-bulk`)는 내부적으로 `setStatus()`를 호출하므로 별도 수정 없이 함께 고쳐졌다.
+
+`snapshotResults(ids)`도 같은 폴백 경로를 타는 게 문제였다: 실행 취소용 스냅샷을 뜰 때 `resultFor()`를 호출해 캠페인 스코프에 레코드가 없으면 'all' 레코드를 "이전 상태"로 저장해버렸다. 이 상태에서 `restoreResults()`가 되돌리면 (a) 방금 위 수정으로 새로 생긴 캠페인 레코드는 그대로 남고 (b) 엉뚱하게 'all' 레코드의 내용을 캠페인 레코드 자리에 덮어씌우는 이중 오류가 날 수 있었다. 수정 후에는 `state.results.find(r=>r.contactId===id&&r.campaignId===state.campaign)`로 폴백 없이 정확한 스코프만 조회하고, 없으면 `prev:null`로 저장한다. `restoreResults()`의 기존 로직은 이미 `prev===null`일 때 "현재 캠페인 스코프의 레코드를 찾아 삭제"하도록 짜여 있었으므로 수정 없이 그대로 새로 생긴 레코드를 정확히 지운다.
+
+### 발송 후 결과 선택 바 (`#outcomeBar`)
+
+README의 "상태 변경" 절에 있던 `문자 버튼 → 앱 실행 → 복귀 → 다음 선택(발송완료/보류/오류/취소) → 자동 저장 → 다음 연락처` 루프를 구현했다. visibilitychange나 포커스 복귀 감지 같은 방식은 데스크톱에서 `sms:` 스킴이 아예 실행되지 않거나 새 탭/앱이 뜨지 않는 환경(대부분의 데스크톱 브라우저)에서 신뢰할 수 없어 채택하지 않았다. 대신 **채널 버튼 클릭 즉시(=`recordAction()` 실행 직후) 표시하는 인라인 바**로 단순화했다 — 실제로 문자 앱이 열렸는지와 무관하게, "이 연락처에 대해 방금 무언가를 시도했다"는 사실 자체를 기준으로 결과를 묻는다.
+
+- `recordAction(channel,c)`이 액션을 기록한 뒤 `state.outcomeFor=c.id`를 설정하고 `renderDetail()`을 호출한다. `smsBtn`/`shareBtn`/`emailBtn`/`callBtn`의 클릭 핸들러는 모두 `recordAction()`을 거치므로 별도 분기 없이 네 채널 전부에서 동일하게 바가 뜬다.
+- `renderDetail()`은 매 호출마다 `$('outcomeBar').hidden=state.outcomeFor!==c.id`로 가시성을 동기화한다. 즉 "지금 표시 중인 연락처가 `outcomeFor`와 같을 때만 보인다"는 단일 조건으로 표시/숨김을 관리하며, 별도의 열기/닫기 상태 플래그를 두지 않았다.
+- 이 조건만으로는 "같은 연락처를 선택한 채 캠페인이나 필터만 바뀐" 경우를 잡지 못한다(연락처 id는 그대로이므로). 그래서 캠페인 전환(`[data-campaign]` 클릭, `cycleCampaign()`, 캠페인 생성/편집/삭제, 데모 로드)과 필터 변경(빠른 필터 `[data-status]` 클릭, `#statusFilter`/`#groupFilter`/검색어 변경)이 일어나는 모든 지점에서 `state.outcomeFor=null`을 명시적으로 같이 설정한다. 연락처 자체를 전환하는 경우(`moveContact`, `excludeCurrent`, `deferCurrent`, 목록 행 클릭)는 `state.selected`가 바뀌면서 위 id 비교 조건이 자연히 걸리므로 별도 처리가 필요 없다.
+- 바의 구성은 안내 문구(`#outcomeText`, `t('outcomePrompt',{name})`)와 버튼 4개: `data-outcome="발송완료"`/`data-outcome="발송후보류"`/`data-outcome="오류"`(라벨은 각각 기존 `statusSent`/`statusHold`/`statusError` 문자열을 재사용— 이미 짧고 뜻이 맞아 새 키를 만들지 않았다)와 `#outcomeCloseBtn`. 상태 버튼 3개는 `document`의 기존 클릭 위임 리스너에 `data-bulk`와 같은 패턴(`e.target.dataset.outcome`)으로 추가해, 이미 있는 "상태값을 데이터 속성에 담아 버튼 여러 개를 한 리스너로 처리"하는 관례를 그대로 따랐다.
+- 상태 버튼 클릭 시: 클릭 시점의 `filtered()` 목록과 그 안에서 현재 연락처의 인덱스를 먼저 캡처해 두고(상태가 바뀌기 전 순서 기준), `snapshotResults()`로 실행 취소용 스냅샷을 뜬 뒤 `setStatus()`로 저장한다. `outcomeFor`를 `null`로 돌려 바를 숨기고, 토스트에 실행 취소 버튼을 붙인다. **발송완료를 선택했을 때만** 캡처해 둔 인덱스 다음(`list.slice(idx+1)`)부터 상태가 `'미처리'`인 첫 연락처를 찾아 `state.selected`를 옮긴다. 못 찾으면(목록 끝까지 미처리가 없으면) 이동하지 않고 `gestureNotice(t('noticeAllPendingDone'))`로만 안내한다. 보류/오류는 자동 이동을 하지 않는다(사용자가 계속 같은 연락처를 붙들고 다른 채널을 시도하는 흐름을 막지 않기 위해). 닫기 버튼은 `state.outcomeFor=null`만 하고 `renderDetail()`을 호출할 뿐 아무 것도 저장하지 않는다.
+- 스타일은 `styles.css`에 `--card`/`--line`/`--accent`/`--accent-soft`/`--ink` 테마 변수만으로 작성해 다크 테마 오버라이드가 따로 필요 없다("발송완료" 버튼만 `--accent` 배경의 강조 버튼으로 구분). 모바일 터치 타깃은 상세 패널이 풀스크린 오버레이로 전환되는 기존 `mobile.css`의 `@media(max-width:1050px)` 블록(다른 액션 버튼들과 같은 breakpoint)에 `.outcome-actions button{min-height:42px}`를 추가해 확보했다.
+
+### 사이드바 active 상태
+
+"전체 연락처" 정적 버튼(`id="allContactsNav"`)과 사이드바 빠른 필터 5개 버튼(`.sidebar [data-status]`)에 있던 하드코딩 `active` 클래스를 지우고, `render()`에서 `state.campaign`/`state.status` 값을 기준으로 매번 `classList.toggle('active', 조건)`을 다시 계산한다. 모바일 레일(`#campaignRail`/`#filterRail`)은 원래부터 매 렌더마다 `innerHTML`을 완전히 새로 그리며 active 여부를 문자열에 포함시켜 왔으므로 이번 수정과 무관하게 계속 정상 동작한다.
+
+### 자잘한 수정
+
+- `#statusFilter`에 결합 상태값 `'보류'`(내부적으로 `발송전보류`+`발송후보류`를 부분일치로 묶어 필터링하는 값, `filtered()`의 기존 로직은 그대로 둠) 옵션을 `발송전보류` 옵션 바로 앞에 추가해, 빠른 필터로 "보류"를 선택했을 때도 드롭다운이 실제 필터 상태를 반영하도록 했다.
+- 빈 상태 분기: `render()`에서 `state.contacts.length===0`(연락처 자체가 없음)과 `list.length===0`(필터링 결과만 0건)을 구분해 `#emptyTitle`/`#emptyDesc`의 텍스트를 각각 다르게 넣고, 후자의 경우 `#emptyImportBtn`을 숨긴다. 두 문구 모두 `data-i18n` 속성은 유지하되(초기 로드·언어 전환 시 기본값), `render()`가 매번 상황에 맞는 텍스트로 덮어써 언어 전환 후에도 올바른 문구가 유지된다.
+- `#selectAll` 체크박스를 매 렌더마다 `list.length>0 && list.every(c=>state.checked.has(c.id))`로 재계산해, 일괄 처리·필터 변경으로 `state.checked`가 비워진 뒤에도 체크 표시가 남아있던 문제를 없앴다.
+- `filtered()`의 텍스트 검색 대상 배열에 `c.email`을 추가했다(기존: name, phone, memo).
+
 ## 실행
 
 IndexedDB와 Web Share API가 안전하게 동작하도록 정적 웹 서버 사용을 권장한다.

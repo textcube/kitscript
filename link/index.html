@@ -17,7 +17,7 @@
       <div class="brand"><span class="brand-mark">L</span><div><strong>Local Message Desk</strong><small data-i18n="brandSubtitle">Local message workspace</small></div><button id="langBtn" type="button" class="lang-toggle" aria-label="Switch language" data-i18n-aria="langToggleAria">EN</button></div>
       <nav aria-label="Workspace menu" data-i18n-aria="navMenuLabel">
         <p class="nav-title" data-i18n="navCampaigns">Campaigns</p>
-        <button class="nav-item active" data-campaign="all"><span data-i18n="allContacts">All Contacts</span><b id="allCount">0</b></button>
+        <button id="allContactsNav" class="nav-item" data-campaign="all"><span data-i18n="allContacts">All Contacts</span><b id="allCount">0</b></button>
         <div id="campaignNav"></div>
         <button id="newCampaignBtn" class="nav-add" data-i18n="newCampaign">+ New Campaign</button>
         <p class="nav-title" data-i18n="navQuickFilters">Quick Filters</p>
@@ -79,7 +79,7 @@
               <thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all" data-i18n-aria="selectAllAria"></th><th data-i18n="colContact">Contact</th><th data-i18n="colStatus">Status</th><th data-i18n="colGroup">Group</th><th data-i18n="colLastAction">Last Action</th><th></th></tr></thead>
               <tbody id="contactRows"></tbody>
             </table>
-            <div id="emptyState" class="empty" hidden><span>✦</span><h2 data-i18n="emptyTitle">No contacts yet</h2><p data-i18n="emptyDesc">Import a file or add a new contact to get started.</p><button id="emptyImportBtn" class="button primary" data-i18n="emptyImportBtn">Import Contacts</button></div>
+            <div id="emptyState" class="empty" hidden><span>✦</span><h2 id="emptyTitle" data-i18n="emptyTitle">No contacts yet</h2><p id="emptyDesc" data-i18n="emptyDesc">Import a file or add a new contact to get started.</p><button id="emptyImportBtn" class="button primary" data-i18n="emptyImportBtn">Import Contacts</button></div>
           </div>
         </div>
 
@@ -94,6 +94,7 @@
             <div class="template-head"><strong data-i18n="templatePreview">Message Preview</strong><button id="editTemplateBtn" data-i18n="editTemplate">Edit Template</button></div>
             <div id="messagePreview" class="message-preview"></div>
             <div class="action-grid"><button id="smsBtn" class="action-button primary-action" aria-label="Send text message" data-i18n-aria="sendSmsAria"><span class="action-icon" aria-hidden="true">●</span><strong data-i18n="smsLabel">SMS</strong></button><button id="shareBtn" class="action-button" aria-label="Share message" data-i18n-aria="sendShareAria"><span class="action-icon" aria-hidden="true">↗</span><strong data-i18n="shareLabel">Share</strong></button><button id="emailBtn" class="action-button" aria-label="Send email" data-i18n-aria="sendEmailAria"><span class="action-icon" aria-hidden="true">✉</span><strong data-i18n="emailBtnLabel">Email</strong></button><button id="callBtn" class="action-button" aria-label="Make a call" data-i18n-aria="sendCallAria"><span class="action-icon" aria-hidden="true">☎</span><strong data-i18n="callLabel">Call</strong></button></div>
+            <div id="outcomeBar" class="outcome-bar" hidden><p id="outcomeText"></p><div class="outcome-actions"><button type="button" data-outcome="발송완료" data-i18n="statusSent">Sent</button><button type="button" data-outcome="발송후보류" data-i18n="statusHold">On Hold</button><button type="button" data-outcome="오류" data-i18n="statusError">Error</button><button type="button" id="outcomeCloseBtn" data-i18n="outcomeClose">Close</button></div></div>
             <div class="history"><strong data-i18n="historyTitle">Action History</strong><div id="historyList"></div></div>
             <div class="gesture-guide" aria-label="Mobile gesture guide" data-i18n-aria="gestureGuideAria"><span data-i18n="gestureNextHint">↑ Next</span><span data-i18n="gestureExcludeHint">← Not needed</span><span data-i18n="gestureHoldHint">Hold · to back →</span><span data-i18n="gesturePrevHint">↓ Previous</span></div>
             <div class="gesture-actions" aria-label="Move and process contact" data-i18n-aria="gestureActionsAria">
