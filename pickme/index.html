@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PICK ME - RETRO STAGE SELECT (MANUAL OVERRIDE)</title>
   <style>
     :root {
@@ -14,6 +14,10 @@
       --crt-line: rgba(18, 16, 16, 0.15);
       --cols: 3;
       --card-h: 140px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
     }
 
     body.theme-city { --accent: #ff00ff; }
@@ -35,13 +39,13 @@
       overflow-x: hidden;
       overflow-y: auto;
       position: relative;
-      padding: 1.25rem 1rem 1.5rem;
+      padding: 1.25rem max(1rem, var(--safe-right)) max(1.5rem, var(--safe-bottom)) max(1rem, var(--safe-left));
     }
 
     .retro-links {
       position: absolute;
-      top: 0.8rem;
-      left: 0.8rem;
+      top: calc(0.8rem + var(--safe-top));
+      left: calc(0.8rem + var(--safe-left));
       z-index: 110;
       display: flex;
       gap: 0.45rem;
@@ -131,8 +135,8 @@
 
     #stop-btn {
       position: absolute;
-      top: 0.8rem;
-      right: 0.8rem;
+      top: calc(0.8rem + var(--safe-top));
+      right: calc(0.8rem + var(--safe-right));
       z-index: 110;
       --button-inner-gap: 0.8rem;
       min-width: 9.5rem;
@@ -177,7 +181,8 @@
       display: grid;
       grid-template-columns: repeat(var(--cols), 1fr);
       gap: 0.8rem;
-      width: min(95vw, 1100px);
+      width: 100%;
+      max-width: 1600px;
       z-index: 10;
       align-content: start;
       padding-bottom: 0.5rem;
@@ -274,15 +279,20 @@
     @keyframes flash { 0% { filter: invert(0); } 100% { filter: invert(1); } }
 
     @media (max-width: 600px) {
-      #status-container { margin-top: 4.2rem; }
+      #status-container { margin-top: calc(4.2rem + var(--safe-top)); }
       .status-text { font-size: 1.4rem; min-width: 240px; }
-      #pick-grid { gap: 0.5rem; }
-      body { padding: 0.8rem 0.7rem 1rem; }
-      .retro-links { top: 0.6rem; left: 0.6rem; }
+      #pick-grid { gap: 0.35rem; }
+      body {
+        padding: 0.8rem max(0.25rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(0.25rem, var(--safe-left));
+      }
+      .retro-links {
+        top: calc(0.6rem + var(--safe-top));
+        left: calc(0.6rem + var(--safe-left));
+      }
       .retro-link { width: 2.2rem; height: 2.2rem; }
       #stop-btn {
-        top: 0.6rem;
-        right: 0.6rem;
+        top: calc(0.6rem + var(--safe-top));
+        right: calc(0.6rem + var(--safe-right));
         --button-inner-gap: 0.6rem;
         min-width: 7.25rem;
         height: 3.375rem;
@@ -312,7 +322,7 @@
       }
 
       #stop-btn::after { inset: 0.3rem; }
-      #status-container { margin-top: 3.8rem; }
+      #status-container { margin-top: calc(3.8rem + var(--safe-top)); }
     }
   </style>
 </head>
