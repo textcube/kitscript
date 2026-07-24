@@ -159,6 +159,9 @@
       text-align: center;
     }
     .upload-button:hover { border-color: var(--accent); color: var(--accent); }
+    .upload-button.danger { color: var(--danger); border-color: rgba(255, 107, 107, .45); }
+    .upload-button.danger:hover { color: #fff; border-color: var(--danger); background: rgba(255, 107, 107, .1); }
+    .upload-button:disabled { cursor: not-allowed; opacity: .42; }
     .asset-list { display: grid; gap: 7px; margin-top: 10px; }
     .asset {
       display: grid;
@@ -528,6 +531,7 @@
               <span id="sourceDropHint">Drop JPG, PNG, or WEBP files here</span>
             </div>
             <button class="upload-button" id="chooseImagesButton" type="button">Choose Images</button>
+            <button class="upload-button danger" id="removeAllImagesButton" type="button">Remove All Images</button>
             <input id="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,.mp4,.webm,.mov,video/mp4,video/webm,video/quicktime" multiple />
             <div class="field source-volume hidden" id="videoSourceControls" hidden>
               <label for="videoVolume">Video Source Volume <span id="videoVolumeValue">100%</span></label>
@@ -1056,6 +1060,7 @@
           height: image.naturalHeight,
           poi: saved.poi || 'center',
           optimization: saved.optimization || null,
+          isDemo: Boolean(saved.isDemo),
           storageRef: saved.opfsRef || null
         };
       }
@@ -1213,6 +1218,27 @@
       }
 
       async createSampleImages() {
+        const demoCount = 12;
+        try {
+          for (let index = 0; index < demoCount; index++) {
+            const number = String(index + 1).padStart(2, '0');
+            const response = await fetch(`./demo/musicians/${number}.jpg`);
+            if (!response.ok) throw new Error(`Demo image ${number} is unavailable.`);
+            const blob = await response.blob();
+            const file = new File([blob], `${number} - Musician Portrait.jpg`, { type: blob.type || 'image/jpeg' });
+            this.images.push(await this.createImageAsset(file, {
+              id: `demo-musician-${number}`,
+              name: file.name,
+              poi: 'center',
+              isDemo: true
+            }));
+          }
+          return;
+        } catch (error) {
+          console.warn('Unable to load bundled musician images; using generated samples.', error);
+          this.images.forEach((asset) => URL.revokeObjectURL(asset.url));
+          this.images = [];
+        }
         const themes = [
           { title: 'Morning Signal', a: '#43e2c3', b: '#1b4dff', c: '#fff4c7' },
           { title: 'City Pulse', a: '#ff5f7e', b: '#24133f', c: '#f8d95b' },
@@ -1227,7 +1253,8 @@
             id: `sample-${index + 1}`,
             name: `${String(index + 1).padStart(2, '0')} - ${themes[index].title}.png`,
             poi: 'center',
-            optimization: optimized.optimization
+            optimization: optimized.optimization,
+            isDemo: true
           }));
         }
       }
@@ -1421,6 +1448,13 @@
         this.onChange();
       }
 
+      async removeAllImages() {
+        this.images.forEach((asset) => URL.revokeObjectURL(asset.url));
+        this.images = [];
+        await this.persistImages();
+        this.onChange();
+      }
+
       async setPoi(id, poi) {
         const asset = this.images.find((item) => item.id === id);
         if (asset) asset.poi = poi;
@@ -1563,6 +1597,7 @@
             name: asset.name,
             poi: asset.poi,
             optimization: asset.optimization,
+            isDemo: asset.isDemo,
             opfsRef: asset.storageRef
           })));
           if (Array.isArray(stored)) {
@@ -1577,11 +1612,11 @@
 
       async restore() {
         try {
-          const savedImages = await this.storage.get('images') || [];
-          for (const saved of savedImages) {
+          const savedImages = await this.storage.get('images');
+          for (const saved of savedImages || []) {
             this.images.push(await this.createImageAsset(saved.blob, saved));
           }
-          if (!this.images.length) {
+          if (!this.images.length && !Array.isArray(savedImages)) {
             await this.createSampleImages();
           }
           const savedAudio = await this.storage.get('audio');
@@ -2595,6 +2630,11 @@
           button.addEventListener('click', () => this.setSourceMode(button.dataset.sourceMode));
         });
         $('chooseImagesButton').addEventListener('click', () => $('imageInput').click());
+        $('removeAllImagesButton').addEventListener('click', async () => {
+          const count = this.assets.images.length;
+          if (!count || !window.confirm(`Remove all ${count} images? This cannot be undone.`)) return;
+          await this.assets.removeAllImages();
+        });
         $('chooseAudioButton').addEventListener('click', () => $('audioInput').click());
         $('imageInput').addEventListener('change', async (event) => {
           if (this.sourceMode === 'video') await this.assets.setVideo(event.target.files[0]);
@@ -2917,6 +2957,8 @@
         $('sourceDropTitle').textContent = isVideo ? 'Add source video' : 'Add image sequence';
         $('sourceDropHint').textContent = isVideo ? 'Drop one MP4, WEBM, or MOV file here' : 'Drop JPG, PNG, or WEBP files here';
         $('chooseImagesButton').textContent = isVideo ? 'Choose Video' : 'Choose Images';
+        $('removeAllImagesButton').hidden = isVideo;
+        $('removeAllImagesButton').disabled = isVideo || !this.assets.images.length;
         $('videoSourceControls').hidden = !isVideo;
         $('videoSourceControls').classList.toggle('hidden', !isVideo);
         $('imageInput').multiple = !isVideo;
@@ -2957,7 +2999,10 @@
             <button class="remove" title="Remove image">×</button>
           `;
           row.querySelector('select').addEventListener('change', (event) => this.assets.setPoi(asset.id, event.target.value));
-          row.querySelector('.remove').addEventListener('click', () => this.assets.removeImage(asset.id));
+          row.querySelector('.remove').addEventListener('click', async () => {
+            if (!window.confirm(`Remove "${asset.name}"?`)) return;
+            await this.assets.removeImage(asset.id);
+          });
           this.setupImageReorder(row, asset.id);
           return row;
           }));

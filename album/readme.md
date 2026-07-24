@@ -13,7 +13,7 @@ Instead of arranging hundreds of clips by hand, the user defines rules once (sce
 - Canvas 2D rendering, Web Audio analysis, Web Worker motion planning
 - Media persisted in IndexedDB (`project_mosaic_media_v1`)
 - Settings persisted in localStorage (`project_mosaic_settings_v1`)
-- First run auto-creates 5 generated sample images and a 30-second demo beat
+- First run loads 12 bundled musician images and a 30-second demo beat. User images are appended to the sequence; individual and bulk image removal require confirmation. Generated artwork remains as a loading fallback.
 
 ## UI Layout
 
