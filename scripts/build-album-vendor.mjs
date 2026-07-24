@@ -6,6 +6,9 @@ await mkdir(output, { recursive: true });
 
 await cp(new URL('../node_modules/mediabunny/dist/bundles/mediabunny.min.mjs', import.meta.url), new URL('mediabunny.mjs', output));
 await cp(new URL('../node_modules/@mediabunny/aac-encoder/dist/bundles/mediabunny-aac-encoder.min.mjs', import.meta.url), new URL('mediabunny-aac-encoder.mjs', output));
+const localAacUrl = new URL('mediabunny-aac-encoder.mjs', output);
+const localAacModule = await readFile(localAacUrl, 'utf8');
+await writeFile(localAacUrl, localAacModule.replaceAll('from"mediabunny"', 'from"./mediabunny.mjs"'));
 await cp(new URL('../node_modules/@ffmpeg/ffmpeg/dist/esm/', import.meta.url), new URL('ffmpeg/', output), { recursive: true });
 await cp(new URL('../node_modules/@ffmpeg/util/dist/esm/', import.meta.url), new URL('ffmpeg-util/', output), { recursive: true });
 await mkdir(new URL('ffmpeg-core/', output), { recursive: true });

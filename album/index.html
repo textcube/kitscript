@@ -174,6 +174,7 @@
     .asset img, .asset video { width: 58px; height: 50px; border-radius: 4px; object-fit: cover; background: #050606; }
     .asset-copy { min-width: 0; }
     .asset-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .76rem; }
+    .asset-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: .62rem; }
     .asset-copy select { width: 100%; margin-top: 5px; min-height: 25px; font-size: .68rem; }
     .remove {
       width: 28px; height: 28px; border: 0; border-radius: 4px;
@@ -247,6 +248,8 @@
     }
     .button.primary { color: #06110f; background: var(--accent); border-color: var(--accent); }
     .button.primary:hover { filter: brightness(1.07); }
+    .button.cancel { grid-column: 1 / -1; color: var(--danger); border-color: rgba(255,107,107,.55); }
+    .button.cancel:hover { background: rgba(255,107,107,.1); }
     .button:disabled { cursor: not-allowed; opacity: .45; }
 
     .workspace { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
@@ -368,6 +371,22 @@
       font-size: .68rem;
       line-height: 1.5;
     }
+    .asset.image-asset { grid-template-columns: 22px 58px minmax(0, 1fr) 28px; }
+    .drag-handle {
+      width: 22px;
+      height: 42px;
+      padding: 0;
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      cursor: grab;
+      font-size: 1rem;
+      touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    .asset.dragging { opacity: .38; }
+    .asset.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+    .asset.drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
     .export-diagnostic strong { color: var(--text); }
     .export-diagnostic[data-level="ready"] { border-color: rgba(67,226,195,.42); }
     .export-diagnostic[data-level="fallback"] { border-color: rgba(244,233,138,.42); }
@@ -653,11 +672,23 @@
               </select>
             </div>
             <div class="field">
+              <label class="check-field"><input id="optimizeImages" type="checkbox" checked /> Optimize New Images for Output</label>
+            </div>
+            <div class="field" id="imageQualityField">
+              <label for="imageQuality">Image Quality <span id="imageQualityValue">85%</span></label>
+              <input id="imageQuality" type="range" value="85" min="60" max="95" step="1" />
+              <div class="storage-status" id="imageOptimizationStatus">New images will be resized and compressed before storage.</div>
+              <button class="button" id="optimizeExistingImagesButton" type="button">Optimize Existing Images</button>
+            </div>
+            <div class="field">
               <label for="frameRate">Frame Rate</label>
               <select id="frameRate">
                 <option value="30">30 FPS</option>
                 <option value="60">60 FPS</option>
               </select>
+            </div>
+            <div class="field">
+              <label class="check-field"><input id="backgroundEncoding" type="checkbox" checked /> Background MP4 Encoding</label>
             </div>
             <div class="field">
               <label for="imageDuration">Image Duration (seconds)</label>
@@ -693,6 +724,7 @@
         <div class="generate-actions">
           <button class="button primary" id="generateButton" disabled>Generate MP4</button>
           <button class="button" id="bakeHtmlButton" disabled>Bake HTML</button>
+          <button class="button cancel" id="cancelExportButton" type="button" hidden>Cancel Export</button>
         </div>
         <div class="export-diagnostic" id="exportDiagnostic" data-level="checking" aria-live="polite">
           <strong>Export preflight</strong><br />Checking local encoders and browser codec support...
@@ -974,13 +1006,14 @@
     }
 
     class AssetManager {
-      constructor(onChange) {
+      constructor(onChange, getOptimizationSettings = () => ({ enabled: false })) {
         this.images = [];
         this.video = null;
         this.audio = null;
         this.audioElement = $('audioElement');
         this.videoElement = $('videoElement');
         this.onChange = onChange;
+        this.getOptimizationSettings = getOptimizationSettings;
         this.storage = new MediaStorage();
         this.audioContext = null;
         this.analyser = null;
@@ -1022,17 +1055,96 @@
           width: image.naturalWidth,
           height: image.naturalHeight,
           poi: saved.poi || 'center',
+          optimization: saved.optimization || null,
           storageRef: saved.opfsRef || null
         };
+      }
+
+      async optimizeImageFile(file) {
+        const settings = this.getOptimizationSettings();
+        if (!settings.enabled) return { file, optimization: null };
+        const sourceUrl = URL.createObjectURL(file);
+        const source = new Image();
+        source.decoding = 'async';
+        source.src = sourceUrl;
+        try {
+          await source.decode();
+          const scale = Math.min(1, Math.max(settings.width / source.naturalWidth, settings.height / source.naturalHeight));
+          const width = Math.max(1, Math.round(source.naturalWidth * scale));
+          const height = Math.max(1, Math.round(source.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d', { alpha: true });
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = 'high';
+          context.drawImage(source, 0, 0, width, height);
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', settings.quality));
+          if (!blob || blob.size >= file.size) {
+            return { file, optimization: { originalSize: file.size, optimizedSize: file.size, originalWidth: source.naturalWidth, originalHeight: source.naturalHeight, width: source.naturalWidth, height: source.naturalHeight, outputWidth: settings.width, outputHeight: settings.height, optimized: false } };
+          }
+          const baseName = (file.name || 'image').replace(/\.[^.]+$/, '');
+          return {
+            file: new File([blob], `${baseName}.webp`, { type: 'image/webp', lastModified: file.lastModified || Date.now() }),
+            optimization: { originalSize: file.size, optimizedSize: blob.size, originalWidth: source.naturalWidth, originalHeight: source.naturalHeight, width, height, outputWidth: settings.width, outputHeight: settings.height, optimized: true, quality: settings.quality }
+          };
+        } finally {
+          URL.revokeObjectURL(sourceUrl);
+        }
       }
 
       async addImages(files) {
         const accepted = [...files].filter((file) => /image\/(jpeg|png|webp)/.test(file.type));
         for (const file of accepted) {
-          this.images.push(await this.createImageAsset(file));
+          const optimized = await this.optimizeImageFile(file);
+          this.images.push(await this.createImageAsset(optimized.file, { name: file.name, optimization: optimized.optimization }));
         }
         await this.persistImages();
         this.onChange();
+      }
+
+      async optimizeExistingImages() {
+        let changed = 0;
+        const settings = this.getOptimizationSettings();
+        for (let index = 0; index < this.images.length; index++) {
+          const asset = this.images[index];
+          if (
+            asset.optimization?.optimized &&
+            asset.optimization.outputWidth === settings.width &&
+            asset.optimization.outputHeight === settings.height &&
+            Math.abs((asset.optimization.quality || 0) - settings.quality) < .001
+          ) continue;
+          const optimized = await this.optimizeImageFile(asset.file);
+          if (!optimized.optimization?.optimized || optimized.file === asset.file) continue;
+          optimized.optimization.originalSize = asset.optimization?.originalSize || optimized.optimization.originalSize;
+          URL.revokeObjectURL(asset.url);
+          this.images[index] = await this.createImageAsset(optimized.file, {
+            id: asset.id,
+            name: asset.name,
+            poi: asset.poi,
+            optimization: optimized.optimization
+          });
+          changed++;
+        }
+        if (changed) await this.persistImages();
+        this.onChange();
+        return changed;
+      }
+
+      async moveImage(sourceId, targetId, placeAfter = false) {
+        if (!sourceId || !targetId || sourceId === targetId) return false;
+        const sourceIndex = this.images.findIndex((asset) => asset.id === sourceId);
+        if (sourceIndex < 0) return false;
+        const [asset] = this.images.splice(sourceIndex, 1);
+        const targetIndex = this.images.findIndex((item) => item.id === targetId);
+        if (targetIndex < 0) {
+          this.images.splice(sourceIndex, 0, asset);
+          return false;
+        }
+        this.images.splice(targetIndex + (placeAfter ? 1 : 0), 0, asset);
+        await this.persistImages();
+        this.onChange();
+        return true;
       }
 
       async setVideo(file) {
@@ -1110,10 +1222,12 @@
         ];
         for (let index = 0; index < themes.length; index++) {
           const file = await this.drawSampleImage(themes[index], index);
-          this.images.push(await this.createImageAsset(file, {
+          const optimized = await this.optimizeImageFile(file);
+          this.images.push(await this.createImageAsset(optimized.file, {
             id: `sample-${index + 1}`,
             name: `${String(index + 1).padStart(2, '0')} - ${themes[index].title}.png`,
-            poi: 'center'
+            poi: 'center',
+            optimization: optimized.optimization
           }));
         }
       }
@@ -1448,6 +1562,7 @@
             blob: asset.file,
             name: asset.name,
             poi: asset.poi,
+            optimization: asset.optimization,
             opfsRef: asset.storageRef
           })));
           if (Array.isArray(stored)) {
@@ -2106,7 +2221,16 @@
         }
       }
 
-      async mixAudio(duration, soundtrackFile, soundtrackVolume, videoFile, videoVolume, loopVideo) {
+      abortError() {
+        return new DOMException('Export cancelled.', 'AbortError');
+      }
+
+      throwIfAborted(signal) {
+        if (signal?.aborted) throw this.abortError();
+      }
+
+      async mixAudio(duration, soundtrackFile, soundtrackVolume, videoFile, videoVolume, loopVideo, signal = null) {
+        this.throwIfAborted(signal);
         if ((!soundtrackFile || soundtrackVolume <= 0) && (!videoFile || videoVolume <= 0)) return null;
         const decodeContext = new AudioContext();
         try {
@@ -2129,13 +2253,116 @@
           };
           add(soundtrack, soundtrackVolume, false);
           add(videoAudio, videoVolume, loopVideo);
-          return await offline.startRendering();
+          const rendered = await offline.startRendering();
+          this.throwIfAborted(signal);
+          return rendered;
         } finally {
           await decodeContext.close();
         }
       }
 
-      async encodeOffline(canvas, duration, fps, prepareFrame, audioBuffer = null) {
+      supportsBackgroundEncoding() {
+        return Boolean(globalThis.Worker && globalThis.OffscreenCanvas && globalThis.createImageBitmap && globalThis.VideoEncoder);
+      }
+
+      async encodeOffline(canvas, duration, fps, prepareFrame, audioBuffer = null, signal = null, useBackground = true) {
+        if (useBackground && this.supportsBackgroundEncoding()) {
+          try {
+            return await this.encodeOfflineWorker(canvas, duration, fps, prepareFrame, audioBuffer, signal);
+          } catch (error) {
+            if (signal?.aborted || error?.name === 'AbortError') throw error;
+            console.warn('Background encoding is unavailable. Retrying on the main thread.', error);
+          }
+        }
+        return this.encodeOfflineMain(canvas, duration, fps, prepareFrame, audioBuffer, signal);
+      }
+
+      async encodeOfflineWorker(canvas, duration, fps, prepareFrame, audioBuffer = null, signal = null) {
+        this.throwIfAborted(signal);
+        const worker = new Worker(new URL('./encoder-worker.js', location.href), { type: 'module' });
+        const pending = new Map();
+        let messageId = 0;
+        const rejectPending = (error) => {
+          pending.forEach(({ reject }) => reject(error));
+          pending.clear();
+        };
+        worker.onmessage = ({ data }) => {
+          if (data.type === 'audio-progress') {
+            this.onProgress('encoding audio in background', Math.min(.05, data.progress * .05), 0, 0, Infinity);
+            return;
+          }
+          const request = pending.get(data.id);
+          if (!request) return;
+          if (data.type === 'error') {
+            const error = new Error(data.message);
+            error.name = data.name || 'Error';
+            error.stack = data.stack || error.stack;
+            request.reject(error);
+          } else {
+            request.resolve(data);
+          }
+          pending.delete(data.id);
+        };
+        worker.onerror = (event) => rejectPending(new Error(event.message || 'The background encoder worker failed.'));
+        const request = (type, payload = {}, transfer = []) => new Promise((resolve, reject) => {
+          const id = ++messageId;
+          pending.set(id, { resolve, reject });
+          worker.postMessage({ id, type, ...payload }, transfer);
+        });
+        const cancel = () => {
+          try { worker.postMessage({ type: 'cancel' }); } catch (error) {}
+          worker.terminate();
+          rejectPending(this.abortError());
+        };
+        signal?.addEventListener('abort', cancel, { once: true });
+        try {
+          const audio = audioBuffer ? {
+            sampleRate: audioBuffer.sampleRate,
+            numberOfChannels: audioBuffer.numberOfChannels,
+            length: audioBuffer.length,
+            channels: Array.from({ length: audioBuffer.numberOfChannels }, (_, channel) => audioBuffer.getChannelData(channel).slice().buffer)
+          } : null;
+          const transfers = audio ? audio.channels : [];
+          await request('start', {
+            width: canvas.width,
+            height: canvas.height,
+            fps,
+            duration,
+            videoBitrate: this.videoBitrate(canvas.width, canvas.height, fps),
+            mediaUrl: new URL(ENCODER_URLS.mediabunny, location.href).href,
+            aacUrl: new URL(ENCODER_URLS.aac, location.href).href,
+            audio
+          }, transfers);
+          const totalFrames = Math.ceil(duration * fps);
+          const startedAt = performance.now();
+          for (let frame = 0; frame < totalFrames; frame++) {
+            this.throwIfAborted(signal);
+            const time = frame / fps;
+            await prepareFrame(time);
+            this.throwIfAborted(signal);
+            const bitmap = await createImageBitmap(canvas);
+            await request('frame', {
+              bitmap,
+              time,
+              duration: Math.min(1 / fps, duration - time),
+              keyFrame: frame % (fps * 2) === 0
+            }, [bitmap]);
+            const elapsed = (performance.now() - startedAt) / 1000;
+            const rate = (frame + 1) / Math.max(.001, elapsed);
+            const remaining = (totalFrames - frame - 1) / Math.max(.001, rate);
+            this.onProgress('encoding MP4 in background', (frame + 1) / totalFrames, frame + 1, totalFrames, remaining);
+          }
+          const result = await request('finish');
+          return new Blob([result.buffer], { type: 'video/mp4' });
+        } finally {
+          signal?.removeEventListener('abort', cancel);
+          worker.terminate();
+          rejectPending(this.abortError());
+        }
+      }
+
+      async encodeOfflineMain(canvas, duration, fps, prepareFrame, audioBuffer = null, signal = null) {
+        this.throwIfAborted(signal);
         if (!globalThis.VideoEncoder) throw new Error('WebCodecs VideoEncoder is unavailable.');
         const media = await this.loadMediabunny();
         const format = new media.Mp4OutputFormat();
@@ -2185,11 +2412,13 @@
         };
         try {
           for (let frame = 0; frame < totalFrames; frame++) {
+            this.throwIfAborted(signal);
             const time = frame / fps;
             if (audioSource && frame % Math.max(1, Math.round(fps * audioChunkSeconds)) === 0) {
               await addAudioChunk(time);
             }
             await prepareFrame(time);
+            this.throwIfAborted(signal);
             await videoSource.add(time, Math.min(1 / fps, duration - time), { keyFrame: frame % (fps * 2) === 0 });
             const elapsed = (performance.now() - startedAt) / 1000;
             const rate = (frame + 1) / Math.max(.001, elapsed);
@@ -2214,7 +2443,8 @@
         return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
       }
 
-      async record(canvas, audioElement, duration, fps, renderFrame, sourceVideo = null, loopSourceVideo = false) {
+      async record(canvas, audioElement, duration, fps, renderFrame, sourceVideo = null, loopSourceVideo = false, signal = null) {
+        this.throwIfAborted(signal);
         let canvasStream = canvas.captureStream(0);
         let videoTrack = canvasStream.getVideoTracks()[0];
         if (!videoTrack?.requestFrame) {
@@ -2256,27 +2486,38 @@
         if (sourceVideo?.src) await sourceVideo.play().catch(() => {});
         const startedAt = performance.now();
 
-        await new Promise((resolve) => {
-          const tick = () => {
-            const elapsed = (performance.now() - startedAt) / 1000;
-            const time = Math.min(elapsed, duration);
-            renderFrame(time);
-            videoTrack?.requestFrame?.();
-            this.onProgress('rendering', time / duration, Math.floor(time * fps), Math.ceil(duration * fps), duration - time);
-            if (time >= duration - .02) return resolve();
-            requestAnimationFrame(tick);
-          };
-          tick();
-        });
+        let renderError = null;
+        let cancel = null;
+        try {
+          await new Promise((resolve, reject) => {
+            cancel = () => reject(this.abortError());
+            signal?.addEventListener('abort', cancel, { once: true });
+            const tick = () => {
+              if (signal?.aborted) return reject(this.abortError());
+              const elapsed = (performance.now() - startedAt) / 1000;
+              const time = Math.min(elapsed, duration);
+              renderFrame(time);
+              videoTrack?.requestFrame?.();
+              this.onProgress('rendering', time / duration, Math.floor(time * fps), Math.ceil(duration * fps), duration - time);
+              if (time >= duration - .02) return resolve();
+              requestAnimationFrame(tick);
+            };
+            tick();
+          }).finally(() => signal?.removeEventListener('abort', cancel));
+        } catch (error) {
+          renderError = error;
+        }
         if (hasAudio) audioElement.pause();
         if (sourceVideo?.src) sourceVideo.pause();
-        recorder.stop();
+        if (recorder.state !== 'inactive') recorder.stop();
         await stopped;
         stream.getTracks().forEach((track) => track.stop());
+        if (renderError) throw renderError;
         return new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
       }
 
-      async toMp4(webm) {
+      async toMp4(webm, signal = null) {
+        this.throwIfAborted(signal);
         if (location.protocol === 'file:') {
           throw new Error('MP4 conversion requires an http:// or https:// page.');
         }
@@ -2287,22 +2528,33 @@
           import(ENCODER_URLS.ffmpegUtil)
         ]), 30000, 'The MP4 encoder package could not be loaded.');
         const ffmpeg = new FFmpeg();
+        const cancel = () => ffmpeg.terminate();
+        signal?.addEventListener('abort', cancel, { once: true });
         ffmpeg.on('progress', ({ progress }) => this.onProgress('encoding H.264', clamp(progress), 0, 0, Infinity));
-        this.onProgress('loading encoder core', .05, 0, 0, Infinity);
-        const loadConfig = LOCAL_ENCODERS ? {
-          coreURL: new URL(ENCODER_URLS.ffmpegCore, location.href).href,
-          wasmURL: new URL(ENCODER_URLS.ffmpegWasm, location.href).href
-        } : {
-          classWorkerURL: await toBlobURL(ENCODER_URLS.ffmpegWorker, 'text/javascript'),
-          coreURL: await toBlobURL(ENCODER_URLS.ffmpegCore, 'text/javascript'),
-          wasmURL: await toBlobURL(ENCODER_URLS.ffmpegWasm, 'application/wasm')
-        };
-        await this.withTimeout(ffmpeg.load(loadConfig), 45000, 'The MP4 encoder could not start.');
-        await ffmpeg.writeFile('mosaic.webm', await fetchFile(webm));
-        await ffmpeg.exec(['-i', 'mosaic.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k', 'mosaic.mp4']);
-        const data = await ffmpeg.readFile('mosaic.mp4');
-        ffmpeg.terminate();
-        return new Blob([data.buffer], { type: 'video/mp4' });
+        try {
+          this.onProgress('loading encoder core', .05, 0, 0, Infinity);
+          const loadConfig = LOCAL_ENCODERS ? {
+            coreURL: new URL(ENCODER_URLS.ffmpegCore, location.href).href,
+            wasmURL: new URL(ENCODER_URLS.ffmpegWasm, location.href).href
+          } : {
+            classWorkerURL: await toBlobURL(ENCODER_URLS.ffmpegWorker, 'text/javascript'),
+            coreURL: await toBlobURL(ENCODER_URLS.ffmpegCore, 'text/javascript'),
+            wasmURL: await toBlobURL(ENCODER_URLS.ffmpegWasm, 'application/wasm')
+          };
+          await this.withTimeout(ffmpeg.load(loadConfig), 45000, 'The MP4 encoder could not start.');
+          this.throwIfAborted(signal);
+          await ffmpeg.writeFile('mosaic.webm', await fetchFile(webm));
+          await ffmpeg.exec(['-i', 'mosaic.webm', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k', 'mosaic.mp4'], -1, { signal });
+          this.throwIfAborted(signal);
+          const data = await ffmpeg.readFile('mosaic.mp4');
+          return new Blob([data.buffer], { type: 'video/mp4' });
+        } catch (error) {
+          if (signal?.aborted) throw this.abortError();
+          throw error;
+        } finally {
+          signal?.removeEventListener('abort', cancel);
+          try { ffmpeg.terminate(); } catch (error) {}
+        }
       }
     }
 
@@ -2310,7 +2562,7 @@
       constructor() {
         this.settingsKey = 'project_mosaic_settings_v1';
         this.motion = new MotionEngine();
-        this.assets = new AssetManager(() => this.assetsChanged());
+        this.assets = new AssetManager(() => this.assetsChanged(), () => this.getImageOptimizationSettings());
         this.renderer = new Renderer($('previewCanvas'), this.motion, () => this.assets.getFrequencyBands(24));
         this.encoder = new Encoder((...args) => this.updateProgress(...args));
         this.plan = [];
@@ -2320,7 +2572,9 @@
         this.previewStartedAt = 0;
         this.previewStartTime = 0;
         this.previewSeekToken = 0;
+        this.draggedImageId = null;
         this.rendering = false;
+        this.exportAbortController = null;
         this.exportDiagnosticToken = 0;
         this.exportDiagnosticTimer = null;
         this.downloadUrl = null;
@@ -2358,9 +2612,18 @@
           return this.assets.addImages(files);
         });
         this.setupDropzone($('audioDropzone'), (files) => this.assets.setAudio(files[0]).then(() => this.saveSettings()));
-        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'videoEndBehavior', 'showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'backgroundEncoding', 'videoEndBehavior', 'showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
         $('renderDurationRange').addEventListener('input', () => this.setRenderDuration($('renderDurationRange').value));
         $('renderDuration').addEventListener('change', () => this.setRenderDuration($('renderDuration').value));
+        $('optimizeImages').addEventListener('change', () => {
+          this.updateImageOptimizationStatus();
+          this.saveSettings();
+        });
+        $('imageQuality').addEventListener('input', () => {
+          this.updateImageOptimizationStatus();
+          this.saveSettings();
+        });
+        $('optimizeExistingImagesButton').addEventListener('click', () => this.optimizeExistingImages());
         $('videoVolume').addEventListener('input', () => {
           this.applyVideoVolume();
           this.saveSettings();
@@ -2392,6 +2655,7 @@
         $('previewButton').addEventListener('click', () => this.togglePreview());
         $('restartButton').addEventListener('click', () => this.restartPreview());
         $('generateButton').addEventListener('click', () => this.generate());
+        $('cancelExportButton').addEventListener('click', () => this.cancelExport());
         $('bakeHtmlButton').addEventListener('click', () => this.bakeHtml());
         window.addEventListener('keydown', (event) => {
           const target = event.target;
@@ -2452,6 +2716,57 @@
         if (this.assets.audio?.duration) return this.assets.audio.duration;
         if (this.sourceMode === 'video' && this.assets.video?.duration) return this.assets.video.duration;
         return Math.max(imageDuration, this.assets.images.length * imageDuration);
+      }
+
+      getImageOptimizationSettings() {
+        const [width, height] = $('resolution').value.split('x').map(Number);
+        return {
+          enabled: $('optimizeImages').checked,
+          width,
+          height,
+          quality: clamp(Number($('imageQuality').value) || 85, 60, 95) / 100
+        };
+      }
+
+      updateImageOptimizationStatus() {
+        const enabled = $('optimizeImages').checked;
+        const quality = clamp(Number($('imageQuality').value) || 85, 60, 95);
+        $('imageQuality').disabled = !enabled;
+        $('imageQualityValue').textContent = `${quality}%`;
+        const optimized = this.assets.images.map((asset) => asset.optimization).filter(Boolean);
+        const originalBytes = optimized.reduce((sum, item) => sum + (item.originalSize || item.optimizedSize || 0), 0);
+        const storedBytes = optimized.reduce((sum, item) => sum + (item.optimizedSize || item.originalSize || 0), 0);
+        const savings = Math.max(0, originalBytes - storedBytes);
+        const summary = originalBytes
+          ? ` Current images saved ${this.assets.formatBytes(savings)} (${Math.round(savings / originalBytes * 100)}%).`
+          : '';
+        $('imageOptimizationStatus').textContent = enabled
+          ? `New images: output-sized WebP at ${quality}% quality.${summary}`
+          : `New images: original files are kept.${summary}`;
+      }
+
+      async optimizeExistingImages() {
+        const button = $('optimizeExistingImagesButton');
+        if (button.disabled || this.rendering || this.capturing) return;
+        button.disabled = true;
+        const previous = button.textContent;
+        button.textContent = 'Optimizing...';
+        try {
+          const changed = await this.assets.optimizeExistingImages();
+          $('statusText').textContent = changed ? 'Images optimized' : 'Images already optimal';
+          $('statusText').classList.remove('error');
+          $('statusDetail').textContent = changed
+            ? `${changed} image${changed === 1 ? '' : 's'} resized and compressed for the selected output.`
+            : 'Optimization would not reduce the current image files.';
+        } catch (error) {
+          console.error(error);
+          $('statusText').textContent = 'Image optimization failed';
+          $('statusText').classList.add('error');
+          $('statusDetail').textContent = error.message || 'The images could not be optimized.';
+        } finally {
+          button.textContent = previous;
+          this.updateUi();
+        }
       }
 
       refreshDurationControls(useNaturalDuration = false) {
@@ -2629,17 +2944,21 @@
         } else {
           $('assetList').replaceChildren(...this.assets.images.map((asset, index) => {
           const row = document.createElement('div');
-          row.className = 'asset';
+          row.className = 'asset image-asset';
+          row.dataset.imageId = asset.id;
           row.innerHTML = `
+            <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag image ${index + 1} to reorder">⋮⋮</button>
             <img src="${asset.url}" alt="" />
             <div class="asset-copy">
               <strong>${String(index + 1).padStart(3, '0')} · ${this.escape(asset.name)}</strong>
+              ${asset.optimization ? `<span>${asset.optimization.optimized ? `${this.assets.formatBytes(asset.optimization.originalSize)} → ${this.assets.formatBytes(asset.optimization.optimizedSize)} · ${asset.width}×${asset.height}` : `Original retained · ${this.assets.formatBytes(asset.file.size)}`}</span>` : ''}
               <select aria-label="Point of interest">${POIS.map(([value, label]) => `<option value="${value}" ${asset.poi === value ? 'selected' : ''}>POI: ${label}</option>`).join('')}</select>
             </div>
             <button class="remove" title="Remove image">×</button>
           `;
           row.querySelector('select').addEventListener('change', (event) => this.assets.setPoi(asset.id, event.target.value));
           row.querySelector('.remove').addEventListener('click', () => this.assets.removeImage(asset.id));
+          this.setupImageReorder(row, asset.id);
           return row;
           }));
         }
@@ -2649,6 +2968,62 @@
         } else {
           $('audioAsset').replaceChildren();
         }
+        this.updateImageOptimizationStatus();
+      }
+
+      clearImageDropIndicators() {
+        document.querySelectorAll('.asset.drop-before, .asset.drop-after').forEach((row) => {
+          row.classList.remove('drop-before', 'drop-after');
+        });
+      }
+
+      setupImageReorder(row, imageId) {
+        const handle = row.querySelector('.drag-handle');
+        const showUpdatedStatus = () => {
+          $('statusText').textContent = 'Image order updated';
+          $('statusText').classList.remove('error');
+          $('statusDetail').textContent = 'The new order is saved and applied to preview and export.';
+        };
+        handle.addEventListener('dragstart', (event) => {
+          this.draggedImageId = imageId;
+          row.classList.add('dragging');
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', imageId);
+        });
+        handle.addEventListener('dragend', () => {
+          this.draggedImageId = null;
+          row.classList.remove('dragging');
+          this.clearImageDropIndicators();
+        });
+        row.addEventListener('dragover', (event) => {
+          if (!this.draggedImageId || this.draggedImageId === imageId) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          const placeAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
+          this.clearImageDropIndicators();
+          row.classList.add(placeAfter ? 'drop-after' : 'drop-before');
+        });
+        row.addEventListener('dragleave', (event) => {
+          if (!row.contains(event.relatedTarget)) row.classList.remove('drop-before', 'drop-after');
+        });
+        row.addEventListener('drop', async (event) => {
+          event.preventDefault();
+          const sourceId = this.draggedImageId || event.dataTransfer.getData('text/plain');
+          const placeAfter = row.classList.contains('drop-after');
+          this.clearImageDropIndicators();
+          if (await this.assets.moveImage(sourceId, imageId, placeAfter)) showUpdatedStatus();
+        });
+        handle.addEventListener('keydown', async (event) => {
+          if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+          event.preventDefault();
+          const index = this.assets.images.findIndex((asset) => asset.id === imageId);
+          const target = this.assets.images[index + (event.key === 'ArrowUp' ? -1 : 1)];
+          if (!target) return;
+          if (await this.assets.moveImage(imageId, target.id, event.key === 'ArrowDown')) {
+            showUpdatedStatus();
+            requestAnimationFrame(() => document.querySelector(`[data-image-id="${CSS.escape(imageId)}"] .drag-handle`)?.focus());
+          }
+        });
       }
 
       updateUi() {
@@ -2656,6 +3031,7 @@
         const ready = isVideo ? Boolean(this.assets.video) : Boolean(this.assets.images.length);
         const busy = this.rendering || this.capturing;
         $('showWaveform').disabled = !this.assets.audio;
+        $('backgroundEncoding').disabled = !this.encoder.supportsBackgroundEncoding();
         $('videoVolume').disabled = !isVideo || !this.assets.video;
         $('audioSourceControls').hidden = !this.assets.audio;
         $('audioSourceControls').classList.toggle('hidden', !this.assets.audio);
@@ -2668,6 +3044,9 @@
         this.applyAudioVolume();
         this.updateCanvasShape();
         $('generateButton').disabled = !ready || busy;
+        $('optimizeExistingImagesButton').disabled = isVideo || !this.assets.images.length || !$('optimizeImages').checked || busy;
+        $('cancelExportButton').hidden = !this.exportAbortController;
+        $('cancelExportButton').disabled = Boolean(this.exportAbortController?.signal.aborted);
         $('bakeHtmlButton').disabled = isVideo || !ready || busy;
         $('captureFrameButton').disabled = !ready || busy;
         $('captureChecksButton').disabled = !ready || busy;
@@ -2841,7 +3220,8 @@
         const rate = `${(result.videoBitrate / 1_000_000).toFixed(1)} Mbps`;
         if (result.direct) {
           element.dataset.level = 'ready';
-          element.innerHTML = `<strong>Ready · direct MP4</strong><br />${result.codec.toUpperCase()}${hasAudio ? ' + AAC' : ''} · ${rate} · estimated ${size} · ${LOCAL_ENCODERS ? 'local encoder' : 'network encoder'}`;
+          const background = $('backgroundEncoding').checked && this.encoder.supportsBackgroundEncoding() ? ' · background worker' : '';
+          element.innerHTML = `<strong>Ready · direct MP4</strong><br />${result.codec.toUpperCase()}${hasAudio ? ' + AAC' : ''} · ${rate} · estimated ${size} · ${LOCAL_ENCODERS ? 'local encoder' : 'network encoder'}${background}`;
           return;
         }
         if (result.recorderType?.includes('mp4')) {
@@ -3003,8 +3383,22 @@
         }
       }
 
+      cancelExport() {
+        if (!this.exportAbortController || this.exportAbortController.signal.aborted) return;
+        this.exportAbortController.abort();
+        this.assets.audioElement.pause();
+        this.assets.videoElement.pause();
+        $('cancelExportButton').disabled = true;
+        $('statusText').textContent = 'Cancelling export';
+        $('statusText').classList.remove('error');
+        $('statusDetail').textContent = 'Stopping encoders and releasing media resources...';
+      }
+
       async generate() {
         if (!this.plan.length || this.rendering || this.capturing) return;
+        const exportController = new AbortController();
+        this.exportAbortController = exportController;
+        const { signal } = exportController;
         this.rendering = true;
         this.previewing = false;
         this.assets.audioElement.pause();
@@ -3035,7 +3429,8 @@
               this.getAudioVolume(),
               this.sourceMode === 'video' ? this.assets.video?.file || null : null,
               this.getVideoVolume(),
-              this.shouldLoopVideo()
+              this.shouldLoopVideo(),
+              signal
             );
             this.renderer.useBakedSpectrum = true;
             recorded = await this.encoder.encodeOffline(
@@ -3045,9 +3440,12 @@
               async (time) => {
                 await this.renderProjectFrame(time, { seekVideo: this.sourceMode === 'video' });
               },
-              mixedAudio
+              mixedAudio,
+              signal,
+              $('backgroundEncoding').checked
             );
           } catch (error) {
+            if (signal.aborted || error?.name === 'AbortError') throw error;
             this.renderer.useBakedSpectrum = false;
             offlineError = error;
             console.warn('Offline MP4 export is unavailable. Falling back to real-time recording.', error);
@@ -3060,7 +3458,8 @@
               fps,
               (time) => this.renderProjectFrame(time),
               this.sourceMode === 'video' ? this.assets.videoElement : null,
-              this.shouldLoopVideo()
+              this.shouldLoopVideo(),
+              signal
             );
           }
           if ((recorded.type || '').includes('mp4')) {
@@ -3075,10 +3474,11 @@
             $('statusText').classList.remove('error');
             $('statusDetail').textContent = 'WebM is ready. MP4 conversion is starting in the background.';
             try {
-              const mp4 = await this.encoder.toMp4(recorded);
+              const mp4 = await this.encoder.toMp4(recorded, signal);
               this.offerDownload(mp4, 'mp4', 'Download MP4');
               this.updateProgress('complete', 1, Math.ceil(duration * fps), Math.ceil(duration * fps), 0);
             } catch (encodingError) {
+              if (signal.aborted || encodingError?.name === 'AbortError') throw encodingError;
               console.error('MP4 encoding failed. Offering WebM fallback.', encodingError);
               $('statusText').textContent = 'WebM ready';
               $('statusText').classList.remove('error');
@@ -3086,12 +3486,23 @@
             }
           }
         } catch (error) {
+          if (signal.aborted || error?.name === 'AbortError') {
+            $('statusText').textContent = 'Export cancelled';
+            $('statusText').classList.remove('error');
+            $('statusDetail').textContent = 'The partial export was discarded and media resources were released.';
+            $('progressPercent').textContent = '0%';
+            $('progressFill').style.width = '0%';
+            $('currentFrame').textContent = '0 / 0';
+            $('remainingTime').textContent = '--:--';
+            return;
+          }
           console.error(error);
           $('statusText').textContent = 'Render failed';
           $('statusText').classList.add('error');
           $('statusDetail').textContent = error.message || 'The browser could not complete this render.';
         } finally {
           this.renderer.useBakedSpectrum = false;
+          if (this.exportAbortController === exportController) this.exportAbortController = null;
           this.rendering = false;
           this.updateUi();
         }
@@ -3343,6 +3754,9 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           });
           $('textLineCount').value = String(clamp(Math.round(Number($('textLineCount').value) || 2), 1, 5));
           if (saved.showWaveform !== undefined) $('showWaveform').checked = Boolean(saved.showWaveform);
+          if (saved.backgroundEncoding !== undefined) $('backgroundEncoding').checked = Boolean(saved.backgroundEncoding);
+          if (saved.optimizeImages !== undefined) $('optimizeImages').checked = Boolean(saved.optimizeImages);
+          if (saved.imageQuality !== undefined) $('imageQuality').value = String(saved.imageQuality);
           if (saved.showTextStream !== undefined) $('showTextStream').checked = Boolean(saved.showTextStream);
           if (saved.showTextCursor !== undefined) $('showTextCursor').checked = Boolean(saved.showTextCursor);
           if (saved.showTextOutline !== undefined) $('showTextOutline').checked = Boolean(saved.showTextOutline);
@@ -3354,6 +3768,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           this.refreshDurationControls(false);
           $('previewSpeedButton').textContent = `${this.previewRate}x`;
           $('previewSpeedButton').classList.toggle('active', this.previewRate === 4);
+          this.updateImageOptimizationStatus();
         } catch (error) {
           console.warn('Unable to restore Project Mosaic settings.', error);
         }
@@ -3368,6 +3783,9 @@ Project Mosaic keeps the creative process focused on images, music, and written 
           imageDuration: $('imageDuration').value,
           transitionFrames: $('transitionFrames').value,
           showWaveform: $('showWaveform').checked,
+          backgroundEncoding: $('backgroundEncoding').checked,
+          optimizeImages: $('optimizeImages').checked,
+          imageQuality: $('imageQuality').value,
           videoVolume: $('videoVolume').value,
           audioVolume: $('audioVolume').value,
           renderDuration: $('renderDuration').value,
@@ -3402,6 +3820,7 @@ Project Mosaic keeps the creative process focused on images, music, and written 
       }
 
       dispose() {
+        this.exportAbortController?.abort();
         clearTimeout(this.textSettingsTimer);
         this.stageResizeObserver?.disconnect();
         this.assets.dispose();
