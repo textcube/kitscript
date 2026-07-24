@@ -1,2 +1,4 @@
 /textcast/*
 /.claude
+/node_modules/
+/album/vendor/
