@@ -139,9 +139,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   translate:-50% -50%;
   overflow:hidden;
   border-radius:clamp(0px, 1.2vw, 22px);
-  /* 사진이 도착하기 전에도 빈 상자로 보이지 않도록 장면의 톤을 미리 깔아 둔다 */
+  /* 빈 홀 사진의 40x40 축소본을 CSS 에 인라인으로 박아 둔다(약 1.2KB).
+     네트워크를 타지 않으므로 첫 페인트부터 무조건 보이고, 원본이 도착하면 그 위에 덮인다.
+     tools/make_lqip.py 로 다시 만든다. */
   background:
-    radial-gradient(ellipse at 50% 36%, rgba(255,150,60,.20), transparent 52%),
+    url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD//gAQTGF2YzYxLjE5LjEwMAD/2wBDAAgMDA4MDhAQEBAQEBMSExQUFBMTExMUFBQVFRUZGRkVFRUUFBUVGBgZGRscGxoaGRocHB4eHiQkIiIqKiszMz7/xACIAAADAQEBAQAAAAAAAAAAAAAFBgMCBAEHAQACAwEAAAAAAAAAAAAAAAACBAMFAQAQAAIBAwIFAwEIAwEAAAAAAAECEQAhAxIEUTETIkFxYYEFoZHBsTIjFNFzguEzEQABBAAFAgUFAQEAAAAAAAABABEhAjFRQQMSE3GxYTKRgaHBIuFyQvD/wAARCAAoACgDARIAAhIAAxIA/9oADAMBAAIRAxEAPwBT2RKbnbwdPesmdNuBPDjaqbZSM2I6T2uOfL7zNviltyalZaw44hObRIsFtK254HXROOVtllwPqYsxdgqmYDebkchPg10p0VwbjIwhhkbphTBMgCwHi1+NJNuCwwaEdntYAYMCX7J5wQoqmJDSfFIe6waNOjUQQDBIMc6cArHKqKMKDQpfLkx9Qkss6VXwqi1qZpaVX2twGBsT5sO5KC4JGpVgKm7l+IEAan9INtPp3WxlhJhNZuoHOIuDejiYkdsXccIcvOgHRrS0wbhW5weVNXuKt5llEJltNWf/AIJUAo7xBOBZwlfSG3KKzMVCtFmYjgALe3tX0UfT9uq9TrfKJj1E+1iaar6Sw1UFbHI+/wCkuT+clEY0dC828xY8IOLDhIbUrahEAiO0itdHG+1CNiDAR3A+pmQfyoBU2/0zeyC+4auHa328EFLvmVNtbYh8PafFJeTNtmBCYMyPztk/bHoI1R7TTK+y2UAjHeL9z/3TDXxNqt2lVw3dzP6BZ+OHGyd6VMklZlztknEbQPJAmPFNH8fCOQj5NXYYAOH+FVDdvmqi3I2LFvlWvSpkggYrtkLyW19wLEfbNGDtcDqQQ8+Ib/lWNxMR8JHq3SO2WrMl8030qKGDJ9PCkZsm4V7gKGaCT+mGH41sbTGWBY5I9VItwlakNdzQA+yHqWaAPqo+VRDtLS6l4AnE/Qo3j3eQbPogIAGHcSS0enLkOPxQ9f8AyPqKisak+mSMdO6A+oLK7Z5cuUZfZT1wWy1Q41jIkSFea6j5NcyNc6xU1Reaia0QVoQmQuK7WyMV0T23yL/sBN/ap+E/xGp7SMPMdkWX8lLUgu/ke4wQ6n+wv//Z") center / cover no-repeat,
     linear-gradient(180deg, #241609 0%, #35210f 55%, #5c3a1d 100%);
   box-shadow:
     0 0 0 1px rgba(255,226,178,.10),
@@ -184,17 +186,40 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   transition:opacity .42s var(--ease);
   z-index:1;
 }
-#stillB{opacity:0}
-#stageVideo{
-  opacity:0;
+/* 인라인 축소본(.stage 배경) 위로 원본이 도착하면 부드럽게 겹쳐 뜬다.
+   whenBaseReady() 가 어떤 경로로든 반드시 1 로 올려 준다. */
+#stillA,#stillB{opacity:0}
+
+/* 영상이 멈춘 순간의 실제 프레임을 떠 두는 캔버스.
+   iOS 는 정지된 <video> 의 프레임을 버리거나 poster 를 다시 띄우는 경우가 있는데,
+   그때 밑에 깔린 그림이 영상과 조금이라도 다르면 화면이 튄다.
+   PNG 대신 영상에서 직접 뜬 프레임을 깔면 픽셀이 같아 무엇이 드러나도 티가 나지 않는다. */
+#frameHold{
   z-index:2;
+  opacity:0;
+  transition:opacity .3s linear;
+}
+#frameHold.show{opacity:1}
+#frameHold.instant{transition:none}
+/* 정방향과 역방향에 각각 전용 <video> 를 둔다.
+   하나짜리로 src 를 갈아끼우면 iOS(WebKit)가 요소를 즉시 비우고 poster 를 띄우는데,
+   그 PNG 와 영상 마지막 프레임은 인코딩이 달라 전환 순간에 그림이 튀었다.
+   역방향은 정방향 위에 겹쳐 두고 불투명해지기만 하면 되므로 빈 구간이 없다. */
+#stageVideo,#stageVideoRev{
+  opacity:0;
   transition:opacity .28s linear;
   background:transparent;
 }
-#stageVideo.show{opacity:1}
+#stageVideo{z-index:3}
+#stageVideoRev{z-index:4}
+#stageVideo.show,#stageVideoRev.show{opacity:1}
+/* 즉시 나타나거나 즉시 걷혀야 하는 순간에는 페이드를 끈다.
+   특히 정방향은 되감기가 끝난 뒤 "피자가 놓인" 낡은 프레임을 들고 있으므로,
+   페이드로 걷으면 그 그림이 드러났다가 사라진다. 반드시 즉시 걷어야 한다. */
+#stageVideo.instant,#stageVideoRev.instant{transition:none}
 
 .stage-vignette{
-  position:absolute;inset:0;z-index:3;pointer-events:none;
+  position:absolute;inset:0;z-index:5;pointer-events:none;
   background:
     radial-gradient(ellipse at 50% 45%, transparent 52%, rgba(20,10,4,.42) 100%),
     linear-gradient(180deg, rgba(12,8,5,.34) 0%, transparent 22%, transparent 62%, rgba(10,6,4,.5) 100%);
@@ -207,7 +232,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   position:absolute;
   left:50%; top:50%;
   translate:-50% -50%;
-  z-index:4;
+  z-index:6;
   width:calc(var(--stage) * .56);
   aspect-ratio:1;
   display:grid;
@@ -333,7 +358,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   left:50%; top:79%;
   width:60%; aspect-ratio:1;
   translate:-50% -50%;
-  z-index:5;
+  z-index:7;
   pointer-events:none;
   opacity:0;
 }
@@ -352,7 +377,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* 전환 순간의 열기 번짐 */
 .shimmer{
-  position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;
+  position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;
   background:radial-gradient(ellipse at 50% 72%, rgba(255,178,96,.55), rgba(255,140,60,.12) 42%, transparent 70%);
 }
 .shimmer.flash{animation:flash .46s var(--ease-out)}
@@ -879,7 +904,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
     <div class="stage-inner">
       <img class="layer" id="stillA" alt="옥수동 화덕피자의 빈 테이블" decoding="async" fetchpriority="high" />
       <img class="layer" id="stillB" alt="" aria-hidden="true" decoding="async" />
+      <canvas class="layer" id="frameHold" aria-hidden="true"></canvas>
       <video class="layer" id="stageVideo" playsinline muted preload="metadata" disablepictureinpicture></video>
+      <video class="layer" id="stageVideoRev" playsinline muted preload="auto" disablepictureinpicture aria-hidden="true"></video>
     </div>
     <div class="stage-vignette"></div>
 
@@ -1194,7 +1221,9 @@ const $ = (id) => document.getElementById(id);
 const stage     = $("stage");
 const stillA    = $("stillA");
 const stillB    = $("stillB");
-const video     = $("stageVideo");
+const video     = $("stageVideo");     // 정방향 전용
+const videoRev  = $("stageVideoRev");  // 역방향 전용 (정방향 위에 겹쳐 둔다)
+const frameHold = $("frameHold");      // 멈춘 순간의 실제 프레임을 떠 두는 캔버스
 const shimmer   = $("shimmer");
 const ambientA  = $("ambientA");
 const ambientB  = $("ambientB");
@@ -1274,15 +1303,26 @@ function init(){
 /** pizza00 이 화면에 그려질 준비가 되면(늦어도 2.5초 뒤) 콜백 */
 function whenBaseReady(done){
   let fired = false;
+
+  // 어떤 경로로 끝나든 원본 스틸을 반드시 드러낸다.
+  // (CSS 에서 opacity:0 으로 시작하므로 이걸 빼먹으면 배경이 영영 안 보인다)
+  const reveal = () => { stillA.style.opacity = "1"; };
+
   const go = () => {
     if (fired) return;
     fired = true;
     clearTimeout(timer);
     showLoader(false);
+    reveal();
     done();
   };
 
-  if (stillA.complete && stillA.naturalWidth > 0){ done(); return; }
+  if (stillA.complete && stillA.naturalWidth > 0){
+    fired = true;
+    reveal();
+    done();
+    return;
+  }
 
   showLoader(true);
   stillA.addEventListener("load", go, { once: true });
@@ -1486,6 +1526,31 @@ function setAmbient(src){
   img.src = src;
 }
 
+/**
+ * 영상이 멈춘 순간의 프레임을 캔버스로 떠서 영상 밑에 깔아 둔다.
+ * iOS 는 정지된 <video> 의 프레임을 버리거나 poster 를 다시 띄우는 경우가 있는데,
+ * 그때 드러나는 그림이 PNG 면 인코딩 차이 때문에 눈에 띄게 튄다.
+ * 영상에서 직접 뜬 프레임이면 픽셀이 같아 무엇이 드러나도 보이지 않는다.
+ */
+function holdFrame(el){
+  if (!el || el.readyState < 2 || !el.videoWidth) return false;
+  try {
+    if (frameHold.width !== el.videoWidth || frameHold.height !== el.videoHeight){
+      frameHold.width  = el.videoWidth;
+      frameHold.height = el.videoHeight;
+    }
+    frameHold.getContext("2d").drawImage(el, 0, 0, frameHold.width, frameHold.height);
+    return true;
+  } catch (e) {
+    return false;   // 그리기에 실패하면 그냥 쓰지 않는다
+  }
+}
+
+function showHold(on, instant){
+  frameHold.classList.toggle("instant", !!instant);
+  frameHold.classList.toggle("show", !!on);
+}
+
 function showLoader(on){
   clearTimeout(loaderTimer);
   if (on){
@@ -1585,6 +1650,20 @@ function runPending(){
 async function enter(m){
   state = State.ENTERING;
   currentMenu = m;
+
+  // 되감기 레이어와 프레임 홀드가 페이드 중일 수 있다. 새 영상 위에 겹치지 않게 즉시 걷는다.
+  // 이 순간 아래 스틸은 pizza00, 새 영상의 첫 프레임도 pizza00 이라 티가 나지 않는다.
+  videoRev.pause();
+  videoRev.classList.add("instant");
+  videoRev.classList.remove("show");
+  showHold(false, true);
+
+  // 새 영상은 부드럽게 떠오른다. 아래 스틸도 첫 프레임도 pizza00 이라 안전하다.
+  video.classList.remove("instant");
+
+  // 첫 프레임 전 검은 화면만 막고, 재생이 시작되면 걷어낸다(아래 finishEnter 참고)
+  video.poster = asset(BASE_IMAGE);
+
   showHero(false);
   setActiveChip(m.id);
   infoReset();
@@ -1732,13 +1811,16 @@ function finishEnter(m){
   // currentTime 을 건드리지 않는다 — 되감기는 전용 클립이 담당하므로 seek 이 필요 없다.
   video.pause();
 
-  // 비디오가 위를 덮고 있는 동안 아래 스틸을 이 메뉴의 정지 이미지로 바꿔 둔다.
-  // 되감기 클립으로 갈아탈 때 비디오가 잠깐 비어도 같은 그림이 드러나 깜빡임이 없다.
-  setStill(asset(m.image));
-  video.poster = asset(m.image);
+  // 지금 화면에 떠 있는 바로 그 프레임을 떠서 영상 밑에 깔아 둔다.
+  // 여기서 PNG 를 깔면 인코딩이 달라 iOS 에서 그림이 튀었다.
+  if (holdFrame(video)) showHold(true, true);
 
-  // 곧 필요해질 되감기 클립을 미리 데운다
-  warmVideo(m.reverse);
+  // poster 를 떼어 둔다. iOS 가 정지 후 poster 를 다시 띄우면 그것도 튀는 원인이 된다.
+  video.removeAttribute("poster");
+
+  // 되감기 전용 요소에 클립을 미리 물려 둔다. 여기서 첫 프레임까지 디코드해 두면
+  // 나중에 불투명하게 만들기만 하면 되므로 전환에 빈 구간이 생기지 않는다.
+  prepareReverse(m);
 
   infoStep(5);
   const chip = chips.get(m.id);
@@ -1750,6 +1832,61 @@ function finishEnter(m){
 }
 
 /* ---------- 역방향 되감기 ---------- */
+
+/**
+ * 되감기 클립을 전용 요소에 물려 두고 첫 프레임까지 준비시킨다.
+ * VIEWING 에 들어가는 순간 호출되므로 사용자가 곧바로 다른 메뉴를 눌러도 대기가 짧다.
+ */
+function prepareReverse(m){
+  if (reduceMotion || !m.reverse) return;
+
+  const src = asset(m.reverse);
+  if (videoRev.dataset.src === src) return;   // 이미 같은 클립이 물려 있다
+
+  videoRev.dataset.src = src;
+  videoRev.dataset.ready = "";
+  videoRev.muted = true;
+  videoRev.playbackRate = REVERSE_RATE;
+
+  const onReady = () => {
+    if (videoRev.dataset.src !== src) return;
+    videoRev.dataset.ready = "1";
+    videoRev.removeEventListener("loadeddata", onReady);
+  };
+  videoRev.addEventListener("loadeddata", onReady);
+  videoRev.addEventListener("error", () => {
+    if (videoRev.dataset.src === src) videoRev.dataset.ready = "err";
+  }, { once: true });
+
+  videoRev.src = src;
+  videoRev.load();
+}
+
+/** 되감기 클립이 첫 프레임을 그릴 수 있을 때까지 기다린다 */
+function waitReverse(timeoutMs){
+  if (videoRev.readyState >= 2) return Promise.resolve(true);
+  if (videoRev.dataset.ready === "err") return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      videoRev.removeEventListener("loadeddata", ok2);
+      videoRev.removeEventListener("canplay", ok2);
+      videoRev.removeEventListener("error", bad);
+      resolve(ok);
+    };
+    const ok2 = () => { if (videoRev.readyState >= 2) finish(true); };
+    const bad = () => finish(false);
+
+    videoRev.addEventListener("loadeddata", ok2);
+    videoRev.addEventListener("canplay", ok2);
+    videoRev.addEventListener("error", bad);
+    const timer = setTimeout(() => finish(videoRev.readyState >= 2), timeoutMs);
+  });
+}
 
 /**
  * 되감기는 미리 만들어 둔 역재생 클립(pizzaNN_rev.mp4)을 정방향으로 재생한다.
@@ -1785,27 +1922,31 @@ async function startLeave(){
     return;
   }
 
-  // 비디오 아래에는 이미 pizzaXX.png 가 깔려 있다(finishEnter 참고).
-  // 클립을 갈아끼우는 동안 비디오가 비어도 같은 그림이라 화면이 튀지 않는다.
-  const ok = await loadVideo(asset(leavingMenu.reverse));
+  // 아직 안 물려 있으면 지금 물린다 (finishEnter 를 건너뛴 경로 대비)
+  prepareReverse(leavingMenu);
 
-  // 로딩 사이에 상태가 바뀌었으면 이 되감기는 버린다
+  const ok = await waitReverse(1800);
+
+  // 기다리는 사이 상태가 바뀌었으면 이 되감기는 버린다
   if (state !== State.LEAVING) return;
 
   if (!ok){
-    // 클립이 없거나 로드 실패 → 페이드 폴백
+    // 클립을 못 받았다 → 정방향 영상을 페이드아웃해 아래 스틸로 되돌아간다
     video.classList.remove("show");
     setTimeout(() => arriveIdle(), 300);
     return;
   }
 
-  video.playbackRate = REVERSE_RATE;   // 8.04초 클립 → 약 1.3초
-  video.muted = true;
-  try { video.currentTime = 0; } catch(e){}
-  video.classList.add("show");
+  videoRev.muted = true;
+  videoRev.playbackRate = REVERSE_RATE;   // 8.04초 클립 → 약 1.3초
+  try { videoRev.currentTime = 0; } catch(e){}
+
+  // 페이드 없이 즉시 덮는다. 이 클립의 첫 프레임은 정방향의 마지막 프레임이라
+  // 아래에 깔린 정방향 영상과 그림이 같아 전환이 보이지 않는다.
+  videoRev.classList.add("instant", "show");
 
   try {
-    await video.play();
+    await videoRev.play();
   } catch (e) {
     arriveIdle();
     return;
@@ -1816,15 +1957,15 @@ async function startLeave(){
   // ended 만 믿지 않는다. 진행률도 함께 본다
   const watch = () => {
     if (state !== State.LEAVING) return;
-    const dur = video.duration;
-    if (video.ended || (dur && isFinite(dur) && video.currentTime >= dur - 0.08)){
+    const dur = videoRev.duration;
+    if (videoRev.ended || (dur && isFinite(dur) && videoRev.currentTime >= dur - 0.08)){
       arriveIdle();
       return;
     }
     rafId = requestAnimationFrame(watch);
   };
   rafId = requestAnimationFrame(watch);
-  video.addEventListener("ended", () => {
+  videoRev.addEventListener("ended", () => {
     if (state === State.LEAVING) arriveIdle();
   }, { once: true });
 }
@@ -1834,12 +1975,30 @@ function arriveIdle(){
   stopLoop();
   clearTimeout(leaveGuard);
 
+  // 되감기가 멈춘 바로 그 프레임으로 홀드를 갱신한다. 이걸 빼먹으면 홀드에 남아 있던
+  // "피자가 놓인 프레임"이 영상이 걷히는 순간 다시 드러난다.
+  const held = holdFrame(videoRev) || holdFrame(video);
+  showHold(held, true);
+
   video.pause();
+  videoRev.pause();
   video.playbackRate = 1;
-  video.poster = asset(BASE_IMAGE);
-  // 되감기 클립의 마지막 프레임 ≈ pizza00 이므로, 스틸을 먼저 깔고 비디오를 숨긴다
+
+  // 스틸은 처음부터 pizza00 이다(중간에 바꾸지 않는다). 영상 두 장을 즉시 걷어도
+  // 픽셀이 같은 홀드가 그 자리를 그대로 이어받아 화면이 튀지 않는다.
+  //
+  // 정방향을 페이드로 걷으면 안 된다. 이 시점 정방향은 "피자가 놓인" 마지막 프레임을
+  // 들고 있어서, 위를 덮던 역방향이 사라지는 순간 그 그림이 드러났다가 사라진다.
   setStill(asset(BASE_IMAGE));
+  video.classList.add("instant");
   video.classList.remove("show");
+  videoRev.classList.add("instant");
+  videoRev.classList.remove("show");
+
+  // 홀드만 부드럽게 사라지며 아래 pizza00 스틸이 드러난다
+  requestAnimationFrame(() => showHold(false, false));
+  setTimeout(() => showHold(false, false), 50);   // rAF 가 멈춘 환경 대비
+
   setAmbient(asset(BASE_IMAGE));
   flash();
 
@@ -1989,9 +2148,11 @@ function bindEvents(){
 
   window.addEventListener("pagehide", () => {
     stopLoop();
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
+    [video, videoRev].forEach((el) => {
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    });
   });
 }
 
