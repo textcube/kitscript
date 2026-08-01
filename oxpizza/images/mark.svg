@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="옥수동 화덕피자">
+  <title>옥수동 화덕피자</title>
+  <!-- 로고에서 화덕 아치와 불꽃만 뽑아낸 마크.
+       원형 로고는 글자가 세 줄이라 16px 파비콘에서 뭉개진다.
+       아치(진갈색)와 불꽃(주황) 두 덩어리만 남기면 아주 작아도 읽힌다.
+       도형 좌표는 tools/build_brand.py 가 만드는 PNG 와 같다. -->
+  <path fill="#3B2A1C" d="M11 50V34a21 21 0 0 1 42 0v16H44V34a12 12 0 0 0-24 0v16z"/>
+  <!-- 벽돌 이음새 -->
+  <g stroke="#F2EDE3" stroke-width="1.1" stroke-linecap="round">
+    <path d="M20.9 28.6l-7.4-5.4M24.4 23.2l-5.4-7.4M30.4 20.2l-2.2-8.8M43.1 28.6l7.4-5.4M39.6 23.2l5.4-7.4M33.6 20.2l2.2-8.8"/>
+  </g>
+  <!-- 불꽃: 아래는 둥글고 위는 뾰족한 물방울 두 겹 -->
+  <path fill="#EE7126" d="M32 27l5.5 15.4a5.6 5.6 0 1 1-11 0z"/>
+  <circle fill="#EE7126" cx="32" cy="42.4" r="5.6"/>
+  <path fill="#F5A33A" d="M32 35l2.9 10a3 3 0 1 1-5.8 0z"/>
+  <circle fill="#F5A33A" cx="32" cy="45" r="3"/>
+</svg>

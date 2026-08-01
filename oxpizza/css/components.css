@@ -1,0 +1,255 @@
+/* 반복해서 쓰는 조각들 — 제목, 버튼, 카드, 폼 */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.9rem, 4.6vw, 3.15rem);
+  word-break: keep-all;
+}
+
+.script {
+  font-family: var(--font-script);
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  color: var(--ember);
+  line-height: 1;
+}
+
+.eyebrow,
+.section-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+.section-kicker span {
+  color: var(--ember);
+  font-variant-numeric: tabular-nums;
+}
+.section-kicker::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.ornament {
+  width: 74px;
+  height: 1px;
+  margin-block: 20px;
+  background: linear-gradient(90deg, var(--ember), transparent);
+}
+
+.lede {
+  color: var(--muted);
+  font-size: clamp(0.96rem, 1.5vw, 1.06rem);
+  word-break: keep-all;
+}
+.lede--dark { color: rgba(240, 230, 216, 0.76); }
+
+.section-head {
+  display: grid;
+  gap: 18px;
+  margin-block: 22px 44px;
+}
+@media (min-width: 900px) {
+  .section-head {
+    grid-template-columns: 1.05fr 1fr;
+    align-items: end;
+    gap: 40px;
+  }
+}
+
+/* ---------- 버튼 ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 26px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease),
+              border-color 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn--filled {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #fff;
+}
+.btn--filled:hover { background: var(--ember-bright); border-color: var(--ember-bright); }
+.btn--light {
+  border-color: rgba(240, 230, 216, 0.5);
+  color: var(--on-char);
+}
+.btn--light:hover { background: var(--on-char); color: var(--char); }
+
+/* ---------- 카드 ---------- */
+
+.dish-card {
+  display: grid;
+  gap: 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease);
+}
+.dish-card__figure {
+  position: relative;
+  overflow: hidden;
+}
+.dish-card img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  transition: transform 0.9s var(--ease);
+}
+/* 사진 위로 불빛이 한 번 지나간다 */
+.dish-card__figure::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(200deg, rgba(228, 118, 63, 0.34), transparent 58%);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+.dish-card:hover { transform: translateY(-6px); box-shadow: 0 22px 48px -26px rgba(42, 33, 26, 0.55); }
+.dish-card:hover img { transform: scale(1.07); }
+.dish-card:hover .dish-card__figure::after { opacity: 1; }
+.dish-card__body { padding: 22px 24px 26px; }
+.dish-card__name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.dish-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+.dish-card__price {
+  font-size: 0.9rem;
+  color: var(--taupe);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dish-card__kr {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: var(--ember);
+}
+.dish-card p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  word-break: keep-all;
+}
+
+/* ---------- 인용 띠 ---------- */
+
+.quote-band {
+  margin-top: 40px;
+  padding: clamp(28px, 5vw, 44px);
+  border-block: 1px solid var(--ember-line);
+  text-align: center;
+}
+.quote-band p {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vw, 1.75rem);
+  color: var(--ink);
+  word-break: keep-all;
+}
+.quote-band span {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+
+/* ---------- 정보 리스트 ---------- */
+
+.event-list { display: grid; gap: 12px; margin-block: 26px; }
+.event-list > div {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(240, 230, 216, 0.16);
+  font-size: 0.92rem;
+}
+.event-list dt {
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ember-bright);
+}
+.event-list dd { color: rgba(240, 230, 216, 0.85); }
+
+/* ---------- 연락처 카드 ---------- */
+
+.contact-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 0.94rem;
+  color: var(--muted);
+}
+.contact-card a:first-child {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  color: var(--ink);
+}
+.contact-card a:hover { color: var(--ember); }
+
+/* ---------- 폼 ---------- */
+
+.reserve-form { display: grid; gap: 18px; align-content: start; }
+.form-fields { display: grid; gap: 16px; }
+.form-field { display: grid; gap: 7px; }
+.form-field label {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--taupe);
+}
+.form-field input,
+.form-field textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--paper);
+  transition: border-color 0.2s var(--ease);
+}
+.form-field input:focus,
+.form-field textarea:focus { border-color: var(--ember); }
+.form-field textarea { min-height: 96px; resize: vertical; }
+.form-hint { font-size: 0.78rem; color: var(--taupe); }
+
+.form-error {
+  min-height: 1.2em;
+  color: var(--wine);
+  font-size: 0.84rem;
+}
+.form-confirm {
+  padding: 16px 18px;
+  border: 1px solid var(--ember-line);
+  background: rgba(196, 86, 42, 0.06);
+  font-size: 0.94rem;
+}
+.form-submit { justify-self: start; }

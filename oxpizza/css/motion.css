@@ -1,0 +1,275 @@
+/* ============================================================
+   첫 방문 인트로 — 화덕 문이 열린다
+
+   강남의원이 "봉투를 받는" 동작으로 프라이빗 초대를 전했다면,
+   여기서 손에 잡히는 물건은 화덕 아가리다. 화면을 닫힌 화덕으로 두고
+   문이 올라가며 열기가 쏟아져 나오는 동안 본문이 드러난다.
+
+   <head> 의 스크립트가 세션당 한 번만 html 에 .oven-on 을 붙인다.
+   ============================================================ */
+
+.oven { display: none; }
+
+.oven-on body { overflow: hidden; }
+
+.oven-on .oven {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+/* 문 — 그을린 나무 판자가 위로 들린다.
+   세로 판자 이음새 + 잔결 + 아래에서 올라오는 불빛을 겹쳐 쌓는다. */
+.oven-on .oven__door {
+  position: absolute;
+  inset: 0;
+  background:
+    /* 잔결 */
+    repeating-linear-gradient(90deg,
+      rgba(255, 226, 190, 0.022) 0px, rgba(255, 226, 190, 0.022) 1px,
+      transparent 1px, transparent 4px),
+    /* 널 사이 그림자 */
+    repeating-linear-gradient(90deg,
+      rgba(0, 0, 0, 0.55) 0px, rgba(0, 0, 0, 0.55) 2px,
+      rgba(255, 180, 120, 0.05) 2px, rgba(255, 180, 120, 0.05) 3px,
+      transparent 3px, transparent 104px),
+    /* 옹이와 결 얼룩 */
+    radial-gradient(ellipse 40% 12% at 22% 28%, rgba(120, 78, 46, 0.22), transparent 70%),
+    radial-gradient(ellipse 34% 9% at 71% 63%, rgba(120, 78, 46, 0.18), transparent 70%),
+    radial-gradient(ellipse 28% 8% at 45% 82%, rgba(120, 78, 46, 0.14), transparent 70%),
+    /* 아래에서 새어 오르는 열 */
+    radial-gradient(ellipse at 50% 108%, rgba(228, 118, 63, 0.28), transparent 48%),
+    linear-gradient(180deg, #0A0806 0%, #16110D 58%, #221812 100%);
+  animation: ovenDoor 1.15s cubic-bezier(0.7, 0, 0.24, 1) 0.62s forwards;
+}
+
+/* 문틈으로 새어 나오는 불빛 */
+.oven-on .oven__seam {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ember-bright), #FFD9A0, var(--ember-bright), transparent);
+  filter: blur(1px);
+  opacity: 0;
+  animation: ovenSeam 0.9s var(--ease) 0.1s forwards;
+}
+
+/* 문이 열리며 쏟아지는 열기 */
+.oven-on .oven__heat {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 170, 90, 0.55), rgba(228, 118, 63, 0.2) 34%, transparent 62%);
+  opacity: 0;
+  animation: ovenHeat 1.5s var(--ease) 0.55s forwards;
+}
+
+/* 낙인 — 봉투의 밀랍 인장에 해당한다. 나무에 지진 각인처럼 크게 앉힌다. */
+.oven-on .oven__seal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  width: clamp(232px, 46vmin, 392px);
+  aspect-ratio: 1;
+  opacity: 0;
+  animation: ovenSeal 1.5s var(--ease) 0.18s forwards;
+}
+
+/* 둘레를 도는 각인 링 */
+.oven-on .oven__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: ovenRingSpin 26s linear infinite;
+}
+.oven-on .oven__ring circle {
+  fill: none;
+  stroke: rgba(228, 118, 63, 0.55);
+  vector-effect: non-scaling-stroke;
+}
+.oven-on .oven__ring .ring-outer { stroke-width: 1; }
+.oven-on .oven__ring .ring-inner { stroke-width: 1; stroke-dasharray: 1.5 5; opacity: 0.6; }
+.oven-on .oven__ring text {
+  fill: rgba(246, 217, 180, 0.82);
+  font-family: var(--font-body);
+  font-size: 7.4px;
+  /* 글자(59자)가 원둘레(2πr≈478)를 거의 한 바퀴 채우도록 맞춘 값.
+     textLength 는 Chrome 이 textPath 에서 무시하므로 자간으로 잡는다.
+     자간 1px 당 길이 약 59px 증가 → 3.7px 에서 약 472px(99%). */
+  letter-spacing: 3.7px;
+  text-transform: uppercase;
+}
+
+/* 가운데 글자 — 링과 반대로 돌지 않도록 따로 둔다 */
+.oven-on .oven__mark {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.oven-on .oven__mark-img {
+  width: clamp(76px, 20vmin, 128px);
+  height: auto;
+  filter: drop-shadow(0 0 30px rgba(228, 118, 63, 0.45));
+}
+.oven-on .oven__mark i {
+  display: block;
+  width: clamp(48px, 10vmin, 84px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(228, 118, 63, 0.9), transparent);
+}
+.oven-on .oven__mark span {
+  font-size: clamp(0.56rem, 1.5vmin, 0.72rem);
+  letter-spacing: 0.36em;
+  text-indent: 0.36em;
+  text-transform: uppercase;
+  color: rgba(240, 230, 216, 0.6);
+  white-space: nowrap;
+}
+
+@keyframes ovenRingSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ovenSeam {
+  0%   { opacity: 0; transform: scaleX(0.2); }
+  55%  { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0.85; transform: scaleX(1); }
+}
+@keyframes ovenSeal {
+  0%   { opacity: 0; transform: scale(0.9); }
+  30%  { opacity: 1; transform: scale(1); }
+  66%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.22); }
+}
+@keyframes ovenHeat {
+  0%   { opacity: 0; }
+  38%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes ovenDoor {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-101%); }
+}
+
+/* 문이 다 열릴 때까지 히어로 문구를 붙잡아 둔다 */
+:root { --hero-delay: 0s; }
+.oven-on { --hero-delay: 1.15s; }
+
+/* 스크롤 등장 연출.
+   scroll.js 가 화면에 들어온 요소에 .is-in 을 붙인다. */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s var(--ease), transform 0.8s var(--ease);
+}
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 순차 등장 — 자식이 하나씩 밀려 들어온다 */
+[data-reveal-group] > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s var(--ease), transform 0.7s var(--ease);
+}
+[data-reveal-group].is-in > * { opacity: 1; transform: none; }
+[data-reveal-group].is-in > *:nth-child(2) { transition-delay: 0.09s; }
+[data-reveal-group].is-in > *:nth-child(3) { transition-delay: 0.18s; }
+[data-reveal-group].is-in > *:nth-child(4) { transition-delay: 0.27s; }
+
+/* 사진은 아래에서 위로 열리며 등장한다 (단순 페이드보다 무게가 있다).
+
+   클립은 반드시 이미지에만 건다. 컨테이너를 잘라 버리면 교차 영역이 0이 되어
+   IntersectionObserver 가 "화면에 들어왔다"고 판정하지 못한다. 그러면 .is-in 이
+   영영 붙지 않고, 열려야 할 사진이 자리만 차지한 채 빈칸으로 남는다. */
+[data-reveal-wipe] img {
+  clip-path: inset(0 0 100% 0);
+  transform: scale(1.08);
+  transition: clip-path 1s var(--ease), transform 1.4s var(--ease);
+}
+[data-reveal-wipe].is-in img {
+  clip-path: inset(0 0 0 0);
+  transform: none;
+}
+[data-reveal-wipe].is-in img:nth-child(2) { transition-delay: 0.1s; }
+[data-reveal-wipe].is-in img:nth-child(3) { transition-delay: 0.2s; }
+
+/* 사진 위 마우스 반응 */
+.craft-strip img,
+.venue__media img {
+  transition: transform 0.9s var(--ease), filter 0.5s var(--ease);
+}
+.craft-strip img:hover,
+.venue__media img:hover { transform: scale(1.04); }
+
+/* 히어로 진입 */
+.hero__content > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: heroIn 0.9s var(--ease) forwards;
+}
+.hero__content > *:nth-child(1) { animation-delay: calc(var(--hero-delay) + 0.15s); }
+.hero__content > *:nth-child(2) { animation-delay: calc(var(--hero-delay) + 0.22s); }
+.hero__content > *:nth-child(3) { animation-delay: calc(var(--hero-delay) + 0.30s); }
+.hero__content > *:nth-child(4) { animation-delay: calc(var(--hero-delay) + 0.42s); }
+.hero__content > *:nth-child(5) { animation-delay: calc(var(--hero-delay) + 0.52s); }
+.hero__content > *:nth-child(6) { animation-delay: calc(var(--hero-delay) + 0.62s); }
+
+.hero__visual {
+  opacity: 0;
+  animation: heroFigureIn 1.2s var(--ease) 0.35s forwards;
+}
+
+@keyframes heroIn {
+  to { opacity: 1; transform: none; }
+}
+@keyframes heroFigureIn {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 사진 위로 천천히 지나가는 온기 */
+.hero__visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(228, 118, 63, 0.16), transparent 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  [data-reveal-group] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  [data-reveal-wipe] img {
+    clip-path: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .hero__content > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  .hero__bg img,
+  .hero__scroll i,
+  .hero__fire,
+  .marquee__track { animation: none !important; }
+  .hero__embers { display: none !important; }
+  .scroll-progress { display: none; }
+  .oven { display: none !important; }
+  .oven-on body { overflow: auto; }
+}

@@ -1,0 +1,32 @@
+/* 옥수동 화덕피자 — 디자인 토큰
+   clinic 의 구조를 그대로 따르되, 색은 화덕과 사워도우 쪽으로 옮겼다.
+   샴페인/금박 → 재(ash)·숯·불꽃·크러스트. */
+
+:root {
+  --flour: #FBF7F0;      /* 밀가루 — 가장 밝은 바탕 */
+  --crust: #F2E9DA;      /* 크러스트 — 섹션 바탕 */
+  --paper: #FFFDF9;      /* 카드 바탕 */
+  --ink: #2A211A;        /* 본문 */
+  --muted: #6E6055;      /* 보조 텍스트 */
+  --taupe: #8C7C6D;
+  --ember: #C4562A;      /* 불씨 — 강조 */
+  --ember-bright: #E4763F;
+  --char: #14100D;       /* 숯 — 어두운 섹션 */
+  --on-char: #F0E6D8;
+  --olive: #4A4B33;
+  --basil: #2F4232;
+  --wine: #5C1F2B;
+  --line: rgba(42, 33, 26, 0.14);
+  --ember-line: rgba(196, 86, 42, 0.4);
+
+  --font-display: "Cormorant Garamond", "Noto Serif KR", serif;
+  --font-serif-kr: "Noto Serif KR", serif;
+  --font-script: "Great Vibes", cursive;
+  --font-body: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+
+  --container: 1180px;
+  --gutter: clamp(20px, 5vw, 56px);
+  --nav-height: 76px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --leading-body: 1.75;
+}
