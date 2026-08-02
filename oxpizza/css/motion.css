@@ -225,26 +225,8 @@
 .hero__content > *:nth-child(5) { animation-delay: calc(var(--hero-delay) + 0.52s); }
 .hero__content > *:nth-child(6) { animation-delay: calc(var(--hero-delay) + 0.62s); }
 
-.hero__visual {
-  opacity: 0;
-  animation: heroFigureIn 1.2s var(--ease) 0.35s forwards;
-}
-
 @keyframes heroIn {
   to { opacity: 1; transform: none; }
-}
-@keyframes heroFigureIn {
-  from { opacity: 0; transform: scale(1.03); }
-  to { opacity: 1; transform: none; }
-}
-
-/* 사진 위로 천천히 지나가는 온기 */
-.hero__visual::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(160deg, rgba(228, 118, 63, 0.16), transparent 55%);
 }
 
 @media (prefers-reduced-motion: reduce) {
