@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="BUNTGAMES 화덕피자 야간 스토리 장면" />
+  <title>화덕피자 야간 근무 — BUNTGAMES</title>
+  <style>
+    :root{--cream:#fff0d6;--orange:#ff5a25;--gold:#ffc447;--night:#080a18;--panel:rgba(9,8,16,.78);--line:rgba(255,196,71,.42)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--night);color:var(--cream);font-family:Inter,"Noto Sans KR",system-ui,sans-serif}body{overflow:hidden}
+    canvas{position:fixed;inset:0;width:100%;height:100%;display:block}.grade{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 28% 55%,rgba(255,77,18,.05),transparent 28%),linear-gradient(180deg,rgba(4,4,14,.06),rgba(3,3,12,.15) 46%,rgba(3,2,8,.66));mix-blend-mode:multiply}
+    .grain{position:fixed;inset:0;pointer-events:none;opacity:.1;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E")}
+    header{position:fixed;left:clamp(22px,4vw,64px);right:clamp(22px,4vw,64px);top:clamp(20px,4vh,52px);display:flex;justify-content:space-between;align-items:flex-start;z-index:10}.eyebrow{font:800 12px/1.4 ui-monospace,monospace;letter-spacing:.22em;color:var(--gold)}h1{margin:10px 0 0;font-size:clamp(42px,7vw,92px);line-height:.82;letter-spacing:-.065em;text-shadow:0 9px 35px #000}.status{display:flex;gap:10px}.chip{padding:11px 14px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(10px);font:700 11px ui-monospace,monospace;letter-spacing:.13em}.live::before{content:'';display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:#adff43;box-shadow:0 0 14px #adff43}
+    .mission{position:fixed;left:clamp(22px,4vw,64px);bottom:clamp(24px,5vh,64px);width:min(520px,calc(100vw - 44px));z-index:10;padding:22px 24px;border:1px solid var(--line);background:linear-gradient(135deg,rgba(8,7,15,.9),rgba(28,12,9,.76));backdrop-filter:blur(15px);box-shadow:0 18px 80px #0008}.missionTop{display:flex;justify-content:space-between;color:var(--gold);font:800 11px ui-monospace,monospace;letter-spacing:.16em}.mission h2{margin:14px 0 6px;font-size:clamp(23px,2.5vw,34px);letter-spacing:-.04em}.mission p{margin:0;color:#d8c5b5;font-size:14px;line-height:1.65}.bar{height:5px;margin-top:19px;background:#3a261e;overflow:hidden}.bar span{display:block;width:68%;height:100%;background:linear-gradient(90deg,var(--orange),var(--gold));animation:pulse 2.2s ease-in-out infinite alternate}@keyframes pulse{to{width:83%}}
+    .legend{position:fixed;right:clamp(22px,4vw,64px);bottom:clamp(24px,5vh,64px);z-index:10;display:grid;gap:8px;justify-items:end}.legend button{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--cream);padding:11px 14px;font:700 11px ui-monospace,monospace;letter-spacing:.12em;cursor:pointer;transition:.2s}.legend button:hover,.legend button.active{color:#111;background:var(--gold);transform:translateX(-5px)}
+    .characterCard{position:fixed;z-index:12;min-width:210px;padding:14px 16px;background:#090812e8;border:1px solid var(--gold);pointer-events:none;opacity:0;transform:translate(-50%,-115%);transition:opacity .18s}.characterCard.show{opacity:1}.characterCard b{display:block;color:var(--gold);font-size:14px}.characterCard span{font:600 11px ui-monospace,monospace;color:#cbbbac}
+    .loader{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#080a18;transition:opacity .7s,visibility .7s}.loader.done{opacity:0;visibility:hidden}.loadMark{font:900 clamp(38px,8vw,90px)/.84 Inter,sans-serif;letter-spacing:-.07em}.loadMark span{color:var(--orange)}.loadLine{height:3px;margin-top:24px;background:#242130;overflow:hidden}.loadLine::after{content:'';display:block;width:55%;height:100%;background:var(--gold);animation:load 1s ease-in-out infinite}@keyframes load{to{transform:translateX(100%)}}
+    @media(max-width:720px){header{align-items:flex-start}.status .chip:not(.live){display:none}.legend{bottom:190px}.mission{padding:17px 18px}.mission p{display:none}}
+  </style>
+</head>
+<body>
+  <canvas id="story"></canvas><div class="grade"></div><div class="grain"></div>
+  <div class="loader" id="loader"><div><div class="loadMark">NIGHT<br><span>SHIFT</span></div><div class="loadLine"></div></div></div>
+  <header><div><div class="eyebrow">BUNTGAMES / PIZZA STORY 01</div><h1>화덕피자<br>야간 근무</h1></div><div class="status"><div class="chip">23:47 PM</div><div class="chip live">OVEN LIVE</div></div></header>
+  <section class="mission"><div class="missionTop"><span>ORDER #0666</span><span>WAVE 03 / 05</span></div><h2>배고픈 손님들이 도착했습니다.</h2><p>제빵사를 도와 화덕의 불을 지키고, 언데드 손님에게 가장 뜨거운 피자를 건네세요.</p><div class="bar"><span></span></div></section>
+  <nav class="legend" aria-label="등장인물"><button data-focus="chef">제빵사</button><button data-focus="runner">드라큘라</button><button data-focus="brute">가면 손님</button><button data-focus="elite">프랑켄</button><button data-focus="shambler">해골</button></nav>
+  <div class="characterCard" id="characterCard"><b></b><span></span></div>
+
+  <script>window.__bootError='';document.documentElement.dataset.boot='pre';window.addEventListener('error',e=>{window.__bootError=e.message||String(e.error||'unknown error');document.documentElement.dataset.bootError=window.__bootError});</script>
+  <script src="./assets/asset-data.js?v=1"></script>
+  <script src="./assets/three.global.min.js?v=2"></script>
+  <script>
+    (async()=>{
+    document.documentElement.dataset.three=typeof window.THREE;
+    const THREE=window.THREE;
+    const canvas=document.getElementById('story');
+    const renderer=new THREE.WebGLRenderer({canvas,alpha:false,antialias:true,powerPreference:'high-performance'});renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0x070916);scene.fog=new THREE.FogExp2(0x090b1c,.028);
+    const camera=new THREE.PerspectiveCamera(34,innerWidth/innerHeight,.1,100);camera.position.set(0,0,9.8);
+    const actors=[];let hovered=null,focusTarget=null;const pointer=new THREE.Vector2(5,5),raycaster=new THREE.Raycaster();
+    const loadTexture=src=>new Promise((resolve,reject)=>{const image=new Image();const name=src.split('/').pop();image.onload=()=>{const texture=new THREE.Texture(image);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;resolve(texture)};image.onerror=()=>reject(new Error('IMAGE LOAD FAILED: '+name));image.src=window.PIZZA_ASSETS?.[name]||src});
+    function coverPlane(texture,z=-4.5){const imageAspect=texture.image.width/texture.image.height;const distance=camera.position.z-z;const h=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;const w=h*camera.aspect;let ph=h,pw=ph*imageAspect;if(pw<w){pw=w;ph=pw/imageAspect}const geo=new THREE.PlaneGeometry(pw,ph);const mat=new THREE.MeshBasicMaterial({map:texture,color:0x7280a5});const mesh=new THREE.Mesh(geo,mat);mesh.position.z=z;scene.add(mesh);return mesh}
+    function spriteFromTexture(texture,name,x,y,z,height,meta){const mat=new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false,alphaTest:.08});const sprite=new THREE.Sprite(mat);const aspect=texture.image.width/texture.image.height;sprite.scale.set(height*aspect,height,1);sprite.position.set(x,y,z);sprite.name=name;sprite.userData={baseY:y,phase:actors.length*.83,...meta};scene.add(sprite);actors.push(sprite);return sprite}
+    function radialTexture(inner,outer){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d'),g=x.createRadialGradient(128,128,4,128,128,128);g.addColorStop(0,inner);g.addColorStop(.28,inner);g.addColorStop(1,outer);x.fillStyle=g;x.fillRect(0,0,256,256);return new THREE.CanvasTexture(c)}
+    function glow(x,y,z,s,color='rgba(255,92,20,.95)'){const m=new THREE.SpriteMaterial({map:radialTexture(color,'rgba(255,60,0,0)'),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});const o=new THREE.Sprite(m);o.position.set(x,y,z);o.scale.set(s,s,1);scene.add(o);return o}
+    const [building,chefTex,brute,elite,runner,shambler]=await Promise.all(['pizza-building.png','source-chef.png','source-mask.png','source-franken.png','source-vampire.png','source-skeleton.png'].map(n=>loadTexture('./assets/'+n)));
+    const backdrop=coverPlane(building,-5.5);backdrop.position.y=.05;
+    spriteFromTexture(chefTex,'chef',.05,-.78,-.55,2.55,{label:'제빵사 마르코',detail:'WOOD-FIRE KEEPER / LV.12'});
+    spriteFromTexture(runner,'runner',.85,-1.75,-.25,2.2,{label:'드라큘라 손님',detail:'ORDER: GARLIC-FREE'});
+    spriteFromTexture(elite,'elite',1.75,-1.55,-.8,2.55,{label:'프랑켄 손님',detail:'ORDER: DOUBLE CHEESE'});
+    spriteFromTexture(brute,'brute',2.85,-1.55,-.45,2.75,{label:'가면 손님',detail:'ORDER: EXTRA HOT'});
+    spriteFromTexture(shambler,'shambler',3.9,-1.72,-.15,2.35,{label:'해골 손님',detail:'ORDER: BONE-DRY CRUST'});
+    const ovenGlow=glow(-3.15,-1.28,-3.8,2.6);const lampGlow=glow(2.15,.25,-3.7,1.1,'rgba(255,190,80,.9)');
+    const moonGlow=glow(-3.5,2.7,-4.8,2.1,'rgba(155,170,255,.72)');
+    const particleCount=150,positions=new Float32Array(particleCount*3),phases=new Float32Array(particleCount);for(let i=0;i<particleCount;i++){const r=(i*37%100)/100;positions[i*3]=-3.3+Math.sin(i*12.989)*.75*r;positions[i*3+1]=-1.1+r*4.2;positions[i*3+2]=-3.2+(i%9)*.12;phases[i]=i*.37}const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(positions,3));const pm=new THREE.PointsMaterial({color:0xff9a36,size:.045,transparent:true,opacity:.75,blending:THREE.AdditiveBlending,depthWrite:false});const embers=new THREE.Points(pg,pm);scene.add(embers);
+    const mist=[];for(let i=0;i<7;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:radialTexture('rgba(175,185,210,.12)','rgba(140,150,180,0)'),transparent:true,depthWrite:false}));s.position.set(-4+i*1.4,-2.5+(i%2)*.35,-2.8+i*.08);s.scale.set(3.2,1.25,1);scene.add(s);mist.push(s)}
+    scene.add(new THREE.AmbientLight(0x39466d,.7));const warm=new THREE.PointLight(0xff5a20,6,10,2);warm.position.set(-3,-1,0);scene.add(warm);
+    function resize(){renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+    addEventListener('pointermove',e=>{pointer.x=e.clientX/innerWidth*2-1;pointer.y=-(e.clientY/innerHeight*2-1)});
+    addEventListener('pointerdown',()=>{if(hovered)focusActor(hovered)});
+    const card=document.getElementById('characterCard');function showCard(actor){if(!actor){card.classList.remove('show');return}const v=actor.position.clone().project(camera);card.style.left=(v.x*.5+.5)*innerWidth+'px';card.style.top=(-v.y*.5+.5)*innerHeight+'px';card.querySelector('b').textContent=actor.userData.label;card.querySelector('span').textContent=actor.userData.detail;card.classList.add('show')}
+    function focusActor(actor){focusTarget=focusTarget===actor?null:actor;document.querySelectorAll('[data-focus]').forEach(b=>b.classList.toggle('active',actor&&b.dataset.focus===actor.name));showCard(focusTarget)}
+    document.querySelectorAll('[data-focus]').forEach(btn=>btn.addEventListener('click',()=>focusActor(actors.find(a=>a.name===btn.dataset.focus))));
+    const clock=new THREE.Clock();function tick(){const t=clock.getElapsedTime();raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(actors,false)[0]?.object||null;hovered=hit;canvas.style.cursor=hit?'pointer':'default';actors.forEach((a,i)=>{a.position.y=a.userData.baseY+Math.sin(t*1.65+a.userData.phase)*.035;a.material.opacity=focusTarget&&focusTarget!==a?.72:1});if(focusTarget)showCard(focusTarget);const targetX=focusTarget?focusTarget.position.x*.12:pointer.x*.12,targetY=focusTarget?focusTarget.position.y*.08:pointer.y*.08;camera.position.x+=(targetX-camera.position.x)*.035;camera.position.y+=(targetY-camera.position.y)*.035;camera.lookAt(0,-.05,-2.6);backdrop.position.x=-camera.position.x*.15;embers.rotation.z=t*.025;const p=embers.geometry.attributes.position.array;for(let i=0;i<particleCount;i++){p[i*3+1]+=.006+(i%5)*.0008;if(p[i*3+1]>3.2)p[i*3+1]=-1.2}embers.geometry.attributes.position.needsUpdate=true;ovenGlow.scale.setScalar(2.5+Math.sin(t*4.5)*.14);warm.intensity=5.2+Math.sin(t*6)*1.2;mist.forEach((m,i)=>m.position.x+=Math.sin(t*.16+i)*.0008);renderer.render(scene,camera);requestAnimationFrame(tick)}
+    document.getElementById('loader').classList.add('done');tick();
+    })().catch(error=>{const message=error?.message||error?.target?.src||error?.type||String(error||'UNKNOWN ERROR');console.error(error);document.documentElement.dataset.bootError=message;const loader=document.getElementById('loader');loader.innerHTML='<div><b>SCENE LOAD ERROR</b><small>'+message+'</small></div>'});
+  </script>
+</body>
+</html>
