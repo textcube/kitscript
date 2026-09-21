@@ -1197,10 +1197,17 @@
         if (Math.abs(video.currentTime - target) > .01) {
           await new Promise((resolve) => {
             const done = () => {
+              clearTimeout(timeout);
               video.removeEventListener('seeked', done);
+              video.removeEventListener('error', done);
+              video.removeEventListener('emptied', done);
               resolve();
             };
+            // A superseding seek or unloaded source may never emit seeked.
+            const timeout = setTimeout(done, 1000);
             video.addEventListener('seeked', done, { once: true });
+            video.addEventListener('error', done, { once: true });
+            video.addEventListener('emptied', done, { once: true });
             video.currentTime = target;
           });
         }
@@ -1704,17 +1711,21 @@
               const directions = ['left-right', 'right-left', 'top-bottom', 'bottom-top'];
               return { id, type, direction: directions[index % directions.length] };
             });
-            self.postMessage(motions);
+            self.postMessage({ requestId: data.requestId, motions });
           };
         `;
         this.workerUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
         this.worker = new Worker(this.workerUrl);
+        this.nextRequestId = 0;
       }
 
       buildPlan(assets, duration, sceneDuration) {
         return new Promise((resolve) => {
-          this.worker.onmessage = ({ data }) => {
-            resolve(data.map((motion, index) => ({
+          const requestId = ++this.nextRequestId;
+          const onMessage = ({ data }) => {
+            if (data.requestId !== requestId) return;
+            this.worker.removeEventListener('message', onMessage);
+            resolve(data.motions.map((motion, index) => ({
               asset: assets[index % assets.length],
               motion,
               start: index * sceneDuration,
@@ -1722,8 +1733,9 @@
               duration: Math.min(sceneDuration, duration - index * sceneDuration)
             })));
           };
+          this.worker.addEventListener('message', onMessage);
           const sceneCount = Math.ceil(duration / sceneDuration);
-          this.worker.postMessage({ ids: Array.from({ length: sceneCount }, (_, index) => `${assets[index % assets.length].id}:${index}`) });
+          this.worker.postMessage({ requestId, ids: Array.from({ length: sceneCount }, (_, index) => `${assets[index % assets.length].id}:${index}`) });
         });
       }
 
@@ -2607,6 +2619,7 @@
         this.previewStartedAt = 0;
         this.previewStartTime = 0;
         this.previewSeekToken = 0;
+        this.planBuildToken = 0;
         this.previewPointerId = null;
         this.pendingPreviewSeekX = null;
         this.previewSeekPromise = null;
@@ -2654,7 +2667,8 @@
           return this.assets.addImages(files);
         });
         this.setupDropzone($('audioDropzone'), (files) => this.importAudio(files[0]));
-        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'backgroundEncoding', 'videoEndBehavior', 'showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        ['transition', 'resolution', 'frameRate', 'imageDuration', 'transitionFrames', 'showWaveform', 'backgroundEncoding', 'videoEndBehavior', 'homeButtonUrl'].forEach((id) => $(id).addEventListener('change', () => this.settingsChanged()));
+        ['showTextStream', 'textFontFamily', 'textColor', 'textFontSize', 'textLineCount', 'textSpeed', 'textLineDelay', 'textCommaDelay', 'showTextCursor', 'showTextOutline', 'showTextShadow', 'textEndBehavior'].forEach((id) => $(id).addEventListener('change', () => this.textSettingsChanged()));
         $('renderDurationRange').addEventListener('input', () => this.setRenderDuration($('renderDurationRange').value));
         $('renderDuration').addEventListener('change', () => this.setRenderDuration($('renderDuration').value));
         $('optimizeImages').addEventListener('change', () => {
@@ -2676,11 +2690,11 @@
         });
         $('textStreamInput').addEventListener('input', () => {
           clearTimeout(this.textSettingsTimer);
-          this.textSettingsTimer = setTimeout(() => this.settingsChanged(), 180);
+          this.textSettingsTimer = setTimeout(() => this.textSettingsChanged(), 180);
         });
         $('loadReaderTextButton').addEventListener('click', () => {
           this.loadReaderText();
-          this.settingsChanged();
+          this.textSettingsChanged();
         });
         const progress = $('previewProgress');
         progress.addEventListener('pointerdown', (event) => {
@@ -2762,6 +2776,17 @@
         this.applyAudioVolume();
         await this.rebuildPlan();
         this.updateUi();
+      }
+
+      textSettingsChanged() {
+        this.saveSettings();
+        if (!this.plan.length || this.rendering || this.capturing) return;
+        // Text edits must not rebuild the scene plan or compete with media seeks.
+        this.configureRenderer();
+        const time = this.previewStartTime + (this.previewing
+          ? (performance.now() - this.previewStartedAt) / 1000 * this.previewRate : 0);
+        this.renderer.frameAt(time);
+        this.updatePreviewProgress(time);
       }
 
       getNaturalDuration() {
@@ -2924,13 +2949,13 @@
       }
 
       async rebuildPlan() {
+        const buildToken = ++this.planBuildToken;
         if (this.sourceMode === 'video') {
           if (!this.assets.video) {
             this.plan = [];
             this.updatePreviewProgress(0);
             return;
           }
-          await this.assets.prepareVideoFrame(0);
           const duration = this.getDuration();
           this.plan = [{
             asset: { ...this.assets.video, type: 'video', element: this.assets.videoElement },
@@ -2945,8 +2970,25 @@
           return;
         } else {
           const imageDuration = Math.max(.5, Number($('imageDuration').value) || 2);
-          this.plan = await this.motion.buildPlan(this.assets.images, this.getDuration(), imageDuration);
+          const plan = await this.motion.buildPlan(this.assets.images, this.getDuration(), imageDuration);
+          if (buildToken !== this.planBuildToken) return;
+          this.plan = plan;
         }
+        this.configureRenderer();
+        this.updateCanvasShape();
+        const time = clamp(this.previewStartTime + (this.previewing
+          ? (performance.now() - this.previewStartedAt) / 1000 * this.previewRate : 0),
+          0, Math.max(0, this.getDuration() - .05));
+        this.previewStartTime = time;
+        this.previewStartedAt = performance.now();
+        const seekToken = ++this.previewSeekToken;
+        await this.syncMediaToProjectTime(time, true);
+        if (buildToken !== this.planBuildToken || seekToken !== this.previewSeekToken) return;
+        await this.renderProjectFrame(time);
+        this.updatePreviewProgress(time);
+      }
+
+      configureRenderer() {
         const fps = Number($('frameRate').value) || 30;
         const transitionFrames = Math.max(1, Number($('transitionFrames').value) || 18);
         const [width, height] = $('resolution').value.split('x').map(Number);
@@ -2974,9 +3016,6 @@
         );
         this.renderer.spectrumFrames = this.assets.audio?.spectrumFrames || [];
         this.renderer.spectrumDuration = this.assets.audio?.duration || this.getDuration();
-        this.updateCanvasShape();
-        await this.renderProjectFrame(0);
-        this.updatePreviewProgress(this.previewStartTime || 0);
       }
 
       renderAssets() {
