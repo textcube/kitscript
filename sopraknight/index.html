@@ -400,6 +400,11 @@
       padding: 2px;
     }
 
+    /* Pixel-art busts (pixelart/sprites.js) replace the portrait PNGs when the pack is loaded. */
+    canvas.px-bust { display: block; image-rendering: crisp-edges; image-rendering: pixelated; box-sizing: content-box; }
+    .performer-art.px { display: grid; place-items: center; }
+    .performer-art.px canvas { box-sizing: content-box; }
+
     .card:hover,
     .card.selected {
       transform: translateY(-1px);
@@ -722,11 +727,15 @@
   </div>
   <div class="toast" id="toast">Welcome to the final performance.</div>
 
+  <!-- Shared pixel-art pack. Optional: without it the game falls back to images/*.png. -->
+  <script src="../pixelart/sprites.js"></script>
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
+    // Optional shared pixel-art pack; null => every draw path below falls back to the PNG art.
+    const PA = (window.PixelArt && typeof window.PixelArt.render === 'function') ? window.PixelArt : null;
     const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const PALETTE = {
@@ -861,6 +870,19 @@
       image.src = `images/sopranian_sd/${type.id}.png`;
       return [type.id, image];
     }));
+
+    // ---- pixel-art helpers (only used when PA is available) -------------------
+    // Integer scale per undead type: ~= spriteSize / 32 so the pixel sprite takes the same room as the old PNG.
+    const PX_SCALE = { shambler: 3, runner: 3, brute: 4, elite: 3 };
+    const PX_MUSICIAN_SCALE = 3;      // 32px sprite -> 96px, the old card art was 112px
+    const PX_AUDIENCE_SCALE = 2;      // seated audience member, 64px
+    const pxTime = () => (prefersReducedMotion ? 0 : state.time * 1000);
+    // Sprites are anchored at their feet (pivot), so callers pass the ground point.
+    function musicianAnim(m) {
+      if (state.win) return 'cheer';
+      if ((state.stageHitUntil || 0) > state.time) return 'hit';
+      return state.running && !state.gameOver ? 'perform' : 'idle';
+    }
 
     function showToast(text) {
       const toast = document.getElementById('toast');
@@ -1021,7 +1043,7 @@
         const power = Math.round(clamp(type.hope / 32) * 100);
         const tempo = Math.round(clamp(.82 / type.rate) * 100);
         button.innerHTML = `
-          <img class="card-art" src="images/sopranian_sd/${type.id}.png" alt="" />
+          ${PA ? `<canvas class="card-art px-bust" data-mode="card" data-type="${type.id}"></canvas>` : `<img class="card-art" src="images/sopranian_sd/${type.id}.png" alt="" />`}
           <div>
             <div class="card-head"><h2>${type.name}</h2><span class="cost">${type.cost}</span></div>
             <p>${type.role}</p>
@@ -1048,16 +1070,19 @@
         roster.replaceChildren();
         return;
       }
-      const newArtSrc = `images/sopranian_sd/${performer.type.id}.png`;
+      const newArtSrc = PA ? `px:${performer.type.id}` : `images/sopranian_sd/${performer.type.id}.png`;
       const oldArt = roster.querySelector('.performer-art:not(.exit)');
-      const oldArtSrc = oldArt?.getAttribute('src') || '';
+      const oldArtSrc = oldArt?.getAttribute('src') || oldArt?.dataset.art || '';
       const shouldSlide = oldArtSrc && oldArtSrc !== newArtSrc;
+      const artHtml = (src, cls) => src.startsWith('px:')
+        ? `<div class="performer-art px${cls}" data-art="${src}"><canvas class="px-bust" data-mode="profile" data-type="${src.slice(3)}"></canvas></div>`
+        : `<img class="performer-art${cls}" src="${src}" alt="" />`;
       const profile = document.createElement('div');
       profile.className = 'performer-profile';
       profile.innerHTML = `
         <div class="performer-art-frame">
-          ${shouldSlide ? `<img class="performer-art exit" src="${oldArtSrc}" alt="" />` : ''}
-          <img class="performer-art${shouldSlide ? ' enter' : ''}" src="${newArtSrc}" alt="" />
+          ${shouldSlide ? artHtml(oldArtSrc, ' exit') : ''}
+          ${artHtml(newArtSrc, shouldSlide ? ' enter' : '')}
         </div>
         <div class="performer-copy">
           <h2>${performer.type.name}</h2>
@@ -1391,10 +1416,13 @@
         y: enemy.y,
         tx: seat?.x || 130,
         ty: seat?.y || 700,
-        color: ['#f5c86a', '#fff2c7', '#e78b3c', '#f5a6a6'][state.audience % 4]
+        color: ['#f5c86a', '#fff2c7', '#e78b3c', '#f5a6a6'][state.audience % 4],
+        // pixel-art extras: the undead plays its `restore` transformation in place, then walks to the seat
+        type: enemy.type, spriteSize: enemy.spriteSize, age: 0,
+        wait: PA ? PA.info(`${enemy.type}.restore`).total / 1000 : 0
       });
       for (let i = 0; i < 18; i++) {
-        state.particles.push({ x: enemy.x, y: enemy.y, vx: (Math.random() - .5) * 80, vy: (Math.random() - .5) * 80, life: .8, color: '#f5c86a' });
+        state.particles.push({ x: enemy.x, y: enemy.y, vx: (Math.random() - .5) * 80, vy: (Math.random() - .5) * 80, life: .8, color: '#f5c86a', fx: i % 3 === 0 ? 'note' : (i % 2 ? 'sparkle' : 'sparkle_hope') });
       }
       playRestoreSound();
       showToast('A heart remembers the music.');
@@ -1471,6 +1499,7 @@
         e.restoreFlash = Math.max(0, (e.restoreFlash || 0) - dt);
         if (e.x < 92) {
           state.morale -= e.moraleDamage;
+          state.stageHitUntil = state.time + .4;      // musicians flinch (pixel `hit` pose)
           state.message = 'A listener reached the stage before hope returned.';
           e.hope = -999;
         }
@@ -1480,6 +1509,8 @@
       state.enemies = state.enemies.filter((e) => e.hope < e.hopeMax && e.hope > -900);
 
       for (const a of state.audienceMembers) {
+        a.age = (a.age || 0) + dt;
+        if (a.age < (a.wait || 0)) continue;       // still playing the restore transformation
         a.x += (a.tx - a.x) * dt * 2.4;
         a.y += (a.ty - a.y) * dt * 2.4;
       }
@@ -1789,7 +1820,9 @@
           let x = 958;
           for (const item of lanePlan) {
             const sprite = undeadSprites[item.type];
-            if (sprite?.complete && sprite.naturalWidth) {
+            if (PA) {
+              PA.play(ctx, `${item.type}.walk`, pxTime() + lane * 110, x + 24, y + 22, 1.5, {});   // 48px footprint like the old icon
+            } else if (sprite?.complete && sprite.naturalWidth) {
               ctx.drawImage(sprite, x, y - 25, 48, 48);
             } else {
               ctx.fillStyle = undeadTypes[item.type].color;
@@ -1927,8 +1960,8 @@
       const sprite = sopranianSprites[m.type.id];
       const size = 112;
       const flash = clamp((m.castFlash || 0) / .3);
-      const bob = prefersReducedMotion ? 0 : Math.sin(state.time * 2.2 + m.tile.col + m.tile.lane) * 2.5;
-      const scale = 1 + flash * .08;
+      const bob = (PA || prefersReducedMotion) ? 0 : Math.sin(state.time * 2.2 + m.tile.col + m.tile.lane) * 2.5;
+      const scale = PA ? 1 : 1 + flash * .08;
       ctx.fillStyle = 'rgba(0,0,0,.23)';
       ctx.beginPath();
       ctx.ellipse(m.x, m.y + 35, 32, 8, 0, 0, Math.PI * 2);
@@ -1943,9 +1976,15 @@
         ctx.restore();
       }
       ctx.save();
-      ctx.translate(m.x, m.y + bob);
+      ctx.translate(Math.round(m.x), Math.round(m.y + bob));
       ctx.scale(scale, scale);
-      if (sprite?.complete && sprite.naturalWidth) {
+      if (PA) {
+        // feet sit on the shadow ellipse (m.y + 35); `perform` while the concert runs, `idle` while placing
+        const anim = musicianAnim(m);
+        const phase = (m.tile.lane * 170 + m.tile.col * 60);
+        const t = anim === 'hit' ? (state.time - ((state.stageHitUntil || 0) - .4)) * 1000 : pxTime() + phase;
+        PA.play(ctx, `${m.type.id}.${anim}`, t, 0, 35 - 0, PX_MUSICIAN_SCALE, { hope: flash * .6 });
+      } else if (sprite?.complete && sprite.naturalWidth) {
         ctx.drawImage(sprite, -size / 2, -size / 2 - 6, size, size);
       } else {
         ctx.fillStyle = m.type.color;
@@ -1987,7 +2026,19 @@
       ctx.beginPath();
       ctx.ellipse(e.x, e.y + spriteSize * .34, spriteSize * .23, spriteSize * .06, 0, 0, Math.PI * 2);
       ctx.fill();
-      if (sprite?.complete && sprite.naturalWidth) {
+      if (PA) {
+        // hope/despair drive the tint: grey & despairing -> gold -> full colour as the music lands
+        const dR = clamp(e.despair / 100), hR = clamp(e.hope / e.hopeMax);
+        const dtA = state.time - (e.pxT == null ? state.time : e.pxT);
+        e.pxT = state.time;
+        e.animT = (e.animT || 0) + dtA * 1000 * Math.max(.35, e.slow) * (e.speed / 32);
+        const near = e.x < 170;                                  // last stretch before the stage: lunge
+        if (near && e.nearAt == null) e.nearAt = state.time;
+        const id = `${e.type}.${near ? 'attack' : 'walk'}`;
+        const t = prefersReducedMotion ? 0 : (near ? (state.time - e.nearAt) * 1000 : e.animT);
+        PA.play(ctx, id, t, e.x, e.y + spriteSize * .34 + 2, PX_SCALE[e.type] || 3,
+                { despair: dR * .9, hope: Math.max(hR * .85, e.restoreFlash > 0 ? .5 : 0) });
+      } else if (sprite?.complete && sprite.naturalWidth) {
         ctx.drawImage(sprite, e.x - spriteSize * .5, e.y - spriteSize * .58, spriteSize, spriteSize);
       } else {
         ctx.fillStyle = e.color;
@@ -2043,6 +2094,58 @@
         }
       }
       ctx.restore();
+    }
+
+    // Restored undead: plays `restore` where it stood, then hops to its seat and cheers (`audience` loop).
+    function drawAudienceMember(a) {
+      const S = PX_SCALE[a.type] || 3;
+      if (a.age < a.wait) {
+        const f = PA.frameAt(`${a.type}.restore`, a.age * 1000, { loop: false });
+        PA.render(ctx, `${a.type}.restore`, f, a.x, a.y + (a.spriteSize || 100) * .34 + 2, S, {});
+        return;
+      }
+      const moving = Math.hypot(a.tx - a.x, a.ty - a.y) > 3;
+      const hop = moving ? Math.abs(Math.sin((a.age - a.wait) * 14)) * 7 : 0;
+      PA.play(ctx, `${a.type}.audience`, pxTime() + (a.tx | 0) * 7, a.x, a.y + 15 - hop, PX_AUDIENCE_SCALE, {});
+    }
+
+    // Left-panel pixel busts (<canvas class="px-bust">): cards + the "Now Performing" portrait.
+    // Redrawn only when (sprite, frame, size) changes; backing store = integer multiple of 64px.
+    function tickBusts(now) {
+      if (!PA) return;
+      const dpr = window.devicePixelRatio || 1;
+      document.querySelectorAll('canvas.px-bust').forEach((c) => {
+        const d = c.dataset;
+        let a = 'bust', box;
+        const hit = (state.stageHitUntil || 0) > state.time;
+        if (d.mode === 'card') {
+          const b = c.closest('.card');
+          if (b && b.classList.contains('selected')) a = 'bust_cheer';
+          box = 64;
+        } else {
+          const performer = state.musicians[state.performerProfileIndex % Math.max(1, state.musicians.length)];
+          if (state.win) a = 'bust_cheer';
+          else if (hit) a = 'bust_hit';
+          else if (performer && performer.type.id === d.type && performer.castFlash > 0) a = 'bust_sing';
+          const p = c.parentElement;
+          box = p ? Math.min(p.clientWidth, p.clientHeight) : 0;
+        }
+        if (!box) return;
+        const id = `${d.type}.${a}`;
+        if (!PA.has(id)) return;
+        let sc = d.mode === 'card' ? Math.max(1, Math.round(dpr)) : Math.max(1, Math.round(box * dpr / 64));
+        if (d.mode !== 'card' && sc > 1 && sc * 64 > box * dpr * 1.15) sc--;
+        const f = PA.frameAt(id, now);
+        const key = `${id}|${f}|${sc}`;
+        if (c._key === key) return;
+        c._key = key;
+        if (c.width !== 64 * sc) { c.width = 64 * sc; c.height = 64 * sc; }
+        c.style.width = (64 * sc / dpr) + 'px'; c.style.height = (64 * sc / dpr) + 'px';
+        if (d.mode === 'card') c.style.padding = '0';
+        const cx = c._ctx || (c._ctx = c.getContext('2d'));
+        cx.clearRect(0, 0, c.width, c.height);
+        PA.render(cx, id, f, 0, 0, sc, { anchor: 'topleft' });
+      });
     }
 
     function drawCurtain() {
@@ -2121,7 +2224,8 @@
         else drawEnemyActor(item.actor);
       }
 
-      for (const a of state.audienceMembers) {
+      for (const a of (PA ? state.audienceMembers.slice().sort((p, q) => p.y - q.y) : state.audienceMembers)) {
+        if (PA && a.type) { drawAudienceMember(a); continue; }
         ctx.fillStyle = a.color;
         ctx.beginPath();
         ctx.arc(a.x, a.y, 12, 0, Math.PI * 2);
@@ -2133,8 +2237,14 @@
 
       for (const p of state.particles) {
         ctx.globalAlpha = clamp(p.life / .8);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 4, 4);
+        if (PA && p.fx) {
+          // restore burst: gold/teal sparkles and a few music notes (fx pack, 16x16 pivot = centre)
+          const age = (.8 - p.life) * 1000;
+          PA.play(ctx, p.fx === 'note' ? 'fx.note' : `fx.${p.fx}`, age + (p.x | 0) * 9, p.x, p.y + 8, 1, {});
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, 4, 4);
+        }
         ctx.globalAlpha = 1;
       }
 
@@ -2198,6 +2308,7 @@
       state.last = now;
       update(dt);
       draw();
+      tickBusts(now);
       requestAnimationFrame(loop);
     }
 
