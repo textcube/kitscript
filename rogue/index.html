@@ -311,6 +311,27 @@
         }
         .profile-empty { font-size: 0.75rem; opacity: 0.4; font-weight: 700; letter-spacing: 1px; }
 
+        /* --- Phone layout (<= 480px): keep the characters readable ---------------
+           A 36-40px tile can't share its face with a full-width "H:1 A:1" strip or
+           "MP: 105" label, so the stats shrink to a small corner badge (HP is always
+           1, so it is dropped; the player's "MP:" prefix is dropped too - the HUD and
+           YOU panel already show MP). In the profile panels the portrait moves up and
+           the name/MP text sits in its own band underneath instead of over the face. */
+        @media (max-width: 480px) {
+            /* `.tile` prefix: the base .stat-container/.unit-stat rules come later in the file */
+            .tile .stat-container { width: auto; left: auto; right: 0; bottom: 0; padding: 0 3px; border-radius: 6px 0 9px 0; justify-content: center; gap: 2px; }
+            .tile .unit-stat { font-size: 0.5rem; letter-spacing: 0; }
+            .tile-enemy .hp-val { display: none; }
+            .tile-player .stat-container { display: none; }          /* MP is in the HUD and the YOU panel */
+            .char-container.px { margin-bottom: 0; }
+            .tile-enemy .char-container.px { margin-bottom: 14%; }   /* lift the sprite clear of the ATK badge */
+            .profile-panel { justify-content: flex-start; }
+            #player-profile-panel .profile-portrait, #enemy-profile-panel .profile-portrait { height: 54%; margin-top: 12px; }
+            .profile-stats { bottom: 4px; }
+            .profile-name { font-size: 0.58rem; letter-spacing: 0.5px; }
+            .profile-value { font-size: 0.68rem; margin-top: 0; }
+        }
+
         .tile {
             width: var(--tile-size); height: var(--tile-size);
             border-radius: 10px; display: flex; flex-direction: column;
@@ -1340,7 +1361,7 @@
             el.innerHTML = `
                 ${getPerformerArt(gameState.player.anim, playerType, `${x}:${y}`)}
                 <div class="stat-container">
-                    <div class="unit-stat hp-val" style="width:100%; text-align:center;">MP: ${gameState.player.mp}</div>
+                    <div class="unit-stat hp-val" style="width:100%; text-align:center;"><span class="mp-lbl">MP: </span>${gameState.player.mp}</div>
                 </div>`;
             return;
         }
