@@ -9148,7 +9148,7 @@
     var w = src.width, h = src.height;
     var ax = a.anim.ax != null ? a.anim.ax : a.def.ax, ay = a.anim.ay != null ? a.anim.ay : a.def.ay;
     var mode = opts.anchor || 'pivot';
-    if (mode === 'topleft') { ax = 0; ay = 0; }
+    if (mode === 'topleft') { ax = opts.flipX ? w : 0; ay = 0; }   // flipX mirrors inside the same box
     else if (mode === 'center') { ax = w / 2; ay = h / 2; }
     ctx.save();
     ctx.imageSmoothingEnabled = false;

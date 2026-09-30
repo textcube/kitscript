@@ -1,9 +1,11 @@
 # PixelArt — Sopranian / Undeath 도트 스프라이트 팩
 
-[rogue](../rogue)와 [sopraknight](../sopraknight)가 **함께 쓰는** 도트(픽셀아트) 캐릭터 에셋이다. 두 게임 모두 빌드 없는 단일 HTML이므로, 팩도 **의존성 없는 스크립트 한 장(`sprites.js`)** 으로 끝난다. 아직 두 게임에는 연결하지 않았다 — 이 폴더는 "다음 빌드에 끼워 넣을 디자인 에셋"이다.
+[rogue](../rogue)와 [sopraknight](../sopraknight)가 **함께 쓰는** 도트(픽셀아트) 캐릭터 에셋이다. 두 게임 모두 빌드 없는 단일 HTML이므로, 팩도 **의존성 없는 스크립트 한 장(`sprites.js`)** 으로 끝난다. rogue 와 sopraknight 에 연결되어 있다(아래 "이 팩을 쓰는 게임").
 
 * 미리보기 갤러리: [`index.html`](index.html) (`file://`로 그대로 열린다. 전 스프라이트 애니메이션 1×/2×/4×, 배경 토글, 복원 시퀀스, rogue·sopraknight 인게임 목업, 사용 코드)
 * 한눈에 보는 PNG: [`sheets/preview-musicians.png`](sheets/preview-musicians.png), [`sheets/preview-undead.png`](sheets/preview-undead.png), [`sheets/preview-restore.png`](sheets/preview-restore.png), [`sheets/preview-musicians-bust.png`](sheets/preview-musicians-bust.png), [`sheets/preview-undead-bust.png`](sheets/preview-undead-bust.png), 인게임 목업 스냅샷 [`sheets/preview-mock-rogue.png`](sheets/preview-mock-rogue.png) · [`sheets/preview-mock-sopraknight.png`](sheets/preview-mock-sopraknight.png)
+
+> **이 팩을 쓰는 게임**: [rogue](../rogue) (`<script src="../pixelart/sprites.js">`, 타일·프로필 패널·선택 카드·아이템·포탈) 와 [sopraknight](../sopraknight) (무대 연주자·언데드 걷기/공격·복원 변신·객석 관객·왼쪽 패널 초상화). 두 게임 모두 `window.PixelArt` 가 없으면 기존 PNG/SVG 에셋으로 자동 폴백한다. 연결 방법은 각 게임의 README 를 본다.
 
 ## 파일 구성
 
@@ -141,6 +143,8 @@ PixelArt.palette / ramps / moods                           // 팔레트 데이�
 
 ## rogue에 끼워 넣기
 
+> 실제 연결 구현은 [`rogue/index.html`](../rogue/index.html) 의 `Sprites` 컨트롤러와 [`rogue/README.md`](../rogue/README.md) 를 참고. 아래는 최소 예시다.
+
 `rogue/index.html` 의 스프라이트는 전부 `<img>` 이다 (`getPerformerArt` → `assets/sopranian/*.png`, `getEnemySVG` → `assets/undeath/*.svg`, 아이템은 이모지). 가장 작은 변경은 `src`만 data URL로 바꾸는 것이다.
 
 ```html
@@ -177,6 +181,8 @@ PixelArt.palette / ramps / moods                           // 팔레트 데이�
 * 처치 연출: 지금의 `leaving` 포즈 축소·페이드를 `mood: 'leaving'`으로 그대로 재현할 수 있고, 더 나아가 `restore` 시퀀스를 재생해도 된다(0.25초 구간을 잘라 쓰려면 프레임 4~5).
 
 ## sopraknight에 끼워 넣기
+
+> 실제 연결 구현은 [`sopraknight/index.html`](../sopraknight/index.html) 의 `drawMusicianActor` / `drawEnemyActor` / `drawAudienceMember` / `tickBusts` 와 [`sopraknight/readme.md`](../sopraknight/readme.md) 를 참고. 아래는 최소 예시다.
 
 `sopraknight/index.html` 은 캔버스에 `ctx.drawImage(sprite, …)` 로 512px PNG를 줄여 그린다(`drawMusicianActor` 112px, `drawEnemyActor` `spriteSize` 92~122px). 이를 `PixelArt.play/render` 로 바꾸면 된다.
 
