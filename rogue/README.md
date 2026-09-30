@@ -1,6 +1,6 @@
 # Eternal Invasion: Roguelike Dungeon Edition
 
-단일 HTML 파일(약 1200줄)로 만든 브라우저 로그라이크 던전 게임이다. 플레이어 캐릭터("Sopranian" 연주자 6종)와 NPC(적, [pizza](../pizza) 프로젝트의 손님 스프라이트 재사용)는 모두 이미지 에셋(`assets/sopranian/`, `assets/undeath/`)으로 그려지고, 아이템은 이모지, 효과음은 Web Audio API로 실시간 합성한다.
+단일 HTML 파일(약 1200줄)로 만든 브라우저 로그라이크 던전 게임이다. 플레이어 캐릭터("Sopranian" 연주자 6종)와 NPC(적, [pizza](../pizza) 프로젝트의 손님 스프라이트 재사용)는 공용 도트 스프라이트 팩([`../pixelart`](../pixelart))으로 그려지고(팩이 없으면 이미지 에셋 `assets/sopranian/`, `assets/undeath/`로 폴백), 아이템도 도트 아이콘이다. 효과음은 Web Audio API로 실시간 합성한다.
 
 * https://kitscript.com/game
 * https://github.com/textcube/kitscript/
@@ -54,7 +54,27 @@
 - **반응형**: `--tile-size`가 `clamp(36px, 10vw, 96px)`라 모바일에서도 타일과 캐릭터가 충분히 크고, `body`는 세로 스크롤이 가능하다. 프로필 패널의 연주자 특성 텍스트(예: "-2 enemy ATK")는 480px 이하 폭에서 숨겨져(`.profile-note`) 좁은 화면에서 초상화를 가리지 않는다.
 - **상단 바**: 패딩·테두리·그림자를 키운 카드형 디자인이며, 아이콘 버튼(홈/유튜브/사운드)은 각각 다른 hover 색 대신 브랜드의 청록색(`--accent-mana`) 하나로 통일해 단순하게 정리했다. `#top-bar`는 `flex-wrap`을 켜두고 480px 이하에서 패딩·아이콘·배지 크기를 줄이는 미디어쿼리를 둬서, 브랜드/스탯/아이콘 세 그룹이 좁은 화면에서 두 줄로 자연스럽게 줄바꿈되고 넘치지 않는다. 이 작업 중 전역 `box-sizing: border-box`가 빠져 있던 것을 발견해 함께 추가했다(패딩이 있는 `width:100%` 요소가 좁은 화면에서 넘치는 근본 원인).
 
+## 도트 그래픽 적용 ([`../pixelart`](../pixelart) 연동)
+
+`index.html` 은 `<script src="../pixelart/sprites.js">` 로 공용 도트 팩을 읽는다. **`window.PixelArt` 가 없으면(예: `rogue/` 폴더만 따로 열었을 때) 예전 PNG/SVG `<img>` 와 이모지 경로로 자동 폴백**하므로 `assets/` 는 그대로 남겨둔다. (이때 브라우저 콘솔에 `sprites.js` 404 한 줄이 뜨는 것은 정상이다.)
+
+| 영역 | 도트 스프라이트 | 연출 연결 |
+|---|---|---|
+| 보드 위 플레이어 | `{id}.stand` / `walk` / `perform` / `hit` / `cheer` | 이동 직후 0.47초 `walk`, 공격(`ani-attack`) 중 `perform`, 피격(`ani-damage`) 중 `hit`, 열쇠 획득 1.1초·포탈 진입 중 `cheer`. 왼쪽으로 이동하면 좌우 반전 |
+| 적 타일 | `{trait}.idle` / `hit` + 기분(`waiting`/`angry`/`leaving`) | 기존 `ani-idle`→waiting, `ani-damage`→`hit` 0.24초 후 angry, `ani-leaving`→leaving(머리 위 ↑) |
+| YOU 패널 | `{id}.bust` (깜빡임 루프), `bust_sing` / `bust_hit` / `bust_cheer` | 공격 중 노래, 피격 시 `>_<`, 포탈/열쇠 때 환호 |
+| TARGET 패널 | `{trait}.bust` + 기분 | 전투 전 waiting → 타격 angry → 전투 종료 후 **satisfied**(미사용이던 `zombie_satisfied` 자리) |
+| 연주자 선택 카드·룰렛 | `{id}.bust` | 룰렛이 스치는 카드는 노래(`bust_sing`), 선택된 카드는 환호(`bust_cheer`) |
+| 아이템 | `item.potion` `maxmp` `shield` `breaker` `key` | `.item-orb` 안의 이모지 자리 |
+| 포탈 / 잠긴 포탈 / HUD 열쇠 | `item.portal`(4프레임 회전), 회색 틴트(`despair`), `item.key` | 기존 SVG 소용돌이·🔒·🔑 자리 |
+
+* **렌더링 방식**: 타일마다 `<canvas class="px-sprite">` 하나를 얹고 **공유 rAF 루프 하나**(`Sprites`)가 전부 그린다. 스프라이트/프레임/기분 키가 바뀐 캔버스만 다시 그리며 프레임은 팩이 미리 렌더해 둔 캐시를 `drawImage`로 붙일 뿐이다. 캔버스 백버퍼는 스프라이트 크기의 **정수 배 × devicePixelRatio**라서(`Sprites.fit`) 어떤 타일 크기·HiDPI에서도 도트 크기가 균일하고, CSS는 `image-rendering: pixelated` 이다. 창 크기가 바뀌면(`--tile-size` 가 `clamp(…vw…)` 이므로) 다시 맞춘다.
+* **기존 최적화 유지**: `tileSignature`/`updateTile` 의 "바뀐 타일만 갱신" 구조는 그대로다. 스프라이트의 걷기·환호 자세는 시그니처가 아니라 `gameState.player.moveAt` / `cheerUntil` / `faceX`(연출 전용 값, 게임 로직과 무관)를 스프라이트 루프가 직접 읽어 고르므로 타일을 다시 만들 필요가 없다. 떠오르는 CSS 부유 애니메이션(`wizard-idle`)은 도트 스프라이트가 자체 idle 을 가지므로 끄고, 타격 플래시·돌진·퇴장 CSS 는 그대로 쓴다.
+* 게임플레이·오토플레이·레이아웃 동작은 바뀌지 않았다 (`too-strong` 채도 저하 + ⚠, 플레이어 pulse, 클러스터 테두리 포함).
+
 ## 개발 이력
+
+**도트 그래픽 적용** — 공용 픽셀아트 팩([`../pixelart`](../pixelart))으로 연주자·언데드·초상화·아이템·포탈 아트를 교체했다. 스프라이트마다 `<canvas>` + 공유 rAF 루프(정수 배율, 변경 시에만 재그리기)로 움직이고, 팩이 없으면 기존 PNG/SVG/이모지로 폴백한다. 자세한 연결표는 위 "도트 그래픽 적용" 절을 본다.
 
 **프로필 초상화 상하 여백 불균형 수정 (2차)** — 박스 자체의 `margin-top` 잔재를 걷어낸 뒤에도(1차 수정) 캐릭터가 여전히 위로 치우쳐 보인다는 스크린샷을 받았다. `assets/sopranian/flutist.png`를 캔버스에 그려 알파 채널을 픽셀 단위로 스캔해보니 원본 이미지 속 캐릭터는 이미 거의 중앙(상단 여백 4.7%, 하단 여백 5.5%)에 위치해 있었다 — 그런데 `#player-profile-panel .profile-portrait img`/`#enemy-profile-panel .profile-portrait img`에 남아있던 `transform: translateY(5%)`(`4%`)가 이미 중앙에 있는 이미지를 추가로 아래로 밀어 다시 불균형을 만들고 있었다. 두 `translateY()`를 제거해 `object-fit: contain`이 원본 그대로 중앙 정렬하도록 되돌렸다. 계측 결과 이미지 박스의 상하 오버플로우 여백 차이가 2px 이내로 좁혀졌다.
 
@@ -99,7 +119,7 @@
 - 여전히 단일 파일 구조다. 기능을 더 붙일 계획이라면 CSS/JS 분리와 렌더링·게임 로직·오디오 모듈 분리를 고려할 만하다.
 - 수동 조작은 방향키만 지원한다. 터치 기기에서 직접 조작하려면 온스크린 방향 버튼이 필요하다.
 - 적 프로필 패널은 "직전 전투 상대"만 기억한다. 여러 마리와 연속으로 싸운 로그를 남기고 싶다면 작은 히스토리 목록을 추가할 수 있다.
-- 복사해온 스프라이트 중 `zombie_satisfied` 포즈는 아직 쓰이지 않는다(`leaving`은 적 처치 연출에 활용 중).
+- 기존 `zombie_satisfied` SVG 포즈는 여전히 쓰이지 않는다. 도트 모드에서는 `satisfied` 기분이 TARGET 패널의 전투 종료 표정으로 쓰인다.
 - pizza 프로젝트의 `assets/undeath/`(프랑켄슈타인·마녀·미이라·호박·임프)에도 같은 스타일의 손님 스프라이트가 더 있다. 트레잇을 늘리고 싶다면 이 폴더도 복사해 재사용할 수 있다.
 
 ## 실행 방법

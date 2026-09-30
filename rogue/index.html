@@ -311,6 +311,27 @@
         }
         .profile-empty { font-size: 0.75rem; opacity: 0.4; font-weight: 700; letter-spacing: 1px; }
 
+        /* --- Phone layout (<= 480px): keep the characters readable ---------------
+           A 36-40px tile can't share its face with a full-width "H:1 A:1" strip or
+           "MP: 105" label, so the stats shrink to a small corner badge (HP is always
+           1, so it is dropped; the player's "MP:" prefix is dropped too - the HUD and
+           YOU panel already show MP). In the profile panels the portrait moves up and
+           the name/MP text sits in its own band underneath instead of over the face. */
+        @media (max-width: 480px) {
+            /* `.tile` prefix: the base .stat-container/.unit-stat rules come later in the file */
+            .tile .stat-container { width: auto; left: auto; right: 0; bottom: 0; padding: 0 3px; border-radius: 6px 0 9px 0; justify-content: center; gap: 2px; }
+            .tile .unit-stat { font-size: 0.5rem; letter-spacing: 0; }
+            .tile-enemy .hp-val { display: none; }
+            .tile-player .stat-container { display: none; }          /* MP is in the HUD and the YOU panel */
+            .char-container.px { margin-bottom: 0; }
+            .tile-enemy .char-container.px { margin-bottom: 14%; }   /* lift the sprite clear of the ATK badge */
+            .profile-panel { justify-content: flex-start; }
+            #player-profile-panel .profile-portrait, #enemy-profile-panel .profile-portrait { height: 54%; margin-top: 12px; }
+            .profile-stats { bottom: 4px; }
+            .profile-name { font-size: 0.58rem; letter-spacing: 0.5px; }
+            .profile-value { font-size: 0.68rem; margin-top: 0; }
+        }
+
         .tile {
             width: var(--tile-size); height: var(--tile-size);
             border-radius: 10px; display: flex; flex-direction: column;
@@ -402,6 +423,24 @@
             display: flex; justify-content: center; align-items: center;
             position: relative;
         }
+
+
+        /* --- Pixel-art sprites (pixelart/sprites.js) ---
+           Sprites are drawn into small <canvas> elements whose backing store is
+           an exact integer multiple of the sprite size (see Sprites.fit), so
+           every art pixel is the same size on any DPR. If sprites.js is missing
+           the game falls back to the old PNG/SVG <img> art and none of this applies. */
+        canvas.px-sprite { display: block; image-rendering: crisp-edges; image-rendering: pixelated; flex: none; -webkit-user-drag: none; }
+        .char-container.px.ani-idle { animation: none; }          /* the sprite has its own idle animation */
+        .char-container.px { margin-bottom: 9%; }                 /* lift feet above the ATK/HP strip */
+        #player-profile-panel .profile-portrait .char-container.px,
+        #enemy-profile-panel .profile-portrait .char-container.px { margin-bottom: 0; align-items: flex-end; }
+        .px-card { width: 100%; aspect-ratio: 1 / 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .tile-exit .px-portal { width: 62%; height: 62%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+        .tile-exit.unlocked .px-portal { filter: drop-shadow(0 0 8px var(--accent-wizard)); }
+        .tile-exit:not(.unlocked) .px-portal { opacity: 0.85; }
+        #ui-key-icon.px-key { display: inline-block; width: 22px; height: 22px; vertical-align: middle; }
+        #ui-key-icon.px-key canvas { margin: 0 auto; position: relative; top: 3px; }
 
         .ani-idle {
             animation-name: wizard-idle;
@@ -732,6 +771,8 @@
 
 <div id="log-panel"></div>
 
+<!-- Shared pixel-art pack. Optional: without it the game falls back to assets/*.png|svg. -->
+<script src="../pixelart/sprites.js"></script>
 <script>
     /* -------------------------------------------------------------------------- */
     /* Config & Helpers                                                            */
@@ -786,22 +827,125 @@
         return `--idle-float:${float}px; --idle-duration:${duration}s; --idle-delay:${delay}s; --idle-tilt:${tilt}deg;`;
     }
 
-    const getPerformerArt = (stateClass = 'ani-idle', type = getPlayerType(), seed = type.id) => `
+    // Optional shared pixel-art pack (../pixelart/sprites.js). `PA` is null when
+    // the file could not be loaded, and every art helper below then falls back
+    // to the original assets/*.png|svg images.
+    const PA = (window.PixelArt && typeof window.PixelArt.render === 'function') ? window.PixelArt : null;
+    const pxCanvas = (kind, attrs = '', fit = kind.startsWith('panel') ? 'cover' : 'round') => `<canvas class="px-sprite" data-px="${kind}" data-fit="${fit}" ${attrs}></canvas>`;
+
+    const getPerformerArt = (stateClass = 'ani-idle', type = getPlayerType(), seed = type.id, kind = 'player') => PA ? `
+        <div class="char-container px ${stateClass}" style="${idleStyle(`player:${seed}:${type.id}`)}">
+            ${pxCanvas(kind, `data-type="${type.id}" data-state="${stateClass}" data-seed="${seed}"`)}
+        </div>` : `
         <div class="char-container ${stateClass}" style="${idleStyle(`player:${seed}:${type.id}`)}">
             <img src="assets/sopranian/${type.id}.png" alt="${type.name}" draggable="false" style="width:112%; height:112%; object-fit:contain; -webkit-user-drag:none; filter:drop-shadow(0 0 10px ${type.color}66);">
         </div>`;
 
-    // NPC art is sourced from the pizza customer sprite set (assets/undeath/).
-    // Each trait has waiting/angry/leaving poses; idle uses waiting, the
-    // combat-clash frame uses angry, and the brief death animation uses
-    // leaving right before the tile is cleared.
-    const getEnemySVG = (type, stateClass = 'ani-idle', seed = type) => {
+    // NPC art: pixel sprites (idle/hit + waiting/angry/leaving moods) when the
+    // pack is present, otherwise the original pizza-customer SVGs
+    // (assets/undeath/). idle uses waiting, the combat-clash frame uses angry,
+    // and the brief death animation uses leaving right before the tile clears.
+    const getEnemySVG = (type, stateClass = 'ani-idle', seed = type, kind = 'enemy', done = false) => {
         const pose = stateClass === 'ani-damage' ? 'angry' : stateClass === 'ani-leaving' ? 'leaving' : 'waiting';
+        if (PA) return `
+        <div class="char-container px ${stateClass}" style="${idleStyle(`enemy:${seed}:${type}`)}">
+            ${pxCanvas(kind, `data-trait="${type}" data-state="${stateClass}" data-seed="${seed}" data-done="${done ? 1 : 0}"`)}
+        </div>`;
         return `
         <div class="char-container ${stateClass}" style="${idleStyle(`enemy:${seed}:${type}`)}">
             <img src="assets/undeath/${type}_${pose}.svg" alt="${type}" draggable="false" style="width:100%; height:100%; object-fit:contain; -webkit-user-drag:none;">
         </div>`;
     };
+
+    /* -------------------------------------------------------------------------- */
+    /* Pixel sprite controller                                                     */
+    /* -------------------------------------------------------------------------- */
+    // One shared rAF loop drives every sprite <canvas> on the page. A canvas is
+    // redrawn only when its (sprite, frame, mood) key changes, using the pack's
+    // prerendered frame cache, and is sized to an integer multiple of the
+    // sprite so pixels stay crisp at any tile size / devicePixelRatio.
+    const Sprites = (() => {
+        if (!PA) return { scan() {}, refit() {} };
+        const live = new Set();
+        const dpr = () => window.devicePixelRatio || 1;
+        const now0 = () => performance.now();
+
+        function spec(c, t) {
+            const d = c.dataset, k = d.px;
+            if (k === 'player' || k === 'panelPlayer') {
+                const p = gameState.player;
+                const cheer = p.enteringPortal || t < (p.cheerUntil || 0);
+                if (k === 'panelPlayer') {
+                    const a = cheer ? 'bust_cheer' : d.state === 'ani-damage' ? 'bust_hit' : d.state === 'ani-attack' ? 'bust_sing' : 'bust';
+                    return { id: `${d.type}.${a}` };
+                }
+                const a = cheer ? 'cheer' : p.anim === 'ani-damage' ? 'hit' : p.anim === 'ani-attack' ? 'perform'
+                        : (t - (p.moveAt || 0) < 470 ? 'walk' : 'stand');
+                return { id: `${d.type}.${a}`, flip: p.faceX < 0 };
+            }
+            if (k === 'enemy') {
+                if (d.state === 'ani-damage') return (t - c._born < 240) ? { id: `${d.trait}.hit` } : { id: `${d.trait}.idle`, mood: 'angry' };
+                if (d.state === 'ani-leaving') return { id: `${d.trait}.idle`, mood: 'leaving' };
+                return { id: `${d.trait}.idle`, mood: 'waiting' };
+            }
+            if (k === 'panelEnemy') {
+                const mood = d.state === 'ani-damage' ? 'angry' : d.state === 'ani-leaving' ? 'leaving' : d.done === '1' ? 'satisfied' : 'waiting';
+                return { id: `${d.trait}.bust`, mood };
+            }
+            if (k === 'card') {
+                const b = c.closest('.player-choice');
+                const a = b && b.classList.contains('selected') ? 'bust_cheer' : b && b.classList.contains('rolling') ? 'bust_sing' : 'bust';
+                return { id: `${d.type}.${a}` };
+            }
+            if (k === 'item') return { id: `item.${d.item}`, still: d.still === '1', despair: +d.tint || 0 };
+            return null;
+        }
+
+        function fit(c, id) {
+            const p = c.parentElement; if (!p) return false;
+            const pw = p.clientWidth, ph = p.clientHeight; if (!pw || !ph) return false;
+            const inf = PA.info(id), r = dpr(), box = Math.min(pw, ph) * r;
+            let sc = c.dataset.fit === 'floor' ? Math.floor(box / inf.w) : Math.round(box / inf.w);
+            if (c.dataset.fit === 'round' && sc > 1 && sc * inf.w > box * 1.15) sc--;   // 'cover' may overflow (the portrait box clips)
+            sc = Math.max(1, sc);
+            c.width = inf.w * sc; c.height = inf.h * sc;
+            c.style.width = (c.width / r) + 'px'; c.style.height = (c.height / r) + 'px';
+            c._sc = sc; c._key = null; c._fit = true; c._w = inf.w;
+            return true;
+        }
+
+        function tick(t) {
+            live.forEach((c) => {
+                if (!c.isConnected) { live.delete(c); return; }
+                const s = spec(c, t);
+                if (!s || !PA.has(s.id)) return;
+                if (c._id !== s.id) { c._id = s.id; c._t0 = t; }
+                if (!c._fit && !fit(c, s.id)) return;
+                const f = s.still ? 0 : PA.frameAt(s.id, t - c._t0 + c._phase);
+                const key = `${s.id}|${f}|${s.mood || ''}|${s.flip ? 1 : 0}|${s.despair || 0}`;
+                if (c._key === key) return;
+                c._key = key;
+                const ctx = c._ctx || (c._ctx = c.getContext('2d'));
+                ctx.clearRect(0, 0, c.width, c.height);
+                PA.render(ctx, s.id, f, 0, 0, c._sc, { anchor: 'topleft', mood: s.mood, flipX: s.flip, despair: s.despair });
+            });
+            requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        window.addEventListener('resize', () => live.forEach((c) => { c._fit = false; }));
+
+        return {
+            scan(root) {
+                root.querySelectorAll('canvas.px-sprite:not([data-reg])').forEach((c) => {
+                    c.dataset.reg = '1';
+                    c._born = now0();
+                    c._phase = hashSeed(c.dataset.seed || c.dataset.px) * 800;
+                    live.add(c);
+                });
+            },
+            refit() { live.forEach((c) => { c._fit = false; }); }
+        };
+    })();
 
     /* -------------------------------------------------------------------------- */
     /* Game State                                                                  */
@@ -895,11 +1039,12 @@
     function renderPlayerSelection() {
         playerChoiceGridEl.innerHTML = PLAYER_TYPES.map((type) => `
             <button class="player-choice" type="button" data-player="${type.id}">
-                <img src="assets/sopranian/${type.id}.png" alt="${type.name}">
+                ${PA ? `<div class="px-card">${pxCanvas('card', `data-type="${type.id}" data-seed="card:${type.id}"`)}</div>` : `<img src="assets/sopranian/${type.id}.png" alt="${type.name}">`}
                 <strong>${type.name}</strong>
                 <span>${type.role}<br>${type.note}</span>
             </button>
         `).join('');
+        Sprites.scan(playerChoiceGridEl);
         playerChoiceGridEl.querySelectorAll('.player-choice').forEach((button) => {
             // A manual click is a deliberate pick, so it always wins
             // immediately and cancels any idle scan / roulette spin in progress.
@@ -1114,7 +1259,7 @@
         if (pSig !== playerPanelSig) {
             playerPanelSig = pSig;
             document.getElementById('player-profile-panel').innerHTML = `
-                <div class="profile-portrait">${getPerformerArt(gameState.player.anim, playerType, 'profile-player')}</div>
+                <div class="profile-portrait">${getPerformerArt(gameState.player.anim, playerType, 'profile-player', 'panelPlayer')}</div>
                 <div class="profile-stats">
                     <div class="profile-name">${playerType.name.toUpperCase()}</div>
                     <div class="profile-value profile-note" style="color:${playerType.color}">${playerType.note}</div>
@@ -1123,12 +1268,12 @@
         }
 
         const le = gameState.lastEnemyProfile;
-        const eSig = le ? `${le.trait}:${le.anim}:${le.power}:${le.clusterSize}` : 'empty';
+        const eSig = le ? `${le.trait}:${le.anim}:${le.power}:${le.clusterSize}:${le.done ? 1 : 0}` : 'empty';
         if (eSig !== enemyPanelSig) {
             enemyPanelSig = eSig;
             const enemyPanelEl = document.getElementById('enemy-profile-panel');
             enemyPanelEl.innerHTML = le ? `
-                <div class="profile-portrait">${getEnemySVG(le.trait, le.anim, `profile-enemy:${le.trait}`)}</div>
+                <div class="profile-portrait">${getEnemySVG(le.trait, le.anim, `profile-enemy:${le.trait}`, 'panelEnemy', le.done)}</div>
                 <div class="profile-stats">
                     <div class="profile-name">${le.trait.toUpperCase()}</div>
                     <div class="profile-value" style="color:var(--accent-red)">ATK ${le.power}${le.clusterSize > 1 ? ` x${le.clusterSize}` : ''}</div>
@@ -1173,6 +1318,7 @@
             for (let x = 0; x < GRID_SIZE; x++) { if (!isReserved(x, y)) updateTile(x, y); }
         }
         renderProfilePanels();
+        Sprites.scan(gridEl);
     }
 
     function tileSignature(x, y) {
@@ -1215,7 +1361,7 @@
             el.innerHTML = `
                 ${getPerformerArt(gameState.player.anim, playerType, `${x}:${y}`)}
                 <div class="stat-container">
-                    <div class="unit-stat hp-val" style="width:100%; text-align:center;">MP: ${gameState.player.mp}</div>
+                    <div class="unit-stat hp-val" style="width:100%; text-align:center;"><span class="mp-lbl">MP: </span>${gameState.player.mp}</div>
                 </div>`;
             return;
         }
@@ -1229,7 +1375,7 @@
                     if (gameState.portalJustOpened) el.classList.add('opening');
                     const gradId = `portalGrad-${x}-${y}`;
                     el.innerHTML = `
-                        <div class="portal-vortex-ui">
+                        ${PA ? `<div class="px-portal">${pxCanvas('item', 'data-item="portal" data-fit="floor"', 'floor')}</div>` : `<div class="portal-vortex-ui">
                             <svg viewBox="0 0 100 100">
                                 <defs>
                                     <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%">
@@ -1242,10 +1388,12 @@
                                 <path d="M50 5 Q70 20 50 50 T50 95" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
                                 <path d="M5 50 Q20 30 50 50 T95 50" stroke="white" stroke-width="2" fill="none" opacity="0.5" />
                             </svg>
-                        </div>
+                        </div>`}
                         <div class="portal-label">PORTAL</div>`;
                 } else {
-                    el.innerHTML = `<span class="lock-icon">🔒</span><div class="lock-label">LOCKED</div>`;
+                    el.innerHTML = PA
+                        ? `<div class="px-portal">${pxCanvas('item', 'data-item="portal" data-still="1" data-tint="0.8"', 'floor')}</div><div class="lock-label">LOCKED</div>`
+                        : `<span class="lock-icon">🔒</span><div class="lock-label">LOCKED</div>`;
                 }
                 break;
             case 'item': {
@@ -1256,7 +1404,7 @@
                 if (tile.subtype === 'shield') it = '🔮';
                 if (tile.subtype === 'breaker') it = '⚡';
                 if (tile.subtype === 'key') { it = '🔑'; itemClass = 'key-drop'; }
-                el.innerHTML = `<div class="tile-item-wrap ${itemClass}"><div class="item-orb" style="${tile.subtype === 'key' ? 'color:gold; border-color:gold;' : ''}">${it}</div></div>`;
+                el.innerHTML = `<div class="tile-item-wrap ${itemClass}"><div class="item-orb" style="${tile.subtype === 'key' ? 'color:gold; border-color:gold;' : ''}">${PA ? pxCanvas('item', `data-item="${tile.subtype}" data-still="1"`, 'floor') : it}</div></div>`;
                 break;
             }
             case 'enemy': {
@@ -1270,6 +1418,12 @@
         }
     }
 
+    // Bookkeeping for the pixel sprites only (walk pose window + facing); no gameplay state.
+    function markMoved(dx) {
+        gameState.player.moveAt = performance.now();
+        if (dx) gameState.player.faceX = dx > 0 ? 1 : -1;
+    }
+
     async function movePlayer(dx, dy) {
         const nx = gameState.player.x + dx, ny = gameState.player.y + dy;
         if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) return;
@@ -1280,11 +1434,13 @@
             addLog(`Picked up ${target.subtype}.`);
             applyItem(target.subtype);
             gameState.grid[ny][nx] = { type: 'empty' };
+            markMoved(dx);
             gameState.player.x = nx;
             gameState.player.y = ny;
             endTurn();
         }
         else if (target.type === 'exit' && gameState.player.hasKey) {
+            markMoved(dx);
             gameState.isAnimating = true; 
             gameState.player.x = nx; 
             gameState.player.y = ny; 
@@ -1293,7 +1449,7 @@
             Sounds.portal(); 
             await new Promise(r => setTimeout(r, 800)); 
             await nextLevel(); 
-        } else if (target.type === 'empty') { Sounds.move(); gameState.player.x = nx; gameState.player.y = ny; endTurn(); }
+        } else if (target.type === 'empty') { Sounds.move(); markMoved(dx); gameState.player.x = nx; gameState.player.y = ny; endTurn(); }
     }
 
     async function startBattleSequence(x, y) {
@@ -1366,6 +1522,7 @@
                 await new Promise(r => setTimeout(r, 200)); 
             }
             
+            markMoved(x - gameState.player.x);
             gameState.player.x = x; gameState.player.y = y;
             if (gameState.grid[y][x].type === 'item') { 
                 Sounds.pick(); 
@@ -1380,6 +1537,7 @@
             updateCalculations();
             gameState.player.anim = 'ani-idle';
             gameState.lastEnemyProfile.anim = 'ani-idle';
+            gameState.lastEnemyProfile.done = true;   // TARGET portrait switches to its "satisfied" mood
             endTurn();
         } else {
             gameState.player.mp = 0;
@@ -1401,6 +1559,7 @@
         if (t === 'shield') gameState.player.invincible = 4;
         if (t === 'breaker') gameState.player.breaker = 6;
         if (t === 'key') { 
+            gameState.player.cheerUntil = performance.now() + 1100;   // cheer pose for the pixel sprite
             gameState.player.hasKey = true; 
             gameState.portalJustOpened = true; 
             document.body.classList.add('shaking'); 
@@ -1609,6 +1768,13 @@
             addLog(gameState.paused ? "Game paused." : "Game resumed.");
         }
     });
+    // HUD key icon: swap the emoji for the pixel key when the pack is available.
+    if (PA) {
+        const keyEl = document.getElementById('ui-key-icon');
+        keyEl.classList.add('px-key');
+        keyEl.innerHTML = pxCanvas('item', 'data-item="key" data-still="1"', 'floor');
+        Sprites.scan(keyEl);
+    }
     window.onload = showPlayerSelection;
 </script>
 </body>

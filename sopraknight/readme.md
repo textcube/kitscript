@@ -11,7 +11,7 @@ The core idea is not to defeat enemies. Emotionless undead enter the hall, and m
 - No backend
 - Runs as a plain browser HTML file
 - Uses HTML5 Canvas for the game field
-- Uses local PNG/JPG assets from `sopraknight/images`
+- Uses the shared pixel-art pack `pixelart/sprites.js` for all characters (see *Pixel-Art Integration*), with the local PNG/JPG assets in `sopraknight/images` as an automatic fallback
 
 ## Game Concept
 
@@ -166,6 +166,21 @@ Current auto behavior:
 - adds 1 to 3 extra random musicians
 - starts the concert automatically
 - restarts after a 7 second countdown
+
+## Pixel-Art Integration
+
+The game loads the shared pack with `<script src="../pixelart/sprites.js"></script>` and draws every character with `PixelArt` instead of the 512px PNGs. **If `window.PixelArt` is missing (for example the `sopraknight/` folder is opened on its own) every draw path falls back to the old `images/` PNGs.** The PNGs stay in the repo for that reason; the only console message in that case is the browser's 404 for `sprites.js`.
+
+| Where | Pixel sprite | Hookup |
+|---|---|---|
+| Stage musicians (`drawMusicianActor`) | `{id}.perform` / `idle` / `hit` / `cheer`, 32px at 3x (96px), feet on the shadow ellipse | `perform` while the concert runs, `idle` while placing, `hit` for 0.4s when an undead reaches the stage (`state.stageHitUntil`, cosmetic only), `cheer` on victory. `castFlash` adds a short hope-tint |
+| Undead (`drawEnemyActor`) | `{type}.walk` / `attack` at 3x (brute 4x) | `walk` animation speed follows `speed * slow`; `attack` for the last stretch (`x < 170`); `despair` tint = `despair/100`, `hope` tint = `hope/hopeMax` (and a pulse while the music lands), so the sprite goes grey -> gold -> colour |
+| Restoration | `{type}.restore` (8 frames) then `{type}.audience` | `restoreEnemy()` still restores instantly (score, inspiration, seat); the audience member plays `restore` in place (`wait` = anim length), then hops to its seat and loops `audience` (2x, includes the seat back) |
+| Particles | `fx.note`, `fx.sparkle`, `fx.sparkle_hope` | replaces the 4px squares of the restore burst |
+| Left panel cards / "Now Performing" | `{id}.bust` (64px) in `<canvas class="px-bust">` | selected card cheers; the performer portrait sings while it casts, winces on a stage hit and cheers on victory. The slide-in/out animation is kept |
+| Incoming preview | `{type}.walk` at 1.5x | replaces the 48px icons |
+
+Notes: lane geometry, hit radii, hope/despair math and balance are unchanged. Sprites use integer scales in canvas space; the canvas itself is still CSS-scaled like before. Pixel sprites honour `prefers-reduced-motion` (static first frame). `restore` is a one-shot of about 1.25 seconds.
 
 ## Assets
 
