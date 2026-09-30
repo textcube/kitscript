@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Eternal Invasion: Dawn of Strike Back | BuntGames</title>
+    <meta name="description" content="Eternal Invasion: Dawn of Strike Back - a neon Scramble-style side-scroller that plays itself. Watch the auto-pilot fly, or grab the controls (keyboard or touch) whenever you like. Free, instant start, no install.">
+    <meta name="theme-color" content="#02020a">
+    <meta name="color-scheme" content="dark">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="BuntGames">
+    <meta property="og:title" content="Eternal Invasion: Dawn of Strike Back">
+    <meta property="og:description" content="A neon Scramble-style side-scroller that plays itself. Watch the auto-pilot, or take over with keyboard or touch.">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Eternal Invasion: Dawn of Strike Back">
+    <meta name="twitter:description" content="A neon Scramble-style side-scroller that plays itself. Watch the auto-pilot, or take over with keyboard or touch.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2302020a'/%3E%3Cpath d='M12 30h30l10 4-10 4H12l5-4z' fill='%2300f2ff'/%3E%3Cpath d='M22 24h12l-3 10H22z' fill='%2300f2ff'/%3E%3Crect x='4' y='31' width='9' height='6' fill='%23ff00ea'/%3E%3Crect x='6' y='46' width='52' height='3' fill='%2300f2ff' opacity='.6'/%3E%3C/svg%3E">
     <style>
         :root {
             --neon-blue: #00f2ff;
@@ -11,7 +22,12 @@
             --neon-green: #39ff14;
             --neon-yellow: #fff200;
             --bg-dark: #02020a;
+            --bar-h: 50px;
         }
+
+        * { -webkit-tap-highlight-color: transparent; }
+
+        html, body { height: 100%; }
 
         body {
             margin: 0;
@@ -24,27 +40,38 @@
             flex-direction: column;
             align-items: center;
             touch-action: none;
+            overscroll-behavior: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            height: 100vh;
+            height: 100dvh;
         }
 
         /* Top Navigation Bar with Branding */
         #top-bar {
             width: 100%;
-            height: 50px;
+            height: var(--bar-h);
+            flex: none;
             background: rgba(10, 10, 30, 0.95);
             border-bottom: 2px solid var(--neon-blue);
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 25px;
+            padding-left: max(25px, env(safe-area-inset-left));
+            padding-right: max(25px, env(safe-area-inset-right));
             box-sizing: border-box;
             z-index: 1000;
             box-shadow: 0 2px 15px rgba(0, 242, 255, 0.3);
+            gap: 10px;
         }
 
         .brand-container {
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 0;
         }
 
         .brand-name {
@@ -56,6 +83,7 @@
             padding: 2px 8px;
             background: var(--neon-pink);
             border-radius: 3px;
+            white-space: nowrap;
         }
 
         .game-title {
@@ -65,12 +93,16 @@
             letter-spacing: 2px;
             font-size: 14px;
             text-shadow: 0 0 10px var(--neon-blue);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .nav-links {
             display: flex;
             gap: 15px;
             align-items: center;
+            flex: none;
         }
 
         .btn {
@@ -86,6 +118,8 @@
             font-weight: bold;
             letter-spacing: 1px;
             outline: none;
+            white-space: nowrap;
+            font-family: inherit;
         }
 
         .btn:hover {
@@ -94,11 +128,19 @@
             box-shadow: 0 0 15px var(--neon-blue);
         }
 
-        /* Game Canvas Container */
+        .btn:focus-visible, .btn-large:focus-visible, #bomb-btn:focus-visible {
+            outline: 2px solid var(--neon-yellow);
+            outline-offset: 2px;
+        }
+
+        .btn:disabled { opacity: 0.45; cursor: default; }
+
+        /* Game Area: the stage (canvas + HUD) is letterboxed to 16:9 by JS */
         #game-container {
             position: relative;
-            width: 100vw;
-            height: calc(100vh - 50px);
+            width: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -106,20 +148,34 @@
             overflow: hidden;
         }
 
+        body.portrait #game-container {
+            align-items: flex-start;
+            background: linear-gradient(#000, #06061a 60%, #0c0620);
+        }
+
+        #stage {
+            position: relative;
+            flex: none;
+            width: 960px;
+            height: 540px;
+            background: #000;
+            overflow: hidden;
+            container-type: normal;
+        }
+
         canvas {
             display: block;
-            image-rendering: pixelated;
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
         }
 
         /* CRT Filter */
-        #game-container::after {
+        #stage::after {
             content: " ";
             display: block;
             position: absolute;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), 
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%),
                         linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
             background-size: 100% 4px, 3px 100%;
             pointer-events: none;
@@ -135,6 +191,8 @@
             pointer-events: none;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
             z-index: 600;
         }
 
@@ -143,6 +201,13 @@
             border-left: 4px solid var(--neon-blue);
             padding: 10px 15px;
             min-width: 150px;
+            box-sizing: border-box;
+        }
+
+        .stat-box.right {
+            border-left: none;
+            border-right: 4px solid var(--neon-green);
+            text-align: right;
         }
 
         .stat-label {
@@ -159,14 +224,25 @@
             font-family: 'Courier New', Courier, monospace;
         }
 
+        .stat-sub {
+            font-size: 12px;
+            color: var(--neon-yellow);
+            margin-top: 4px;
+            letter-spacing: 1px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: nowrap;
+        }
+
         .fuel-container {
             width: 200px;
             height: 12px;
             background: #222;
             border: 1px solid #444;
             margin-top: 5px;
+            margin-left: auto;
             position: relative;
             overflow: hidden;
+            box-sizing: border-box;
         }
 
         #fuel-fill {
@@ -175,6 +251,14 @@
             background: var(--neon-green);
             box-shadow: 0 0 10px var(--neon-green);
             transition: width 0.1s linear;
+        }
+
+        #fuel-box.low { animation: low-fuel-blink 0.5s steps(2, start) infinite; }
+        #fuel-box.gain { box-shadow: 0 0 22px var(--neon-green); background: rgba(20, 90, 10, 0.75); }
+
+        @keyframes low-fuel-blink {
+            0% { background: rgba(255, 0, 60, 0.45); }
+            100% { background: rgba(0, 0, 0, 0.6); }
         }
 
         .ai-indicator {
@@ -194,7 +278,15 @@
             padding: 8px 15px;
             border-radius: 20px;
             border: 1px solid var(--neon-green);
+            pointer-events: none;
+            white-space: nowrap;
         }
+
+        .ai-indicator.manual {
+            color: var(--neon-yellow);
+            border-color: var(--neon-yellow);
+        }
+        .ai-indicator.manual .pulse { background: var(--neon-yellow); animation: none; }
 
         .pulse {
             width: 10px;
@@ -202,6 +294,7 @@
             background: var(--neon-green);
             border-radius: 50%;
             animation: pulse-animation 1.5s infinite;
+            flex: none;
         }
 
         @keyframes pulse-animation {
@@ -210,43 +303,129 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
         }
 
+        /* Controls hint: fades out on its own */
+        #hint {
+            position: absolute;
+            left: 0; right: 0;
+            bottom: 74px;
+            text-align: center;
+            z-index: 600;
+            pointer-events: none;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #cfefff;
+            text-shadow: 0 0 8px rgba(0, 242, 255, 0.8);
+            transition: opacity 1.2s ease;
+            opacity: 0.9;
+        }
+        #hint span { background: rgba(0, 0, 0, 0.55); padding: 6px 12px; border-radius: 14px; display: inline-block; }
+        #hint.hidden { opacity: 0; }
+        #hint .hint-touch { display: none; }
+        body.touch #hint .hint-touch { display: inline-block; }
+        body.touch #hint .hint-kb { display: none; }
+
+        /* Touch: bomb button + rotate hint */
+        #bomb-btn {
+            display: none;
+            position: absolute;
+            right: max(18px, env(safe-area-inset-right));
+            bottom: max(18px, env(safe-area-inset-bottom));
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-pink);
+            background: rgba(255, 0, 234, 0.16);
+            color: var(--neon-pink);
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: inherit;
+            box-shadow: 0 0 18px rgba(255, 0, 234, 0.45);
+            z-index: 900;
+            touch-action: none;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+        #bomb-btn:active, #bomb-btn.down { background: rgba(255, 0, 234, 0.55); color: #fff; }
+        body.touch #bomb-btn { display: flex; }
+        body.portrait #bomb-btn { width: 96px; height: 96px; font-size: 15px; bottom: max(40px, env(safe-area-inset-bottom)); }
+
+        #rotate-hint {
+            display: none;
+            position: absolute;
+            left: 16px; right: 130px;
+            bottom: max(56px, calc(env(safe-area-inset-bottom) + 40px));
+            font-size: 12px;
+            line-height: 1.5;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #7fdfff;
+            opacity: 0.8;
+            z-index: 800;
+            pointer-events: none;
+        }
+        body.portrait.touch #rotate-hint { display: block; }
+
         /* Screen Overlays */
         #game-over {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(2, 2, 10, 0.95);
+            width: min(92%, 460px);
+            box-sizing: border-box;
+            background: rgba(2, 2, 10, 0.88);
             border: 2px solid var(--neon-pink);
-            padding: 50px;
+            padding: clamp(12px, 3vmin, 30px);
             text-align: center;
             display: none;
             flex-direction: column;
             align-items: center;
             z-index: 2000;
             box-shadow: 0 0 50px var(--neon-pink);
+            animation: over-in 0.35s ease-out;
         }
+
+        @keyframes over-in {
+            from { opacity: 0; transform: translate(-50%, -46%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        body.portrait #game-over { top: 60%; }
 
         #game-over h1 {
             color: var(--neon-pink);
-            font-size: 50px;
+            font-size: clamp(20px, 5.4vmin, 36px);
             margin: 0;
-            letter-spacing: 5px;
+            letter-spacing: 3px;
             text-shadow: 0 0 20px var(--neon-pink);
             text-transform: uppercase;
         }
 
         .reason {
-            margin: 20px 0;
-            font-size: 18px;
+            margin: clamp(6px, 2vmin, 16px) 0;
+            font-size: clamp(12px, 2.6vmin, 16px);
             color: #aaa;
             text-transform: uppercase;
         }
 
-        .timer {
-            font-size: 18px;
+        #new-best {
             color: var(--neon-yellow);
-            margin-bottom: 25px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            margin: 0 0 6px;
+            font-size: clamp(13px, 3vmin, 18px);
+            text-shadow: 0 0 12px var(--neon-yellow);
+            display: none;
+        }
+
+        .timer {
+            font-size: clamp(13px, 3vmin, 18px);
+            color: var(--neon-yellow);
+            margin: 0 0 clamp(10px, 3vmin, 25px);
             text-transform: uppercase;
         }
 
@@ -254,8 +433,8 @@
             background: transparent;
             border: 2px solid var(--neon-blue);
             color: var(--neon-blue);
-            padding: 15px 40px;
-            font-size: 20px;
+            padding: clamp(10px, 2.5vmin, 15px) clamp(22px, 6vmin, 40px);
+            font-size: clamp(15px, 3.4vmin, 20px);
             font-weight: 900;
             letter-spacing: 4px;
             text-transform: uppercase;
@@ -263,6 +442,7 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
             outline: none;
+            font-family: inherit;
         }
 
         .btn-large:hover {
@@ -271,95 +451,243 @@
             box-shadow: 0 0 30px var(--neon-blue);
             transform: scale(1.05);
         }
+
+        .over-hint {
+            margin: 12px 0 0;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: #789;
+            text-transform: uppercase;
+        }
+
+        /* Compact HUD for small stages (phones) */
+        #stage.compact #ui-layer { top: 8px; left: 8px; right: 8px; gap: 6px; }
+        #stage.compact .stat-box { padding: 4px 8px; min-width: 0; border-left-width: 3px; }
+        #stage.compact .stat-box.right { border-right-width: 3px; }
+        #stage.compact .stat-label { font-size: 8px; letter-spacing: 1px; margin-bottom: 1px; }
+        #stage.compact .stat-value { font-size: 16px; }
+        #stage.compact .stat-sub { font-size: 9px; margin-top: 1px; }
+        #stage.compact .fuel-container { width: 84px; height: 7px; margin-top: 3px; }
+        #stage.compact .ai-indicator { bottom: 8px; left: 8px; font-size: 9px; padding: 3px 9px; gap: 6px; }
+        #stage.compact .pulse { width: 7px; height: 7px; }
+        #stage.compact #hint { bottom: 34px; font-size: 9px; }
+        #stage.compact #hint span { padding: 3px 8px; }
+
+        #stage.tiny .stat-label { display: none; }
+
+        @media (max-width: 640px) {
+            #top-bar { padding: 0 10px; gap: 6px; }
+            .brand-container { gap: 6px; }
+            .game-title { display: none; }
+            .nav-links { gap: 6px; }
+            .btn { padding: 6px 8px; font-size: 10px; letter-spacing: 0.5px; }
+            .brand-name { font-size: 12px; }
+        }
+
+        @media (max-width: 400px) {
+            #top-bar { padding: 0 6px; gap: 4px; }
+            .nav-links { gap: 4px; }
+            .btn { padding: 5px 6px; font-size: 9px; letter-spacing: 0; }
+            .brand-name { font-size: 11px; padding: 2px 6px; letter-spacing: 0; }
+        }
+
+        @media (max-height: 500px) {
+            :root { --bar-h: 38px; }
+            .btn { padding: 4px 10px; }
+            body.touch #bomb-btn { width: 64px; height: 64px; font-size: 11px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pulse, #fuel-box.low { animation: none; }
+            #game-over { animation: none; }
+            #hint { transition: none; }
+            .btn, .btn-large { transition: none; }
+        }
     </style>
 </head>
 <body>
 
-<div id="top-bar">
+<header id="top-bar">
     <div class="brand-container">
         <div class="brand-name">BuntGames</div>
         <div class="game-title">Dawn of Strike Back</div>
     </div>
-    <div class="nav-links">
-        <a href="https://youtube.com/@textcube" target="_blank" class="btn">YouTube</a>
-        <a href="https://kitscript.com/game" target="_blank" class="btn">KitScript</a>
-        <button id="sound-toggle" class="btn">Audio: OFF</button>
-    </div>
-</div>
+    <nav class="nav-links" aria-label="Site links">
+        <a href="https://youtube.com/@textcube" target="_blank" rel="noopener" class="btn">YouTube</a>
+        <a href="https://kitscript.com/game" target="_blank" rel="noopener" class="btn">KitScript</a>
+        <button id="sound-toggle" class="btn" type="button" aria-pressed="false" aria-label="Toggle sound effects">Audio: OFF</button>
+    </nav>
+</header>
 
-<div id="game-container">
-    <div id="ui-layer">
-        <div class="stat-box">
-            <div class="stat-label">Tactical Score</div>
-            <div id="score-val" class="stat-value">0000000</div>
-            <div id="best-val" style="font-size:12px;color:var(--neon-yellow);margin-top:4px;letter-spacing:1px;">BEST 0000000</div>
-        </div>
-        <div class="stat-box" style="border-left: none; border-right: 4px solid var(--neon-green); text-align: right;">
-            <div class="stat-label">Energy Core</div>
-            <div class="stat-value" id="fuel-text">100%</div>
-            <div class="fuel-container">
-                <div id="fuel-fill"></div>
+<main id="game-container">
+    <div id="stage">
+        <canvas id="gameCanvas" role="img" aria-label="Eternal Invasion game view. A neon jet flies through a cave, flown by an auto-pilot that you can override with the keyboard or touch."></canvas>
+
+        <div id="ui-layer">
+            <div class="stat-box">
+                <div class="stat-label">Tactical Score</div>
+                <div id="score-val" class="stat-value">0000000</div>
+                <div id="best-val" class="stat-sub">BEST 0000000</div>
+                <div id="sector-val" class="stat-sub" style="color:var(--neon-blue);margin-top:2px;">SECTOR 1</div>
+            </div>
+            <div id="fuel-box" class="stat-box right">
+                <div class="stat-label">Energy Core</div>
+                <div class="stat-value" id="fuel-text">100%</div>
+                <div class="fuel-container" role="progressbar" aria-label="Energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="fuel-bar">
+                    <div id="fuel-fill"></div>
+                </div>
             </div>
         </div>
+
+        <div id="hint" aria-hidden="true">
+            <span class="hint-kb">Arrows / WASD steer &middot; Space bomb &middot; let go and the auto-pilot takes over</span>
+            <span class="hint-touch">Drag to steer &middot; Tap to bomb</span>
+        </div>
+
+        <div id="ai-indicator" class="ai-indicator">
+            <div class="pulse"></div>
+            <span id="ai-text">Auto-Pilot Active</span>
+        </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="rotate-hint" aria-hidden="true">Rotate your device for a bigger view</div>
+    <button id="bomb-btn" type="button" aria-label="Drop bomb">Bomb</button>
 
-    <div class="ai-indicator">
-        <div class="pulse"></div>
-        <span>Auto-Pilot Active</span>
-    </div>
-
-    <div id="game-over">
+    <div id="game-over" role="dialog" aria-label="Mission failed">
         <h1>Mission Failed</h1>
-        <p id="death-reason" class="reason">Hull Breached</p>
+        <p id="death-reason" class="reason" aria-live="polite">Hull Breached</p>
+        <p id="new-best">NEW RECORD!</p>
         <p id="final-score" class="reason">Score: 0000000 &nbsp;|&nbsp; Best: 0000000</p>
         <p class="timer">Auto-Deploy in <span id="restart-timer">7</span>s</p>
-        <button id="deploy-btn" class="btn-large">Deploy Now</button>
+        <button id="deploy-btn" class="btn-large" type="button" aria-label="Deploy now, restart the mission">Deploy Now</button>
+        <p class="over-hint">Any key or tap also redeploys</p>
     </div>
-</div>
+</main>
+
+<noscript><p style="position:fixed;inset:60px 0 0;text-align:center;color:#00f2ff;font-family:sans-serif">Eternal Invasion needs JavaScript enabled to run.</p></noscript>
 
 <script>
 /**
  * AUDIO ENGINE
+ * Every entry point is guarded: if Web Audio is missing, blocked or throws,
+ * the game simply stays silent.
  */
 const AudioEngine = (() => {
     let ctx = null;
+    let master = null;
+    let noiseBuf = null;
     let enabled = false;
+    let unsupported = !(window.AudioContext || window.webkitAudioContext);
+    let voices = 0;
+    let lastBoom = 0;
 
     const ensureCtx = () => {
-        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === 'suspended') ctx.resume();
+        if (unsupported) return false;
+        try {
+            if (!ctx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                ctx = new AC();
+                master = ctx.createGain();
+                master.gain.value = 0.9;
+                if (ctx.createDynamicsCompressor) {
+                    const comp = ctx.createDynamicsCompressor();
+                    master.connect(comp);
+                    comp.connect(ctx.destination);
+                } else {
+                    master.connect(ctx.destination);
+                }
+            }
+            if (ctx.state === 'suspended') {
+                const pr = ctx.resume();
+                if (pr && pr.catch) pr.catch(() => {});
+            }
+            return true;
+        } catch (e) {
+            unsupported = true;
+            ctx = null;
+            return false;
+        }
     };
 
-    const playTone = (freq, type, duration, volume) => {
-        if (!enabled || !ctx) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(volume, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
+    const canPlay = () => enabled && ctx && ctx.state === 'running' && voices < 14;
+
+    const playTone = (freq, type, duration, volume, slideTo, delay) => {
+        if (!canPlay()) return;
+        try {
+            const t0 = ctx.currentTime + (delay || 0);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+            if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + duration);
+            gain.gain.setValueAtTime(volume, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+            osc.connect(gain);
+            gain.connect(master);
+            voices++;
+            osc.onended = () => { voices--; osc.disconnect(); gain.disconnect(); };
+            osc.start(t0);
+            osc.stop(t0 + duration + 0.02);
+        } catch (e) {}
+    };
+
+    // Filtered noise burst: the body of every explosion.
+    const playBoom = (duration, volume, cutoff) => {
+        if (!canPlay()) return;
+        try {
+            const now = ctx.currentTime;
+            if (now - lastBoom < 0.05) return;
+            lastBoom = now;
+            if (!noiseBuf) {
+                noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.0), ctx.sampleRate);
+                const d = noiseBuf.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = ctx.createBufferSource();
+            const filt = ctx.createBiquadFilter();
+            const gain = ctx.createGain();
+            src.buffer = noiseBuf;
+            filt.type = 'lowpass';
+            filt.frequency.setValueAtTime(cutoff, now);
+            filt.frequency.exponentialRampToValueAtTime(120, now + duration);
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            src.connect(filt);
+            filt.connect(gain);
+            gain.connect(master);
+            voices++;
+            src.onended = () => { voices--; src.disconnect(); filt.disconnect(); gain.disconnect(); };
+            src.start(now);
+            src.stop(now + duration + 0.02);
+        } catch (e) {}
     };
 
     return {
+        isSupported: () => !unsupported,
         isEnabled: () => enabled,
-        setEnabled: (v) => { enabled = v; if (enabled) ensureCtx(); },
+        // Only records the preference: the AudioContext itself is created on
+        // the first user gesture (browsers refuse to start it before that).
+        setEnabled: (v) => { enabled = v && !unsupported; },
         primeOnGesture: () => { if (enabled) ensureCtx(); },
         toggle: () => {
+            if (unsupported) return false;
             enabled = !enabled;
             if (enabled) ensureCtx();
             return enabled;
         },
-        shoot: () => playTone(900, 'square', 0.1, 0.03),
-        bomb: () => playTone(350, 'triangle', 0.2, 0.05),
-        launch: () => playTone(180, 'sawtooth', 0.5, 0.07),
-        explode: () => playTone(120, 'sawtooth', 0.6, 0.1),
-        collect: () => playTone(1600, 'sine', 0.25, 0.08)
+        suspend: () => { try { if (ctx && ctx.state === 'running') ctx.suspend(); } catch (e) {} },
+        resume: () => { if (enabled) ensureCtx(); },
+        shoot: () => playTone(900, 'square', 0.08, 0.018, 600),
+        bomb: () => playTone(350, 'triangle', 0.25, 0.05, 140),
+        launch: () => playTone(180, 'sawtooth', 0.5, 0.06, 500),
+        explode: (big) => {
+            playBoom(big ? 0.9 : 0.4, big ? 0.28 : 0.14, big ? 2200 : 1500);
+            playTone(big ? 90 : 130, 'sawtooth', big ? 0.7 : 0.35, big ? 0.1 : 0.06, 40);
+        },
+        collect: () => { playTone(1200, 'sine', 0.12, 0.07); playTone(1800, 'sine', 0.22, 0.07, null, 0.09); },
+        warn: () => { playTone(660, 'square', 0.09, 0.035); playTone(520, 'square', 0.12, 0.035, null, 0.11); },
+        sector: () => { playTone(660, 'triangle', 0.14, 0.06); playTone(880, 'triangle', 0.14, 0.06, null, 0.12); playTone(1320, 'triangle', 0.3, 0.06, null, 0.24); },
+        ready: () => playTone(300, 'triangle', 0.35, 0.05, 900)
     };
 })();
 
@@ -368,16 +696,26 @@ const AudioEngine = (() => {
  */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const stageEl = document.getElementById('stage');
+const containerEl = document.getElementById('game-container');
 const scoreEl = document.getElementById('score-val');
 const bestEl = document.getElementById('best-val');
+const sectorEl = document.getElementById('sector-val');
 const fuelEl = document.getElementById('fuel-fill');
+const fuelBoxEl = document.getElementById('fuel-box');
+const fuelBarEl = document.getElementById('fuel-bar');
 const fuelTextEl = document.getElementById('fuel-text');
 const gameOverEl = document.getElementById('game-over');
 const restartTimerEl = document.getElementById('restart-timer');
 const deathReasonEl = document.getElementById('death-reason');
 const finalScoreEl = document.getElementById('final-score');
+const newBestEl = document.getElementById('new-best');
 const soundBtn = document.getElementById('sound-toggle');
 const deployBtn = document.getElementById('deploy-btn');
+const bombBtn = document.getElementById('bomb-btn');
+const hintEl = document.getElementById('hint');
+const aiIndicatorEl = document.getElementById('ai-indicator');
+const aiTextEl = document.getElementById('ai-text');
 
 const CONFIG = {
     width: 960,
@@ -386,8 +724,17 @@ const CONFIG = {
     gravity: 0.38,
     fuelMax: 100,
     fuelDepletion: 0.07,
-    difficultyInc: 0.00012,
-    hitboxScale: 0.60
+    hitboxScale: 0.60,
+    sectorLength: 6000,      // world px per sector
+    difficultyDist: 90000,   // world px until difficulty tops out (x2.0)
+    gapStart: 400,
+    gapMin: 175,
+    gapShrink: 0.0016,       // px of corridor lost per world px
+    fuelPickup: 40,
+    maxParticles: 320,
+    restartSeconds: 7,
+    introFrames: 46,
+    invulnFrames: 110
 };
 
 // Cache the neon CSS colors once at startup instead of calling
@@ -402,6 +749,34 @@ const NEON = (() => {
         bgDark: cs.getPropertyValue('--bg-dark').trim()
     };
 })();
+
+// Sector themes: name + terrain neon color. Sector N uses THEMES[(N-1) % 5].
+const THEMES = [
+    { name: 'Outer Caverns',  rgb: [0, 242, 255] },
+    { name: 'Magma Vents',    rgb: [255, 122, 40] },
+    { name: 'Toxic Grove',    rgb: [57, 255, 20] },
+    { name: 'Crystal Depths', rgb: [196, 96, 255] },
+    { name: 'Ion Storm',      rgb: [255, 226, 60] }
+];
+
+// Enemy spawn weights per sector: [base, fuel, tank, samTower, ufo, fighter].
+// Sectors 1-4 introduce the roster gradually; later sectors alternate a
+// ground-heavy and an air-heavy flavour so the mix keeps shifting.
+const MIX = [
+    [30, 22, 26,  8, 14,  0],
+    [22, 17, 18, 20, 19,  4],
+    [16, 15, 14, 18, 20, 17],
+    [12, 14, 12, 22, 18, 22]
+];
+const MIX_GROUND = [14, 14, 20, 26, 12, 14];
+const MIX_AIR    = [ 8, 14,  8, 16, 26, 28];
+const ENEMY_TYPES = ['base', 'fuel', 'tank', 'samTower', 'ufo', 'fighter'];
+const ENEMY_VALUE = { samTower: 500, ufo: 300, tank: 350, fighter: 400, base: 200, fuel: 150 };
+
+function mixFor(sector) {
+    if (sector <= MIX.length) return MIX[sector - 1];
+    return sector % 2 ? MIX_GROUND : MIX_AIR;
+}
 
 function loadBest() {
     try {
@@ -418,17 +793,63 @@ function saveSoundPref(on) {
     try { localStorage.setItem('pilot_sound_on', on ? '1' : '0'); } catch (e) {}
 }
 
-// HiDPI backing store: scale the canvas by devicePixelRatio (capped) while
-// keeping all drawing code in 960x540 logical coordinates.
-function setupCanvas() {
+// Reduced motion: no shake, no full-screen flashes, no slow-mo.
+let reduceMotion = false;
+try {
+    const rmq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduceMotion = rmq.matches;
+    const onRm = e => { reduceMotion = e.matches; };
+    if (rmq.addEventListener) rmq.addEventListener('change', onRm);
+    else if (rmq.addListener) rmq.addListener(onRm);
+} catch (e) {}
+
+// Canvas layout: the 960x540 logical playfield is letterboxed into whatever
+// space is left under the top bar, and the backing store is sized to the
+// displayed size x devicePixelRatio (capped) so it is crisp on HiDPI without
+// wasting fill-rate. All drawing code stays in 960x540 logical coordinates.
+const view = { k: 1, cssScale: 1, bg: null };
+
+function layout() {
+    const cw = containerEl.clientWidth;
+    const ch = containerEl.clientHeight;
+    if (cw < 10 || ch < 10) return;
+    const scale = Math.min(cw / CONFIG.width, ch / CONFIG.height);
+    const w = Math.max(1, Math.floor(CONFIG.width * scale));
+    const h = Math.max(1, Math.floor(CONFIG.height * scale));
+    stageEl.style.width = w + 'px';
+    stageEl.style.height = h + 'px';
+    stageEl.classList.toggle('compact', w < 700);
+    stageEl.classList.toggle('tiny', w < 420);
+    document.body.classList.toggle('portrait', ch > cw * 1.05);
+    view.cssScale = w / CONFIG.width;
+
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = CONFIG.width * dpr;
-    canvas.height = CONFIG.height * dpr;
-    canvas.style.width = CONFIG.width + 'px';
-    canvas.style.height = CONFIG.height + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const bw = Math.min(2048, Math.max(1, Math.round(w * dpr)));
+    const bh = Math.round(bw * CONFIG.height / CONFIG.width);
+    if (canvas.width !== bw || canvas.height !== bh) {
+        canvas.width = bw;
+        canvas.height = bh;
+    }
+    view.k = bw / CONFIG.width;
+    buildBackground(bw, bh);
 }
-setupCanvas();
+
+// Static backdrop (gradient + nebula glows) is rendered once per resize and
+// blitted each frame instead of rebuilding gradients every frame.
+function buildBackground(bw, bh) {
+    if (!view.bg) view.bg = document.createElement('canvas');
+    view.bg.width = bw;
+    view.bg.height = bh;
+    const b = view.bg.getContext('2d');
+    b.setTransform(view.k, 0, 0, view.k, 0, 0);
+    const grad = b.createLinearGradient(0, 0, 0, CONFIG.height);
+    grad.addColorStop(0, '#020210'); grad.addColorStop(1, '#0a0a25');
+    b.fillStyle = grad; b.fillRect(0, 0, CONFIG.width, CONFIG.height);
+    b.globalAlpha = 0.15;
+    b.fillStyle = NEON.pink; b.beginPath(); b.arc(CONFIG.width * 0.7, CONFIG.height * 0.3, 200, 0, Math.PI * 2); b.fill();
+    b.fillStyle = NEON.blue; b.beginPath(); b.arc(CONFIG.width * 0.2, CONFIG.height * 0.8, 250, 0, Math.PI * 2); b.fill();
+    b.globalAlpha = 1.0;
+}
 
 let state = {
     score: 0,
@@ -436,18 +857,39 @@ let state = {
     fuel: CONFIG.fuelMax,
     isGameOver: false,
     timer: 0,
-    spawnAccumulator: 0,
+    distance: 0,
+    sector: 1,
+    spawnDist: 0,
+    sinceFuel: 0,
     difficulty: 1,
-    restartCountdown: 7,
-    restartInterval: null,
+    restartTime: CONFIG.restartSeconds,
+    deadTime: 0,
+    overShown: false,
+    timeScale: 1,
+    shake: 0,
+    flash: 0,
+    flashColor: '#fff',
+    fuelFlash: 0,
+    lowFuelTimer: 0,
+    banner: 0,
+    bannerSub: '',
+    intro: 0,
+    invuln: 0,
+    trailAcc: 0,
+    manualUntil: 0,
+    hintTime: 0,
+    seed: [0, 0, 0, 0, 0],
     keys: {},
     particles: [],
+    popups: [],
+    rings: [],
     bullets: [],
     bombs: [],
     enemies: [],
     samMissiles: [],
     terrain: [],
     stars: [],
+    theme: { r: 0, g: 242, b: 255 },
     player: {
         x: 150,
         y: 270,
@@ -460,11 +902,17 @@ let state = {
     }
 };
 
+// Touch / pointer steering (drag = manual override, tap = bomb).
+const touch = { id: null, sx: 0, sy: 0, px0: 0, py0: 0, tx: 0, ty: 0, t0: 0, moved: false, bombHeld: false };
+
 // Frame-rate independent timing. frameScale == 1 at a steady 60fps; all
 // per-frame deltas below are multiplied by it so gameplay speed is tied to
-// wall-clock time, not display refresh rate.
+// wall-clock time, not display refresh rate. realScale is the same unit but
+// ignores the death slow-motion (used for UI timers).
 let lastTime = 0;
 let frameScale = 1;
+let realScale = 1;
+let loopErrors = 0;
 
 function initStars() {
     state.stars = [];
@@ -481,182 +929,462 @@ function initStars() {
 
 function initTerrain() {
     state.terrain = [];
-    for (let i = 0; i <= CONFIG.width / 15 + 5; i++) {
-        state.terrain.push(generateTerrainPoint(i * 15));
+    for (let i = 0; i <= CONFIG.width / 15 + 8; i++) {
+        state.terrain.push(generateTerrainPoint(i * 15, state.distance + i * 15));
     }
 }
 
-function generateTerrainPoint(x) {
-    const time = (state.timer + x) * 0.0015;
+// Terrain is a pure function of world position (distance travelled + screen
+// x), so it is continuous no matter how fast the scroll is. A per-run phase
+// seed makes every cave different.
+function generateTerrainPoint(x, wx) {
+    const s = state.seed;
+    const time = wx * 0.0015;
+    const rough = 1 + 0.18 * Math.sin(wx * 0.00012 + s[0]);
     const floorBase = 440;
     const ceilingBase = 60;
-    const floor = floorBase + Math.sin(time * 2) * 60 + Math.sin(time * 4.5) * 25;
-    const ceiling = ceilingBase + Math.cos(time * 1.5) * 50 + Math.sin(time * 3.2) * 20;
-    const gap = Math.max(160, 400 - (state.timer * 0.012));
+    const floor = floorBase + (Math.sin(time * 2 + s[1]) * 60 + Math.sin(time * 4.5 + s[2]) * 25) * rough;
+    const ceiling = ceilingBase + Math.cos(time * 1.5 + s[3]) * 50 + Math.sin(time * 3.2 + s[4]) * 20;
+    const gap = Math.max(CONFIG.gapMin, CONFIG.gapStart - wx * CONFIG.gapShrink);
     const finalFloor = floor;
     const finalCeiling = Math.min(ceiling, finalFloor - gap);
     return { x, floor: finalFloor, ceiling: finalCeiling };
 }
 
-function createExplosion(x, y, color = '#00f2ff', count = 16) {
-    for (let i = 0; i < count; i++) {
+// Interpolated terrain lookups (terrain points are exactly 15px apart), shared
+// by collision sampling, bomb impacts, spawning and ground-following.
+function terrainIndex(x) {
+    const i = Math.floor((x - state.terrain[0].x) / 15);
+    const n = state.terrain.length - 2;
+    return i < 0 ? 0 : (i > n ? n : i);
+}
+function floorAt(x) {
+    const i = terrainIndex(x);
+    const a = state.terrain[i], b = state.terrain[i + 1];
+    const f = Math.max(0, Math.min(1, (x - a.x) / 15));
+    return a.floor + (b.floor - a.floor) * f;
+}
+function ceilAt(x) {
+    const i = terrainIndex(x);
+    const a = state.terrain[i], b = state.terrain[i + 1];
+    const f = Math.max(0, Math.min(1, (x - a.x) / 15));
+    return a.ceiling + (b.ceiling - a.ceiling) * f;
+}
+
+// In-place compaction so per-frame filtering doesn't allocate new arrays.
+function compact(arr, keep) {
+    let j = 0;
+    for (let i = 0; i < arr.length; i++) {
+        if (keep(arr[i])) arr[j++] = arr[i];
+    }
+    arr.length = j;
+}
+
+function addShake(v) {
+    if (!reduceMotion) state.shake = Math.min(14, state.shake + v);
+}
+function addFlash(alpha, color) {
+    if (reduceMotion) return;
+    if (alpha >= state.flash) { state.flash = alpha; state.flashColor = color; }
+}
+
+function addPopup(x, y, text, color, big) {
+    if (state.popups.length > 24) state.popups.shift();
+    state.popups.push({ x, y, text, color, life: 1, big: !!big });
+}
+
+function createExplosion(x, y, color = '#00f2ff', count = 16, power = 1) {
+    const room = CONFIG.maxParticles - state.particles.length;
+    const n = Math.min(count, Math.max(0, room));
+    for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = (Math.random() * 6 + 1.5) * (0.7 + power * 0.35);
+        const r = Math.random();
+        const ember = r > 0.72;
         state.particles.push({
             x, y,
-            vx: (Math.random() - 0.5) * 16,
-            vy: (Math.random() - 0.5) * 16,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
             life: 1.0,
-            size: Math.random() * 4 + 2,
-            color
+            decay: ember ? 0.018 : 0.03 + Math.random() * 0.02,
+            size: ember ? Math.random() * 4 + 3 : Math.random() * 3 + 1.5,
+            drag: ember ? 0.94 : 0.965,
+            grav: ember ? 0.06 : 0,
+            color: ember ? '#ff9a3c' : (r < 0.2 ? '#ffffff' : color)
         });
     }
-    AudioEngine.explode();
+    if (state.rings.length < 12) {
+        state.rings.push({ x, y, r: 4, max: 26 + power * 22, life: 1, color });
+    }
+    AudioEngine.explode(power >= 2);
+}
+
+function spawnSpark(x, y, vx, vy, color, size, decay) {
+    if (state.particles.length >= CONFIG.maxParticles) return;
+    state.particles.push({ x, y, vx, vy, life: 1, decay, size, drag: 0.96, grav: 0, color });
+}
+
+const GAME_KEYS = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Space: 1, KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1 };
+
+function isUiTarget(el) {
+    return !!(el && el.closest && el.closest('button, a, input, select, textarea'));
+}
+
+function requestRestart() {
+    // The short guard keeps a still-held key or an in-flight tap from
+    // instantly skipping the death sequence.
+    if (state.isGameOver && state.deadTime > 30) resetGame();
 }
 
 window.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Let Space/Enter operate a focused button or link instead of the game.
+    if (isUiTarget(e.target) && (e.code === 'Space' || e.code === 'Enter')) return;
+    if (GAME_KEYS[e.code]) e.preventDefault();
+    if (e.repeat) return;
     state.keys[e.code] = true;
+    noteInput();
     // Instant restart on any key while the game-over overlay is up (in
     // addition to the 7s auto-restart and the Deploy button).
-    if (state.isGameOver) resetGame();
+    if (state.isGameOver && e.code !== 'Tab' && !e.code.startsWith('Shift')) requestRestart();
 });
 window.addEventListener('keyup', e => { state.keys[e.code] = false; });
 
+function releaseInput() {
+    state.keys = {};
+    touch.id = null;
+    touch.bombHeld = false;
+    bombBtn.classList.remove('down');
+}
+
 // A key or click held while alt-tabbing must not leave the manual override
-// stuck "on" forever - clear all tracked keys when focus is lost.
-window.addEventListener('blur', () => { state.keys = {}; });
+// stuck "on" forever - clear all tracked input when focus is lost.
+window.addEventListener('blur', releaseInput);
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) state.keys = {};
+    if (document.hidden) {
+        releaseInput();
+        AudioEngine.suspend();
+    } else {
+        // Don't fast-forward through the time the tab spent hidden.
+        lastTime = 0;
+        AudioEngine.resume();
+    }
+});
+window.addEventListener('pagehide', () => {
+    if (state.score > state.best) { state.best = state.score; saveBest(Math.floor(state.best)); }
 });
 
 // Browsers require a user gesture before audio can play; if the sound
 // preference was already ON from a previous visit, prime the AudioContext
-// on the very first gesture instead of trying (and failing) at load time.
-['keydown', 'pointerdown'].forEach(evt => {
-    window.addEventListener(evt, () => AudioEngine.primeOnGesture(), { once: true });
+// on the first gestures instead of trying (and failing) at load time.
+['keydown', 'pointerup', 'touchend', 'click'].forEach(evt => {
+    window.addEventListener(evt, () => AudioEngine.primeOnGesture(), { passive: true });
 });
 
-const soundPref = loadSoundPref();
-AudioEngine.setEnabled(soundPref);
-soundBtn.innerText = `Audio: ${soundPref ? 'ON' : 'OFF'}`;
+function refreshSoundBtn() {
+    if (!AudioEngine.isSupported()) {
+        soundBtn.textContent = 'Audio: N/A';
+        soundBtn.disabled = true;
+        soundBtn.setAttribute('aria-pressed', 'false');
+        return;
+    }
+    const on = AudioEngine.isEnabled();
+    soundBtn.textContent = `Audio: ${on ? 'ON' : 'OFF'}`;
+    soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
 
-soundBtn.onclick = () => {
-    const isOn = AudioEngine.toggle();
-    soundBtn.innerText = `Audio: ${isOn ? 'ON' : 'OFF'}`;
-    saveSoundPref(isOn);
-    soundBtn.blur();
+AudioEngine.setEnabled(loadSoundPref());
+refreshSoundBtn();
+
+soundBtn.onclick = (e) => {
+    AudioEngine.toggle();
+    refreshSoundBtn();
+    saveSoundPref(AudioEngine.isEnabled());
+    // Only drop focus for mouse/touch clicks; keyboard users keep theirs.
+    if (e.detail > 0) soundBtn.blur();
 };
 
-deployBtn.onclick = () => {
+deployBtn.onclick = (e) => {
     resetGame();
-    deployBtn.blur();
+    if (e.detail > 0) deployBtn.blur();
 };
+
+// ---- Touch / pointer controls -------------------------------------------
+function markTouch(e) {
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') document.body.classList.add('touch');
+}
+try {
+    if (window.matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+} catch (e) {}
+
+function noteInput() {
+    // First real input: let the controls hint fade sooner.
+    if (state.hintTime < 9999) state.hintTime = Math.max(state.hintTime, 420);
+}
+
+containerEl.addEventListener('pointerdown', e => {
+    if (isUiTarget(e.target)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    markTouch(e);
+    noteInput();
+    if (state.isGameOver) { requestRestart(); return; }
+    if (touch.id === null) {
+        touch.id = e.pointerId;
+        touch.sx = e.clientX; touch.sy = e.clientY;
+        touch.px0 = state.player.x; touch.py0 = state.player.y;
+        touch.tx = touch.px0; touch.ty = touch.py0;
+        touch.t0 = performance.now();
+        touch.moved = false;
+        try { containerEl.setPointerCapture(e.pointerId); } catch (err) {}
+    } else {
+        // A second finger while steering = bomb.
+        playerBomb();
+    }
+});
+
+containerEl.addEventListener('pointermove', e => {
+    if (e.pointerId !== touch.id) return;
+    // 1 screen px == 1/cssScale logical px, but on tiny stages (portrait
+    // phones) boost the gain so a thumb swipe still covers the whole playfield.
+    const k = Math.max(1 / view.cssScale, 1.3);
+    const dx = e.clientX - touch.sx, dy = e.clientY - touch.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 12) touch.moved = true;
+    touch.tx = touch.px0 + dx * k;
+    touch.ty = touch.py0 + dy * k;
+});
+
+function endTouch(e) {
+    if (e.pointerId !== touch.id) return;
+    const tap = !touch.moved && performance.now() - touch.t0 < 260;
+    touch.id = null;
+    state.manualUntil = state.timer + 45; // brief grace before auto-pilot resumes
+    if (tap && e.type === 'pointerup') playerBomb();
+}
+containerEl.addEventListener('pointerup', endTouch);
+containerEl.addEventListener('pointercancel', endTouch);
+containerEl.addEventListener('contextmenu', e => e.preventDefault());
+
+bombBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    markTouch(e);
+    noteInput();
+    if (state.isGameOver) { requestRestart(); return; }
+    touch.bombHeld = true;
+    bombBtn.classList.add('down');
+    try { bombBtn.setPointerCapture(e.pointerId); } catch (err) {}
+    playerBomb();
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(evt => {
+    bombBtn.addEventListener(evt, () => { touch.bombHeld = false; bombBtn.classList.remove('down'); });
+});
+bombBtn.addEventListener('click', e => {
+    // Keyboard activation (pointer taps are handled on pointerdown).
+    if (e.detail === 0) playerBomb();
+});
 
 function playerShoot() {
     if (state.isGameOver || state.timer - state.player.lastShot < 9) return;
-    state.bullets.push({ 
-        x: state.player.x + state.player.w, 
-        y: state.player.y + state.player.h/2 - 2, 
-        vx: 18 
+    state.bullets.push({
+        x: state.player.x + state.player.w,
+        y: state.player.y + state.player.h/2 - 2,
+        vx: 18
     });
     state.player.lastShot = state.timer;
     AudioEngine.shoot();
 }
 
 function playerBomb() {
-    if (state.isGameOver || state.timer - state.player.lastBomb < 20) return; 
-    state.bombs.push({ 
-        x: state.player.x + 25, 
-        y: state.player.y + state.player.h, 
-        vx: (CONFIG.scrollSpeed * state.difficulty) + 10.0, 
-        vy: -0.8 
+    if (state.isGameOver || state.timer - state.player.lastBomb < 20) return;
+    state.bombs.push({
+        x: state.player.x + 25,
+        y: state.player.y + state.player.h,
+        vx: (CONFIG.scrollSpeed * state.difficulty) + 10.0,
+        vy: -0.8
     });
     state.player.lastBomb = state.timer;
     AudioEngine.bomb();
 }
 
+function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+const GROUND_TYPES = { base: 1, fuel: 1, tank: 1, samTower: 1 };
+
+// Auto-pilot: fly the middle of the safe band ahead, top up fuel, keep out of
+// the lane of anything about to hit us (hold still and let the gun clear
+// distant targets, sidestep close ones) and time bombs ballistically.
 function runAI() {
     const p = state.player;
-    const scanDists = [120, 240];
-    let avgCenter = 0;
-    scanDists.forEach(d => {
-        const idx = Math.floor((p.x + d) / 15);
-        const t = state.terrain[idx % state.terrain.length];
-        if (t) avgCenter += (t.floor + t.ceiling) / 2;
-    });
-    avgCenter /= scanDists.length;
+    const cy = p.y + p.h / 2;
+    const speed = CONFIG.scrollSpeed * state.difficulty;
 
-    const fuelTarget = state.enemies.find(e => e.type === 'fuel' && !e.dead && e.x > p.x && e.x < p.x + 500);
-    let targetY = (state.fuel < 45 && fuelTarget) ? fuelTarget.y - 120 : avgCenter;
+    // Safe band for the ship centre over the look-ahead window.
+    const look = 150 + speed * 12;
+    let top = -1000, bot = 2000;
+    for (let d = 0; d <= look; d += 30) {
+        const x = p.x + p.w * 0.5 + d;
+        const c = ceilAt(x), f = floorAt(x);
+        if (c > top) top = c;
+        if (f < bot) bot = f;
+    }
+    let bandTop = top + 34, bandBot = bot - 34;
+    if (bandTop > bandBot) { bandTop = bandBot = (top + bot) / 2; }
+    let targetY = (bandTop + bandBot) / 2;
 
-    // Evade incoming SAM missiles: bias the target Y away from a nearby
-    // threat, but keep it clamped inside the corridor so the AI never
-    // dodges itself into a wall.
-    const threat = state.samMissiles.find(m =>
-        !m.dead && m.x - p.x > -40 && m.x - p.x < 260 && Math.abs(m.y - (p.y + p.h / 2)) < 220
-    );
-    if (threat) {
-        const curT = state.terrain.find(t => t.x >= p.x) || state.terrain[0];
-        const corridorTop = curT.ceiling + 50;
-        const corridorBottom = curT.floor - 50;
-        const evadeY = threat.y < p.y + p.h / 2 ? p.y + 150 : p.y - 150;
-        targetY = Math.max(corridorTop, Math.min(corridorBottom, evadeY));
+    // Low on fuel: fly a little lower toward the next NRG cell so the bomb
+    // has a short, accurate drop.
+    if (state.fuel < 60) {
+        for (let i = 0; i < state.enemies.length; i++) {
+            const e = state.enemies[i];
+            if (e.type === 'fuel' && !e.dead && e.x > p.x + 40 && e.x < p.x + 640) {
+                targetY = clamp(e.y - 110, bandTop, bandBot);
+                break;
+            }
+        }
     }
 
+    // Hazards ahead: homing SAM missiles and air units. In our lane and
+    // far away -> hold the line and let the gun clear it; in our lane and
+    // close -> sidestep; near but not in our lane -> never drift toward it.
+    const noseX = p.x + p.w;
+    let hazY = 0, hazDist = 9999, hazAir = false, hazNear = false, nearY = 0, nearDist = 9999;
+    for (let i = 0; i < state.enemies.length; i++) {
+        const e = state.enemies[i];
+        if ((e.type !== 'ufo' && e.type !== 'fighter') || e.dead) continue;
+        const dist = e.x - noseX;
+        if (dist < -30 || dist > 560) continue;
+        const dy = e.y + e.h / 2 - cy;
+        if (Math.abs(dy) < 40) {
+            if (dist < hazDist) { hazDist = dist; hazY = cy + dy; hazAir = true; }
+        } else if (Math.abs(dy) < 80 && dist < 320 && dist < nearDist) {
+            nearDist = dist; nearY = cy + dy; hazNear = true;
+        }
+    }
+    for (let i = 0; i < state.samMissiles.length; i++) {
+        const m = state.samMissiles[i];
+        if (m.dead || m.lost) continue;
+        const dist = m.x - noseX;
+        if (dist < -30 || dist > 620) continue;
+        // A homing missile ends up in our lane sooner or later: treat it as
+        // in-lane from the moment it launches.
+        if (dist < hazDist) { hazDist = dist; hazY = m.y; hazAir = false; }
+    }
+    if (hazDist < 9999) {
+        const inLane = Math.abs(hazY - cy) < (hazAir ? 40 : 64);
+        const close = hazAir ? hazDist < 230 : hazDist < 160;
+        if (close && inLane) {
+            // Sidestep toward the side with more room.
+            const looseTop = ceilAt(p.x + p.w) + 28, looseBot = floorAt(p.x + p.w) - 28;
+            let dir = hazY > cy ? -1 : 1;
+            if (Math.abs(hazY - cy) < 6) dir = (cy - looseTop) > (looseBot - cy) ? -1 : 1;
+            targetY = clamp(cy + dir * 90, looseTop, looseBot);
+        } else {
+            targetY = clamp(cy, bandTop, bandBot);
+        }
+    } else if (hazNear && ((targetY - cy) * (nearY - cy) > 0)) {
+        targetY = cy;
+    }
+
+    const touchOn = touch.id !== null;
     const isManualY = state.keys['ArrowUp'] || state.keys['ArrowDown'] || state.keys['KeyW'] || state.keys['KeyS'];
     const isManualX = state.keys['ArrowLeft'] || state.keys['ArrowRight'] || state.keys['KeyA'] || state.keys['KeyD'];
+    const manual = touchOn || isManualY || isManualX;
+    if (manual) state.manualUntil = state.timer + 45;
 
-    if (!isManualY) {
-        const diffY = targetY - (p.y + p.h/2);
-        p.vy += (diffY > 0 ? 0.45 : -0.45) * frameScale;
+    if (touchOn) {
+        // Drag-to-steer: critically-damped chase of the finger target.
+        const tx = clamp(touch.tx, 20, CONFIG.width - p.w - 20);
+        const ty = clamp(touch.ty, 20, CONFIG.height - p.h - 20);
+        const desX = clamp((tx - p.x) * 0.2, -12, 12);
+        const desY = clamp((ty - p.y) * 0.2, -12, 12);
+        p.vx += clamp((desX - p.vx) * 0.6, -1.6, 1.6) * frameScale;
+        p.vy += clamp((desY - p.vy) * 0.6, -1.6, 1.6) * frameScale;
+    } else {
+        if (!isManualY) {
+            const desY = clamp((targetY - cy) * 0.14, -6.5, 6.5);
+            p.vy += clamp((desY - p.vy) * 0.5, -0.9, 0.9) * frameScale;
+        }
+        if (!isManualX && state.intro >= CONFIG.introFrames) {
+            const desX = clamp((180 - p.x) * 0.1, -3, 3);
+            p.vx += clamp((desX - p.vx) * 0.4, -0.5, 0.5) * frameScale;
+        }
     }
 
-    if (!isManualX) {
-        const targetX = 180;
-        const diffX = targetX - p.x;
-        if (Math.abs(diffX) > 10) p.vx += (diffX > 0 ? 0.2 : -0.2) * frameScale;
+    // Ballistic bomb timing: solve when a bomb released now lands on a
+    // ground target (bombs leave with vy -0.8 and fall under gravity; their
+    // screen-space vx is a constant +10, targets drift left with the scroll).
+    // Fuel cells take priority when the tank is low.
+    const bx0 = p.x + 25, by0 = p.y + p.h;
+    const wantFuel = state.fuel < 60;
+    let best = null, bestPri = -1;
+    for (let i = 0; i < state.enemies.length; i++) {
+        const e = state.enemies[i];
+        if (e.dead || !GROUND_TYPES[e.type] || e.x < bx0) continue;
+        const drop = e.y + e.h * 0.5 - by0;
+        if (drop < 10 || e.x > bx0 + 460) continue;
+        const t = (0.8 + Math.sqrt(0.64 + 0.76 * drop)) / 0.38;
+        const closing = 10 - (e.vx || 0) + speed;
+        const gapNow = e.x + e.w / 2 - bx0;
+        const err = gapNow - closing * t;
+        if (Math.abs(err) < 26) {
+            const pri = (wantFuel && e.type === 'fuel') ? 2 : (e.type === 'samTower' ? 1.5 : 1);
+            if (pri > bestPri) { best = e; bestPri = pri; }
+        }
     }
+    if (best) playerBomb();
+}
 
-    const groundEnemy = state.enemies.find(e =>
-        !e.dead && (e.type === 'base' || e.type === 'fuel' || e.type === 'tank' || e.type === 'samTower') &&
-        e.x > p.x + 180 && e.x < p.x + 320
-    );
-    if (groundEnemy) playerBomb();
+function pickEnemyType() {
+    const w = mixFor(state.sector);
+    let total = 0;
+    for (let i = 0; i < w.length; i++) total += w[i];
+    let r = Math.random() * total;
+    for (let i = 0; i < w.length; i++) {
+        r -= w[i];
+        if (r < 0) return ENEMY_TYPES[i];
+    }
+    return 'base';
 }
 
 function spawnEnemies() {
-    const spawnRate = Math.floor(38 / state.difficulty);
-    // Fractional timer under variable frame rate: accumulate frame-units
-    // and fire whenever the accumulator crosses the spawn interval, instead
-    // of a modulo check that a fractional timer would rarely land on exactly.
-    state.spawnAccumulator += frameScale;
-    if (state.spawnAccumulator >= spawnRate) {
-        state.spawnAccumulator -= spawnRate;
-        const lastT = state.terrain[state.terrain.length - 1];
-        const rand = Math.random();
-        const margin = 20;
+    // Distance-based cadence: enemy density per screen stays similar as the
+    // scroll speeds up, and only tightens slowly with each sector.
+    const speed = CONFIG.scrollSpeed * state.difficulty;
+    state.spawnDist -= speed * frameScale;
+    state.sinceFuel += speed * frameScale;
+    if (state.spawnDist > 0 || state.enemies.length > 16) return;
+    state.spawnDist += Math.max(105, 168 - (state.sector - 1) * 5) * (0.85 + Math.random() * 0.3);
 
-        if (rand < 0.12) {
-            state.enemies.push({ type: 'base', x: CONFIG.width, y: lastT.floor - 28, w: 28, h: 28 });
-        } else if (rand < 0.32) {
-            state.enemies.push({ type: 'fuel', x: CONFIG.width, y: lastT.floor - 38, w: 24, h: 38 });
-        } else if (rand < 0.45) {
-            state.enemies.push({ type: 'tank', x: CONFIG.width, y: lastT.floor - 20, w: 32, h: 18, vx: -1.5 });
-        } else if (rand < 0.60) {
-            state.enemies.push({ type: 'samTower', x: CONFIG.width, y: lastT.floor - 35, w: 20, h: 35, launched: false });
-        } else if (rand < 0.78) {
-            const uh = 20;
-            const uMin = lastT.ceiling + margin;
-            const uMax = lastT.floor - uh - margin;
-            let uy = lastT.ceiling + 80 + Math.random() * 120;
-            uy = Math.max(uMin, Math.min(uMax, uy));
-            state.enemies.push({ type: 'ufo', x: CONFIG.width, y: uy, baseY: uy, w: 38, h: uh, vx: -5, bobPhase: Math.random() * Math.PI * 2 });
-        } else if (rand < 0.90) {
-            const fh = 18;
-            const fMin = lastT.ceiling + margin;
-            const fMax = lastT.floor - fh - margin;
-            let fy = state.player.y + (Math.random() - 0.5) * 150;
-            fy = Math.max(fMin, Math.min(fMax, fy));
-            state.enemies.push({ type: 'fighter', x: CONFIG.width, y: fy, w: 35, h: fh, vx: -10 });
-        }
+    const sx = CONFIG.width + 20;
+    const margin = 20;
+    let type = pickEnemyType();
+    // Pity spawn so a long fuel drought can't strand the ship.
+    if (state.sinceFuel > 2400 && state.fuel < 70) type = 'fuel';
+    if (type === 'fuel') state.sinceFuel = 0;
+
+    const cl = ceilAt(sx), fl = floorAt(sx);
+    if (type === 'base') {
+        state.enemies.push({ type, x: sx, y: fl - 28, w: 28, h: 28 });
+    } else if (type === 'fuel') {
+        state.enemies.push({ type, x: sx, y: fl - 38, w: 24, h: 38 });
+    } else if (type === 'tank') {
+        state.enemies.push({ type, x: sx, y: fl - 20, w: 32, h: 18, vx: -1.5 });
+    } else if (type === 'samTower') {
+        state.enemies.push({ type, x: sx, y: fl - 35, w: 20, h: 35, launched: false });
+    } else if (type === 'ufo') {
+        const uh = 20;
+        const uMin = cl + margin + 36;
+        const uMax = fl - uh - margin - 36;
+        let uy = cl + 80 + Math.random() * 120;
+        uy = Math.max(uMin, Math.min(Math.max(uMin, uMax), uy));
+        state.enemies.push({ type, x: sx, y: uy, baseY: uy, w: 38, h: uh, vx: -5, bobPhase: Math.random() * Math.PI * 2 });
+    } else {
+        const fh = 18;
+        const fMin = cl + margin;
+        const fMax = fl - fh - margin;
+        let fy = state.player.y + (Math.random() - 0.5) * 150;
+        fy = Math.max(fMin, Math.min(Math.max(fMin, fMax), fy));
+        state.enemies.push({ type, x: sx, y: fy, w: 35, h: fh, vx: -10 });
     }
 }
 
@@ -666,6 +1394,19 @@ function checkCollision(r1x, r1y, r1w, r1h, r2x, r2y, r2w, r2h, scale = 1.0) {
     const x1 = r1x + (r1w - w1) / 2;
     const y1 = r1y + (r1h - h1) / 2;
     return x1 < r2x + r2w && x1 + w1 > r2x && y1 < r2y + r2h && y1 + h1 > r2y;
+}
+
+function advanceSector() {
+    state.sector++;
+    const th = THEMES[(state.sector - 1) % THEMES.length];
+    state.banner = 170;
+    state.bannerSub = th.name;
+    const bonus = 500 * (state.sector - 1);
+    state.score += bonus;
+    state.fuel = Math.min(CONFIG.fuelMax, state.fuel + 15);
+    state.fuelFlash = 30;
+    addPopup(state.player.x + 20, state.player.y - 30, 'SECTOR BONUS +' + bonus, NEON.yellow, true);
+    AudioEngine.sector();
 }
 
 function update() {
@@ -679,25 +1420,88 @@ function update() {
         s.x -= s.speed * ambientSpeed * 0.2 * frameScale;
         if (s.x < 0) s.x = CONFIG.width;
     });
-    state.particles.forEach(pt => {
+    for (let i = 0; i < state.particles.length; i++) {
+        const pt = state.particles[i];
+        const dr = Math.pow(pt.drag, frameScale);
+        pt.vx *= dr;
+        pt.vy = pt.vy * dr + pt.grav * frameScale;
         pt.x += pt.vx * frameScale;
         pt.y += pt.vy * frameScale;
-        pt.life -= 0.03 * frameScale;
-    });
-    state.particles = state.particles.filter(pt => pt.life > 0);
+        pt.life -= pt.decay * frameScale;
+    }
+    compact(state.particles, pt => pt.life > 0);
+    for (let i = 0; i < state.popups.length; i++) {
+        const pp = state.popups[i];
+        pp.y -= 0.7 * frameScale;
+        pp.life -= 0.016 * frameScale;
+    }
+    compact(state.popups, pp => pp.life > 0);
+    for (let i = 0; i < state.rings.length; i++) {
+        const r = state.rings[i];
+        r.r += (r.max - r.r) * 0.16 * frameScale + 0.4 * frameScale;
+        r.life -= 0.045 * frameScale;
+    }
+    compact(state.rings, r => r.life > 0);
+    state.shake *= Math.pow(0.9, frameScale);
+    if (state.shake < 0.05) state.shake = 0;
+    state.flash = Math.max(0, state.flash - 0.035 * frameScale);
+    if (state.fuelFlash > 0) state.fuelFlash -= realScale;
+    if (state.banner > 0) state.banner -= realScale;
+    if (state.timeScale < 1) state.timeScale = Math.min(1, state.timeScale + 0.012 * realScale);
 
-    if (state.isGameOver) return;
+    // Terrain theme colour eases toward the current sector's palette.
+    const tt = THEMES[(state.sector - 1) % THEMES.length].rgb, th = state.theme;
+    const k = 1 - Math.pow(0.97, frameScale);
+    th.r += (tt[0] - th.r) * k; th.g += (tt[1] - th.g) * k; th.b += (tt[2] - th.b) * k;
 
-    state.difficulty += CONFIG.difficultyInc * frameScale;
+    // Controls hint fades on its own after a while.
+    if (state.hintTime < 9999) {
+        state.hintTime += realScale;
+        if (state.hintTime > 560) { hintEl.classList.add('hidden'); state.hintTime = 9999; }
+    }
+
+    if (state.isGameOver) {
+        state.deadTime += realScale;
+        if (!state.overShown && state.deadTime > 36) {
+            state.overShown = true;
+            gameOverEl.style.display = 'flex';
+        }
+        // Frame-timed auto-restart: no timers to leak or double up.
+        state.restartTime -= realScale / 60;
+        const secs = Math.max(0, Math.ceil(state.restartTime));
+        if (restartTimerEl.textContent !== String(secs)) restartTimerEl.textContent = secs;
+        if (state.restartTime <= 0) resetGame();
+        return;
+    }
+
+    // Difficulty is a pure function of distance (soft ramp to x2), which
+    // also drives the sector counter.
+    state.difficulty = 1 + Math.min(1, state.distance / CONFIG.difficultyDist);
+    const sector = Math.floor(state.distance / CONFIG.sectorLength) + 1;
+    while (state.sector < sector) advanceSector();
+
+    const speed = CONFIG.scrollSpeed * state.difficulty;
+    state.distance += speed * frameScale;
     state.fuel -= CONFIG.fuelDepletion * frameScale;
     // Small continuous distance/survival trickle so the score always climbs
     // during an unattended attract run, even between kills.
-    state.score += 1.2 * frameScale;
-
-    playerShoot();
-    if (state.keys['Space']) playerBomb();
+    state.score += speed * 0.285 * frameScale;
 
     const p = state.player;
+
+    // Fly-in "get ready" moment: the ship slides in from the left while
+    // shielded. Everything (AI, spawns, fuel) is already live.
+    if (state.intro < CONFIG.introFrames) {
+        state.intro += frameScale;
+        const u = Math.min(1, state.intro / CONFIG.introFrames);
+        p.x = -70 + (150 + 70) * (1 - Math.pow(1 - u, 3));
+        p.vx = 0;
+    }
+    if (state.invuln > 0) state.invuln -= frameScale;
+
+    playerShoot();
+    if (state.keys['Space'] || touch.bombHeld) playerBomb();
+
     if (state.keys['ArrowLeft'] || state.keys['KeyA']) p.vx -= 0.8 * frameScale;
     if (state.keys['ArrowRight'] || state.keys['KeyD']) p.vx += 0.8 * frameScale;
     if (state.keys['ArrowUp'] || state.keys['KeyW']) p.vy -= 0.8 * frameScale;
@@ -707,20 +1511,27 @@ function update() {
 
     p.vx *= Math.pow(0.88, frameScale);
     p.vy *= Math.pow(0.88, frameScale);
-    p.x += p.vx * frameScale;
+    if (state.intro >= CONFIG.introFrames) p.x += p.vx * frameScale;
     p.y += p.vy * frameScale;
 
-    if (p.x < 20) p.x = 20;
+    if (p.x < 20 && state.intro >= CONFIG.introFrames) p.x = 20;
     if (p.x > CONFIG.width - p.w - 20) p.x = CONFIG.width - p.w - 20;
     if (p.y < 20) p.y = 20;
     if (p.y > CONFIG.height - p.h - 20) p.y = CONFIG.height - p.h - 20;
 
-    const speed = ambientSpeed;
+    // Engine trail.
+    state.trailAcc += frameScale;
+    if (state.trailAcc >= 1.5) {
+        state.trailAcc = 0;
+        spawnSpark(p.x - 10, p.y + 8 + Math.random() * 4, -speed * 0.6 - Math.random() * 2, (Math.random() - 0.5) * 0.8,
+            Math.random() < 0.5 ? NEON.pink : NEON.yellow, 2 + Math.random() * 2, 0.07);
+    }
 
     for (let t of state.terrain) t.x -= speed * frameScale;
-    if (state.terrain[0].x < -20) {
+    while (state.terrain[0].x < -20) {
         state.terrain.shift();
-        state.terrain.push(generateTerrainPoint(state.terrain[state.terrain.length - 1].x + 15));
+        const last = state.terrain[state.terrain.length - 1];
+        state.terrain.push(generateTerrainPoint(last.x + 15, state.distance + last.x + 15));
     }
 
     // Sample terrain collision at multiple points across the ship's width
@@ -728,127 +1539,220 @@ function update() {
     // floor or dipping ceiling can't visibly clip through the front of a
     // 48px-wide ship before it registers as a hit.
     const terrainMargin = 6;
-    const sampleXs = [p.x, p.x + p.w / 2, p.x + p.w];
-    let hitTerrain = false;
-    for (const sx of sampleXs) {
-        const t = terrainAt(sx);
-        if (p.y + terrainMargin < t.ceiling || p.y + p.h - terrainMargin > t.floor) {
-            hitTerrain = true;
-            break;
+    const safe = state.invuln > 0;
+    if (!safe) {
+        let hitTerrain = false;
+        for (let s = 0; s < 3; s++) {
+            const sx = p.x + p.w * 0.5 * s;
+            if (p.y + terrainMargin < ceilAt(sx) || p.y + p.h - terrainMargin > floorAt(sx)) {
+                hitTerrain = true;
+                break;
+            }
+        }
+        if (hitTerrain) endGame("Hull Collision Detected");
+    }
+    if (state.fuel <= 0) { state.fuel = 0; endGame("Energy Depleted"); }
+    if (state.isGameOver) return;
+
+    // Low-fuel alarm: blinking HUD (see updateUI), on-canvas warning and a
+    // beep (when audio is on) that speeds up as the tank empties.
+    if (state.fuel < 30) {
+        state.lowFuelTimer -= realScale;
+        if (state.lowFuelTimer <= 0) {
+            state.lowFuelTimer = state.fuel < 15 ? 24 : 42;
+            AudioEngine.warn();
+        }
+    } else {
+        state.lowFuelTimer = 0;
+    }
+
+    for (let i = 0; i < state.bullets.length; i++) {
+        const b = state.bullets[i];
+        b.x += b.vx * frameScale;
+        if (b.x > CONFIG.width || b.y < ceilAt(b.x) || b.y > floorAt(b.x)) {
+            b.dead = true;
+            if (b.x < CONFIG.width) spawnSpark(b.x, b.y, -1 - Math.random() * 2, (Math.random() - 0.5) * 3, NEON.blue, 2, 0.1);
         }
     }
-    if (hitTerrain) endGame("Hull Collision Detected");
-    if (state.fuel <= 0) endGame("Energy Depleted");
 
-    state.bullets.forEach(b => {
-        b.x += b.vx * frameScale;
-        if (b.x > CONFIG.width) b.dead = true;
-    });
-
-    state.bombs.forEach(b => {
-        if (b.dead) return;
+    for (let i = 0; i < state.bombs.length; i++) {
+        const b = state.bombs[i];
+        if (b.dead) continue;
         b.x += (b.vx - speed) * frameScale;
         b.vy += CONFIG.gravity * frameScale;
         b.y += b.vy * frameScale;
-        const bt = terrainAt(b.x);
-        if (bt && b.y > bt.floor) {
-            createExplosion(b.x, b.y, NEON.pink, 6);
-            b.dead = true;
+        if (b.y > floorAt(b.x)) detonateBomb(b);
+        else if (b.x > CONFIG.width + 40 || b.y > CONFIG.height + 40) b.dead = true;
+    }
+
+    for (let i = 0; i < state.samMissiles.length; i++) {
+        const m = state.samMissiles[i];
+        if (m.dead) continue;
+        m.age += frameScale;
+        // Pure-pursuit homing with a limited turn rate: it can be out-turned
+        // and, unlike a wall, it can be shot down.
+        // Once it has overshot the ship its motor cuts out and the scroll
+        // carries it away - nothing chases the tail where the gun can't reach.
+        if (m.x < p.x - 10 && m.age > 25) m.lost = true;
+        let v = Math.min(7, 4 + m.age * 0.014);
+        if (m.lost) {
+            m.v = (m.v === undefined ? v : m.v) * Math.pow(0.95, frameScale);
+            v = m.v;
+        } else {
+            const want = Math.atan2(p.y + p.h / 2 - m.y, p.x + p.w / 2 - m.x);
+            let da = want - m.heading;
+            while (da > Math.PI) da -= Math.PI * 2;
+            while (da < -Math.PI) da += Math.PI * 2;
+            const turn = 0.04 * frameScale;
+            m.heading += clamp(da, -turn, turn);
         }
-    });
-
-    state.samMissiles.forEach(m => {
-        m.y += m.vy * frameScale;
-        m.x -= speed * frameScale;
-        const yDiff = p.y - m.y;
-        const xDiff = p.x - m.x;
-        m.vy += (yDiff > 0 ? 0.32 : -0.32) * frameScale;
-        m.vx = (m.vx || 0) + (xDiff > 0 ? 0.05 : -0.05) * frameScale;
-        m.vy *= Math.pow(0.98, frameScale);
-        m.angle = Math.atan2(m.vy, -speed + (m.vx || 0));
-
-        if (checkCollision(p.x, p.y, p.w, p.h, m.x, m.y, 8, 20, CONFIG.hitboxScale)) {
+        const mvx = Math.cos(m.heading) * v - speed;
+        const mvy = Math.sin(m.heading) * v;
+        m.x += mvx * frameScale;
+        m.y += mvy * frameScale;
+        m.angle = Math.atan2(mvy, mvx);
+        m.puff += frameScale;
+        if (m.puff > 2.5) {
+            m.puff = 0;
+            spawnSpark(m.x, m.y + 4, -mvx * 0.2 + (Math.random() - 0.5), -mvy * 0.2 + (Math.random() - 0.5), 'rgba(220,220,255,1)', 2.5, 0.06);
+        }
+        if (state.invuln <= 0 && checkCollision(p.x, p.y, p.w, p.h, m.x - 5, m.y - 9, 10, 18, CONFIG.hitboxScale)) {
+            m.dead = true;
             endGame("Kinetically Intercepted");
+        } else if (m.y < ceilAt(m.x) || m.y > floorAt(m.x)) {
+            m.dead = true;
+            createExplosion(m.x, m.y, NEON.pink, 8, 0.8);
+        } else if (m.age > 300) {
+            m.dead = true;
+            createExplosion(m.x, m.y, '#ffffff', 8, 0.7);
+        } else if (m.x < -100 || m.x > CONFIG.width + 200) {
+            m.dead = true;
         }
-        if (m.y < -50 || m.x < -100) m.dead = true;
-    });
+    }
+    if (state.isGameOver) return;
 
     spawnEnemies();
-    state.enemies.forEach(e => {
-        if (e.dead) return;
+    for (let i = 0; i < state.enemies.length; i++) {
+        const e = state.enemies[i];
+        if (e.dead) continue;
         e.x += (e.vx || 0) * frameScale;
         e.x -= speed * frameScale;
-        if (e.type === 'tank') {
-            const et = terrainAt(e.x);
-            if (et) e.y = et.floor - e.h;
+        if (GROUND_TYPES[e.type]) {
+            // Ground units ride the terrain surface (uses the higher of the
+            // two support points so they never sink into a slope).
+            e.y = Math.min(floorAt(e.x), floorAt(e.x + e.w)) - e.h;
         }
-        if (e.type === 'samTower' && !e.launched && e.x < p.x + 400) {
+        if (e.type === 'samTower' && !e.launched && e.x < p.x + 520 && e.x < CONFIG.width - 30) {
             e.launched = true;
-            state.samMissiles.push({ x: e.x + 5, y: e.y, vy: -10, angle: -Math.PI / 2 });
+            state.samMissiles.push({ x: e.x + 8, y: e.y, heading: -Math.PI / 2, angle: -Math.PI / 2, age: 0, puff: 0 });
             AudioEngine.launch();
         }
-        if (e.type === 'ufo') e.y = e.baseY + Math.sin(state.timer * 0.1 + (e.bobPhase || 0)) * 35;
-        if (checkCollision(p.x, p.y, p.w, p.h, e.x, e.y, e.w, e.h, CONFIG.hitboxScale)) {
-            endGame("Combat Collision");
+        if (e.type === 'ufo') {
+            e.y = e.baseY + Math.sin(state.timer * 0.1 + (e.bobPhase || 0)) * 35;
         }
-    });
+        if (e.type === 'ufo' || e.type === 'fighter') {
+            // Air units follow the corridor: never embedded in rock.
+            e.y = clamp(e.y, ceilAt(e.x + e.w / 2) + 8, floorAt(e.x + e.w / 2) - e.h - 8);
+        }
+        if (state.invuln <= 0 && checkCollision(p.x, p.y, p.w, p.h, e.x, e.y, e.w, e.h, CONFIG.hitboxScale)) {
+            // Touching an NRG cell just scoops up the fuel; anything else is lethal.
+            if (e.type === 'fuel') destroyEnemy(e);
+            else endGame("Combat Collision");
+        }
+    }
+    if (state.isGameOver) return;
 
     // Check projectile-vs-enemy hits as their own passes (rather than nested
     // inside the enemy loop by index) so a bullet and a bomb landing on the
     // same enemy in one frame can't double-award score or splice a
-    // different, innocent enemy out from under a stale index.
-    state.bullets.forEach(b => {
-        if (b.dead) return;
-        for (const e of state.enemies) {
+    // different, innocent enemy out from under a stale index. Bullets are
+    // swept back over the ground they covered this frame so fast targets
+    // (or a long frame) can never tunnel through them.
+    for (let i = 0; i < state.bullets.length; i++) {
+        const b = state.bullets[i];
+        if (b.dead) continue;
+        const sweep = b.vx * frameScale;
+        for (let j = 0; j < state.enemies.length; j++) {
+            const e = state.enemies[j];
             if (e.dead) continue;
-            if (checkCollision(e.x, e.y, e.w, e.h, b.x, b.y, 14, 4, 1.2)) {
+            if (checkCollision(e.x, e.y, e.w, e.h, b.x - sweep, b.y - 0.5, 17 + sweep, 5)) {
                 destroyEnemy(e);
                 b.dead = true;
                 break;
             }
         }
-    });
-    state.bombs.forEach(b => {
-        if (b.dead) return;
-        for (const e of state.enemies) {
-            if (e.dead) continue;
-            if (checkCollision(e.x, e.y, e.w, e.h, b.x, b.y, 10, 10, 1.2)) {
-                destroyEnemy(e);
-                b.dead = true;
+        if (b.dead) continue;
+        for (let j = 0; j < state.samMissiles.length; j++) {
+            const m = state.samMissiles[j];
+            if (m.dead) continue;
+            if (checkCollision(m.x - 6, m.y - 11, 12, 22, b.x - sweep, b.y - 0.5, 17 + sweep, 5)) {
+                m.dead = true; b.dead = true;
+                state.score += 75;
+                addPopup(m.x, m.y - 10, '+75', '#ffffff', false);
+                createExplosion(m.x, m.y, '#ffffff', 10, 0.9);
+                addShake(1.5);
                 break;
             }
         }
-    });
+    }
+    for (let i = 0; i < state.bombs.length; i++) {
+        const b = state.bombs[i];
+        if (b.dead) continue;
+        for (let j = 0; j < state.enemies.length; j++) {
+            const e = state.enemies[j];
+            if (e.dead) continue;
+            if (checkCollision(e.x, e.y, e.w, e.h, b.x - 6, b.y - 6, 12, 12)) {
+                destroyEnemy(e);
+                detonateBomb(b);
+                break;
+            }
+        }
+    }
 
     // Mark-and-filter removal: flags are set above, actual array pruning
     // happens once here so no loop above ever skips an element by splicing
     // mid-iteration.
-    state.bullets = state.bullets.filter(b => !b.dead);
-    state.bombs = state.bombs.filter(b => !b.dead);
-    state.samMissiles = state.samMissiles.filter(m => !m.dead);
-    state.enemies = state.enemies.filter(e => !e.dead && e.x > -100);
+    compact(state.bullets, b => !b.dead);
+    compact(state.bombs, b => !b.dead);
+    compact(state.samMissiles, m => !m.dead);
+    compact(state.enemies, e => !e.dead && e.x > -100);
 
     updateUI();
 }
 
-// Terrain lookup shared by collision sampling, bomb impacts and tank
-// ground-following - the terrain array is sorted ascending by x.
-function terrainAt(x) {
-    return state.terrain.find(t => t.x >= x) || state.terrain[state.terrain.length - 1];
+// A bomb blast (terrain impact or direct hit) also takes out any ground
+// unit within its radius, which makes bombing forgiving and chunky.
+function detonateBomb(b) {
+    if (b.dead) return;
+    b.dead = true;
+    createExplosion(b.x, b.y, NEON.yellow, 12, 1.1);
+    addShake(1.8);
+    for (let i = 0; i < state.enemies.length; i++) {
+        const e = state.enemies[i];
+        if (e.dead || !GROUND_TYPES[e.type]) continue;
+        if (Math.hypot(e.x + e.w / 2 - b.x, e.y + e.h / 2 - b.y) < 46) destroyEnemy(e);
+    }
 }
 
 function destroyEnemy(e) {
     if (e.dead) return; // guard against being hit by two projectiles in the same frame
     e.dead = true;
+    const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
     if (e.type === 'fuel') {
-        state.fuel = Math.min(CONFIG.fuelMax, state.fuel + 45);
-        state.score += 150;
+        state.fuel = Math.min(CONFIG.fuelMax, state.fuel + CONFIG.fuelPickup);
+        state.score += ENEMY_VALUE.fuel;
+        state.fuelFlash = 30;
         AudioEngine.collect();
-        createExplosion(e.x + e.w/2, e.y + e.h/2, NEON.green, 12);
+        createExplosion(cx, cy, NEON.green, 14, 0.9);
+        addPopup(cx, cy - 12, '+' + CONFIG.fuelPickup + ' FUEL', NEON.green, true);
+        addFlash(0.12, NEON.green);
     } else {
-        const value = {samTower: 500, ufo: 300, tank: 350, fighter: 400, base: 200}[e.type];
+        const value = ENEMY_VALUE[e.type];
         state.score += value;
-        createExplosion(e.x + e.w/2, e.y + e.h/2, NEON.pink);
+        createExplosion(cx, cy, NEON.pink, 18, 1.2);
+        addPopup(cx, cy - 10, '+' + value, '#ffffff', false);
+        addShake(e.type === 'samTower' || e.type === 'tank' ? 3 : 2);
+        addFlash(0.05, '#ffffff');
     }
 }
 
@@ -856,147 +1760,327 @@ function formatScore(n) {
     return String(Math.max(0, Math.floor(n))).padStart(7, '0');
 }
 
+// DOM writes are cached so the HUD only touches the page when a displayed
+// value actually changes (not 60 times a second).
+const hudCache = { score: '', best: '', sector: '', fuel: -1, low: false, gain: false, manual: null };
+
+function setText(el, key, value) {
+    if (hudCache[key] !== value) { hudCache[key] = value; el.textContent = value; }
+}
+
 function updateUI() {
-    scoreEl.innerText = formatScore(state.score);
-    bestEl.innerText = 'BEST ' + formatScore(state.best);
-    fuelEl.style.width = (state.fuel / CONFIG.fuelMax * 100) + '%';
-    fuelTextEl.innerText = Math.max(0, Math.floor(state.fuel)) + '%';
-    if (state.fuel < 30) {
-        fuelEl.style.backgroundColor = NEON.pink;
-        fuelTextEl.style.color = NEON.pink;
-    } else {
-        fuelEl.style.backgroundColor = NEON.green;
-        fuelTextEl.style.color = NEON.green;
+    setText(scoreEl, 'score', formatScore(state.score));
+    setText(bestEl, 'best', 'BEST ' + formatScore(Math.max(state.best, state.score)));
+    setText(sectorEl, 'sector', 'SECTOR ' + state.sector);
+    const fuel = Math.max(0, Math.floor(state.fuel));
+    if (hudCache.fuel !== fuel) {
+        hudCache.fuel = fuel;
+        fuelEl.style.width = (state.fuel / CONFIG.fuelMax * 100) + '%';
+        fuelTextEl.textContent = fuel + '%';
+        fuelBarEl.setAttribute('aria-valuenow', fuel);
+        const low = state.fuel < 30;
+        fuelEl.style.backgroundColor = low ? NEON.pink : NEON.green;
+        fuelTextEl.style.color = low ? NEON.pink : NEON.green;
+    }
+    const low = state.fuel < 30 && !state.isGameOver;
+    if (hudCache.low !== low) { hudCache.low = low; fuelBoxEl.classList.toggle('low', low); }
+    const gain = state.fuelFlash > 0;
+    if (hudCache.gain !== gain) { hudCache.gain = gain; fuelBoxEl.classList.toggle('gain', gain); }
+    const manual = state.timer < state.manualUntil;
+    if (hudCache.manual !== manual) {
+        hudCache.manual = manual;
+        aiIndicatorEl.classList.toggle('manual', manual);
+        aiTextEl.textContent = manual ? 'Manual Override' : 'Auto-Pilot Active';
     }
 }
 
 function endGame(reason) {
     if (state.isGameOver) return;
     state.isGameOver = true;
-    deathReasonEl.innerText = reason;
+    state.deadTime = 0;
+    state.overShown = false;
+    deathReasonEl.textContent = reason;
 
-    if (state.score > state.best) {
+    const newBest = state.score > state.best;
+    if (newBest) {
         state.best = state.score;
         saveBest(Math.floor(state.best));
     }
-    finalScoreEl.innerText = `Score: ${formatScore(state.score)}  |  Best: ${formatScore(state.best)}`;
+    finalScoreEl.textContent = `Score: ${formatScore(state.score)}  |  Best: ${formatScore(state.best)}  |  Sector ${state.sector}`;
+    newBestEl.style.display = newBest && state.score > 0 ? 'block' : 'none';
 
-    gameOverEl.style.display = 'flex';
-    createExplosion(state.player.x, state.player.y, '#f00', 30);
-    state.restartCountdown = 7;
-    restartTimerEl.innerText = state.restartCountdown;
-
-    if (state.restartInterval) clearInterval(state.restartInterval);
-
-    state.restartInterval = setInterval(() => {
-        state.restartCountdown--;
-        restartTimerEl.innerText = state.restartCountdown;
-        if (state.restartCountdown <= 0) {
-            resetGame();
-        }
-    }, 1000);
+    // The overlay itself appears a beat later (see update) so the explosion
+    // gets the stage first.
+    createExplosion(state.player.x + 24, state.player.y + 10, '#ff3030', 60, 3);
+    createExplosion(state.player.x + 24, state.player.y + 10, NEON.blue, 24, 2);
+    addShake(14);
+    addFlash(0.55, '#ffffff');
+    if (!reduceMotion) state.timeScale = 0.3;
+    state.restartTime = CONFIG.restartSeconds;
+    restartTimerEl.textContent = CONFIG.restartSeconds;
+    releaseInput();
+    state.fuelFlash = 0;
+    updateUI();
 }
 
 function resetGame() {
-    if (state.restartInterval) {
-        clearInterval(state.restartInterval);
-        state.restartInterval = null;
-    }
     state.score = 0;
     state.fuel = CONFIG.fuelMax;
     state.isGameOver = false;
+    state.overShown = false;
     state.difficulty = 1;
     state.timer = 0;
-    state.spawnAccumulator = 0;
-    state.enemies = [];
-    state.bullets = [];
-    state.bombs = [];
-    state.samMissiles = [];
-    state.particles = [];
-    state.player.x = 150;
+    state.distance = 0;
+    state.sector = 1;
+    state.spawnDist = 260;
+    state.sinceFuel = 0;
+    state.timeScale = 1;
+    state.shake = 0;
+    state.flash = 0;
+    state.fuelFlash = 0;
+    state.lowFuelTimer = 0;
+    state.deadTime = 0;
+    state.restartTime = CONFIG.restartSeconds;
+    state.banner = 200;
+    state.bannerSub = 'Get ready - ' + THEMES[0].name;
+    state.intro = 0;
+    state.invuln = CONFIG.invulnFrames;
+    state.trailAcc = 0;
+    state.manualUntil = 0;
+    state.theme = { r: THEMES[0].rgb[0], g: THEMES[0].rgb[1], b: THEMES[0].rgb[2] };
+    for (let i = 0; i < state.seed.length; i++) state.seed[i] = Math.random() * Math.PI * 2;
+    state.enemies.length = 0;
+    state.bullets.length = 0;
+    state.bombs.length = 0;
+    state.samMissiles.length = 0;
+    state.particles.length = 0;
+    state.popups.length = 0;
+    state.rings.length = 0;
+    state.player.x = -70;
     state.player.y = 270;
     state.player.vx = 0;
     state.player.vy = 0;
     state.player.lastShot = -100;
     state.player.lastBomb = -100;
+    touch.id = null;
+    touch.bombHeld = false;
     gameOverEl.style.display = 'none';
     initTerrain();
     initStars();
+    AudioEngine.ready();
+    updateUI();
 }
 
 /**
  * RENDERER
  */
-function draw() {
-    const grad = ctx.createLinearGradient(0, 0, 0, CONFIG.height);
-    grad.addColorStop(0, '#020210'); grad.addColorStop(1, '#0a0a25');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+// Theme-derived terrain styles are rebuilt only when the rounded colour changes.
+const themeStyle = { key: '', line: '', glowA: '', glowB: '', ceil: '', floor: '', far: '' };
+function refreshThemeStyle() {
+    const r = Math.round(state.theme.r), g = Math.round(state.theme.g), b = Math.round(state.theme.b);
+    const key = r + ',' + g + ',' + b;
+    if (key === themeStyle.key) return;
+    themeStyle.key = key;
+    themeStyle.line = `rgb(${key})`;
+    themeStyle.glowA = `rgba(${key},0.10)`;
+    themeStyle.glowB = `rgba(${key},0.28)`;
+    themeStyle.ceil = `rgba(${Math.round(8 + r * 0.06)},${Math.round(14 + g * 0.06)},${Math.round(40 + b * 0.05)},0.86)`;
+    themeStyle.floor = `rgba(${Math.round(12 + r * 0.07)},${Math.round(8 + g * 0.05)},${Math.round(34 + b * 0.05)},0.86)`;
+    themeStyle.far = `rgba(${key},0.09)`;
+}
 
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = NEON.pink; ctx.beginPath(); ctx.arc(CONFIG.width * 0.7, CONFIG.height * 0.3, 200, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = NEON.blue; ctx.beginPath(); ctx.arc(CONFIG.width * 0.2, CONFIG.height * 0.8, 250, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1.0;
+function traceEdge(key) {
+    const t = state.terrain;
+    ctx.moveTo(t[0].x, t[0][key]);
+    for (let i = 1; i < t.length; i++) ctx.lineTo(t[i].x, t[i][key]);
+}
+
+function drawTerrain() {
+    const t = state.terrain;
+    const first = t[0].x - 20, last = t[t.length - 1].x + 20;
+
+    // Far parallax ridge.
+    ctx.fillStyle = themeStyle.far;
+    ctx.beginPath();
+    ctx.moveTo(-20, CONFIG.height);
+    const off = state.distance * 0.35;
+    for (let x = -20; x <= CONFIG.width + 40; x += 30) {
+        const w = x + off;
+        ctx.lineTo(x, 455 + Math.sin(w * 0.011 + state.seed[0]) * 38 + Math.sin(w * 0.027 + state.seed[2]) * 16);
+    }
+    ctx.lineTo(CONFIG.width + 40, CONFIG.height);
+    ctx.fill();
+
+    // Ceiling and floor: flat fill, then a cheap layered glow (wide faint
+    // strokes) instead of an expensive shadowBlur over the whole polygon.
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    traceEdge('ceiling');
+    ctx.lineTo(last, -20); ctx.lineTo(first, -20);
+    ctx.fillStyle = themeStyle.ceil; ctx.fill();
+    ctx.beginPath();
+    traceEdge('floor');
+    ctx.lineTo(last, CONFIG.height + 20); ctx.lineTo(first, CONFIG.height + 20);
+    ctx.fillStyle = themeStyle.floor; ctx.fill();
+
+    const widths = [12, 6, 2.5], styles = [themeStyle.glowA, themeStyle.glowB, themeStyle.line];
+    for (let i = 0; i < 3; i++) {
+        ctx.lineWidth = widths[i]; ctx.strokeStyle = styles[i];
+        ctx.beginPath(); traceEdge('ceiling'); ctx.stroke();
+        ctx.beginPath(); traceEdge('floor'); ctx.stroke();
+    }
+}
+
+function drawEnemy(e) {
+    ctx.shadowBlur = 8;
+    if (e.type === 'base') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = '#fff'; ctx.fillRect(e.x + 4, e.y + 4, 20, 8); }
+    else if (e.type === 'fuel') {
+        const pulse = 0.65 + 0.35 * Math.sin(state.timer * 0.15 + e.x * 0.01);
+        ctx.fillStyle = NEON.green; ctx.shadowColor = NEON.green; ctx.shadowBlur = 8 + pulse * 8;
+        ctx.fillRect(e.x, e.y, e.w, e.h);
+        ctx.fillStyle = '#000'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("NRG", e.x + 1, e.y + 24);
+    }
+    else if (e.type === 'tank') { ctx.fillStyle = '#555'; ctx.shadowColor = '#888'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = NEON.yellow; ctx.fillRect(e.x + 5, e.y - 6, 22, 10); ctx.fillRect(e.x - 8, e.y - 2, 12, 4); }
+    else if (e.type === 'samTower') { ctx.fillStyle = '#333'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.fillRect(e.x + 4, e.y + 2, 12, 6); }
+    else if (e.type === 'ufo') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.beginPath(); ctx.ellipse(e.x + e.w/2, e.y + e.h/2, e.w/2, e.h/2, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(e.x + e.w/2 - 5, e.y + 3, 10, 4); }
+    else if (e.type === 'fighter') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.beginPath(); ctx.moveTo(e.x, e.y + e.h / 2); ctx.lineTo(e.x + e.w, e.y); ctx.lineTo(e.x + e.w, e.y + e.h); ctx.fill(); }
+}
+
+function draw() {
+    ctx.setTransform(view.k, 0, 0, view.k, 0, 0);
+    ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+    if (view.bg && view.bg.width) ctx.drawImage(view.bg, 0, 0, CONFIG.width, CONFIG.height);
+    else { ctx.fillStyle = '#04041a'; ctx.fillRect(0, 0, CONFIG.width, CONFIG.height); }
 
     state.stars.forEach(s => { ctx.globalAlpha = s.opacity; ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
     ctx.globalAlpha = 1.0;
 
-    ctx.lineWidth = 3; ctx.strokeStyle = NEON.blue; ctx.shadowBlur = 10; ctx.shadowColor = NEON.blue;
-    ctx.beginPath();
-    ctx.moveTo(state.terrain[0].x, state.terrain[0].ceiling);
-    for (let t of state.terrain) ctx.lineTo(t.x, t.ceiling);
-    ctx.lineTo(CONFIG.width, 0); ctx.lineTo(0, 0);
-    ctx.fillStyle = 'rgba(10, 20, 50, 0.8)'; ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(state.terrain[0].x, state.terrain[0].floor);
-    for (let t of state.terrain) ctx.lineTo(t.x, t.floor);
-    ctx.lineTo(CONFIG.width, CONFIG.height); ctx.lineTo(0, CONFIG.height);
-    ctx.fillStyle = 'rgba(15, 10, 40, 0.8)'; ctx.fill(); ctx.stroke();
+    ctx.save();
+    if (state.shake > 0) ctx.translate((Math.random() - 0.5) * state.shake * 1.6, (Math.random() - 0.5) * state.shake * 1.6);
+
+    refreshThemeStyle();
+    drawTerrain();
+
+    state.enemies.forEach(drawEnemy);
     ctx.shadowBlur = 0;
 
-    state.enemies.forEach(e => {
-        ctx.shadowBlur = 8;
-        if (e.type === 'base') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = '#fff'; ctx.fillRect(e.x + 4, e.y + 4, 20, 8); }
-        else if (e.type === 'fuel') { ctx.fillStyle = NEON.green; ctx.shadowColor = NEON.green; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = '#000'; ctx.font = 'bold 12px sans-serif'; ctx.fillText("NRG", e.x + 1, e.y + 24); }
-        else if (e.type === 'tank') { ctx.fillStyle = '#555'; ctx.shadowColor = '#888'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = NEON.yellow; ctx.fillRect(e.x + 5, e.y - 6, 22, 10); ctx.fillRect(e.x - 8, e.y - 2, 12, 4); }
-        else if (e.type === 'samTower') { ctx.fillStyle = '#333'; ctx.fillRect(e.x, e.y, e.w, e.h); ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.fillRect(e.x + 4, e.y + 2, 12, 6); }
-        else if (e.type === 'ufo') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.beginPath(); ctx.ellipse(e.x + e.w/2, e.y + e.h/2, e.w/2, e.h/2, 0, 0, Math.PI * 2); ctx.fill(); }
-        else if (e.type === 'fighter') { ctx.fillStyle = NEON.pink; ctx.shadowColor = NEON.pink; ctx.beginPath(); ctx.moveTo(e.x + e.w, e.y + e.h / 2); ctx.lineTo(e.x, e.y); ctx.lineTo(e.x, e.y + e.h); ctx.fill(); }
-    });
-
     state.samMissiles.forEach(m => {
-        ctx.save(); ctx.translate(m.x + 4, m.y + 10); ctx.rotate(m.angle + Math.PI/2);
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.angle + Math.PI/2);
         ctx.shadowBlur = 10; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff'; ctx.fillRect(-4, -10, 8, 20);
         ctx.fillStyle = NEON.pink; ctx.fillRect(-4, 5, 8, 5); ctx.restore();
     });
 
     if (!state.isGameOver) {
         const p = state.player;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.shadowBlur = 15; ctx.shadowColor = NEON.blue;
+        const blink = state.invuln > 0 ? 0.55 + 0.35 * Math.sin(state.timer * 0.6) : 1;
+        ctx.save();
+        ctx.globalAlpha = blink;
+        ctx.translate(p.x + 22, p.y + 10);
+        ctx.rotate(clamp(p.vy * 0.035, -0.25, 0.25));
+        ctx.translate(-22, -10);
+        ctx.shadowBlur = 15; ctx.shadowColor = NEON.blue;
         ctx.fillStyle = NEON.blue; ctx.fillRect(0, 5, 45, 10); ctx.fillRect(10, 0, 15, 20); ctx.fillStyle = '#fff'; ctx.fillRect(28, 3, 12, 7);
-        ctx.fillStyle = state.timer % 4 < 2 ? NEON.pink : NEON.yellow; ctx.fillRect(-15, 6, 15, 8);
+        const flick = 10 + (state.timer % 4 < 2 ? 5 : 0);
+        ctx.fillStyle = state.timer % 4 < 2 ? NEON.pink : NEON.yellow; ctx.fillRect(-flick, 6, flick, 8);
         ctx.restore();
+        if (state.invuln > 0) {
+            ctx.globalAlpha = Math.min(1, state.invuln / 40) * 0.5;
+            ctx.strokeStyle = NEON.blue; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(p.x + 22, p.y + 10, 34 + Math.sin(state.timer * 0.3) * 2, 0, Math.PI * 2); ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
     }
 
-    ctx.shadowBlur = 10; ctx.fillStyle = '#fff';
-    state.bullets.forEach(b => { ctx.shadowColor = NEON.blue; ctx.fillRect(b.x, b.y, 16, 4); });
-    state.bombs.forEach(b => { ctx.shadowColor = NEON.yellow; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#666'; ctx.fillRect(b.x - 8, b.y - 4, 4, 8); });
-    state.particles.forEach(pt => { ctx.shadowBlur = 0; ctx.globalAlpha = pt.life; ctx.fillStyle = pt.color; ctx.fillRect(pt.x, pt.y, pt.size, pt.size); });
-    ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+    ctx.shadowBlur = 8; ctx.fillStyle = '#fff'; ctx.shadowColor = NEON.blue;
+    state.bullets.forEach(b => { ctx.fillRect(b.x, b.y, 16, 4); });
+    ctx.shadowColor = NEON.yellow;
+    state.bombs.forEach(b => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#666'; ctx.fillRect(b.x - 8, b.y - 4, 4, 8); });
+    ctx.shadowBlur = 0;
+
+    // Shockwave rings, then additive-blended particles for a hotter look.
+    ctx.lineWidth = 3;
+    state.rings.forEach(r => { ctx.globalAlpha = Math.max(0, r.life) * 0.7; ctx.strokeStyle = r.color; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke(); });
+    ctx.globalCompositeOperation = 'lighter';
+    state.particles.forEach(pt => { ctx.globalAlpha = Math.min(1, pt.life); ctx.fillStyle = pt.color; ctx.fillRect(pt.x, pt.y, pt.size, pt.size); });
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1.0;
+
+    // Score / pickup popups.
+    ctx.textAlign = 'center';
+    state.popups.forEach(pp => {
+        ctx.globalAlpha = Math.min(1, pp.life * 1.6);
+        ctx.font = pp.big ? 'bold 18px "Courier New", monospace' : 'bold 15px "Courier New", monospace';
+        ctx.fillStyle = '#000'; ctx.fillText(pp.text, pp.x + 1, pp.y + 1);
+        ctx.fillStyle = pp.color; ctx.fillText(pp.text, pp.x, pp.y);
+    });
+    ctx.globalAlpha = 1.0;
+    ctx.restore();
+
+    // Screen-space overlays (not shaken).
+    if (!state.isGameOver && state.fuel < 30) {
+        const a = 0.35 + 0.35 * Math.sin(state.timer * (state.fuel < 15 ? 0.5 : 0.3));
+        ctx.globalAlpha = Math.max(0, a) * 0.6;
+        ctx.strokeStyle = '#ff2050'; ctx.lineWidth = 8;
+        ctx.strokeRect(4, 4, CONFIG.width - 8, CONFIG.height - 8);
+        ctx.globalAlpha = 0.5 + Math.max(0, a);
+        ctx.font = 'bold 22px "Courier New", monospace'; ctx.fillStyle = NEON.pink;
+        ctx.fillText('LOW FUEL - FIND NRG CELLS', CONFIG.width / 2, 100);
+        ctx.globalAlpha = 1;
+    }
+    if (state.banner > 0 && !state.isGameOver) {
+        const life = state.banner;
+        const a = Math.min(1, life / 30, (200 - Math.min(200, life)) / 12 + 0.15);
+        ctx.globalAlpha = Math.max(0, Math.min(1, a));
+        ctx.font = '900 44px "Segoe UI", Tahoma, sans-serif'; ctx.fillStyle = NEON.blue;
+        ctx.shadowColor = NEON.blue; ctx.shadowBlur = 14;
+        ctx.fillText('SECTOR ' + state.sector, CONFIG.width / 2, 165);
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 15px "Segoe UI", Tahoma, sans-serif'; ctx.fillStyle = '#fff';
+        ctx.fillText(state.bannerSub.toUpperCase(), CONFIG.width / 2, 190);
+        ctx.globalAlpha = 1;
+    }
+    if (state.flash > 0) {
+        ctx.globalAlpha = state.flash;
+        ctx.fillStyle = state.flashColor;
+        ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+        ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = 'start';
+    ctx.shadowBlur = 0;
 }
 
 function loop(time) {
+    requestAnimationFrame(loop);
     if (!lastTime) lastTime = time;
     const dt = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
-    frameScale = dt * 60;
-
-    update();
-    draw();
-    requestAnimationFrame(loop);
+    const frames = dt * 60;
+    // Long frames are split into sub-steps of at most 1.5 frame-units so
+    // physics, collisions and spawns behave the same at 20fps as at 144fps.
+    const steps = Math.max(1, Math.ceil(frames / 1.5));
+    realScale = frames / steps;
+    try {
+        for (let i = 0; i < steps; i++) {
+            frameScale = realScale * state.timeScale;
+            update();
+        }
+        draw();
+        loopErrors = 0;
+    } catch (err) {
+        // Never let one bad frame kill an unattended attract loop.
+        if (loopErrors++ === 0) console.error(err);
+        if (loopErrors > 5) { loopErrors = 0; try { resetGame(); } catch (e2) {} }
+    }
 }
 
-initStars();
-initTerrain();
+// Re-fit on any size change (rotation, URL bar, window resize, zoom).
+window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', layout);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
+if (window.ResizeObserver) new ResizeObserver(layout).observe(containerEl);
+layout();
+
+resetGame();
 requestAnimationFrame(loop);
 </script>
 </body>
