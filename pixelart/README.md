@@ -3,7 +3,7 @@
 [rogue](../rogue)와 [sopraknight](../sopraknight)가 **함께 쓰는** 도트(픽셀아트) 캐릭터 에셋이다. 두 게임 모두 빌드 없는 단일 HTML이므로, 팩도 **의존성 없는 스크립트 한 장(`sprites.js`)** 으로 끝난다. 아직 두 게임에는 연결하지 않았다 — 이 폴더는 "다음 빌드에 끼워 넣을 디자인 에셋"이다.
 
 * 미리보기 갤러리: [`index.html`](index.html) (`file://`로 그대로 열린다. 전 스프라이트 애니메이션 1×/2×/4×, 배경 토글, 복원 시퀀스, rogue·sopraknight 인게임 목업, 사용 코드)
-* 한눈에 보는 PNG: [`sheets/preview-musicians.png`](sheets/preview-musicians.png), [`sheets/preview-undead.png`](sheets/preview-undead.png), [`sheets/preview-restore.png`](sheets/preview-restore.png), [`sheets/preview-musicians-bust.png`](sheets/preview-musicians-bust.png), [`sheets/preview-undead-bust.png`](sheets/preview-undead-bust.png)
+* 한눈에 보는 PNG: [`sheets/preview-musicians.png`](sheets/preview-musicians.png), [`sheets/preview-undead.png`](sheets/preview-undead.png), [`sheets/preview-restore.png`](sheets/preview-restore.png), [`sheets/preview-musicians-bust.png`](sheets/preview-musicians-bust.png), [`sheets/preview-undead-bust.png`](sheets/preview-undead-bust.png), 인게임 목업 스냅샷 [`sheets/preview-mock-rogue.png`](sheets/preview-mock-rogue.png) · [`sheets/preview-mock-sopraknight.png`](sheets/preview-mock-sopraknight.png)
 
 ## 파일 구성
 
