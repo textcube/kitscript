@@ -214,10 +214,13 @@ input.name { font: 800 34px ui-monospace, monospace; letter-spacing: 8px; text-a
   .chip { min-height: 24px; padding: 1px 6px; font-size: 11px; } .chip.obj { min-width: 130px; padding-bottom: 3px; }
   #bottom { flex-wrap: nowrap; gap: 8px; padding: 3px 6px; } .dcard { width: 44px; height: 42px; } .dcard canvas { width: 32px; height: 26px; top: 2px; } .dcard .cost { font-size: 10px; }
   .skl { width: 36px; height: 36px; } .skl span.t { font-size: 8px; } .lbtn { min-width: 24px; height: 24px; } .lanesel .lbl { display: none; }
-  .tbars { min-width: 70px; gap: 2px; } .tbars .bar { min-width: 56px; height: 6px; } #v-tstate { display: none; }
+  .tbars { min-width: 60px; gap: 3px; } .tbars .bar { min-width: 60px; height: 7px; } .tbars .tl { display: none; } #v-tstate { display: none; }
   #joy { width: 84px; height: 84px; } #joy i { left: 19px; top: 19px; }
+  #hud { overflow: hidden; } #hud .chip .mini { display: none; } #hud .chip .lbl { display: none; } .chip.obj { min-width: 0; flex: 0 1 auto; } .chip.obj .row b { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+  .ibtn, .ctrl .ibtn { height: 30px; min-width: 32px; } .lbtn { min-width: 34px; height: 34px; } .skl { width: 44px; height: 44px; }
+  .bunt-logo { font-size: 12px; letter-spacing: 1px; }
 }
-@media (pointer: coarse) { .ibtn { height: 40px; min-width: 40px; } .lbtn { min-width: 44px; height: 44px; } .skl { width: 50px; height: 50px; } .btn { min-height: 44px; } .tab { padding: 10px 14px; } }
+@media (pointer: coarse) and (min-height: 461px) { .ibtn { height: 40px; min-width: 40px; } .lbtn { min-width: 44px; height: 44px; } .skl { width: 50px; height: 50px; } .btn { min-height: 44px; } .tab { padding: 10px 14px; } }
 @media (prefers-reduced-motion: reduce) { .node.open, .pop, .item .buy.flash, .coins.flash { animation: none; } * { transition-duration: .01ms !important; } }
 </style>
 </head>
@@ -734,7 +737,7 @@ const UNITS = {
     medic:     { name: 'Field Medic',    cls: 'inf', hp: 55,  spd: 40,  rng: 105, dmg: 0,  cd: 1,   w: 'bullet', heal: 16, cost: 18, dcd: 4, r: 10, air: false, role: 'Sustain', desc: 'Repairs up to three nearby friends (16 hp/s). Unarmed.', counter: 'Kill medics first.' },
     walker:    { name: 'Heavy Walker',   cls: 'veh', hp: 560, spd: 22,  rng: 235, dmg: 26, cd: 1.1, w: 'cannon', splash: 26, cost: 46, dcd: 7, r: 20, air: true, role: 'Siege bruiser', desc: 'Huge and slow, hits air and ground. Takes 2.4x from rockets.', counter: 'Beaten by rocket troopers, EMP and sappers.' },
     sapper:    { name: 'Sapper',         cls: 'inf', hp: 34,  spd: 92,  rng: 14,  dmg: 80, cd: 0.5, w: 'blast', splash: 62, cost: 10, dcd: 1.5, r: 8, air: false, nb: true, role: 'Demolition', desc: 'Sprints in and detonates: 2.4x against structures and bridges.', counter: 'Shoot them early; shield bearers hold them off.' },
-    hauler:    { name: 'Convoy Hauler',  cls: 'veh', hp: 1300, spd: 15, rng: 0,   dmg: 0,  cd: 1,   w: 'bullet', cost: 0, dcd: 0, r: 24, air: false, role: 'Payload', desc: 'Slow armoured payload.', counter: '' },
+    hauler:    { name: 'Convoy Hauler',  cls: 'veh', hp: 1300, spd: 8, rng: 0,   dmg: 0,  cd: 1,   w: 'bullet', cost: 0, dcd: 0, r: 24, air: false, role: 'Payload', desc: 'Slow armoured payload.', counter: '' },
     tank:      { name: 'Tank',           cls: 'veh', hp: 600, spd: 100, rng: 235, dmg: 22, cd: 0.38, w: 'cannon', cost: 0, dcd: 0, r: TANK_R, air: true, role: 'Hero', desc: 'Your tank.', counter: '' }
 };
 
@@ -840,7 +843,7 @@ function ramp(t0, t1, every, fn) {
 }
 const rnd = (a, b, f) => Math.round(a + (b - a) * f);
 // a push: several unit groups arriving together. lane: index | -1 random per unit | -2 spread over all lanes
-function P(t, lane, comp, gap) { const out = []; for (const u in comp) out.push(W(t, lane, u, comp[u], gap == null ? 0.6 : gap)); return out; }
+function P(t, lane, comp, gap) { const out = []; for (const u in comp) out.push(W(t, lane, u, comp[u], gap == null ? 0.22 : gap)); return out; }
 const cat = (...a) => [].concat(...a);
 
 const MISSIONS = [
@@ -849,29 +852,29 @@ const MISSIONS = [
         id: '1-1', planet: 0, name: 'Landfall', sub: 'First contact on the ash plains', obj: 'destroy', lanes: LANES1,
         intent: 'Watch an auto-battle happen. Meet the deploy bar, the three skills and the warp-home repair.',
         teach: 'Your army fights by itself. Tap a card to deploy, 1 / 2 / 3 fire skills, R warps the tank home to repair.',
-        abase: 2400, ebase: 4200, eturret: 1, sup: { s: 44, r: 1.9 }, par: 220, reward: 130, grant: 'shield', em: 1, ed: 1, sz: 1,
+        abase: 2400, ebase: 4200, eturret: 1, sup: { s: 44, r: 1.9 }, par: 220, reward: 130, grant: 'shield', em: 1, ed: 1, sz: 2.5,
         tr: { a: { every: 11, u: 'rifle' }, e: { every: 12, u: 'rifle' } },
         etank: { hp: 420, resp: 35, first: 55, dmg: 16, cd: 0.8, name: 'Scout Tank' },
         garrison: [{ u: 'rifle', n: 3, x0: 700, x1: 900 }],
-        waves: cat(P(8, 0, { rifle: 3 }, 0.8), P(28, 0, { rifle: 4 }, 0.7), P(50, 0, { rifle: 5 }, 0.6), P(72, 0, { rifle: 6 }), P(96, 0, { rifle: 7 }, 0.5), P(120, 0, { rifle: 8 }, 0.5), P(146, 0, { rifle: 9 }, 0.5)),
+        waves: cat(P(8, 0, { rifle: 3 }), P(28, 0, { rifle: 4 }), P(50, 0, { rifle: 5 }), P(72, 0, { rifle: 6 }), P(96, 0, { rifle: 7 }), P(120, 0, { rifle: 8 }), P(146, 0, { rifle: 9 })),
         structs: [{ k: 'wall', lane: 0, x: 380, hp: 380, side: 0 }], cards: []
     },
     { // 1-2
         id: '1-2', planet: 0, name: 'Ash Line', sub: 'Hold the wall until extraction', obj: 'survive', lanes: LANES1, time: 150,
         intent: 'Rocket troopers appear: they kill tanks. Fight behind infantry and let the lava vents burn what walks in.',
         teach: 'Rocket troopers hit vehicles hard. Stay behind your line, and use Shield Bearers to soak fire.',
-        abase: 2300, sup: { s: 40, r: 1.8 }, reward: 160, em: 1, ed: 1, sz: 1, holdX: 500,
+        abase: 2300, sup: { s: 40, r: 1.8 }, reward: 160, em: 1.05, ed: 1, sz: 2.4, holdX: 500,
         tr: { a: { every: 10, u: 'rifle' }, e: { every: 14, u: 'rifle' } },
         structs: [{ k: 'wall', lane: 0, x: 440, hp: 520, side: 0 }],
         vents: [{ lane: 0, x: 660, per: 8.5, ph: 3, warn: 1.6, r: 52, dmg: 75 }, { lane: 0, x: 725, per: 8.5, ph: 7.2, warn: 1.6, r: 52, dmg: 75 }],
-        waves: cat(P(6, 0, { rifle: 4 }, 0.8), P(24, 0, { rifle: 5 }, 0.7), P(42, 0, { rifle: 4, rocket: 2 }, 0.8), P(62, 0, { rifle: 6, rocket: 2 }), P(84, 0, { rifle: 6, rocket: 3 }), P(106, 0, { rifle: 8, rocket: 3 }, 0.5), P(126, 0, { rifle: 9, rocket: 4 }, 0.5)),
+        waves: cat(P(6, 0, { rifle: 4 }), P(24, 0, { rifle: 5 }), P(42, 0, { rifle: 4, rocket: 2 }), P(62, 0, { rifle: 6, rocket: 2 }), P(84, 0, { rifle: 6, rocket: 3 }), P(106, 0, { rifle: 8, rocket: 3 }), P(126, 0, { rifle: 9, rocket: 4 })),
         cards: ['h_vent', 'h_wall']
     },
     { // 1-3
         id: '1-3', planet: 0, name: 'Cinder Bridge', sub: 'Cut the flank, take the outpost', obj: 'destroy', lanes: LANES2,
         intent: 'Two lanes: enemies cross a burning bridge on the ridge. Drop it, capture the middle outpost, meet the Sapper.',
         teach: 'A Strike on the bridge while enemies cross drops them into the lava. Stand near the outpost to capture its turret.',
-        abase: 2400, ebase: 5000, eturret: 1, sup: { s: 44, r: 1.9 }, par: 300, reward: 200, grant: 'rocket', em: 1.05, ed: 1, sz: 1,
+        abase: 2400, ebase: 3000, eturret: 1, sup: { s: 44, r: 1.9 }, par: 320, reward: 200, grant: 'rocket', em: 1.1, ed: 1.03, sz: 2.2,
         tr: { a: { every: 10, u: 'rifle', lane: -1 }, e: { every: 12, u: 'rifle', lane: -1 } },
         etank: { hp: 640, resp: 45, first: 80, dmg: 19, cd: 0.7, name: 'Cinder Tank' },
         garrison: [{ u: 'rifle', n: 4, x0: 720, x1: 950 }],
@@ -885,7 +888,7 @@ const MISSIONS = [
         id: '1-4', planet: 0, name: 'Ashen Champion', sub: 'Warlord Kael challenges you', obj: 'duel', lanes: LANES2,
         intent: 'A tank duel. Learn to read the shell rings, break his guard with EMP, and use rockets and lanes.',
         teach: 'Leave the shell rings. EMP breaks his guard. Rocket Troopers hurt him 2.4x - deploy them.',
-        abase: 2200, sup: { s: 46, r: 1.9 }, par: 170, reward: 250, em: 1, ed: 1, sz: 1,
+        abase: 2200, sup: { s: 46, r: 1.9 }, par: 170, reward: 250, em: 1.25, ed: 1.1, sz: 1,
         tr: { a: { every: 9, u: 'rifle', lane: -1 }, e: { every: 15, u: 'rifle', lane: -1 } },
         etank: { hp: 1650, resp: 0, first: 2, dmg: 24, cd: 0.5, spd: 80, range: 245, ab: ['barrage', 'guard', 'dash'], name: 'WARLORD KAEL' },
         vents: [{ lane: 1, x: 620, per: 9, ph: 1, warn: 1.6, r: 54, dmg: 70 }, { lane: 0, x: 780, per: 9, ph: 5.5, warn: 1.6, r: 54, dmg: 70 }],
@@ -895,10 +898,10 @@ const MISSIONS = [
 
     /* ------------------------------ PLANET 2: HELIX-3 (fog, ion storms) ------------------------------ */
     { // 2-1
-        id: '2-1', planet: 1, name: 'Whiteout', sub: 'Two outposts in a blizzard', obj: 'capture', lanes: LANES3, time: 60, fog: 250, rally: true,
+        id: '2-1', planet: 1, name: 'Whiteout', sub: 'Two outposts in a blizzard', obj: 'capture', lanes: LANES3, time: 110, fog: 250, rally: true,
         intent: 'Fog hides the enemy until it is close. Capture the middle outpost, then storm the far one and hold both. Drones arrive.',
         teach: 'You only see what is near. Deploy toward the next outpost; the tank counts as three units on a point.',
-        abase: 2400, sup: { s: 46, r: 1.9 }, par: 240, reward: 290, em: 1.05, ed: 1, sz: 1,
+        abase: 2400, sup: { s: 46, r: 1.9 }, par: 400, reward: 290, em: 1.2, ed: 1.08, sz: 5,
         tr: { a: { every: 10, u: 'rifle', lane: -1 }, e: { every: 11, u: ['rifle', 'rifle', 'shield'], lane: -1 } },
         etank: { hp: 800, resp: 50, first: 90, dmg: 20, cd: 0.65, name: 'Glacier Tank' },
         garrison: [{ u: 'rifle', n: 5, x0: 700, x1: 950 }],
@@ -911,7 +914,7 @@ const MISSIONS = [
         id: '2-2', planet: 1, name: 'Frozen Pass', sub: 'Silence the mortar batteries', obj: 'targets', lanes: LANES3, fog: 240, tname: 'BATTERIES',
         intent: 'Mortar batteries and a command uplink outrange your infantry. Flank with fast units, or drive the tank in and Strike them.',
         teach: 'Every battery shell shows a ring. Mortars cannot hit close targets - rush them, or Strike from range.',
-        abase: 2400, sup: { s: 48, r: 1.9 }, par: 320, reward: 330, em: 1.05, ed: 1, sz: 1,
+        abase: 2400, sup: { s: 48, r: 1.9 }, par: 380, reward: 330, em: 1.2, ed: 1.08, sz: 2.4,
         tr: { a: { every: 10, u: 'rifle', lane: -1 }, e: { every: 12, u: ['rifle', 'rifle', 'artillery'], lane: -1 } },
         etank: { hp: 900, resp: 55, first: 110, dmg: 21, cd: 0.62, name: 'Pass Warden' },
         garrison: [{ u: 'rifle', n: 4, x0: 700, x1: 900 }],
@@ -925,10 +928,10 @@ const MISSIONS = [
         cards: []
     },
     { // 2-3
-        id: '2-3', planet: 1, name: 'Storm Front', sub: 'Convoy through the ion storm', obj: 'escort', lanes: LANES3, haulers: [{ lane: 1, hp: 1400 }],
+        id: '2-3', planet: 1, name: 'Storm Front', sub: 'Convoy through the ion storm', obj: 'escort', lanes: LANES3, haulers: [{ lane: 1, hp: 1900 }],
         intent: 'Escort the hauler across the field while ion storms strike in warning rings. Medics keep enemy groups alive - kill them first.',
         teach: 'The hauler halts when enemies stand in front of it. Clear the road, and step out of the lightning rings.',
-        abase: 2200, sup: { s: 46, r: 1.9 }, par: 320, reward: 350, em: 1.05, ed: 1, sz: 1,
+        abase: 2200, sup: { s: 46, r: 1.9 }, par: 320, reward: 350, em: 1.2, ed: 1.08, sz: 1.5,
         ion: { t0: 22, every: 21, dur: 4.5, bolt: 0.55, warn: 0.9, dmg: 60, stun: 1.6 },
         tr: { a: { every: 10, u: 'rifle', lane: 1 }, e: { every: 12, u: ['rifle', 'shield', 'rifle'], lane: -1 } },
         etank: { hp: 850, resp: 55, first: 120, dmg: 21, cd: 0.62, name: 'Storm Tank' },
@@ -940,7 +943,7 @@ const MISSIONS = [
         id: '2-B', planet: 1, name: 'Iron Leviathan', sub: 'Boss: the tracked dreadnought', obj: 'boss', boss: 'dread', lanes: LANES3,
         intent: 'First boss. Two turrets and a lane cannon guard an armoured reactor. Read the marked lane, then hit the exposed core.',
         teach: 'Turrets and cannon first: the reactor is armoured. When the cannon fires, the reactor is exposed for a few seconds.',
-        abase: 2600, sup: { s: 50, r: 2.0 }, par: 330, reward: 640, em: 1, ed: 1, bhp: 0.55, sz: 1,
+        abase: 2600, sup: { s: 50, r: 2.0 }, par: 330, reward: 640, em: 1, ed: 1, bhp: 0.5, siege: 0.5, sz: 1,
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 18, u: ['rifle', 'rocket'], lane: -1, from: 12 } },
         waves: cat(P(20, -2, { rifle: 4 }), P(60, -2, { rifle: 4, shield: 2 }), P(100, -2, { rifle: 5, rocket: 2 }), P(140, -2, { rifle: 5, shield: 3 }), P(180, -2, { rifle: 6, rocket: 3 }), P(220, -2, { rifle: 6, shield: 3 }), P(260, -2, { rifle: 7, rocket: 3 })),
         structs: [{ k: 'wall', lane: 1, x: 420, hp: 500, side: 0 }], cards: ['b_dread']
@@ -951,19 +954,19 @@ const MISSIONS = [
         id: '3-1', planet: 2, name: 'Impact Zone', sub: 'Survive the meteor storm', obj: 'survive', lanes: LANES2, time: 200, lowg: true, holdX: 520,
         intent: 'Meteors fall in red rings on both sides. Low gravity extends your mortars. The Heavy Walker arrives - rockets and EMP counter it.',
         teach: 'Watch the red rings. Heavy Walkers are slow but deadly: Rocket Troopers deal 2.4x, EMP stuns them.',
-        abase: 2500, sup: { s: 46, r: 1.9 }, reward: 400, em: 1.05, ed: 1, sz: 1,
+        abase: 1800, sup: { s: 46, r: 1.9 }, reward: 400, em: 1.3, ed: 1.12, sz: 4.5,
         meteor: { t0: 16, every: 8.5, n: 3, r: 62, warn: 1.7, dmg: 130, x0: 300, x1: 1000 },
         tr: { a: { every: 10, u: 'rifle', lane: -1 }, e: { every: 13, u: ['rifle', 'rifle', 'rocket'], lane: -1 } },
         structs: [{ k: 'wall', lane: 0, x: 450, hp: 500, side: 0 }, { k: 'wall', lane: 1, x: 450, hp: 500, side: 0 }],
-        waves: cat(P(6, -2, { rifle: 5 }), P(24, -2, { rifle: 5, rocket: 2 }), P(44, -2, { rifle: 6, shield: 3 }), P(66, -2, { rifle: 5, rocket: 3, walker: 1 }, 1.2), P(90, -2, { rifle: 7, sapper: 3 }), P(114, -2, { rifle: 6, rocket: 3, walker: 1 }, 1.2),
-            P(140, -2, { rifle: 8, shield: 3, sapper: 3 }), P(166, -2, { rifle: 8, rocket: 4, walker: 2 }, 1.2), P(190, -2, { rifle: 9, shield: 4 })),
+        waves: cat(P(6, -2, { rifle: 5 }), P(24, -2, { rifle: 5, rocket: 2 }), P(44, -2, { rifle: 6, shield: 3 }), P(58, -2, { artillery: 2 }, 1), P(66, -2, { rifle: 5, rocket: 3, walker: 1 }, 1.2), P(90, -2, { rifle: 7, sapper: 3 }), P(104, -2, { artillery: 3, drone: 3 }, 0.6), P(118, -2, { rifle: 6, rocket: 3, walker: 1 }, 1.2),
+            P(140, -2, { rifle: 8, shield: 3, sapper: 3 }), P(152, -2, { artillery: 4, drone: 4 }, 0.6), P(166, -2, { rifle: 8, rocket: 4, walker: 2 }, 1.2), P(182, -2, { artillery: 4, drone: 6, rifle: 6 }, 0.5)),
         cards: ['h_meteor', 'h_lowg']
     },
     { // 3-2
-        id: '3-2', planet: 2, name: 'Skyfall Outposts', sub: 'Three ridges, one hold', obj: 'capture', lanes: LANES3, time: 75, rally: true, lowg: true,
+        id: '3-2', planet: 2, name: 'Skyfall Outposts', sub: 'Three ridges, one hold', obj: 'capture', lanes: LANES3, time: 110, rally: true, lowg: true,
         intent: 'Capture three outposts across three lanes and hold them together. Drones raid the ones you take; turrets shoot them down.',
-        teach: 'Three points, three lanes: hold them all at once for 75 seconds. Captured turrets shoot air.',
-        abase: 2500, sup: { s: 48, r: 2.0 }, par: 280, reward: 440, em: 1.1, ed: 1, sz: 1,
+        teach: 'Three points, three lanes: hold them all at once for 110 seconds. Captured turrets shoot air.',
+        abase: 2500, sup: { s: 48, r: 2.0 }, par: 280, reward: 440, em: 1.3, ed: 1.12, sz: 5,
         meteor: { t0: 40, every: 14, n: 2, r: 60, warn: 1.8, dmg: 120, x0: 320, x1: 950 },
         tr: { a: { every: 10, u: 'rifle', lane: -2 }, e: { every: 11, u: ['rifle', 'shield', 'rocket'], lane: -1 } },
         etank: { hp: 1000, resp: 55, first: 100, dmg: 22, cd: 0.6, name: 'Obsidian Tank' },
@@ -977,13 +980,13 @@ const MISSIONS = [
         id: '3-3', planet: 2, name: 'Collapse', sub: 'The plateau is coming apart', obj: 'hold', lanes: LANES3, time: 210, lowg: true, holdX: 470,
         intent: 'Defend a collapsing position. The far edge falls away in steps, pushing the enemy closer and killing anyone standing on it.',
         teach: 'The ground beyond the marked edge will fall. Keep your army near the base; extraction arrives when the timer ends.',
-        abase: 2600, sup: { s: 48, r: 2.0 }, reward: 480, em: 1.1, ed: 1, sz: 1,
+        abase: 1800, sup: { s: 48, r: 2.0 }, reward: 480, em: 1.3, ed: 1.12, sz: 3.5,
         collapse: [{ t: 45, edge: 1090 }, { t: 90, edge: 980 }, { t: 135, edge: 880 }, { t: 178, edge: 800 }],
         meteor: { t0: 30, every: 16, n: 2, r: 60, warn: 1.8, dmg: 120, x0: 260, x1: 800 },
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 12, u: ['rifle', 'shield', 'rocket', 'sapper'], lane: -1 } },
         structs: [{ k: 'wall', lane: 0, x: 440, hp: 480, side: 0 }, { k: 'wall', lane: 1, x: 440, hp: 480, side: 0 }, { k: 'wall', lane: 2, x: 440, hp: 480, side: 0 }],
-        waves: cat(P(10, -2, { rifle: 5 }), P(28, -2, { rifle: 5, shield: 3 }), P(46, -2, { rifle: 5, rocket: 3 }), P(62, -2, { rifle: 4, drone: 3 }), P(80, -2, { rifle: 7, shield: 3 }), P(96, -2, { rifle: 5, sapper: 4 }), P(112, -2, { rifle: 6, walker: 1, rocket: 2 }, 1),
-            P(128, -2, { rifle: 8, shield: 3 }), P(144, -2, { rifle: 5, artillery: 3, drone: 3 }), P(160, -2, { rifle: 7, rocket: 4 }), P(176, -2, { rifle: 8, walker: 1, sapper: 3 }, 1), P(192, -2, { rifle: 9, shield: 4, rocket: 3 })),
+        waves: cat(P(10, -2, { rifle: 5 }), P(28, -2, { rifle: 5, shield: 3 }), P(46, -2, { rifle: 5, rocket: 3 }), P(62, -2, { rifle: 4, drone: 3 }), P(80, -2, { rifle: 7, shield: 3 }), P(96, -2, { rifle: 5, sapper: 4, artillery: 2 }, 0.5), P(112, -2, { rifle: 6, walker: 1, rocket: 2 }, 1),
+            P(126, -2, { rifle: 8, shield: 3, drone: 4 }), P(142, -2, { rifle: 5, artillery: 4, drone: 4 }, 0.5), P(158, -2, { rifle: 7, rocket: 4, sapper: 3 }), P(174, -2, { rifle: 8, walker: 2, artillery: 3 }, 1), P(190, -2, { rifle: 9, shield: 4, rocket: 3, drone: 5 }, 0.4)),
         etank: { hp: 1100, resp: 60, first: 110, dmg: 22, cd: 0.6, name: 'Rift Tank' },
         cards: ['h_collapse']
     },
@@ -991,7 +994,7 @@ const MISSIONS = [
         id: '3-B', planet: 2, name: 'The Colossus', sub: 'Boss: the walking fortress', obj: 'boss', boss: 'colossus', lanes: LANES3, lowg: true,
         intent: 'Second boss. Four legs, a belly mortar and a shielded cockpit. Break two legs and the cockpit kneels within reach.',
         teach: 'The dust ring shows which lane the next stomp runs down. Break two legs and the cockpit drops into reach.',
-        abase: 2800, sup: { s: 52, r: 2.0 }, par: 360, reward: 780, em: 1, ed: 1, bhp: 2.6, sz: 1,
+        abase: 2800, sup: { s: 52, r: 2.0 }, par: 360, reward: 780, em: 1, ed: 1, bhp: 1.3, siege: 0.6, sz: 1,
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 18, u: ['rifle', 'rocket'], lane: -1, from: 14 } },
         waves: cat(P(20, -2, { rifle: 4 }), P(60, -2, { rifle: 4, shield: 3 }), P(100, -2, { rifle: 5, rocket: 3 }), P(140, -2, { rifle: 6, shield: 3 }), P(180, -2, { rifle: 6, rocket: 3 }), P(220, -2, { rifle: 7, shield: 4 }), P(260, -2, { rifle: 7, rocket: 4 })),
         structs: [{ k: 'wall', lane: 1, x: 430, hp: 520, side: 0 }], cards: ['b_colossus']
@@ -1002,7 +1005,7 @@ const MISSIONS = [
         id: '4-1', planet: 3, name: 'Breach', sub: 'Storm the outer wall', obj: 'destroy', lanes: LANES3,
         intent: 'A fortified gate: enemy barricades in every lane, a cut bridge, vents and ion storms. Bring sappers and artillery.',
         teach: 'Enemy barricades stop your infantry. Sappers and mortar shells go through them; so does the tank.',
-        abase: 2800, ebase: 8500, eturret: 3, sup: { s: 50, r: 2.0 }, par: 380, reward: 560, em: 1.15, ed: 1.05, sz: 1,
+        abase: 2800, ebase: 3400, eturret: 3, sup: { s: 50, r: 2.0 }, par: 520, reward: 560, em: 1.4, ed: 1.15, sz: 1.4,
         ion: { t0: 45, every: 26, dur: 4, bolt: 0.6, warn: 0.9, dmg: 60, stun: 1.5 },
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 11, u: ['rifle', 'shield', 'rocket', 'rifle'], lane: -1 } },
         etank: { hp: 1300, resp: 55, first: 70, dmg: 23, cd: 0.55, ab: ['barrage'], name: 'Gate Warlord' },
@@ -1018,7 +1021,7 @@ const MISSIONS = [
         id: '4-2', planet: 3, name: 'Signal Spire', sub: 'Blind the hive: four spires', obj: 'targets', lanes: LANES3, fog: 230, tname: 'SIGNAL SPIRES',
         intent: 'Four spires guard the citadel through the fog, each spitting shells. Combine drones for sight, sappers for speed and Strike for reach.',
         teach: 'Drones scout the fog and spot for Strike. Take spires one lane at a time; ion storms hit both sides.',
-        abase: 2800, sup: { s: 50, r: 2.0 }, par: 360, reward: 600, em: 1.15, ed: 1.05, sz: 1,
+        abase: 2800, sup: { s: 50, r: 2.0 }, par: 360, reward: 600, em: 1.4, ed: 1.15, sz: 2.6,
         ion: { t0: 40, every: 24, dur: 4, bolt: 0.6, warn: 0.9, dmg: 60, stun: 1.5 },
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 11, u: ['rifle', 'shield', 'medic', 'artillery'], lane: -1 } },
         etank: { hp: 1400, resp: 55, first: 90, dmg: 23, cd: 0.55, ab: ['barrage', 'guard'], name: 'Spire Guard' },
@@ -1034,10 +1037,10 @@ const MISSIONS = [
         cards: []
     },
     { // 4-3
-        id: '4-3', planet: 3, name: 'Last Convoy', sub: 'Two haulers, two roads', obj: 'escort', lanes: LANES3, haulers: [{ lane: 0, hp: 1200 }, { lane: 2, hp: 1200 }],
+        id: '4-3', planet: 3, name: 'Last Convoy', sub: 'Two haulers, two roads', obj: 'escort', lanes: LANES3, haulers: [{ lane: 0, hp: 1700 }, { lane: 2, hp: 1700 }],
         intent: 'Escort two haulers along two roads at once under meteors. Split your army, or pick the lane in trouble.',
         teach: 'Both haulers must arrive. Deploy where the road is blocked; the tank can only guard one lane at a time.',
-        abase: 2800, sup: { s: 52, r: 2.1 }, par: 380, reward: 660, em: 1.12, ed: 1.05, sz: 1,
+        abase: 2800, sup: { s: 52, r: 2.1 }, par: 380, reward: 660, em: 1.15, ed: 1.05, sz: 0.9,
         meteor: { t0: 25, every: 12, n: 3, r: 60, warn: 1.7, dmg: 125, x0: 260, x1: 1000 },
         tr: { a: { every: 9, u: 'rifle', lane: -2 }, e: { every: 11, u: ['rifle', 'shield', 'rocket', 'medic'], lane: -1 } },
         etank: { hp: 1400, resp: 55, first: 100, dmg: 23, cd: 0.55, ab: ['barrage'], name: 'Convoy Hunter' },
@@ -1050,7 +1053,7 @@ const MISSIONS = [
         id: '4-B', planet: 3, name: 'Eternal Citadel', sub: 'Final boss: the hovering mothership', obj: 'boss', boss: 'citadel', lanes: LANES3,
         intent: 'The final exam. Rockets and mortars are useless against a flying fortress: bring riflemen, drones and the tank. Shields first, then the core.',
         teach: 'Vertical lines mark beams that lock a moment before firing. Rockets and mortars cannot hit the Citadel.',
-        abase: 3000, sup: { s: 56, r: 2.2 }, par: 420, reward: 1000, em: 1, ed: 1, bhp: 1.1, sz: 1,
+        abase: 3000, sup: { s: 56, r: 2.2 }, par: 420, reward: 1000, em: 1, ed: 1, bhp: 1.2, sz: 1,
         tr: { a: { every: 8, u: 'rifle', lane: -2 }, e: { every: 18, u: ['rifle', 'shield'], lane: -1, from: 14 } },
         waves: cat(P(24, -2, { rifle: 4 }), P(70, -2, { rifle: 4, shield: 3 }), P(120, -2, { rifle: 5, rocket: 3 }), P(170, -2, { rifle: 6, shield: 3 }), P(220, -2, { rifle: 6, rocket: 3 }), P(270, -2, { rifle: 7, shield: 4 })),
         structs: [{ k: 'wall', lane: 1, x: 430, hp: 520, side: 0 }], cards: ['b_citadel']
@@ -1191,6 +1194,7 @@ function startRun(m, o) {
     // waves sorted by time
     r.waves = (m.waves || []).map(w => Object.assign({}, w, { n: Math.max(1, Math.round((w.n || 1) * (m.sz || 1))) })).sort((a, b) => a.t - b.t);
     r.trickleT = [rr(2, 4), rr(3, 5)];
+    if (m.obj === 'destroy' || m.obj === 'targets' || m.obj === 'boss' || m.obj === 'duel') { r.rallyX = m.rallyX || (m.obj === 'targets' ? 560 : 640); r.pushN = m.pushN || 12; r.push = false; }
     // hazards
     r.vents = (m.vents || []).map(v => ({ lane: v.lane, x: v.x, per: v.per || 8, ph: v.ph || 0, warn: v.warn || 1.6, r: v.r || 52, dmg: v.dmg || 70, phase: 0, boom: 0 }));
     if (m.meteor) r.nextMeteor = (m.meteor.t0 || 20) * 60;
@@ -1239,12 +1243,12 @@ function spawnUnit(side, type, lane, o) {
         id: uidc++, type, side, cls: d.cls, lane: clamp(lane, 0, r.nl - 1), x: o.x != null ? o.x : SPAWN_X[side], r: d.r, lv,
         hp: (o.hp || d.hp) * (o.hp ? 1 : mod.hp), mhp: 0, dmgM: mod.dmg * (o.dmgM || 1), spd: d.spd * (o.spdM || 1), rng: d.rng, air, airOK: !!d.air,
         cdT: rr(0.1, d.cd + 0.4), tt: (uidc % 7) + 1, tgt: null, stun: 0, fl: 0, dj: rr(-11, 11), ay: air ? 68 + rr(-8, 22) : 0, ph: rr(0, 6.28), face: side === 0 ? 1 : -1,
-        dead: false, vis: true, mv: false, born: r.t, sw: rr(0, 6.28), revealT: 0, atk: 0, hasted: 0
+        gy: laneY(clamp(lane, 0, r.nl - 1)), gapT: 0, dead: false, vis: true, mv: false, born: r.t, sw: rr(0, 6.28), revealT: 0, atk: 0, hasted: 0
     };
     if (!o.hp) u.mhp = u.hp; else u.mhp = u.hp;
     u.x = clamp(u.x, 30, Math.min(1170, side === 1 ? r.edgeX - 24 : 1170));
     r.units.push(u);
-    if (side === 1 && !r.seenNow['u_' + type] && type !== 'hauler') {
+    if (side === 1 && !r.seenNow['u_' + type] && type !== 'hauler' && type !== 'rifle') {
         r.seenNow['u_' + type] = 1;
         if (!save.seen['u_' + type] && CARDS['u_' + type]) r.cardQ.push('u_' + type);
     }
@@ -1253,7 +1257,7 @@ function spawnUnit(side, type, lane, o) {
 function uy(u) {          // vertical centre of a unit
     if (u.air) return laneY(u.lane) - 58 - u.ay * 0.6 + Math.sin(u.ph * 0.9) * 5;
     if (u.hero) return u.ly - 34 + Math.sin(u.ph) * 2;
-    return laneY(u.lane) - u.r - 3 + u.dj * 0.55;
+    return (u.gy != null ? u.gy : laneY(u.lane)) - u.r - 3 + u.dj * 0.55;
 }
 function ucx(u) { return u.x; }
 
@@ -1271,9 +1275,10 @@ function hurt(t, dmg, w, srcSide, o) {
         if (!HEADLESS && (r.t & 3) === 0) { pushFx('spark', t.x + t.face * 8, uy(t), { c: '#9cf' }); AudioEngine.tink(); }
     }
     if (t.dmgMul != null && t.dmgMul !== 1) mult *= t.dmgMul;
-    const amt = dmg * mult;
+    let amt = dmg * mult;
+    if (t.type === 'hauler') { if (srcSide === -1) amt *= 0.3; else if (w === 'rocket') amt *= 0.4; else if (w === 'cannon') amt *= 0.7; }   // reactive armour: weather and rockets barely scratch the convoy
     if (t.hero && t.side === 0 && r.god) return 0;
-    if (t.k === 'base' && t.invuln) return 0;
+    if (t.k === 'base' && (t.invuln || (t.side === 0 && r.o.godBase))) return 0;
     if (t.guard > 0) { t.hp -= amt * 0.3; } else t.hp -= amt;
     t.fl = 5;
     if (srcSide === 0 && !t.hero) r.stats.score += 0;
@@ -1353,7 +1358,7 @@ function canHitT(u, t, w) {
     if (cls === 'air' && !u.airOK) return false;
     return true;
 }
-const TPRIO = { medic: 60, artillery: 45, rocket: 20, drone: 8, sapper: 10, walker: 0, rifle: 0, shield: -18, hauler: 30 };
+const TPRIO = { medic: 60, artillery: 45, rocket: 20, drone: 8, sapper: 10, walker: 0, rifle: 0, shield: -18, hauler: 6 };
 function findTarget(u, maxR, w, opts) {
     const r = run;
     opts = opts || {};
@@ -1409,7 +1414,7 @@ function lobShell(u, tx, ty, o) {
     const r = run;
     const sx = o.sx != null ? o.sx : u.x, sy = o.sy != null ? o.sy : uy(u) - 10;
     const dist = Math.abs(tx - sx) + Math.abs(ty - sy) * 0.4;
-    const T = clamp(dist / (o.spd || 320), 0.55, 2.2) * (r.lowg ? 1.35 : 1);
+    const T = clamp(dist / (o.spd || 320), o.minT || 0.55, 2.4) * (r.lowg ? 1.35 : 1);
     const p = { k: 's', sx, sy, x: sx, y: sy, tx, ty, t: 0, T, dmg: o.dmg, w: o.w || 'shell', side: u.side, splash: o.splash || 56, hgt: (o.hgt || 130) * (r.lowg ? 1.5 : 1), c: o.c || (u.side === 0 ? '#ffd600' : '#ff6a3c'), air: false, warn: o.warn !== false, ttl: 9 };
     r.proj.push(p);
     return p;
@@ -1540,7 +1545,22 @@ function goalFor(u) {
         return (r.points.reduce((s, p) => Math.max(s, p.x), 0)) - 30;
     }
     if (m.holdX) return m.holdX + u.dj * 0.6;
+    // offensive missions: the army masses at a rally line and pushes together once it is big enough (see updateArmyOrder)
+    if (r.rallyX && !r.push) return r.rallyX + u.dj * 0.8;
     return BASE_X[1] - 92;
+}
+function updateArmyOrder() {
+    const r = run, m = r.m;
+    if (!r.rallyX) return;
+    let n = 0, near = 0;
+    for (let i = 0; i < r.units.length; i++) {
+        const u = r.units[i];
+        if (u.dead || u.hero || u.hidden || u.type === 'hauler') continue;
+        if (u.side === 0) { if (u.type !== 'medic') n++; }
+        else if (!u.air && u.x < r.rallyX + 260) near++;
+    }
+    if (!r.push && (n >= r.pushN || (n >= Math.ceil(r.pushN * 0.6) && near < 3))) r.push = true;
+    else if (r.push && n <= Math.floor(r.pushN * 0.3) && near > 4) r.push = false;
 }
 function updateUnit(u) {
     const r = run;
@@ -1552,6 +1572,7 @@ function updateUnit(u) {
     const d = UNITS[u.type];
     if (u.cdT > 0) u.cdT -= DT;
     u.ph += DT * 6;
+    if (!u.air) { const ty = laneY(u.lane); if (u.gy !== ty) u.gy += clamp(ty - u.gy, -110 * DT, 110 * DT); }
     if (u.type === 'hauler') return updateHauler(u);
     if (u.type === 'medic') return updateMedic(u);
     if (u.type === 'sapper') return updateSapper(u);
@@ -1580,8 +1601,20 @@ function updateUnit(u) {
     if (wallAhead(u, dir)) return;
     const nx = u.x + dir * u.spd * DT;
     const gp = gapAt(u.lane, nx + dir * u.r);
-    if (gp) return;
+    if (gp) { if ((u.gapT += DT) > 1.2) tryLaneChange(u, dir); return; }
+    u.gapT = 0;
     u.x = nx; u.mv = true;
+}
+// a unit stuck at a gap (cut bridge / collapsed edge) hops to an open lane
+function tryLaneChange(u, dir) {
+    const r = run;
+    for (const dl of [1, -1]) {
+        const l = u.lane + dl;
+        if (l < 0 || l >= r.nl) continue;
+        if (gapAt(l, u.x + dir * (u.r + 30))) continue;
+        u.lane = l; u.gapT = 0; return true;
+    }
+    return false;
 }
 function fireUnit(u, d, t) {
     const r = run;
@@ -1633,7 +1666,7 @@ function updateSapper(u) {
         const edge = distEdge(u.x, uy(u), t);
         if (edge < 16 || (t.k === 'base' && Math.abs(dx) < t.hw + 10)) { sapperBoom(u); return; }
         const gp = gapAt(u.lane, u.x + u.face * 10);
-        if (!gp) { u.x += u.face * u.spd * DT; u.mv = true; }
+        if (!gp) { u.x += u.face * u.spd * DT; u.mv = true; u.gapT = 0; } else if ((u.gapT += DT) > 0.8) tryLaneChange(u, u.face);
         const wl = wallAhead(u, u.face); if (wl) u.tgt = wl;
         // slowly drift toward the lane of the target
         if (t.lane != null && !t.hero && t.lane !== u.lane && Math.abs(dx) < 260 && !(t.k === 'base')) { /* stay in own lane; splash reaches adjacent lane */ }
@@ -1642,7 +1675,7 @@ function updateSapper(u) {
     }
     u.face = dir;
     const goal = u.side === 0 ? BASE_X[1] - 80 : BASE_X[0] + 80;
-    if ((goal - u.x) * dir > 2 && !gapAt(u.lane, u.x + dir * 10)) { u.x += dir * u.spd * DT; u.mv = true; }
+    if ((goal - u.x) * dir > 2) { if (!gapAt(u.lane, u.x + dir * 10)) { u.x += dir * u.spd * DT; u.mv = true; u.gapT = 0; } else if ((u.gapT += DT) > 0.8) tryLaneChange(u, dir); }
 }
 function side0Fog(u, t) { return u.side === 0 && run.fog && !t.vis; }
 function sapperBoom(u) {
@@ -1714,15 +1747,20 @@ function updateMedic(u) {
 function updateHauler(u) {
     const r = run;
     if (u.exited) return;
-    const dir = 1;
     let blocked = false;
     const foe = r.gl[1][u.lane];
-    for (let i = 0; i < foe.length; i++) { const f = foe[i]; if (f.x > u.x && f.x < u.x + 150) { blocked = true; break; } }
-    for (let i = 0; i < r.units.length && !blocked; i++) { const f = r.units[i]; if (f.dead || f.side !== 1 || f.air || f.hero || f.lane !== u.lane) continue; }
+    for (let i = 0; i < foe.length; i++) { const f = foe[i]; if (f.x > u.x && f.x < u.x + 200) { blocked = true; break; } }
     if (!blocked && wallAhead(u, 1)) blocked = true;
     if (gapAt(u.lane, u.x + u.r + 6)) blocked = true;
+    // the convoy only rolls while it has an escort nearby (units within 260px; the tank counts double)
+    let esc = 0;
+    for (let i = 0; i < r.units.length; i++) { const a = r.units[i]; if (a.dead || a.side !== 0 || a === u || a.type === 'hauler') continue; if (Math.abs(a.x - u.x) < 260) esc += a.hero ? 2 : 1; }
+    u.waiting = esc < 2;
+    // checkpoints: the convoy stops for a few seconds to run diagnostics
+    u.cp = u.cp || {};
+    for (const cx of [430, 700, 950]) if (u.x >= cx && !u.cp[cx]) { u.cp[cx] = 1; u.holdT = 7; addTxt(u.x, uy(u) - 50, 'CHECKPOINT', '#ffd600', 1.4); }
     u.mv = false; u.face = 1;
-    if (!blocked && !(u.holdT > 0)) { u.x += u.spd * DT; u.mv = true; }
+    if (!blocked && !u.waiting && !(u.holdT > 0)) { u.x += u.spd * DT; u.mv = true; }
     if (u.holdT > 0) u.holdT -= DT;
     u.blocked = blocked;
     if (u.x >= EXIT_X) { u.exited = true; u.dead = true; u.hp = u.mhp; r.exited++; addTxt(u.x, uy(u) - 30, 'EXITED', '#7cff9e'); if (!HEADLESS) AudioEngine.capture(); }
@@ -1780,7 +1818,7 @@ function stepStructs() {
                 if (best) {
                     s.tcd = s.cd;
                     const tx = best.x + (best.hero ? best.vx * 0.5 : 0), ty = best.hero ? best.ly : laneY(best.lane);
-                    lobShell({ side: 1 }, tx + rr(-14, 14), ty + rr(-4, 4), { dmg: s.dmg * r.edM, splash: s.splash, spd: 300, hgt: 170, sx: s.x, sy: s.cy - 20 });
+                    lobShell({ side: 1 }, tx + rr(-14, 14), ty + rr(-4, 4), { dmg: s.dmg * r.edM, splash: s.splash, spd: 300, hgt: 170, sx: s.x, sy: s.cy - 20, minT: 1.15 });
                     if (!HEADLESS) AudioEngine.shellup();
                 }
             }
@@ -2357,6 +2395,7 @@ function stepRun() {
     }
     buildLists();
     if (r.auto) aiStep(r);
+    if ((r.t % 30) === 0) updateArmyOrder();
     stepWaves();
     stepDeploy();
     stepHazards();
@@ -2430,7 +2469,7 @@ function colBlast(r, x, w, dmg, tankDmg) {
     if (!HEADLESS) { pushFx('colBeam', x, 0, { w }); AudioEngine.beam(); r.shake = Math.max(r.shake, 8); }
 }
 function bossShell(r, sx, sy, tx, ty, dmg, splash, spd) {
-    lobShell({ side: 1 }, tx, ty, { dmg: dmg * r.edM, splash: splash || 56, spd: spd || 240, hgt: 190, sx, sy, w: 'shell' });
+    lobShell({ side: 1 }, tx, ty, { dmg: dmg * r.edM, splash: splash || 56, spd: spd || 240, hgt: 190, sx, sy, w: 'shell', minT: 1.3 });
     if (!HEADLESS) AudioEngine.shellup();
 }
 function shellAtAlly(r, sx, sy, dmg, spread) {
@@ -2459,10 +2498,10 @@ function bossSlide(B) {
 // siege fire: every few seconds the boss shells the allied base itself (telegraphed), so a slow fight is a lost fight
 function bossSiege(B) {
     const r = run;
-    const iv = B.phase === 1 ? 20 : B.phase === 2 ? 14 : 10;
-    if (B.tick('siege', iv, 38)) {
+    const iv = B.phase === 1 ? 20 : B.phase === 2 ? 14 : 10, sk = r.m.siege == null ? 1 : r.m.siege;
+    if (sk > 0 && B.tick('siege', iv, 38)) {
         const b = r.aBase, x = b.x + 48, y = b.cy + 40;
-        for (let k = 0; k < 2; k++) addDang({ kind: 'circle', x: x + k * 26 - 13, y: y + (k ? 18 : -10), r: 62, T: 2.0 + k * 0.25, side: 1, siege: true, fn: d => { explode(d.x, d.y, d.r, 90 * r.edM, 'shell', 1, { c: '#ff8a50' }); hurt(r.aBase, 40, 'beam', 1, { dir: 0, raw: true }); } });
+        for (let k = 0; k < 2; k++) addDang({ kind: 'circle', x: x + k * 26 - 13, y: y + (k ? 18 : -10), r: 62, T: 2.0 + k * 0.25, side: 1, siege: true, fn: d => { explode(d.x, d.y, d.r, 90 * sk * r.edM, 'shell', 1, { c: '#ff8a50' }); hurt(r.aBase, 40 * sk, 'beam', 1, { dir: 0, raw: true }); } });
         if (!HEADLESS) { addTxt(b.x + 40, b.cy - 120, 'BASE UNDER FIRE', '#ff5470', 1.6); AudioEngine.alarm(); }
     }
 }
@@ -2880,7 +2919,8 @@ function tankPlan(r, A) {
             goal = part.x - dxOK - (part.cr || 0) * 0.3;
             // never run far ahead of the army
             const fx = Math.max(allyFront(r, 0), allyFront(r, Math.min(1, r.nl - 1)), allyFront(r, r.nl - 1));
-            goal = Math.min(goal, Math.max(fx + 120, 520));
+            const B = r.boss, brave = B.hpFrac() < 0.5 || (B.phase >= 2 && hpf > 0.6);
+            goal = Math.min(goal, brave ? 1200 : Math.max(fx + 120, 520));
             focus = part;
         }
     } else if (obj === 'duel' && r.etank && !r.etank.dead) {
@@ -2930,7 +2970,8 @@ function tankPlan(r, A) {
             A.laneT = r.t + 170;
             lane = bestThreatLane(r, A);
         }
-        const fx0 = allyFront(r, lane);
+        let fx0 = allyFront(r, lane);
+        if (fx0 < 0) { for (let l = 0; l < r.nl; l++) fx0 = Math.max(fx0, allyFront(r, l)); }
         let front = fx0 < 0 ? BASE_X[0] + 210 : fx0;
         let g = front + 22;
         // keep clear of rocket range, approach anything else to shooting range
@@ -2951,7 +2992,8 @@ function tankPlan(r, A) {
 function bestThreatLane(r, A) {
     let best = A.lane, bs = -1e9;
     for (let l = 0; l < r.nl; l++) {
-        let s = laneThreat(r, l);
+        const al = r.gl[0][l].length;
+        let s = laneThreat(r, l) + Math.min(4, al) * 0.5 - (al === 0 ? 2.5 : 0);   // fight where the army is
         if (l === A.lane) s += 1.6 + 0.3;           // hysteresis
         if (s > bs) { bs = s; best = l; }
     }
@@ -3011,12 +3053,18 @@ function tankDodge(r, A) {
         if (left > 1.5 || left < 0.12 || p.t < P.react) continue;
         if (hyp(t.x - p.tx, y - p.ty) < p.splash + 24) { const dir = t.x >= p.tx ? 1 : -1; dodgeX = p.tx + dir * (p.splash + 44); }
     }
-    // shockwaves
-    if (r.boss && r.boss.waves) for (let i = 0; i < r.boss.waves.length; i++) {
-        const w = r.boss.waves[i];
-        if (Math.abs(t.ly - laneY(w.lane)) < 50 && w.x > t.x - 10 && w.x - t.x < 330) {
+    // shockwaves: leave every lane that has one incoming (and any lane already marked by a lane strike)
+    if (r.boss && r.boss.waves && r.boss.waves.length) {
+        const badW = new Set(); let hit = false;
+        for (let i = 0; i < r.boss.waves.length; i++) {
+            const w = r.boss.waves[i];
+            badW.add(w.lane);
+            if (Math.abs(t.ly - laneY(w.lane)) < 50 && w.x > t.x - 10 && w.x - t.x < 330) hit = true;
+        }
+        r.dang.forEach(d => { if (d.kind === 'lane' && d.side !== 0) badW.add(d.lane); });
+        if (hit) {
             let best = -1, bd = 1e9;
-            for (let l = 0; l < r.nl; l++) { if (l === w.lane) continue; const dd = Math.abs(l - nearestLane(t.ly)); if (dd < bd) { bd = dd; best = l; } }
+            for (let l = 0; l < r.nl; l++) { if (badW.has(l)) continue; const dd = Math.abs(l - nearestLane(t.ly)); if (dd < bd) { bd = dd; best = l; } }
             if (best >= 0) dodgeLane = best;
         }
     }
@@ -3122,6 +3170,7 @@ function deployAI(r, A) {
     if (r.sup - UNITS[best].cost < reserve && r.sup < r.supMax * 0.8) return;
     deploy(r, best, deployLaneFor(r, best, mix));
 }
+function gapAhead(l) { const g = run.lanes[l].gaps; for (let i = 0; i < g.length; i++) if (g[i][0] > 150 && g[i][0] < 1050) return true; return false; }
 function deployLaneFor(r, id, mix) {
     const m = r.m;
     if (r.nl === 1) return 0;
@@ -3139,6 +3188,8 @@ function deployLaneFor(r, id, mix) {
         if (m.obj === 'targets') { r.structs.forEach(x => { if (x.obj && !x.dead && x.lane === l) s += 1.4; }); }
         if (m.obj === 'escort' && r.haulers) { if (r.haulers.some(h => !h.dead && !h.exited && h.lane === l)) s += 3.5; }
         if (r.boss && !r.boss.dead) { s += (l === Math.min(1, r.nl - 1) ? 0.6 : 0) - allies * 0.15; }
+        // a lane with a cut bridge / collapsed ground ahead is a dead end for ground units
+        if (id !== 'drone' && gapAhead(l)) s -= 6;
         // spread out: fewer allies is better, everything else equal
         s -= allies * 0.12;
         s += rr(0, 0.4) + (P.mistakes > 0.1 ? rr(-1, 1) : 0);
@@ -3332,6 +3383,7 @@ function simCampaign(seed, prof, o) {
     for (let i = 0; i < MISSION_COUNT; i++) {
         const m = MISSIONS[i];
         let tries = 0, cleared = false;
+        if (o.snap) o.snap(i, JSON.stringify(save));
         while (tries < (o.maxTries || 6)) {
             const deck = o.noLoadout ? save.deck.slice(0, 4) : aiLoadout(m);
             save.deck = deck.slice();
@@ -3643,7 +3695,7 @@ function drawUnitShape(u, T) {
     }
 }
 function drawGroundUnit(u, T) {
-    const gy = laneY(u.lane) + u.dj * 0.55 + 1;
+    const gy = (u.gy != null ? u.gy : laneY(u.lane)) + u.dj * 0.55 + 1;
     ctx.save();
     let a = 1;
     if (u.dead) { a = 1 - (run.t - u.deadT) / 24; if (a <= 0) { ctx.restore(); return; } }
@@ -3659,7 +3711,7 @@ function drawGroundUnit(u, T) {
     ctx.restore();
     if (!u.dead) {
         const f = u.hp / u.mhp;
-        if (u.type === 'hauler') { hpBar(u.x, gy - 68, 76, f, ALLY); }
+        if (u.type === 'hauler') { hpBar(u.x, gy - 68, 76, f, ALLY); if (u.waiting || u.holdT > 0 || u.blocked) { ctx.fillStyle = u.blocked ? '#ff8a6a' : '#ffd600'; ctx.font = '800 9px system-ui'; ctx.textAlign = 'center'; ctx.fillText(u.blocked ? 'ROAD BLOCKED' : u.waiting ? 'WAITING FOR ESCORT' : 'HOLD', u.x, gy - 74); } }
         else if (f < 0.995) hpBar(u.x, gy - (u.type === 'walker' ? 72 : 46), u.type === 'walker' ? 40 : 26, f, u.side === 0 ? ALLY : FOE);
     }
 }
@@ -4323,7 +4375,7 @@ function buildBottom(r) {
         h += '<button class="skl" type="button" data-sk="' + id + '" style="--cd:' + s.color + '" aria-label="' + s.name + ' (key ' + s.key + ', ' + s.cost + ' energy)" title="' + esc(s.name + ' - ' + s.desc + ' (' + s.cost + ' EN)') + '"><span class="ring"></span><span class="t">' + s.short + '</span><span class="k">' + s.key + '</span></button>';
     });
     h += '<button class="skl" type="button" data-warp="1" style="--cd:#d500f9" aria-label="Warp the tank home to repair (key R)" title="Warp home (R)"><span class="ring"></span><span class="t">WARP</span><span class="k">R</span></button></div>';
-    h += '<div class="tbars"><div class="row">ARMOR<div class="bar"><i id="v-hp"></i></div></div><div class="row">ENERGY<div class="bar"><i id="v-en"></i></div></div><div id="v-tstate"></div></div>';
+    h += '<div class="tbars"><div class="row"><span class="tl">ARMOR</span><div class="bar"><i id="v-hp"></i></div></div><div class="row"><span class="tl">ENERGY</span><div class="bar"><i id="v-en"></i></div></div><div id="v-tstate"></div></div>';
     bot.innerHTML = h;
     bot.querySelectorAll('canvas[data-ic]').forEach(c => drawUnitIcon(c, c.dataset.ic, 0));
     ui.bottomKey = r.deck.join(',') + '|' + r.nl;
@@ -4403,6 +4455,7 @@ function beginMission(idx) {
     if (idx % 4 === 0) r.bannerQ.push({ text: 'PLANET ' + (m.planet + 1), sub: PLANETS[m.planet].name, sub2: PLANETS[m.planet].sub, t: 0, T: 2.6, color: PLANETS[m.planet].color });
     r.bannerQ.push({ text: 'MISSION ' + m.id, sub: m.name, sub2: m.sub, t: 0, T: 2.6, color: '#ffe27a' });
     r.banner = r.bannerQ.shift();
+    if (idx > 0 && !save.seen['m:' + idx] && !fails) r.cardQ.unshift('m:' + idx);
     if (fails) toast(mercyText(Math.min(4, fails)), 380);
     AudioEngine.play(planetMusic(m)); AudioEngine.banner();
     buildBottom(r); syncChrome(); syncAutoBtn(); syncPauseBtn(); layoutCanvas();
@@ -4461,9 +4514,19 @@ function finishMission() {
     if (res.clear) showTally(res); else showFail(res);
 }
 
-/* ---------- info cards (NEW ENEMY / HAZARD / BOSS) ---------- */
+/* ---------- info cards (NEW ENEMY / HAZARD / BOSS / MISSION BRIEFING) ---------- */
+const OBJ_LINE = { destroy: 'Destroy the enemy base before yours falls', survive: 'Keep your base alive until extraction', capture: 'Capture every outpost and hold them all together', targets: 'Destroy every marked target', escort: 'Bring the convoy to the exit alive', duel: 'Defeat the enemy champion', hold: 'Hold your base until the evac timer ends', boss: 'Destroy the boss (weapons first, then the core)' };
+const OBJ_ICON = { destroy: 'wall', survive: 'meteor', capture: 'point', targets: 'vent', escort: 'hauler', duel: 'kael', hold: 'collapse' };
+function briefCard(idx) {
+    const m = MISSIONS[idx];
+    const tags = [OBJ_LINE[m.obj] || m.brief || 'Complete the objective'];
+    if (m.par) tags.push('Par time ' + m.par + 's for three stars'); else tags.push('Keep the base healthy for three stars');
+    const hz = []; if (m.vents) hz.push('lava vents'); if (m.meteor) hz.push('meteors'); if (m.ion) hz.push('ion storms'); if (m.fog) hz.push('fog'); if (m.lowg) hz.push('low gravity'); if (m.collapse) hz.push('collapse');
+    if (hz.length) tags.push('Hazards: ' + hz.join(', '));
+    return { type: 'MISSION ' + m.id + ' BRIEFING', title: m.name.toUpperCase(), text: m.intent, counter: tags, icon: m.boss ? m.boss === 'dread' ? 'dread' : m.boss === 'colossus' ? 'colossus' : 'citadel' : (OBJ_ICON[m.obj] || 'point') };
+}
 function showCard(key) {
-    const info = CARDS[key];
+    const info = key.indexOf('m:') === 0 ? briefCard(parseInt(key.slice(2), 10)) : CARDS[key];
     if (!info) return;
     save.seen[key] = 1; persist();
     ui.card = { key }; ui.cardT = 60 * 6;
@@ -4486,7 +4549,7 @@ function showTally(res) {
         ['Enemies destroyed', res.kills], ['Units lost', res.lost], ['Tank losses', res.tankDeaths], ['Time', Math.round(res.secs) + 's' + (m.par ? ' (par ' + m.par + 's)' : '')],
         ['Mission reward' + (res.first ? '' : ' (replay 50%)'), r.clearBonus], ['Star bonus', r.starBonus], ['Salvage', r.killCr]
     ];
-    const finale = !!res.finale || (r.idx === MISSION_COUNT - 1);
+    const finale = !!res.finale;
     let h = '<div class="card pop" style="width:min(520px,100%)"><h2>MISSION ' + m.id + ' CLEAR</h2><div class="muted">' + esc(m.name) + '</div>';
     h += '<div id="t-stars" style="margin:10px 0 2px">' + starsHtml(0) + '</div>';
     h += '<div class="muted" style="margin-bottom:4px">&#9733; clear &middot; &#9733;&#9733; base stayed above 45% &middot; &#9733;&#9733;&#9733; base above 72%, at most one tank loss' + (m.par ? ', under ' + m.par + 's' : '') + '</div>';
@@ -4508,7 +4571,7 @@ function showTally(res) {
     announce('Mission clear. ' + res.stars + ' stars. ' + res.cr + ' credits.');
 }
 function tallyNext() {
-    if (ui.tally && (ui.tally.finale || (run && run.idx === MISSION_COUNT - 1))) return showEnding();
+    if (ui.tally && ui.tally.finale) return showEnding();
     openGarage(() => showMap());
 }
 
