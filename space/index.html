@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Eternal Invasion: Space Edition - Auto-Battle Shooter | BuntGames</title>
-<meta name="description" content="Eternal Invasion: Space Edition is an auto-battle space shooter campaign. Watch your ship fight on its own or take the stick: 17 handcrafted stages in five sectors, eight enemy types, five bosses, power-ups, an upgrade shop, endless mode and a top-10 table. Free in your browser.">
+<meta name="description" content="Eternal Invasion: Space Edition is an auto-battle space shooter campaign. Watch your ship fight on its own or take the stick: 17 handcrafted stages in five sectors, eleven enemy types, five bosses, power-ups, an upgrade shop, endless mode and a top-10 table. Free in your browser.">
 <meta name="theme-color" content="#05070f">
 <meta name="color-scheme" content="dark">
 <meta property="og:type" content="website">
@@ -803,7 +803,9 @@ const SHAPES = {
     checker: ['a.a.a.a', '.b.b.b.', 'c.c.c.c'],
     ring:    ['.bbbb.', 'b....b', '.bbbb.'],
     pincer:  ['ab....ba', 'ab....ba', 'cb....bc'],
-    arrow:   ['..a..', '.bbb.', 'ccccc']
+    arrow:   ['..a..', '.bbb.', 'ccccc'],
+    stairs:  ['aaa....', '.bbb...', '..ccc..', '...bbb.'],
+    diamond: ['...d...', '..bcb..', '.bcccb.', '..bcb..']
 };
 
 const STAGES = [
@@ -835,7 +837,7 @@ const STAGES = [
         waves: [
             W(['..bb..', '.dbbd.', '..cc..'], { entry: 'drop', vx: 50, step: 18, drops: { '0,2': 'shield' } }),
             W(['a.a.a.a', '.d.d.d.', 'b.b.b.b'], { entry: 'spiral', side: 'alt', sx: 96, vx: 56, step: 18, dive: { every: [5, 7], n: 1, style: 'mix' } }),
-            W(['cccccc', 'dbbbbd'], { entry: 'sweep', side: 'split', vx: 58, step: 20, drops: { '0,3': 'option' } }),
+            W(SHAPES.diamond, { entry: 'sweep', side: 'split', sx: 96, vx: 58, step: 18, dive: { every: [5, 7], n: 1, style: 'mix' }, drops: { '2,3': 'option' } }),
             W(['wbabbaw', 'dbbcbbd', '.a.d.a.'], { entry: 'loop', side: 'alt', sx: 96, vx: 62, step: 18, dive: { every: [4, 6], n: 2, style: 'mix' } })
         ] },
     {   id: '1-B', sector: 0, name: 'The Gatekeeper', sub: 'Sector boss', boss: 'gate',
@@ -856,7 +858,7 @@ const STAGES = [
         events: [{ t: 30, e: 'supply', kind: 'bomb', x: 0.5 }],
         waves: [
             W(SHAPES.classic, { entry: 'drop', vx: 54, step: 18 }),
-            W(SHAPES.blocks, { entry: 'sweep', side: 'split', vx: 58, step: 18, drops: { '0,0': 'spread' } }),
+            W(SHAPES.stairs, { entry: 'sweep', side: 'alt', sx: 92, sy: 84, vx: 58, step: 16, drops: { '0,0': 'spread' } }),
             W(['wbbbbw', 'cbbbbc'], { entry: 'arc', side: 'split', vx: 60, step: 18, drops: { '1,3': 'shield' } }),
             W(SHAPES.checker, { entry: 'loop', side: 'alt', sx: 96, vx: 62, step: 18, dive: { every: [7, 10], n: 1, style: 'swoop' } })
         ] },
@@ -869,7 +871,7 @@ const STAGES = [
             W(['s.ss.s', 'bbbbbb'], { entry: 'drop', vx: 54, step: 18, drops: { '0,0': 'rapid' } }),
             W(['.s..s.', 'sbbbbs', '.cccc.'], { entry: 'spiral', side: 'alt', vx: 56, step: 18, drops: { '1,3': 'life' } }),
             W(['wsbbsw', 'bbccbb'], { entry: 'arc', side: 'split', vx: 60, step: 18, dive: { every: [6, 9], n: 1, style: 'mix' }, drops: { '0,2': 'option' } }),
-            W(['s.s.s.s', 'dbbbbbd', '.cc.cc.'], { entry: 'loop', side: 'alt', sx: 96, vx: 64, step: 18 })
+            W(['s.s.s.s', 'dbbbbbd', '.cc.cc.'], { entry: 'loop', side: 'alt', sx: 96, vx: 64, step: 18, bob: { a: 24, w: 1.7 } })
         ] },
     {   id: '2-B', sector: 1, name: 'Rockjaw', sub: 'Sector boss', boss: 'rockjaw',
         teach: 'A ring of armour plates orbits its core and blocks your fire. Shoot through the gaps, or shatter the plates.',
@@ -889,7 +891,7 @@ const STAGES = [
         waves: [
             W(SHAPES.classic, { entry: 'fade', vx: 54, step: 18 }),
             W(['n.bb.n', 'bbbbbb'], { entry: 'arc', side: 'split', vx: 56, step: 18, drops: { '1,1': 'spread' } }),
-            W(['..n.n..', 'wbbbbbw', '.c.c.c.'], { entry: 'spiral', side: 'alt', sx: 96, vx: 58, step: 18, drops: { '2,3': 'shield' } }),
+            W(['..n.n..', 'wbbbbbw', '.c.c.c.'], { entry: 'spiral', side: 'alt', sx: 96, vx: 58, step: 18, bob: { a: 22, w: 1.6 }, drops: { '2,3': 'shield' } }),
             W(['n.n.n.n', 'bcbbbcb'], { entry: 'sweep', side: 'split', sx: 96, vx: 62, step: 18, drops: { '1,3': 'bomb' } })
         ] },
     {   id: '3-2', sector: 2, name: 'Ghost Signals', sub: 'Blink and it moves',
@@ -921,7 +923,7 @@ const STAGES = [
         waves: [
             W(SHAPES.classic, { entry: 'drop', vx: 50, step: 18 }),
             W(SHAPES.ring, { entry: 'arc', side: 'split', vx: 56, step: 18, drops: { '0,2': 'spread' } }),
-            W(['cbbbbc', 'wa..aw', 'cbbbbc'], { entry: 'sweep', side: 'split', vx: 58, step: 18, drops: { '1,1': 'shield' } }),
+            W(['cbbbbc', 'wa..aw', 'cbbbbc'], { entry: 'sweep', side: 'split', vx: 58, step: 18, bob: { a: 26, w: 1.9 }, drops: { '1,1': 'shield' } }),
             W(SHAPES.checker, { entry: 'loop', side: 'alt', sx: 96, vx: 62, step: 18, dive: { every: [6, 9], n: 1, style: 'mix' } })
         ] },
     {   id: '4-2', sector: 3, name: 'Shield Wall', sub: 'Break the guard',
@@ -965,7 +967,7 @@ const STAGES = [
             W(['bxbbxb', 'aaaaaa'], { entry: 'drop', vx: 54, step: 18, drops: { '0,0': 'rapid' } }),
             W(['x.bb.x', 'wbccbw'], { entry: 'arc', side: 'split', vx: 56, step: 18, drops: { '1,2': 'shield' } }),
             W(['dxbbxd', 'cbaabc'], { entry: 'sweep', side: 'split', vx: 58, step: 18, dive: { every: [5, 8], n: 1, style: 'mix' }, drops: { '0,2': 'spread' } }),
-            W(['x.x.x.x', 'bcbnbcb', '.a.a.a.'], { entry: 'loop', side: 'alt', sx: 96, vx: 62, step: 18, drops: { '1,3': 'bomb' } })
+            W(['x.x.x.x', 'bcbnbcb', '.a.a.a.'], { entry: 'loop', side: 'alt', sx: 96, vx: 62, step: 18, bob: { a: 24, w: 1.8 }, drops: { '1,3': 'bomb' } })
         ] },
     {   id: '5-2', sector: 4, name: 'Gauntlet', sub: 'Everything at once',
         teach: 'Every enemy you have met, back to back. Prioritise: Snipers and Carriers first, Aegis before its neighbours.',
@@ -974,7 +976,7 @@ const STAGES = [
         mines: [{ x: 180, y: 430 }, { x: 540, y: 430 }],
         events: [{ t: 40, e: 'supply', kind: 'life', x: 0.5 }],
         waves: [
-            W(['nwbbwn', 'xbccbx'], { entry: 'arc', side: 'split', vx: 56, step: 18, drops: { '0,0': 'spread' } }),
+            W(['nwbbwn', 'xbccbx'], { entry: 'arc', side: 'split', vx: 56, step: 18, bob: { a: 20, w: 1.6 }, drops: { '0,0': 'spread' } }),
             W(['k.gg.k', 'dsbbsd'], { entry: 'sweep', side: 'split', vx: 52, step: 18, dive: { every: [5, 8], n: 1, style: 'mix' }, drops: { '1,1': 'shield' } }),
             W(['.G...G.', 'fgaCagf', '.G...G.'], { entry: 'fade', sx: 100, y0: 200, sy: 100, vx: 40, step: 18, drops: { '1,3': 'option' } }),
             W(['x.n.n.x', 'cwbbbwc', 'd.s.s.d'], { entry: 'spiral', side: 'alt', sx: 96, vx: 60, step: 18, dive: { every: [5, 7], n: 2, style: 'mix' }, drops: { '1,3': 'bomb' } })
@@ -1291,6 +1293,7 @@ function launchEnemy(r, e) {
     const f = e.form;
     if (e.entry === 'fade' || !ENTRY[e.entry]) {
         const s = slotPos(e); e.x = s.x; e.y = s.y; e.px = e.x; e.py = e.y; e.st = 'form'; e.fade = 0.7; e.diveT = rr(3, 8);
+        if (e.k.tele) e.tp = { s: 'vis', t: rr(1.4, 2.8) };
         return;
     }
     const s = slotPos(e);
@@ -1817,7 +1820,7 @@ function applyPickup(r, pk) {
     else if (pk.kind === 'crystal') { r.coins += 8; r.score += 100; r.crystals = (r.crystals || 0) + 1; }
     if (pk.kind !== 'life') AudioEngine.pick();
     if (pk.kind !== 'crystal') AudioEngine.power();
-    ring(r, pk.x, pk.y, 10, 70, 0.4, K.color); addPop(r, pk.x, pk.y - 22, K.name.toUpperCase(), 0, K.color);
+    ring(r, pk.x, pk.y, 10, 70, 0.4, K.color); addPop(r, pk.x, pk.y - 22, pk.kind === 'crystal' ? '+8' : K.name.toUpperCase(), 0, K.color);
 }
 function updatePickups(r, dt) {
     const p = r.p, mag = 55 * p.ampMul + 22;
@@ -2873,6 +2876,7 @@ function fairness(bossId, o) {
     r.allSpawned = true; r.wi = 99;
     spawnBoss(r, bossId);
     const H = 72, dtp = 1 / 48;
+    const byAtk = {};
     let checks = 0, worstFrac = 1, worstActual = true, blockedActual = 0, worstAt = '', peakBullets = 0, unsafeChecks = 0, fracSum = 0;
     const maxT = o.maxSec || 240;
     while (r.boss && r.t < maxT) {
@@ -2884,12 +2888,13 @@ function fairness(bossId, o) {
             let safe = 0; for (let c = 0; c < NC; c++) if (S.depth[c] >= H) safe++;
             const frac = safe / NC, actual = S.depth[cellOf(r.p.x)] >= H;
             checks++; fracSum += frac;
+            const ak = (r.boss.atk ? r.boss.atk.s.n : 'idle') + '/p' + r.boss.phase; if (byAtk[ak] === undefined || frac < byAtk[ak]) byAtk[ak] = +frac.toFixed(2);
             if (frac < worstFrac) { worstFrac = frac; worstAt = (r.boss.atk ? r.boss.atk.s.n : '-') + '@ph' + r.boss.phase + ' t=' + r.t.toFixed(1); }
             if (!actual) { blockedActual++; }
             if (frac === 0) unsafeChecks++;
         }
     }
-    return { boss: bossId, done: !r.boss, t: +r.t.toFixed(1), checks, minSafeFrac: +worstFrac.toFixed(3), avgSafeFrac: +(fracSum / Math.max(1, checks)).toFixed(3), actualNotEscapable: blockedActual, noEscapeAnywhere: unsafeChecks, worstAt, peakBullets };
+    return { boss: bossId, done: !r.boss, t: +r.t.toFixed(1), checks, minSafeFrac: +worstFrac.toFixed(3), avgSafeFrac: +(fracSum / Math.max(1, checks)).toFixed(3), actualNotEscapable: blockedActual, noEscapeAnywhere: unsafeChecks, worstAt, peakBullets, byAtk };
 }
 
 /* ==========================================================================
@@ -3419,6 +3424,12 @@ function drawDangerLine(r, t) {
     X.beginPath(); X.moveTo(0, DANGER_Y); X.lineTo(GW, DANGER_Y); X.stroke(); X.setLineDash([]); X.lineDashOffset = 0;
 }
 
+function drawWreck(r, t) {   // the fallen Overlord, drifting and burning behind the ending
+    const sp = BSPR.overHull; if (!sp) return;
+    X.save(); X.translate(GW / 2 + Math.sin(t * 0.2) * 20, 250 + Math.sin(t * 0.3) * 12); X.rotate(0.28 + Math.sin(t * 0.15) * 0.05); X.globalAlpha = 0.5;
+    X.drawImage(sp.img, -sp.w / 2 * 0.9, -sp.h / 2 * 0.9, sp.w * 0.9, sp.h * 0.9); X.restore(); X.globalAlpha = 1;
+    const g = X.createRadialGradient(GW / 2, 250, 10, GW / 2, 250, 280); g.addColorStop(0, 'rgba(255,140,60,.28)'); g.addColorStop(1, 'rgba(255,60,60,0)'); X.fillStyle = g; X.fillRect(0, 0, GW, 600);
+}
 function drawBunkers(r) {
     for (const bk of r.bunk) {
         for (let c = 0; c < BCOLS * BROWS; c++) {
@@ -3765,7 +3776,7 @@ function render(tms) {
     const sh = settings.shake && r.shake > 0.05 ? r.shake : 0;
     X.save();
     if (sh) X.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
-    drawDangerLine(r, t);
+    if (game.scene === 'ending') drawWreck(r, t); else drawDangerLine(r, t);
     drawBunkers(r);
     drawLinks(r, t);
     for (const e of r.en) if (e.st !== 'wait') drawEnemy(e, r, t);
@@ -3784,7 +3795,7 @@ function render(tms) {
     drawFx(r, t);
     X.restore();
     if (r.vign > 0) { X.globalAlpha = r.vign; X.drawImage(vignetteCv, 0, 0); X.globalAlpha = 1; }
-    if (r.flash > 0) { X.fillStyle = `rgba(255,255,255,${Math.min(0.75, r.flash).toFixed(3)})`; X.fillRect(0, 0, GW, GH); }
+    if (r.flash > 0) { X.fillStyle = `rgba(255,255,255,${(Math.min(0.75, r.flash) * (settings.shake ? 1 : 0.3)).toFixed(3)})`; X.fillRect(0, 0, GW, GH); }
     drawBossHud(r, t);
     drawBanner(r);
     if (touch.active && game.scene === 'stage') { X.strokeStyle = 'rgba(190,220,255,.5)'; X.lineWidth = 2; X.beginPath(); X.arc(touch.x, r.p.y, 44, 0, TAU); X.stroke(); }
@@ -3835,8 +3846,9 @@ function later(fn, ms) { const id = setTimeout(fn, ms); ui.timers.push(id); retu
 function clearTimers() { ui.timers.forEach(clearTimeout); ui.timers = []; }
 
 /* ---------- panels ---------- */
+const PANEL_LABEL = { menu: 'Pause menu', card: 'Information card', tally: 'Stage results', fail: 'Stage failed', shop: 'Upgrade shop', map: 'Sector map', scores: 'High scores', settings: 'Settings', howto: 'How to play', ending: 'Campaign ending', entry: 'Enter your initials', endover: 'Endless run over' };
 function buildPanels() {
-    $('panels').innerHTML = PANEL_IDS.map(id => '<div class="panel' + (id === 'card' ? ' top' : '') + '" id="p-' + id + '" role="dialog" aria-modal="true" aria-label="' + id + '"></div>').join('');
+    $('panels').innerHTML = PANEL_IDS.map(id => '<div class="panel' + (id === 'card' ? ' top' : '') + '" id="p-' + id + '" role="dialog" aria-modal="true" aria-label="' + PANEL_LABEL[id] + '"></div>').join('');
 }
 function showPanel(id, html, clearBg) {
     PANEL_IDS.forEach(k => { $('p-' + k).classList.toggle('show', k === id); });
@@ -3925,7 +3937,7 @@ function beginStage(key) {
     AudioEngine.play(bonus ? 'bonus' : stageMusic(st)); AudioEngine.banner();
     syncAutoBtn(); syncPauseBtn(); layoutCanvas();
     announce((bonus ? 'Bonus stage: ' : 'Stage ' + st.id + ': ') + st.name + '. ' + st.teach);
-    later(() => { if (run === r && game.scene === 'stage' && !game.paused) toast(esc(st.teach), 520); }, 1900);
+    later(() => { if (run === r && game.scene === 'stage' && !game.paused) toast(esc(st.teach), innerWidth < 620 ? 330 : 520); }, 1900);
 }
 function beginEndless() {
     hidePanels(); clearTimers();
@@ -4147,6 +4159,8 @@ function openMenu() {
 }
 function togglePause(force) {
     if (game.scene !== 'stage' || !run || run.over) return;
+    if (ui.card && force !== true) { dismissCard(); return; }
+    if (ui.card) return;
     const want = force === undefined ? !game.paused : force;
     if (want === game.paused) return;
     if (want) openMenu(); else { game.paused = false; hidePanels(); syncPauseBtn(); AudioEngine.pause(); }
@@ -4451,7 +4465,7 @@ function installDebug() {
     window.__space = {
         game, ui, DBG, STAGES, BONUS, BOSSDEF, KINDS, PU, UPGRADES, PROFILES, SECTORS,
         beginStage, beginEndless, showMap, openShop, showEnding, showEntry, showTally, showFail, finishStage, aiShop, buyUpgrade, stageResult, applyResult, openMenu, togglePause, useBomb,
-        startRecommended, recommended, simStage, fairness, computeSafety, spawnBoss, spawnWave, dropPickup, showCard, dismissCard, openScores, openSettings, openHowTo, finishEndless, layoutCanvas, setAutoMode,
+        startRecommended, recommended, renderEnding, simStage, fairness, computeSafety, spawnBoss, spawnWave, dropPickup, mkEnemy, launchEnemy, addEB, addMine, addRock, startDive, killEnemy, hurtEnemy, BSPR, SPRITES, showCard, dismissCard, openScores, openSettings, openHowTo, finishEndless, layoutCanvas, setAutoMode,
         get run() { return run; }, get save() { return save; }, get scale() { return scale; },
         step(n) { for (let i = 0; i < (n || 1); i++) tick(); },
         setSave(fn) { fn(save); persist(); }
