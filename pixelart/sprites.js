@@ -60,10 +60,10 @@
       d: "k",
       m: "k",
       l: "d",
-      s: "O",
-      t: "O",
-      u: "O",
-      r: "O",
+      s: "B",
+      t: "B",
+      u: "B",
+      r: "B",
       G: "O",
       g: "O",
       o: "O",
@@ -801,7 +801,7 @@
           torso: {
             x: 12,
             y: 17,
-            r: ["...tt...", "mdsssstn", "mdwssswn", "mdwsswdn", ".mdwwdn.", ".mddddn."]
+            r: ["...tt...", "mddttddn", "mdwsswdn", "mddwwddn", "mdddddnn", "mdddddnn"]
           },
           kbd: {
             x: 6,
@@ -840,52 +840,46 @@
             r: ["llllllll", "dddgdddn", "n......n"]
           },
           aL_a: {
-            x: 10,
-            y: 19,
-            r: ["...t", "..st", ".stt", "sss.", "sss."],
-            ol: "O"
+            x: 9,
+            y: 18,
+            r: ["...m.", "..mdn", ".sdnn", "mstn.", ".sss.", ".sss."]
           },
           aL_b: {
             x: 8,
-            y: 19,
-            r: [".....t", "...ttt", "ssst..", "sss..."],
-            ol: "O"
+            y: 18,
+            r: ["....m.", "..mmdn", ".sddnn", "sssnn.", "sss..."]
           },
           aL_c: {
             x: 7,
-            y: 19,
-            r: ["......t", "....stt", "..sttt.", "ssst...", "sss...."],
-            ol: "O"
+            y: 18,
+            r: [".....m.", "...mmdn", ".mtddnn", ".stnnn.", "sssn...", "sss...."]
           },
           aR_a: {
             x: 18,
-            y: 19,
-            r: ["st..", "ss..", ".st.", ".sss", ".sss"],
-            ol: "O"
+            y: 18,
+            r: [".mm..", "mddn.", "mddt.", ".mstn", ".sss.", ".sss."]
           },
           aR_b: {
             x: 18,
-            y: 19,
-            r: ["ss....", "tsss..", "..tsss", "...sss"],
-            ol: "O"
+            y: 18,
+            r: [".mm...", "mddm..", "mdddt.", ".ndsss", "...sss"]
           },
           aR_c: {
             x: 18,
-            y: 19,
-            r: ["ss.....", "tss....", "..sss..", "...tsss", "....sss"],
-            ol: "O"
+            y: 18,
+            r: [".mm....", "mddm...", "mdddst.", ".nndst.", "....sss", "....sss"]
           },
           aL_up: {
             x: 6,
             y: 13,
-            r: ["sss.....", "sss.....", "sttt....", "...tt...", "....tt..", ".....ttt", "......tt"],
-            ol: "O"
+            r: ["sss.....", "sss.....", "sttt....", "..ttt...", "....ttt.", ".....ttt", "......tt"],
+            ol: false
           },
           aR_up: {
             x: 18,
             y: 13,
-            r: ["......sss", "......sss", ".....tstt", "....tt...", "..stt....", ".ttt.....", "tt......."],
-            ol: "O"
+            r: ["......sss", "......sss", ".....tstt", "...stt...", "..stt....", ".ttt.....", "tt......."],
+            ol: false
           },
           press_a: {
             x: 11,
@@ -1177,6 +1171,27 @@
               }
             ]
           },
+          stand: {
+            loop: true,
+            frames: [
+              {
+                d: 360,
+                l: "bun:0,0 pin:0,0 skirtS  torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 kbdc:0,0 aW_R:0,0"
+              },
+              {
+                d: 240,
+                l: "bun:0,0 pin:0,0 skirtS  torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 kbdc:0,0 aW_R:0,0"
+              },
+              {
+                d: 360,
+                l: "bun:0,1 pin:0,1 skirtS  torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 kbdc:0,1 aW_R:0,1"
+              },
+              {
+                d: 240,
+                l: "bun:0,1 pin:0,1 skirtS  torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 kbdc:0,1 aW_R:0,1"
+              }
+            ]
+          },
           perform: {
             loop: true,
             frames: [
@@ -1224,27 +1239,6 @@
               {
                 d: 130,
                 l: "bun:0,-1 pin:0,-1 skirtS  torso:0,-1 head:0,-1 face_smile:0,-1 ear:0,-1 aW_L:0,-1 kbdc:0,-1 aW_R:0,-1"
-              }
-            ]
-          },
-          stand: {
-            loop: true,
-            frames: [
-              {
-                d: 360,
-                l: "bun:0,0 pin:0,0 skirtS  torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 kbdc:0,0 aW_R:0,0"
-              },
-              {
-                d: 240,
-                l: "bun:0,0 pin:0,0 skirtS  torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 kbdc:0,0 aW_R:0,0"
-              },
-              {
-                d: 360,
-                l: "bun:0,1 pin:0,1 skirtS  torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 kbdc:0,1 aW_R:0,1"
-              },
-              {
-                d: 240,
-                l: "bun:0,1 pin:0,1 skirtS  torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 kbdc:0,1 aW_R:0,1"
               }
             ]
           },
@@ -1854,6 +1848,27 @@
               }
             ]
           },
+          stand: {
+            loop: true,
+            frames: [
+              {
+                d: 360,
+                l: "celloBack:0,0 skirtS  bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 240,
+                l: "celloBack:0,0 skirtS  bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 360,
+                l: "celloBack:0,1 skirtS  bun:0,1 ribbon:0,1 torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 aW_R:0,1"
+              },
+              {
+                d: 240,
+                l: "celloBack:0,1 skirtS  bun:0,1 ribbon:0,1 torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 aW_R:0,1"
+              }
+            ]
+          },
           perform: {
             loop: true,
             frames: [
@@ -1880,6 +1895,27 @@
               {
                 d: 120,
                 l: "skirt neck bun:0,1 ribbon:0,1 torso:0,1 head:0,1 face_play:0,1 ear:0,1 cello strings bow:-1,0 armBow:-1,0 armFing3 +fx/note_c_w:26,4 endpin"
+              }
+            ]
+          },
+          walk: {
+            loop: true,
+            frames: [
+              {
+                d: 130,
+                l: "celloBack:0,0 skirtS shoeA bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 130,
+                l: "celloBack:0,-1 skirtS  bun:0,-1 ribbon:0,-1 torso:0,-1 head:0,-1 face_smile:0,-1 ear:0,-1 aW_L:0,-1 aW_R:0,-1"
+              },
+              {
+                d: 130,
+                l: "celloBack:0,0 skirtS shoeB bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 130,
+                l: "celloBack:0,-1 skirtS  bun:0,-1 ribbon:0,-1 torso:0,-1 head:0,-1 face_smile:0,-1 ear:0,-1 aW_L:0,-1 aW_R:0,-1"
               }
             ]
           },
@@ -1914,48 +1950,6 @@
               {
                 d: 110,
                 l: "skirt neck bun:0,-1 ribbon:0,-1 torso:0,-1 head:0,-1 face_cheer:0,-1 ear:0,-1 cello strings bow:0,0 armV_L armV_R +fx/twk_s_g:27,11 endpin"
-              }
-            ]
-          },
-          walk: {
-            loop: true,
-            frames: [
-              {
-                d: 130,
-                l: "celloBack:0,0 skirtS shoeA bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 130,
-                l: "celloBack:0,-1 skirtS  bun:0,-1 ribbon:0,-1 torso:0,-1 head:0,-1 face_smile:0,-1 ear:0,-1 aW_L:0,-1 aW_R:0,-1"
-              },
-              {
-                d: 130,
-                l: "celloBack:0,0 skirtS shoeB bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 130,
-                l: "celloBack:0,-1 skirtS  bun:0,-1 ribbon:0,-1 torso:0,-1 head:0,-1 face_smile:0,-1 ear:0,-1 aW_L:0,-1 aW_R:0,-1"
-              }
-            ]
-          },
-          stand: {
-            loop: true,
-            frames: [
-              {
-                d: 360,
-                l: "celloBack:0,0 skirtS  bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 240,
-                l: "celloBack:0,0 skirtS  bun:0,0 ribbon:0,0 torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 360,
-                l: "celloBack:0,1 skirtS  bun:0,1 ribbon:0,1 torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 aW_R:0,1"
-              },
-              {
-                d: 240,
-                l: "celloBack:0,1 skirtS  bun:0,1 ribbon:0,1 torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aW_L:0,1 aW_R:0,1"
               }
             ]
           },
@@ -2102,60 +2096,81 @@
             r: ["tt", "tt", "tt", "O."]
           },
           flute: {
-            x: 13,
+            x: 12,
             y: 17,
             r: [
-              "wccAcclccAcclccAcl",
-              "cCCCCCCCCCCCCCCCCA"
-            ]
+              "wccwccwccwccwccwccl",
+              "CCCCACCACCACCACCACA"
+            ],
+            ol: "d"
+          },
+          hL: {
+            x: 15,
+            y: 17,
+            r: ["ss", "st"]
+          },
+          hR: {
+            x: 24,
+            y: 17,
+            r: ["ss", "st"]
+          },
+          hL2: {
+            x: 16,
+            y: 17,
+            r: ["ss", "st"]
+          },
+          hR2: {
+            x: 25,
+            y: 17,
+            r: ["ss", "st"]
           },
           aL: {
             x: 13,
             y: 18,
-            r: ["..sss", "stsss", "tt..."],
-            ol: "O"
+            r: [".sss", "ssss", "tstt"],
+            ol: "u"
           },
           aR: {
             x: 19,
             y: 18,
-            r: ["....ssss", "sstttsss", "ttt....."],
-            ol: "O"
+            r: ["....sss", "ssstsss", "ttttstt"],
+            ol: "u"
           },
           aL2: {
             x: 13,
             y: 18,
-            r: ["...sss", "sttsss", "tt...."],
-            ol: "O"
+            r: ["..sss", "sssss", "ttstt"],
+            ol: "u"
           },
           aR2: {
             x: 19,
             y: 18,
-            r: [".....ssss", "ssttttsss", "ttt......"],
-            ol: "O"
+            r: [".....sss", "sssstsss", "tttttstt"],
+            ol: "u"
           },
           aL_up: {
             x: 6,
             y: 13,
             r: ["sss.....", "sss.....", "sttt....", "...tt...", "....tt..", ".....ttt", "......tt"],
-            ol: "O"
+            ol: "u"
           },
           aR_up: {
             x: 19,
             y: 12,
             r: [".....sss", ".....sss", "....sstt", "...stt..", "..stt...", ".stt....", "stt.....", "tt......"],
-            ol: "O"
+            ol: "u"
           },
           aH_L: {
             x: 7,
             y: 18,
             r: ["sss....", "sssssst", "stttttt"],
-            ol: "O"
+            ol: "u"
           },
           aH_R: {
             x: 19,
             y: 19,
             r: ["ss.......", "tsss.....", "..ttsssss", ".....tsss", "......stt"],
-            ol: "O"
+            ol: "u"
           },
           fluteV: {
             x: 26,
@@ -2166,19 +2181,19 @@
             x: 19,
             y: 19,
             r: ["s........", "tsss.....", "..tssss..", "....ttsss", ".......ss"],
-            ol: "O"
+            ol: "u"
           },
           aW_L0: {
             x: 9,
             y: 19,
             r: ["....t", "...tt", "..tt.", "sss..", "sss..", "stt.."],
-            ol: "O"
+            ol: "u"
           },
           aW_L1: {
             x: 10,
             y: 19,
             r: ["...t", "..st", ".stt", "sss.", "sss."],
-            ol: "O"
+            ol: "u"
           },
           shoeA: {
             x: 10,
@@ -2398,82 +2413,49 @@
             frames: [
               {
                 d: 360,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 flute:0,0 aL:0,0 aR:0,0 "
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aL:0,0 aR:0,0 flute:0,0 hL:0,0 hR:0,0 "
               },
               {
                 d: 240,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 flute:0,0 aL:0,0 aR:0,0 "
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aL:0,0 aR:0,0 flute:0,0 hL:0,0 hR:0,0 "
               },
               {
                 d: 360,
-                l: "bun:0,1 pin:0,1 skirt slit torso:0,1 head:0,1 face_smile:0,1 ear:0,1 flute:0,1 aL:0,1 aR:0,1 "
+                l: "bun:0,1 pin:0,1 skirt slit torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aL:0,1 aR:0,1 flute:0,1 hL:0,1 hR:0,1 "
               },
               {
                 d: 240,
-                l: "bun:0,1 pin:0,1 skirt slit torso:0,1 head:0,1 face_smile:0,1 ear:0,1 flute:0,1 aL:0,1 aR:0,1 "
+                l: "bun:0,1 pin:0,1 skirt slit torso:0,1 head:0,1 face_smile:0,1 ear:0,1 aL:0,1 aR:0,1 flute:0,1 hL:0,1 hR:0,1 "
               }
             ]
           },
+          stand: { alias: "idle" },
           perform: {
             loop: true,
             frames: [
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 flute:0,0 aL aR +fx/note_a_g:25,8"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 aL aR flute:0,0 hL:0,0 hR:0,0 +fx/note_a_g:25,8"
               },
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 flute:0,-1 aL2:0,-1 aR:0,-1 +fx/note_b_w:25,5"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 aL2:0,-1 aR:0,-1 flute:0,-1 hL2:0,-2 hR:0,-2 +fx/note_b_w:25,5"
               },
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 flute:0,0 aL aR2 +fx/note_c_g:25,2"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 aL aR2 flute:0,0 hL:0,0 hR2:0,0 +fx/note_c_g:25,2"
               },
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 flute:0,-1 aL2:0,-1 aR2:0,-1 +fx/note_a_w:22,10"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 aL2:0,-1 aR2:0,-1 flute:0,-1 hL2:0,-2 hR2:0,-2 +fx/note_a_w:22,10"
               },
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 flute:0,0 aL aR +fx/note_b_g:26,6 +fx/twk_s_g:29,14"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_play:0,0 ear:0,0 aL aR flute:0,0 hL:0,0 hR:0,0 +fx/note_b_g:26,6 +fx/twk_s_g:29,14"
               },
               {
                 d: 110,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 flute:0,-1 aL:0,-1 aR2:0,-1 +fx/note_c_w:25,3"
-              }
-            ]
-          },
-          hit: {
-            loop: false,
-            frames: [
-              {
-                d: 90,
-                l: "bun:-1,1 pin:-1,1 skirt slit torso:-1,1 head:-1,1 face_hit:-1,1 ear:-1,1 aH_L aH_R "
-              },
-              {
-                d: 160,
-                l: "bun:-1,0 pin:-1,0 skirt slit torso:-1,0 head:-1,0 face_hit:-1,0 ear:-1,0 flute:-1,0 aL:-1,0 aR:-1,0 "
-              }
-            ]
-          },
-          cheer: {
-            loop: true,
-            frames: [
-              {
-                d: 120,
-                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_cheer:0,0 ear:0,0 aL_up aR_up +fx/twk_s_g:3,8 +fx/twk_s_g:28,8"
-              },
-              {
-                d: 110,
-                l: "bun:0,-2 pin:0,-2 skirt slit torso:0,-2 head:0,-2 face_cheer:0,-2 ear:0,-2 aL_up aR_up +fx/twk_m_g:2,6"
-              },
-              {
-                d: 120,
-                l: "bun:0,-3 pin:0,-3 skirt slit torso:0,-3 head:0,-3 face_cheer:0,-3 ear:0,-3 aL_up aR_up +fx/twk_m_g:26,4 +fx/twk_s_g:3,4"
-              },
-              {
-                d: 110,
-                l: "bun:0,-1 pin:0,-1 skirt slit torso:0,-1 head:0,-1 face_cheer:0,-1 ear:0,-1 aL_up aR_up +fx/twk_s_g:28,10"
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_smile:0,0 ear:0,0 aL:0,-1 aR2:0,-1 flute:0,-1 hL:0,-1 hR2:0,-2 +fx/note_c_w:25,3"
               }
             ]
           },
@@ -2498,7 +2480,40 @@
               }
             ]
           },
-          stand: { alias: "idle" },
+          hit: {
+            loop: false,
+            frames: [
+              {
+                d: 90,
+                l: "bun:-1,1 pin:-1,1 skirt slit torso:-1,1 head:-1,1 face_hit:-1,1 ear:-1,1 aH_L aH_R "
+              },
+              {
+                d: 160,
+                l: "bun:-1,0 pin:-1,0 skirt slit torso:-1,0 head:-1,0 face_hit:-1,0 ear:-1,0 aL:-1,0 aR:-1,0 flute:-1,0 hL:-1,0 hR:-1,0 "
+              }
+            ]
+          },
+          cheer: {
+            loop: true,
+            frames: [
+              {
+                d: 120,
+                l: "bun:0,0 pin:0,0 skirt slit torso:0,0 head:0,0 face_cheer:0,0 ear:0,0 aL_up aR_up +fx/twk_s_g:3,8 +fx/twk_s_g:28,8"
+              },
+              {
+                d: 110,
+                l: "bun:0,-2 pin:0,-2 skirt slit torso:0,-2 head:0,-2 face_cheer:0,-2 ear:0,-2 aL_up aR_up +fx/twk_m_g:2,6"
+              },
+              {
+                d: 120,
+                l: "bun:0,-3 pin:0,-3 skirt slit torso:0,-3 head:0,-3 face_cheer:0,-3 ear:0,-3 aL_up aR_up +fx/twk_m_g:26,4 +fx/twk_s_g:3,4"
+              },
+              {
+                d: 110,
+                l: "bun:0,-1 pin:0,-1 skirt slit torso:0,-1 head:0,-1 face_cheer:0,-1 ear:0,-1 aL_up aR_up +fx/twk_s_g:28,10"
+              }
+            ]
+          },
           bust: {
             loop: true,
             frames: [
@@ -2676,7 +2691,18 @@
               "..gggggggo.oggggO",
               "..oooooooo...oogO",
               "...............o."
-            ]
+            ],
+            ol: "k"
+          },
+          hV: {
+            x: 17,
+            y: 16,
+            r: ["ss", "st"]
+          },
+          hB: {
+            x: 23,
+            y: 18,
+            r: ["ss", "st"]
           },
           armV: {
             x: 9,
@@ -3011,82 +3037,49 @@
             frames: [
               {
                 d: 360,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 trumpet:0,0 armV:0,0 armB:0,0 "
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 armV:0,0 armB:0,0 trumpet:0,0 hV:0,0 hB:0,0 "
               },
               {
                 d: 240,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 trumpet:0,0 armV:0,0 armB:0,0 "
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 armV:0,0 armB:0,0 trumpet:0,0 hV:0,0 hB:0,0 "
               },
               {
                 d: 360,
-                l: "bun:0,1 pin:0,1 legL legR shoeL shoeR torso:0,1 head:0,1 face_smile:0,1 ear:0,1 trumpet:0,1 armV:0,1 armB:0,1 "
+                l: "bun:0,1 pin:0,1 legL legR shoeL shoeR torso:0,1 head:0,1 face_smile:0,1 ear:0,1 armV:0,1 armB:0,1 trumpet:0,1 hV:0,1 hB:0,1 "
               },
               {
                 d: 240,
-                l: "bun:0,1 pin:0,1 legL legR shoeL shoeR torso:0,1 head:0,1 face_smile:0,1 ear:0,1 trumpet:0,1 armV:0,1 armB:0,1 "
+                l: "bun:0,1 pin:0,1 legL legR shoeL shoeR torso:0,1 head:0,1 face_smile:0,1 ear:0,1 armV:0,1 armB:0,1 trumpet:0,1 hV:0,1 hB:0,1 "
               }
             ]
           },
+          stand: { alias: "idle" },
           perform: {
             loop: true,
             frames: [
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 trumpet:0,0 armV armB +fx/note_a_g:23,0"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 armV armB trumpet:0,0 hV:0,0 hB:0,0 +fx/note_a_g:23,0"
               },
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 trumpet:0,-1 armV2:0,-1 armB:0,-1 +fx/note_b_g:22,1 +fx/wave_s:26,1"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 armV2:0,-1 armB:0,-1 trumpet:0,-1 hV:0,0 hB:0,-1 +fx/note_b_g:22,1 +fx/wave_s:26,1"
               },
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 trumpet:0,0 armV armB2 +fx/note_c_w:24,0"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 armV armB2 trumpet:0,0 hV:0,0 hB:0,1 +fx/note_c_w:24,0"
               },
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 trumpet:0,-1 armV2:0,-1 armB2:0,-1 +fx/wave_m:26,3 +fx/note_a_w:22,1"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 armV2:0,-1 armB2:0,-1 trumpet:0,-1 hV:0,0 hB:0,0 +fx/wave_m:26,3 +fx/note_a_w:22,1"
               },
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 trumpet:0,0 armV armB +fx/note_b_w:23,0"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_play:0,0 ear:0,0 armV armB trumpet:0,0 hV:0,0 hB:0,0 +fx/note_b_w:23,0"
               },
               {
                 d: 100,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 trumpet:0,-1 armV2:0,-1 armB:0,-1 +fx/note_c_g:25,0 +fx/wave_s:27,2"
-              }
-            ]
-          },
-          hit: {
-            loop: false,
-            frames: [
-              {
-                d: 90,
-                l: "bun:-1,1 pin:-1,1 legL legR shoeL shoeR torso:-1,1 head:-1,1 face_hit:-1,1 ear:-1,1 armH_L armH_R "
-              },
-              {
-                d: 160,
-                l: "bun:-1,0 pin:-1,0 legL legR shoeL shoeR torso:-1,0 head:-1,0 face_hit:-1,0 ear:-1,0 trumpet:-1,0 armV:-1,0 armB:-1,0 "
-              }
-            ]
-          },
-          cheer: {
-            loop: true,
-            frames: [
-              {
-                d: 120,
-                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_cheer:0,0 ear:0,0 armUp_L armUp_R +fx/twk_s_g:2,8"
-              },
-              {
-                d: 110,
-                l: "bun:0,-2 pin:0,-2 legL2 legR2 shoeLu shoeRu torso:0,-2 head:0,-2 face_cheer:0,-2 ear:0,-2 armUp_L armUp_R +fx/twk_m_g:1,6 +fx/twk_s_g:26,7"
-              },
-              {
-                d: 120,
-                l: "bun:0,-3 pin:0,-3 legL2 legR2 shoeLu shoeRu torso:0,-3 head:0,-3 face_cheer:0,-3 ear:0,-3 armUp_L armUp_R +fx/twk_m_g:25,3"
-              },
-              {
-                d: 110,
-                l: "bun:0,-1 pin:0,-1 legL2 legR2 shoeLu shoeRu torso:0,-1 head:0,-1 face_cheer:0,-1 ear:0,-1 armUp_L armUp_R +fx/twk_s_g:2,6"
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_smile:0,0 ear:0,0 armV2:0,-1 armB:0,-1 trumpet:0,-1 hV:0,0 hB:0,-1 +fx/note_c_g:25,0 +fx/wave_s:27,2"
               }
             ]
           },
@@ -3111,7 +3104,40 @@
               }
             ]
           },
-          stand: { alias: "idle" },
+          hit: {
+            loop: false,
+            frames: [
+              {
+                d: 90,
+                l: "bun:-1,1 pin:-1,1 legL legR shoeL shoeR torso:-1,1 head:-1,1 face_hit:-1,1 ear:-1,1 armH_L armH_R "
+              },
+              {
+                d: 160,
+                l: "bun:-1,0 pin:-1,0 legL legR shoeL shoeR torso:-1,0 head:-1,0 face_hit:-1,0 ear:-1,0 armV:-1,0 armB:-1,0 trumpet:-1,0 hV:-1,0 hB:-1,0 "
+              }
+            ]
+          },
+          cheer: {
+            loop: true,
+            frames: [
+              {
+                d: 120,
+                l: "bun:0,0 pin:0,0 legL legR shoeL shoeR torso:0,0 head:0,0 face_cheer:0,0 ear:0,0 armUp_L armUp_R +fx/twk_s_g:2,8"
+              },
+              {
+                d: 110,
+                l: "bun:0,-2 pin:0,-2 legL2 legR2 shoeLu shoeRu torso:0,-2 head:0,-2 face_cheer:0,-2 ear:0,-2 armUp_L armUp_R +fx/twk_m_g:1,6 +fx/twk_s_g:26,7"
+              },
+              {
+                d: 120,
+                l: "bun:0,-3 pin:0,-3 legL2 legR2 shoeLu shoeRu torso:0,-3 head:0,-3 face_cheer:0,-3 ear:0,-3 armUp_L armUp_R +fx/twk_m_g:25,3"
+              },
+              {
+                d: 110,
+                l: "bun:0,-1 pin:0,-1 legL2 legR2 shoeLu shoeRu torso:0,-1 head:0,-1 face_cheer:0,-1 ear:0,-1 armUp_L armUp_R +fx/twk_s_g:2,6"
+              }
+            ]
+          },
           bust: {
             loop: true,
             frames: [
@@ -3754,6 +3780,27 @@
               }
             ]
           },
+          stand: {
+            loop: true,
+            frames: [
+              {
+                d: 360,
+                l: "hairb:0,0 skirt  torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 240,
+                l: "hairb:0,0 skirt  torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 360,
+                l: "hairb:0,1 skirt  torso:0,1 head:0,1 pin:0,1 face_smile:0,1 ear:0,1 miniharp:0,1 aW_L:0,1 aW_R:0,1"
+              },
+              {
+                d: 240,
+                l: "hairb:0,1 skirt  torso:0,1 head:0,1 pin:0,1 face_smile:0,1 ear:0,1 miniharp:0,1 aW_L:0,1 aW_R:0,1"
+              }
+            ]
+          },
           perform: {
             loop: true,
             frames: [
@@ -3780,6 +3827,27 @@
               {
                 d: 110,
                 l: "harp hairb:0,1 skirt torso:0,1 head:0,1 pin:0,1 face_play:0,1 ear:0,1 aL_a aR_d gl_a gl_d +fx/note_c_w:5,9"
+              }
+            ]
+          },
+          walk: {
+            loop: true,
+            frames: [
+              {
+                d: 130,
+                l: "hairb:0,0 skirt shoeA torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 130,
+                l: "hairb:0,-1 skirt  torso:0,-1 head:0,-1 pin:0,-1 face_smile:0,-1 ear:0,-1 miniharp:0,-1 aW_L:0,-1 aW_R:0,-1"
+              },
+              {
+                d: 130,
+                l: "hairb:0,0 skirt shoeB torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
+              },
+              {
+                d: 130,
+                l: "hairb:0,-1 skirt  torso:0,-1 head:0,-1 pin:0,-1 face_smile:0,-1 ear:0,-1 miniharp:0,-1 aW_L:0,-1 aW_R:0,-1"
               }
             ]
           },
@@ -3814,48 +3882,6 @@
               {
                 d: 110,
                 l: "harp hairb:0,-1 skirt torso:0,-1 head:0,-1 pin:0,-1 face_cheer:0,-1 ear:0,-1 aL_up aR_up +fx/twk_s_g:30,9"
-              }
-            ]
-          },
-          walk: {
-            loop: true,
-            frames: [
-              {
-                d: 130,
-                l: "hairb:0,0 skirt shoeA torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 130,
-                l: "hairb:0,-1 skirt  torso:0,-1 head:0,-1 pin:0,-1 face_smile:0,-1 ear:0,-1 miniharp:0,-1 aW_L:0,-1 aW_R:0,-1"
-              },
-              {
-                d: 130,
-                l: "hairb:0,0 skirt shoeB torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 130,
-                l: "hairb:0,-1 skirt  torso:0,-1 head:0,-1 pin:0,-1 face_smile:0,-1 ear:0,-1 miniharp:0,-1 aW_L:0,-1 aW_R:0,-1"
-              }
-            ]
-          },
-          stand: {
-            loop: true,
-            frames: [
-              {
-                d: 360,
-                l: "hairb:0,0 skirt  torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 240,
-                l: "hairb:0,0 skirt  torso:0,0 head:0,0 pin:0,0 face_smile:0,0 ear:0,0 miniharp:0,0 aW_L:0,0 aW_R:0,0"
-              },
-              {
-                d: 360,
-                l: "hairb:0,1 skirt  torso:0,1 head:0,1 pin:0,1 face_smile:0,1 ear:0,1 miniharp:0,1 aW_L:0,1 aW_R:0,1"
-              },
-              {
-                d: 240,
-                l: "hairb:0,1 skirt  torso:0,1 head:0,1 pin:0,1 face_smile:0,1 ear:0,1 miniharp:0,1 aW_L:0,1 aW_R:0,1"
               }
             ]
           },
@@ -7331,22 +7357,22 @@
             x: 4,
             y: 2,
             r: [
-              "......ffffffff.....",
-              "....fwwhhhhhhhhf...",
-              "...wwwRiRhhhhhhhh..",
-              "..wwiiiiiyhhhhhhhj.",
-              ".wwiiiyiiiyhhhhhhjj",
-              "wwiiiiiiiiyhhhhhhjj",
+              "......hhhhhhhh.....",
+              "....hwwjjjjjjjjh...",
+              "...wwwRiRjjjjjjjj..",
+              "..wwiiiiiyjjjjjjjk.",
+              ".wwiiiyiiiyjjjjjjkk",
+              "wwiiiiiiiiyjjjjjjkk",
               "wiiiiiiiiikkkkyykkk",
               "wiiiiiiiiikkkkykkkk",
-              "wiiiiiiiiiyyhhhhhjj",
-              "wiyiiiiiiyyyhhhhjjj",
-              "wiiiiiiiiyyyhhhhjjj",
-              "wiRiiiiyyyyhhhhjjj.",
-              ".iiRiiiyyyyhhjjjjj.",
-              ".wiiiyyyyyhjjjjjj..",
-              "..yyyyyyyjjjjjj....",
-              "....yyyyjjjjj......"
+              "wiiiiiiiiiyyjjjjjkk",
+              "wiyiiiiiiyyyjjjjkkk",
+              "wiiiiiiiiyyyjjjjkkk",
+              "wiRiiiiyyyyjjjjkkk.",
+              ".iiRiiiyyyyjjkkkkk.",
+              ".wiiiyyyyyjkkkkkk..",
+              "..yyyyyyykkkkkk....",
+              "....yyyykkkkk......"
             ]
           },
           face_waiting: {
@@ -7833,10 +7859,10 @@
             x: 4,
             y: 2,
             r: [
-              "BBBBBBBBBBBBBBBBkk..",
-              "OOOOOOOOOOOOOOOOkk..",
-              "OOOOOOOOOOOOOOOOkk..",
-              "OOkOOkOOkOOkOOkOkk..",
+              "BBBBBBBBBBBBBBBBBB..",
+              "OOOOOOOOOOOOOOOOOO..",
+              "OOOOOOOOOOOOOOOOOO..",
+              "OOkOOkOOkOOkOOkOOk..",
               "OOeOfOfffffjfjffhe..",
               "eOfOffffffffjjffhh..",
               "efffffffffffffffhh.l",
@@ -7855,17 +7881,17 @@
           face_waiting: {
             x: 5,
             y: 8,
-            r: ["jj..", ".jjj", ".kck", "..k.", "....", "....", "....", "jjjj"]
+            r: ["jjjj..", ".www..", ".kkw..", ".kkw..", "......", "......", "......", "jjjjjj"]
           },
           face_angry: {
             x: 4,
-            y: 8,
-            r: [".jjjj", "..RRk", ".....", ".....", ".....", ".....", ".....", ".jjjj", "j...."]
+            y: 7,
+            r: ["..jjj..", ".jjjj..", "..www..", "..RRw..", "..RRw..", ".......", ".......", ".......", ".jjjjjj", "j......"]
           },
           face_leaving: {
             x: 5,
-            y: 9,
-            r: [".jjj", ".kTk", "..k.", "....", "....", "j..j", ".jj."]
+            y: 8,
+            r: ["jjjj..", ".www..", ".TTw..", ".TTw..", "......", "......", "j....j", ".jjjj."]
           },
           face_satisfied: {
             x: 5,
@@ -8361,47 +8387,47 @@
           note_a_g: {
             x: 0,
             y: 0,
-            r: ["..OO...", ".OggO..", ".OgOgO.", ".OgOOgO", ".OgO.O.", "OggO...", "OggO...", ".OO...."]
+            r: ["...OO..", "..OggO.", "..OgOgO", "..OgOO.", "..OgO..", ".OggO..", "OgggO..", ".OgO...", "..O...."]
           },
           note_a_w: {
             x: 0,
             y: 0,
-            r: ["..yy...", ".ywwy..", ".ywywy.", ".ywyywy", ".ywy.y.", "ywwy...", "ywwy...", ".yy...."]
+            r: ["...yy..", "..ywwy.", "..ywywy", "..ywyy.", "..ywy..", ".ywwy..", "ywwwy..", ".ywy...", "..y...."]
           },
           note_a_t: {
             x: 0,
             y: 0,
-            r: ["..hh...", ".hTTh..", ".hThTh.", ".hThhTh", ".hTh.h.", "hTTh...", "hTTh...", ".hh...."]
+            r: ["...hh..", "..hTTh.", "..hThTh", "..hThh.", "..hTh..", ".hTTh..", "hTTTh..", ".hTh...", "..h...."]
           },
           note_b_g: {
             x: 0,
             y: 0,
-            r: ["..OOOOO..", ".OgggggO.", ".OgOOOgO.", ".OgO.OgO.", "OggOOggO.", "OggOOggO.", ".OO..OO.."]
+            r: ["...OOOOO.", "..OgggggO", "..OgOOOgO", "..OgO.OgO", "..OgO.OgO", ".OggOOggO", "OgggOgggO", ".OgO.OgO.", "..O...O.."]
           },
           note_b_w: {
             x: 0,
             y: 0,
-            r: ["..yyyyy..", ".ywwwwwy.", ".ywyyywy.", ".ywy.ywy.", "ywwyywwy.", "ywwyywwy.", ".yy..yy.."]
+            r: ["...yyyyy.", "..ywwwwwy", "..ywyyywy", "..ywy.ywy", "..ywy.ywy", ".ywwyywwy", "ywwwywwwy", ".ywy.ywy.", "..y...y.."]
           },
           note_b_t: {
             x: 0,
             y: 0,
-            r: ["..hhhhh..", ".hTTTTTh.", ".hThhhTh.", ".hTh.hTh.", "hTThhTTh.", "hTThhTTh.", ".hh..hh.."]
+            r: ["...hhhhh.", "..hTTTTTh", "..hThhhTh", "..hTh.hTh", "..hTh.hTh", ".hTThhTTh", "hTTThTTTh", ".hTh.hTh.", "..h...h.."]
           },
           note_c_g: {
             x: 0,
             y: 0,
-            r: ["..O..", ".OgO.", ".OgO.", ".OgO.", ".OgO.", "OggO.", "OggO.", ".OO.."]
+            r: ["...O.", "..OgO", ".OggO", "..OgO", "..OgO", "..OgO", ".OggO", "OgggO", ".OgO.", "..O.."]
           },
           note_c_w: {
             x: 0,
             y: 0,
-            r: ["..y..", ".ywy.", ".ywy.", ".ywy.", ".ywy.", "ywwy.", "ywwy.", ".yy.."]
+            r: ["...y.", "..ywy", ".ywwy", "..ywy", "..ywy", "..ywy", ".ywwy", "ywwwy", ".ywy.", "..y.."]
           },
           note_c_t: {
             x: 0,
             y: 0,
-            r: ["..h..", ".hTh.", ".hTh.", ".hTh.", ".hTh.", "hTTh.", "hTTh.", ".hh.."]
+            r: ["...h.", "..hTh", ".hTTh", "..hTh", "..hTh", "..hTh", ".hTTh", "hTTTh", ".hTh.", "..h.."]
           },
           spark_s_g: {
             x: 0,
@@ -8416,7 +8442,7 @@
           spark_l_g: {
             x: 0,
             y: 0,
-            r: ["....o....", "...oGo...", "..ooGoo..", ".oGowoGo.", "oGGwwwGGo", ".oGowoGo.", "..ooGoo..", "...oGo...", "....o...."]
+            r: ["....o....", "...oGo...", "...oGo...", ".ooGwGoo.", "oGGwwwGGo", ".ooGwGoo.", "...oGo...", "...oGo...", "....o...."]
           },
           spark_s_t: {
             x: 0,
@@ -8431,7 +8457,7 @@
           spark_l_t: {
             x: 0,
             y: 0,
-            r: ["....h....", "...hTh...", "..hhThh..", ".hThwhTh.", "hTTwwwTTh", ".hThwhTh.", "..hhThh..", "...hTh...", "....h...."]
+            r: ["....h....", "...hTh...", "...hTh...", ".hhTwThh.", "hTTwwwTTh", ".hhTwThh.", "...hTh...", "...hTh...", "....h...."]
           },
           twk_s_g: {
             x: 0,
@@ -8446,7 +8472,7 @@
           twk_l_g: {
             x: 0,
             y: 0,
-            r: ["...G...", "...G...", ".G.w.G.", "GGwwwGG", ".G.w.G.", "...G...", "...G..."]
+            r: ["...G...", "...G...", "..GwG..", "GGwwwGG", "..GwG..", "...G...", "...G..."]
           },
           wave_s: {
             x: 0,
@@ -8816,23 +8842,23 @@
             ]
           },
           maxmp: {
-            x: 0,
+            x: 1,
             y: 0,
             r: [
-              "G............G.",
-              "G...........GwG",
-              ".............G.",
-              "...RRRR..RRRR..",
-              "..RrrRRRRRRRRR.",
-              ".RrwRRRRRRRRRRx",
-              ".RrRRRRRRRRRRRx",
-              ".RRRRRRRRRRRRRx",
-              "..RRRRRRRRRRRx.",
-              "...RRRRRRRRRx..",
-              "....RRRRRRRx...",
-              ".....RRRRRx....",
-              "......RRRx.....",
-              ".......Rx......"
+              "............G.",
+              "...........GwG",
+              "............G.",
+              "..RRRR..RRRR..",
+              ".RrrRRRRRRRRR.",
+              "RrRRRRRRRRRRRx",
+              "RrRRRRRRRRRRRx",
+              "RRRRRRRRRRRRRx",
+              ".RRRRRRRRRRRx.",
+              "..RRRRRRRRRx..",
+              "...RRRRRRRx...",
+              "....RRRRRx....",
+              ".....RRRx.....",
+              "......Rx......"
             ]
           },
           shield: {
