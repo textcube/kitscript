@@ -239,12 +239,14 @@ input.name { font: 900 34px ui-monospace, monospace; letter-spacing: 8px; text-a
  *  SECTION 2   Audio: SFX + procedural music sequencer (WebAudio only)
  *  SECTION 3   Data: constants, enemy roster, power-ups, upgrades, cards
  *  SECTION 4   Stages: sectors, five bosses' definitions, 17 authored stages, bonus + endless generator
- *  SECTION 5   Simulation: runs, waves, entry/dive paths, enemies, weapons, bullets, hazards, power-ups
+ *  SECTION 5   Simulation: runs, waves, entry/dive paths
+ *     5b  Enemies: kinds, formations, abilities, dives, shooting
+ *     5c  Weapons + power-ups: targeting, fire, bombs, pick-ups, bullets, hazards (rocks, mines, bunkers, beams), wave scheduler, tick
  *  SECTION 6   Bosses: five multi-phase fights
  *  SECTION 7   Auto-pilot AI (demo + test bot): safety-map dodging, targeting, power-ups, auto-shop
  *  SECTION 7b  Results, stars, economy, fairness checker
  *  SECTION 8   Renderer: sprites, backdrops, entities, fog, effects
- *  SECTION 9   UI: HUD, panels, screens, flow, input, main loop
+ *  SECTION 9   UI: HUD, panels, screens, flow; 9b input; main loop
  *  SECTION 10  Debug hooks (off by default) and boot
  *
  *  The simulation (sections 3-7b) never touches the DOM, so the same code is used by
@@ -1263,7 +1265,9 @@ function damageRock(r, k, dmg) {
     r.score += 10 + k.size * 10;
 }
 
-/* ---------- enemies ---------- */
+/* ==========================================================================
+ * SECTION 5b - ENEMIES: kinds, formations, entry + dive movement, abilities, shooting
+ * ========================================================================== */
 const HPX = 8;   // global enemy toughness knob (boss hit points use the stage's raw hpm)
 function stageHp(r, base, hpm) { return Math.max(1, Math.round(base * hpm * HPX * 2) / 2); }
 function mkEnemy(r, kind, form, ox, oy, o) {
@@ -1678,6 +1682,9 @@ function breach(r, f) {
     hitPlayer(r, 'breach');
 }
 
+/* ==========================================================================
+ * SECTION 5c - WEAPONS + POWER-UPS (and the hazards / scheduler / tick that use them)
+ * ========================================================================== */
 /* ---------- targeting (used by auto-fire for everyone, and by the AI for positioning) ---------- */
 function incoming(r, ref) { let n = 0; for (const b of r.pb) if (b.tgt === ref) n += b.dmg; return n; }
 const KIND_PRIO = { sniper: 12, carrier: 16, aegis: 12, splitter: 3, phantom: 4, pylon: 8, core: 6, drone: 5, splitling: 7, plated: 2 };
@@ -4366,7 +4373,9 @@ function sceneTick() {
     }
 }
 
-/* ---------- input ---------- */
+/* ==========================================================================
+ * SECTION 9b - INPUT: keyboard, pointer / touch drag (manual override), HUD buttons, pause on blur
+ * ========================================================================== */
 function stageLive() { return game.scene === 'stage' && run && !run.over && !game.paused && !ui.card; }
 function syncInput() {
     const r = run; if (!r) return;
