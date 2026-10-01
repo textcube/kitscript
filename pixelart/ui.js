@@ -145,24 +145,51 @@
   Object.keys(FONT_EXTRA).forEach(function (a) { glyphs[a] = glyphs[FONT_EXTRA[a]]; });
   function glyphOf(ch) { return glyphs[ch] || glyphs['?']; }
 
+  // ---- tiny 3x5 caps font (labels in dense canvas UIs); lowercase maps to uppercase -------------
+  var T3 = {
+    'A': '.#./#.#/###/#.#/#.#', 'B': '##./#.#/##./#.#/##.', 'C': '.##/#../#../#../.##', 'D': '##./#.#/#.#/#.#/##.',
+    'E': '###/#../##./#../###', 'F': '###/#../##./#../#..', 'G': '.##/#../#.#/#.#/.##', 'H': '#.#/#.#/###/#.#/#.#',
+    'I': '###/.#./.#./.#./###', 'J': '..#/..#/..#/#.#/.#.', 'K': '#.#/#.#/##./#.#/#.#', 'L': '#../#../#../#../###',
+    'M': '#.#/###/#.#/#.#/#.#', 'N': '##./#.#/#.#/#.#/#.#', 'O': '.#./#.#/#.#/#.#/.#.', 'P': '##./#.#/##./#../#..',
+    'Q': '.#./#.#/#.#/###/.##', 'R': '##./#.#/##./#.#/#.#', 'S': '.##/#../.#./..#/##.', 'T': '###/.#./.#./.#./.#.',
+    'U': '#.#/#.#/#.#/#.#/###', 'V': '#.#/#.#/#.#/#.#/.#.', 'W': '#.#/#.#/###/###/#.#', 'X': '#.#/#.#/.#./#.#/#.#',
+    'Y': '#.#/#.#/.#./.#./.#.', 'Z': '###/..#/.#./#../###',
+    '0': '###/#.#/#.#/#.#/###', '1': '.#./##./.#./.#./###', '2': '##./..#/.#./#../###', '3': '##./..#/.#./..#/##.',
+    '4': '#.#/#.#/###/..#/..#', '5': '###/#../##./..#/##.', '6': '.##/#../###/#.#/###', '7': '###/..#/.#./.#./.#.',
+    '8': '###/#.#/###/#.#/###', '9': '###/#.#/###/..#/##.',
+    '.': '.../.../.../.../.#.', ',': '.../.../.../.#./#..', ':': '.../.#./.../.#./...', '/': '..#/..#/.#./#../#..',
+    '-': '.../.../###/.../...', '!': '.#./.#./.#./.../.#.', '?': '##./..#/.#./.../.#.', "'": '.#./.#./.../.../...',
+    '+': '.../.#./###/.#./...', 'x': '.../#.#/.#./#.#/...', '%': '#.#/..#/.#./#../#.#', '(': '.#./#../#../#../.#.', ')': '.#./..#/..#/..#/.#.',
+    '\u2190': '..#/.#./#../.#./..#', '\u2192': '#../.#./..#/.#./#..', '\u266a': '.##/.#./.#./##./##.', '\u2665': '#.#/###/###/.#./...'
+  };
+  var tinyGlyphs = {};
+  Object.keys(T3).forEach(function (ch) {
+    var rows = T3[ch].split('/'), x0 = 3, x1 = -1, i, j;
+    for (j = 0; j < rows.length; j++) for (i = 0; i < 3; i++) if (rows[j][i] === '#') { x0 = Math.min(x0, i); x1 = Math.max(x1, i); }
+    tinyGlyphs[ch] = { rows: rows, x0: x0, x1: x1, adv: (x1 >= x0 ? x1 - x0 + 1 : 0) + 1 };
+  });
+  tinyGlyphs[' '] = { rows: [], x0: 0, x1: -1, adv: 2 };
+  var FONTS = { main: { glyphs: glyphs, h: CELL_H, get: glyphOf }, tiny: { glyphs: tinyGlyphs, h: 5, get: function (ch) { var u = ch.toUpperCase(); return tinyGlyphs[u] || tinyGlyphs[ch] || tinyGlyphs['?']; } } };
+
   // ---- canvas text ----------------------------------------------------------
   // Text is rendered once per (string, colours) at 1 art pixel = 1 canvas pixel and cached;
   // callers scale it by an integer with imageSmoothingEnabled = false.
   var textCache = {}, textCount = 0;
-  function measure(str) { var w = 0; for (var i = 0; i < str.length; i++) w += glyphOf(str[i]).adv; return Math.max(0, w - 1); }
+  function measure(str, font) { var f = FONTS[font || 'main'], w = 0; for (var i = 0; i < str.length; i++) w += f.get(str[i]).adv; return Math.max(0, w - 1); }
   function textCanvas(str, o) {
     o = o || {};
-    var key = str + '\u0001' + (o.color || 'w') + '\u0001' + (o.outline || '') + '\u0001' + (o.shadow || '') + '\u0001' + (o.fill || '');
+    var f = FONTS[o.font || 'main'];
+    var key = (o.font || '') + '\u0002' + str + '\u0001' + (o.color || 'w') + '\u0001' + (o.outline || '') + '\u0001' + (o.shadow || '') + '\u0001' + (o.fill || '');
     var c = textCache[key];
     if (c) return c;
     var pad = o.outline ? 1 : 0, sh = o.shadow ? 1 : 0;
-    var w = measure(str) + pad * 2 + sh, h = CELL_H + pad * 2 + sh;
+    var w = measure(str, o.font) + pad * 2 + sh, h = f.h + pad * 2 + sh;
     var im = new Img(w, h), x = pad, i, j, g, a;
     var put = function (ox, oy, col) {
       var cx = pad;
       for (var n = 0; n < str.length; n++) {
-        var gg = glyphOf(str[n]);
-        for (var jj = 0; jj < CELL_H; jj++) for (var ii = gg.x0; ii <= gg.x1; ii++) if (gg.rows[jj][ii] === '#') im.set(cx + ii - gg.x0 + ox, pad + jj + oy, col);
+        var gg = f.get(str[n]);
+        for (var jj = 0; jj < f.h; jj++) for (var ii = gg.x0; ii <= gg.x1; ii++) if (gg.rows[jj] && gg.rows[jj][ii] === '#') im.set(cx + ii - gg.x0 + ox, pad + jj + oy, col);
         cx += gg.adv;
       }
     };
