@@ -1,6 +1,6 @@
 # PixelArt — Sopranian / Undeath 도트 스프라이트 팩
 
-[rogue](../rogue)와 [sopraknight](../sopraknight)가 **함께 쓰는** 도트(픽셀아트) 캐릭터 에셋이다. 두 게임 모두 빌드 없는 단일 HTML이므로, 팩도 **의존성 없는 스크립트 한 장(`sprites.js`)** 으로 끝난다. rogue 와 sopraknight 에 연결되어 있다(아래 "이 팩을 쓰는 게임").
+[rogue](../rogue)와 [sopraknight](../sopraknight)가 **함께 쓰는** 도트(픽셀아트) 캐릭터 에셋이다. 두 게임 모두 빌드 없는 단일 HTML이므로, 팩도 **의존성 없는 스크립트 두 장** 으로 끝난다: 캐릭터·아이템·효과는 `sprites.js`, 화면 전체의 도트 UI(폰트·프레임·버튼·아이콘·패턴)는 `ui.js`. rogue 와 sopraknight 에 연결되어 있다(아래 "이 팩을 쓰는 게임").
 
 * 미리보기 갤러리: [`index.html`](index.html) (`file://`로 그대로 열린다. 전 스프라이트 애니메이션 1×/2×/4×, 배경 토글, 복원 시퀀스, rogue·sopraknight 인게임 목업, 사용 코드)
 * 한눈에 보는 PNG: [`sheets/preview-musicians.png`](sheets/preview-musicians.png), [`sheets/preview-undead.png`](sheets/preview-undead.png), [`sheets/preview-restore.png`](sheets/preview-restore.png), [`sheets/preview-musicians-bust.png`](sheets/preview-musicians-bust.png), [`sheets/preview-undead-bust.png`](sheets/preview-undead-bust.png), 인게임 목업 스냅샷 [`sheets/preview-mock-rogue.png`](sheets/preview-mock-rogue.png) · [`sheets/preview-mock-sopraknight.png`](sheets/preview-mock-sopraknight.png)
@@ -12,7 +12,8 @@
 | 경로 | 설명 |
 |---|---|
 | `sprites.js` | 팔레트 + 스프라이트 데이터 + 렌더러. `<script src>`로 불러오거나 통째로 인라인 붙여넣기 가능. `window.PixelArt` 노출 (약 345KB, gzip 시 약 35KB) |
-| `index.html` | 자체 완결 미리보기 갤러리 |
+| `ui.js` | **PixelUI 킷** — 비트맵 폰트(+생성된 TTF), 9-slice 프레임/버튼, 아이콘, 패턴, 디더, 도트 캔버스 헬퍼. `window.PixelUI` 노출 (약 48KB) |
+| `index.html` | 자체 완결 미리보기 갤러리 (스프라이트 + UI 킷 섹션) |
 | `sheets/<그룹>.png` / `.json` | 그룹(캐릭터)별 스프라이트 시트 + 프레임 아틀라스 (PNG만 쓰는 경우용) |
 | `sheets/all.png` / `all.json` | 전 그룹을 세로로 쌓은 통합 시트 + 통합 아틀라스 |
 | `sheets/preview-*.png` | 눈으로 보기 위한 확대(3~8×) 몽타주 |
@@ -211,6 +212,65 @@ PixelArt.render(ctx, 'tile.seat', 0, seat.x, seat.y + 14, 1.5);  // 빈 좌석
 * 선택/호버된 무대 칸에는 `{ outline: '#f5c86a' }` 를 주면 금색 윤곽이 생긴다.
 * 이미지를 안 쓰는 대안: `sheets/*.png` + `*.json` 아틀라스를 `drawImage(sheet, f.x, f.y, f.w, f.h, dx, dy, f.w*3, f.h*3)` 로 직접 자른다. (틴트 옵션은 JS 경로에서만 지원)
 
+## UI 킷 (`ui.js`, `window.PixelUI`)
+
+게임의 **캐릭터가 아닌 모든 화면 요소**(패널, 버튼, 아이콘, 글자, 바닥/벽 타일, 스포트라이트·벽지 패턴)를 같은 32색 팔레트로 그리기 위한 킷이다. 이미지는 전부 **런타임에 생성되고 한 번만 캐시**된다(외부 이미지·폰트 요청 0). `sprites.js` 와 독립적이며 로드 순서는 상관없다.
+
+```html
+<script src="../pixelart/sprites.js"></script>
+<script src="../pixelart/ui.js"></script>
+<script>
+  // 성공하면 <html class="pxui"> 가 붙는다 -> 게임의 도트 스킨 CSS 는 전부 html.pxui 아래에 둔다
+  const PX = window.PixelUI ? PixelUI.install({ kFor: (w) => (w >= 1100 ? 3 : w >= 720 ? 2 : 1) }) : null;   // 없으면 null = 기존 모습
+</script>
+```
+
+`install(opt)` 가 하는 일: ① `@font-face "PixelUI"` 주입 ② 프레임/패턴/아이콘 data URL 을 CSS 변수로 노출(`--pxu-f-<프레임>` `--pxu-p-<패턴>` `--pxu-i-<아이콘>-<톤>`, 프레임 슬라이스 `--pxu-s-<프레임>`) ③ `--k`(도트 1칸 = 몇 CSS px, `kFor(innerWidth)` 결과, 리사이즈 시 갱신)와 `--m-small/--m-body/--m-head`(글자 배율), `data-pxk` 설정 ④ `html.pxui` 클래스 추가(`rootClass:false` 로 끌 수 있음).
+
+### 비트맵 폰트
+
+* **메인 5×7** — 대문자/소문자(x-height 5 + 디센더)/숫자/기호 `. , : ; ! ? ' " - + / % ( ) [ ] { } @ # & * = < > | ~ ^ _` 와 게임용 `♪ ☠ ⚠ ← → ↑ ↓ ♥ ★ × • ✓ ·`. 글자 폭은 모양에서 계산하는 가변 폭(자간 1칸).
+* **tiny 3×5** — 대문자·숫자·기초 기호 전용(소문자는 대문자로). 캔버스 안의 좁은 라벨(레인 번호, 말풍선 라벨, 수량 `x5`)용.
+* **DOM 텍스트** — `buildTTF()` 가 폰트 데이터에서 TrueType 을 직접 만들어 base64 로 `@font-face` 에 넣는다. 1픽셀 = 128 유닛, em = 1024 유닛(=8픽셀)이라 **`font-size: 8px × n` 이면 도트 1칸 = n CSS px** 로 또렷하게 나온다. 8의 배수가 아닌 크기는 번지므로 쓰지 않는다. `.pxu-text` 클래스 또는 `font-family: var(--pxu-font)`.
+* **캔버스 텍스트** — `PixelUI.drawText(ctx, str, x, y, {color, outline, shadow, scale, align, font:'main'|'tiny'})`. 문자열×색 조합마다 1배율 캔버스를 한 번 만들어 캐시하고 정수배로 `drawImage` 한다. `measure(str, font)` 폭 측정, `textCanvas()` 원본 캔버스.
+
+### 프레임 · 버튼 (9-slice)
+
+프레임 하나는 `(2S+2)²` 픽셀 이미지(모서리·가장자리 S칸 + 늘어나는 2칸)다. CSS 에서는
+
+```css
+border: solid transparent; border-width: calc(6px * var(--k));
+border-image: var(--pxu-f-stone) 6 fill / calc(6px * var(--k)) / 0 stretch;   /* slice = S */
+image-rendering: pixelated;
+```
+
+로 쓴다(가운데 배경 패턴을 따로 깔고 싶으면 `fill` 을 뺀다). 캔버스에서는 `PixelUI.drawFrame(ctx, name, x, y, w, h, k)` / `PixelCanvas.frame()`.
+
+| 세트 | 프레임 |
+|---|---|
+| 던전(돌·철) | `stone` `stoneHi` `stoneRed` `stoneViolet` `plaque` `inset` `well` · 철 버튼 `btn` `btnHover` `btnDown` `btnOff` `btnOn` · 금 버튼 `gbtn` `gbtnHover` `gbtnDown` `gbtnOff` |
+| 콘서트홀(나무·벨벳·금) | `wood` `woodHi` `velvet` `hallPlaque` `card` `cardOn` `cardOff` · 나무 버튼 `hbtn` `hbtnHover` `hbtnDown` `hbtnOff` `hbtnOn` · `bar` `toast` |
+
+버튼 상태는 **normal / hover / pressed / disabled(+ 토글 on)** 이 각각 별도 프레임이고, 눌림은 프레임 교체 + 내용물을 1칸 아래로(`translateY(var(--k))`) 내리는 방식이다(`transform: scale` 같은 보간 없음). 새 프레임은 `PixelUI.defineFrame(name, {S, fill, rings:[[밝은색, 어두운색], ...], dots})`.
+
+### 아이콘 · 패턴 · 디더
+
+* **아이콘 12×12**: `sound` `mute` `home` `play`(유튜브) `github` `close` `lock` `heart` `menu` `star`, 톤 8종(`normal hover dim gold cyan red dark hope`). 1칸 그림자 포함. CSS 는 `background: var(--pxu-i-home-normal) center / 100% 100%`, 캔버스는 `PixelCanvas.icon()`. `defineIcon(name, rows)` 로 추가.
+* **패턴**(타일링 배경): 던전 `wall` `floor0~3` `torch`(3프레임 불꽃) `fxImpact` `fxWave`, 홀 `planks` `curtain` `velvet` `hallwall` `carpet`, 스크림 `scrim` `scrim2` `scrim3`(3종 밀도의 Bayer 디더 어둠). `PixelUI.pattern(name)` → `{canvas, url, w, h}`, `definePattern(name, fn)`.
+* **디더**: 그라디언트·블러·반투명 그림자 대신 `PixelUI.dither(img, x, y, w, h, a, b, t)` (Bayer 4×4), `PixelUI.gradient(w, h, [키...])` (밴드+디더 그라디언트 `Img`). 오버레이는 `scrim*` 패턴.
+
+### 도트 캔버스 헬퍼 (`PixelUI.Canvas`)
+
+`new PixelUI.Canvas(ctx).setScale(r, u)` — 논리 좌표를 `r`(논리 px → 기기 px)로 옮기되 모든 도형이 `u`기기px(=도트 1칸) 격자에 스냅된다. `rect` `px` `line` `ring` `disc` `ellipse` `dither` `tile` `frame` `text` `icon`. sopraknight 는 이 대신 아주 작은 버퍼(1칸=버퍼 1px)에 그리고 통째로 정수배 확대하는 방식을 쓴다(아래 게임 README 참고).
+
+### 스킨을 만들 때의 약속
+
+1. 모든 CSS 는 `html.pxui` 아래에. 킷이 없으면(`window.PixelUI` 없음) 클래스가 붙지 않아 **기존 모습 그대로** 동작한다.
+2. 크기는 전부 `calc(N px * var(--k))` 로 — 도트 1칸이 항상 정수 CSS px(HiDPI 에서는 정수 기기 px).
+3. 그라디언트·`blur`·`backdrop-filter`·`border-radius`·부드러운 `box-shadow`·`scale/rotate` 애니메이션을 쓰지 않는다. 그림자는 하드 인셋 `box-shadow`/`text-shadow 1칸`, 애니메이션은 `steps()` + 정수칸 이동.
+4. 이미지는 `image-rendering: pixelated`, 글자는 8px 배수 크기.
+5. 아이콘 버튼은 `aria-label` 유지, 포커스는 `:focus-visible` 에 1칸 두께 금색 아웃라인.
+
 ## 스프라이트 추가/수정하기
 
 ### 데이터 구조
@@ -292,4 +352,6 @@ harpist: {
 * 검은 드레스는 어두운 배경에서 림라이트와 금 트림에 의존한다. 아주 밝은 배경에서는 실루엣이 매우 진하게 나온다.
 * `audience`는 상반신 + 의자 앞면만 있어 앉은 다리가 없다. `stand`의 "들고 선" 자세(피아노·첼로·하프)는 `idle`의 앉은 자세와 포즈가 다르므로 전환 시 튄다.
 * 언데드 측면 4종은 좌향 고정이다. 오른쪽으로 걷는 연출에는 `flipX` 를 쓴다.
+* UI 킷의 폰트는 영문/숫자/기호용이다(한글 없음). 한글이 필요한 곳은 본문 폴백 폰트를 써야 한다 — 현재 두 게임 UI 는 모두 영어다.
+* `kFor` 가 소수 배율을 돌려주면 도트가 균일하지 않을 수 있다. 정수(또는 `n / devicePixelRatio` 처럼 기기 px 가 정수가 되는 값)만 쓴다.
 * 전체 데이터가 문자열이라 파일이 크다(345KB, gzip ~35KB). 문자열 압축(RLE)은 사람이 편집하기 어려워 하지 않았다.

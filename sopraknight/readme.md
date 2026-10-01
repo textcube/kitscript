@@ -182,6 +182,37 @@ The game loads the shared pack with `<script src="../pixelart/sprites.js"></scri
 
 Notes: lane geometry, hit radii, hope/despair math and balance are unchanged. Sprites use integer scales in canvas space; the canvas itself is still CSS-scaled like before. Pixel sprites honour `prefers-reduced-motion` (static first frame). `restore` is a one-shot of about 1.25 seconds.
 
+## Pixel-Art UI Skin and Canvas Renderer
+
+Beyond the characters, the whole screen is pixel art when `../pixelart/ui.js` (`window.PixelUI`) and `sprites.js` are both loaded. **Without either of them the original smooth look and the legacy canvas code run unchanged** (`PX` is `null`: no `html.pxui` class, `draw()` falls through to `drawHall()` and friends).
+
+**Canvas (`drawPixel()`).** The scene is drawn into a 427 x 267 buffer where **1 art pixel = 3 logical px**; lanes, slot circles, seats, `canvasPoint()` hit-testing and every gameplay number stay in the 1280 x 800 logical space (`W`/`H` are now constants and everything is converted with `q(v) = round(v / 3)`). The buffer is presented with nearest-neighbour scaling:
+
+| Viewport | Result |
+|---|---|
+| Desktop (canvas area wide enough for 2x or more) | whole device pixels per art pixel (e.g. 854 x 534 css px at 1280 x 800, 3x on full-HD), crisp at any DPR |
+| Phones / narrow windows (where whole pixels would waste more than 15% of the width) | fills the width with a fractional nearest-neighbour scale, so pixels are slightly uneven but never blurred |
+
+The backing store is `427 x n` by `267 x n` (`n` = whole device pixels per art pixel), `image-rendering: pixelated`. All dithering is Bayer 4x4 (cached `CanvasPattern`s), all shapes are 1px primitives (`RING` `DISC` `ELL` `LINE` `BOX`), text uses the kit's 5x7 and 3x5 fonts, frames are the kit's 9-slice `wood` / `hallPlaque` / `velvet` / `inset` / `btnOn`. Static pieces (wall paper, valance, drapes, carpet runway, plank stage, plaques, seat panel) are pre-rendered once into `stat`; slot circles, shadows, despair gauges and the spotlight cone are cached sprites. Typical frame cost is 1-4 ms (the legacy renderer was under 1 ms of recording time but did gradients and blurs on a 1280 x 800 canvas).
+
+| Element | Pixel version |
+|---|---|
+| Hall | navy damask wall, red velvet valance + pleated drapes with gold tie-backs, dark parquet floor, rising 1px dust motes |
+| Stage | gold-trimmed wood frame, one plank band per lane, footlights, `LOCKED STAGE TEAM` plaque under it |
+| Lanes | carpet runway bands with dotted centre lines, `L1`-`L6` labels; the red lane warning is a flashing dither |
+| Slot circles | dithered discs with a dashed (empty), white (hover) or solid gold (occupied) ring |
+| Message banner / AUTO | plaque with the message (5x7 font, 3x5 when it is long) and a second line; AUTO is a gold-rimmed badge |
+| Incoming preview | 16x16 "minis" of the walk frames (2x2 block majority downsample, cached) with `xN` counts |
+| Audience | seated sprites clipped behind velvet seat backs, 2 rows; walkers hop over unclipped; gauge + `n/30` in the plaque |
+| Spotlight, range hints | two-colour dithered cone; dithered rectangles with dashed (preview) or solid borders, white arrow, label plaque |
+| Beams, pulses | 3px pixel lines (colour / white core / colour) that go dashed as they fade, impact burst from the kit's `fxImpact`; pixel rings that go dashed |
+| Enemy / musician meters | 1px outlined bars, 13-pixel despair half-ring, dashed hope ring |
+| Curtain, vignette, victory / defeat | pleated curtain pattern with a gold edge, banded dither vignette, dithered scrim + `wood` (gold) or `velvet` (red) panel |
+
+**Left panel.** `html.pxui` CSS under `<style id="pxui-style">`: 2 css px per art pixel (3 on screens at least 1790 x 1180), wooden edge, pixel title banner generated at start-up (`makeBanner()`: the six musicians on a stage under spotlights, the title in the kit font at 2x - it replaces `brand-violin.jpg`), icon buttons with normal / hover / pressed / on frames and kit icons instead of SVGs, 2 x 2 stat cards with stepped meters (`round(down, ..., 1 art px)`), roster cards that show the 32px idle (selected: `perform`) sprite, `Now Performing` portrait at 2x with a stepped (`steps(9)`) slide, gold `BEGIN CONCERT`, a pixel toast. Primary text is the generated 16px font (`8px * k`), fine print is 8px (16px on phones). The role line of the roster cards is kept in the button `title` (the cards are too narrow for it). The grand-wave button reads `Wave 12s` while cooling down. At 700px height or less the controls stick to the bottom of the panel.
+
+Verified at 1920 x 1080, 1366 x 768, 1280 x 800, 1024 x 600, 768 x 1024, 390 x 844 and 375 x 667 (DPR 1 and 2), full auto-play cycles including victory and restart, forced defeat and morale vignette, and with `pixelart/` blocked (legacy path) or only `ui.js` missing (sprites without the pixel skin).
+
 ## Assets
 
 ### Undead Assets
@@ -253,7 +284,7 @@ These are now the active in-game musician sprites. They were generated to match 
 
 ## UI Direction
 
-Current visual direction:
+Current visual direction (pixel skin on top, see above; this list describes the legacy look that remains as the fallback):
 
 - future classical concert hall
 - deep navy background

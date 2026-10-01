@@ -551,6 +551,8 @@
       box-shadow: 0 34px 110px rgba(0, 0, 0, .45);
     }
 
+    .stage-frame { display: contents; }
+
     .toast {
       position: fixed;
       left: 50%;
@@ -658,6 +660,165 @@
       }
     }
   </style>
+  <style id="pxui-style">
+/* ===== sopraknight : pixel-art UI skin (active only when html.pxui is set by PixelUI.install) =====
+   1 art pixel = var(--k) css px (2 on desktop/phones, 3 on full-HD+).  Primary text 8px*k, fine print 8px*kf. */
+html.pxui {
+  --kf: calc(var(--k) - 1);
+  --fp: calc(8px * var(--k)); --lp: calc(10px * var(--k));
+  --ff: calc(8px * var(--kf)); --lf: calc(10px * var(--kf));
+  --u: calc(1px * var(--k));
+}
+@media (max-width: 880px) { html.pxui { --kf: 2; } }
+html.pxui,
+html.pxui body {
+  background-color: #1b1731; background-image: var(--pxu-p-hallwall); background-size: calc(32px * var(--k)) calc(32px * var(--k));
+  font-family: var(--pxu-font); font-size: var(--fp); line-height: var(--lp); letter-spacing: 0; color: #fff8e8;
+  image-rendering: pixelated; -webkit-font-smoothing: none;
+}
+html.pxui button, html.pxui a { font-family: var(--pxu-font); font-size: inherit; letter-spacing: 0; }
+html.pxui b, html.pxui strong { font-weight: 400; }
+html.pxui :focus-visible { outline: var(--u) solid #fff2ac; outline-offset: var(--u); }
+html.pxui .app { background-image: none; grid-template-columns: calc(160px * var(--k)) 1fr; }
+/* ---- left panel: dark velvet cabinet with a wooden edge ---- */
+html.pxui .panel {
+  gap: calc(3px * var(--k)); padding: calc(3px * var(--k)); backdrop-filter: none;
+  background-color: #0f0c1d; background-image: var(--pxu-p-scrim3); background-size: calc(4px * var(--k)) calc(4px * var(--k));
+  border: solid transparent; border-width: 0 calc(6px * var(--k)) 0 0; border-image: var(--pxu-f-wood) 6 / 0 calc(6px * var(--k)) 0 0 / 0 stretch; image-rendering: pixelated;
+  overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #7c4a2a #0f0c1d;
+}
+html.pxui .panel > * { flex-shrink: 0; }
+html.pxui .brand { display: block; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+html.pxui .brand::before {
+  content: ""; display: block; height: calc(66px * var(--k)); margin: 0 auto; width: calc(148px * var(--k)); max-width: 100%;
+  background: var(--px-banner) center / calc(148px * var(--k)) calc(66px * var(--k)) no-repeat; image-rendering: pixelated;
+}
+html.pxui .brand::after { display: none; }
+html.pxui h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html.pxui .brand p { margin: calc(2px * var(--k)) 0 0; max-width: none; text-align: center; font-size: var(--ff); line-height: var(--lf); font-weight: 400; color: #bba78c; text-shadow: none; }
+/* ---- buttons (icons) ---- */
+html.pxui .quick-actions { gap: calc(2px * var(--k)); }
+html.pxui .icon-btn, html.pxui .control {
+  border: solid transparent; border-radius: 0; box-shadow: none; transition: none; transform: none; filter: none; image-rendering: pixelated; cursor: pointer;
+  background: none; border-width: calc(4px * var(--k)); border-image: var(--pxu-f-hbtn) 4 fill / calc(4px * var(--k)) / 0 stretch; box-sizing: border-box;
+}
+html.pxui .icon-btn { min-height: calc(20px * var(--k)); padding: 0; color: #ecdfc0; font-size: 8px; line-height: calc(10px * var(--k)); display: grid; place-items: center; }
+html.pxui .icon-btn:hover { background: none; filter: none; border-color: transparent; color: #fff8e8; border-image: var(--pxu-f-hbtnHover) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .icon-btn:active { transform: none; box-shadow: none; border-image: var(--pxu-f-hbtnDown) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .icon-btn:active > * { transform: translateY(var(--u)); }
+html.pxui .icon-btn.sound-on, html.pxui .icon-btn.auto-on, html.pxui .icon-btn.speed-on {
+  background: none; border-color: transparent; color: #f7c95d; border-image: var(--pxu-f-hbtnOn) 4 fill / calc(4px * var(--k)) / 0 stretch;
+}
+html.pxui .icon-btn.sound-off { color: #7973ad; }
+html.pxui .icon-label { font-size: 8px; line-height: calc(10px * var(--k)); font-weight: 400; letter-spacing: 0; }
+html.pxui .icon-btn .pxi { display: block; width: calc(12px * var(--k)); height: calc(12px * var(--k)); background: var(--ic) center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
+html.pxui .icon-btn:hover .pxi { background-image: var(--ich); }
+/* ---- stat cards ---- */
+html.pxui .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2px * var(--k)); }
+html.pxui .stat, html.pxui .card {
+  border: solid transparent; border-radius: 0; background: none; box-shadow: none; transition: none; image-rendering: pixelated;
+  border-width: calc(4px * var(--k)); border-image: var(--pxu-f-card) 4 fill / calc(4px * var(--k)) / 0 stretch;
+}
+html.pxui .stat { padding: 0 calc(1px * var(--k)) calc(5px * var(--k)); overflow: visible; }
+html.pxui .stat span { font-size: var(--ff); line-height: var(--lf); font-weight: 400; color: #bba78c; text-transform: none; }
+html.pxui .stat strong { margin: 0; font-size: var(--fp); line-height: var(--lp); font-weight: 400; color: #fff8e8; }
+html.pxui .stat.low strong { color: #ff8d8d; }
+html.pxui .stat::after { left: var(--u); right: var(--u); bottom: var(--u); height: calc(4px * var(--k)); border-radius: 0; background: #0f0c1d; box-shadow: inset 0 0 0 var(--u) #2c2751; }
+html.pxui .stat .meter {
+  left: calc(2px * var(--k)); bottom: calc(2px * var(--k)); height: calc(2px * var(--k)); border-radius: 0; box-shadow: none; transition: none;
+  background: var(--meter-color, #f7c95d);
+  width: calc(var(--value, 0) * 1%); width: round(down, calc((100% - 4 * var(--u)) * var(--value, 0) / 100), var(--u));
+}
+html.pxui #inspirationStat { --meter-color: #f7c95d; }
+html.pxui #moraleStat { --meter-color: #82ecd2; }
+html.pxui #audienceStat { --meter-color: #82ecd2; }
+html.pxui #waveStat { --meter-color: #ffbb6e; }
+html.pxui .section-title { margin: 0; padding-bottom: var(--u); border-bottom: var(--u) solid #7c4a2a; font-size: var(--fp); line-height: var(--lp); font-weight: 400; color: #f7c95d; text-transform: uppercase; }
+/* ---- roster cards ---- */
+html.pxui .roster { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(2px * var(--k)); }
+html.pxui .stats, html.pxui .controls, html.pxui .performer-meta { min-width: 0; }
+html.pxui .quick-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+html.pxui .card { min-height: 0; padding: 0; gap: 0; color: #fff8e8; align-content: start; }
+html.pxui .card:hover { transform: none; background: none; border-color: transparent; border-image: var(--pxu-f-cardOn) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .card.selected { transform: none; background: none; border-color: transparent; box-shadow: none; border-image: var(--pxu-f-cardOn) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .card:active { padding-top: var(--u); }
+html.pxui .card.unavailable { opacity: 1; border-image: var(--pxu-f-cardOff) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .card.unavailable canvas { opacity: .6; }
+html.pxui .card.unavailable .cost { color: #ff8d8d; }
+html.pxui .card-art { width: auto; height: auto; border: 0; border-radius: 0; background: none; box-shadow: none; padding: 0; margin: 0 auto; }
+html.pxui .card h2 { font-size: 8px; line-height: calc(10px * var(--kf)); font-weight: 400; text-shadow: none; white-space: nowrap; }
+html.pxui .card .cost { font-size: 8px; line-height: calc(10px * var(--kf)); font-weight: 400; color: #f7c95d; }
+html.pxui .card { min-width: 0; overflow: hidden; }
+html.pxui .card-head { gap: calc(2px * var(--k)); margin: 0; }
+html.pxui .card p { display: none; }
+html.pxui .mini-stats { gap: var(--u); margin-top: var(--u); }
+html.pxui .mini-stats .bar { height: calc(2px * var(--k)); border-radius: 0; background: #0f0c1d; }
+html.pxui .mini-stats .bar i { border-radius: 0; width: var(--w); width: round(down, var(--w), var(--u)); }
+/* ---- now performing ---- */
+html.pxui .performer-profile { gap: calc(2px * var(--k)); padding: 0; border: solid transparent; border-radius: 0; background: none; box-shadow: none; border-width: calc(4px * var(--k)); border-image: var(--pxu-f-card) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .performer-art-frame {
+  width: calc(72px * var(--k)); height: calc(72px * var(--k)); aspect-ratio: auto; justify-self: center; border: 0; border-radius: 0; box-shadow: none; padding: 0;
+  background-color: #0f0c1d; background-image: var(--pxu-p-scrim); background-size: calc(4px * var(--k)) calc(4px * var(--k));
+}
+html.pxui .performer-art { --performer-art-inset: 0px; object-fit: none; }
+html.pxui .performer-art.enter { animation: px-slide-in .6s steps(9) both; }
+html.pxui .performer-art.exit { animation: px-slide-out .6s steps(9) both; }
+@keyframes px-slide-in { from { transform: translateX(calc(72px * var(--k))); } to { transform: none; } }
+@keyframes px-slide-out { from { transform: none; } to { transform: translateX(calc(-72px * var(--k))); } }
+html.pxui .performer-copy { gap: calc(2px * var(--k)); }
+html.pxui .performer-copy h2 { font-size: var(--fp); line-height: var(--lp); font-weight: 400; text-shadow: none; color: #fff2ac; }
+html.pxui .performer-copy p { font-size: var(--ff); line-height: var(--lf); color: #bba78c; }
+html.pxui .performer-meta { gap: calc(2px * var(--k)); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html.pxui .performer-meta span {
+  padding: 0; border: solid transparent; border-radius: 0; background: none; font-size: var(--ff); line-height: var(--lf); font-weight: 400; color: #ecdfc0; text-transform: none; text-align: center;
+  border-width: calc(3px * var(--k)); border-image: var(--pxu-f-inset) 3 fill / calc(3px * var(--k)) / 0 stretch;
+}
+/* ---- bonuses, hint, controls ---- */
+html.pxui .hint, html.pxui .bonus-list { font-size: var(--ff); line-height: var(--lf); color: #ecdfc0; }
+html.pxui .hint { padding: calc(2px * var(--k)); border: solid transparent; border-radius: 0; background: none; border-width: calc(3px * var(--k)); border-image: var(--pxu-f-inset) 3 fill / calc(3px * var(--k)) / 0 stretch; color: #bba78c; }
+html.pxui .controls { gap: calc(2px * var(--k)); }
+html.pxui #startBtn { grid-column: 1 / -1; }
+html.pxui #skillBtn { grid-column: auto; }
+html.pxui .control {
+  padding: calc(3px * var(--k)) calc(2px * var(--k)); font-size: var(--fp); line-height: var(--lp); font-weight: 400; text-transform: uppercase; color: #fff8e8; text-shadow: none; letter-spacing: 0;
+  border-image: var(--pxu-f-hbtn) 4 fill / calc(4px * var(--k)) / 0 stretch;
+}
+html.pxui .control:not(.secondary) { color: #0f0c1d; border-image: var(--pxu-f-gbtn) 4 fill / calc(4px * var(--k)) / 0 stretch; text-shadow: 0 var(--u) 0 #fff2ac; }
+html.pxui .control:not(.secondary):hover { transform: none; filter: none; border-image: var(--pxu-f-gbtnHover) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .control:not(.secondary):active { transform: none; box-shadow: none; padding-top: calc(4px * var(--k)); padding-bottom: calc(2px * var(--k)); border-image: var(--pxu-f-gbtnDown) 4 fill / calc(4px * var(--k)) / 0 stretch; text-shadow: none; }
+html.pxui .control.secondary { background: none; text-shadow: none; }
+html.pxui .control.secondary:hover { transform: none; filter: none; border-image: var(--pxu-f-hbtnHover) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .control.secondary:active { transform: none; box-shadow: none; padding-top: calc(4px * var(--k)); padding-bottom: calc(2px * var(--k)); border-image: var(--pxu-f-hbtnDown) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+html.pxui .control:disabled { cursor: not-allowed; color: #453f79; text-shadow: none; padding: calc(3px * var(--k)) calc(2px * var(--k)); border-image: var(--pxu-f-hbtnOff) 4 fill / calc(4px * var(--k)) / 0 stretch; }
+/* ---- stage ---- */
+html.pxui .stage-wrap { padding: calc(3px * var(--k)); }
+html.pxui .stage-frame {
+  display: block; border: solid transparent; border-width: calc(6px * var(--k)); border-image: var(--pxu-f-wood) 6 fill / calc(6px * var(--k)) / 0 stretch; image-rendering: pixelated; line-height: 0;
+}
+html.pxui canvas.px-bust { border: 0; border-radius: 0; box-shadow: none; background: none; max-height: none; aspect-ratio: auto; image-rendering: pixelated; }
+html.pxui canvas#game { display: block; width: auto; max-height: none; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; background: #0f0c1d; image-rendering: pixelated; }
+/* ---- toast ---- */
+html.pxui .toast {
+  border: solid transparent; border-width: calc(4px * var(--k)); border-radius: 0; background: none; box-shadow: none; transition: none; transform: translateX(-50%); bottom: calc(6px * var(--k));
+  border-image: var(--pxu-f-toast) 4 fill / calc(4px * var(--k)) / 0 stretch; padding: calc(1px * var(--k)) calc(2px * var(--k)); font-size: var(--fp); line-height: var(--lp); font-weight: 400; color: #fff8e8; image-rendering: pixelated;
+  width: max-content; max-width: min(calc(300px * var(--k)), calc(100vw - 16px)); text-align: center; z-index: 20;
+}
+html.pxui .toast.show { transform: translateX(-50%); }
+@media (max-width: 880px) {
+  html.pxui .app { grid-template-columns: 1fr; }
+  html.pxui .panel { order: 2; border-width: 0; border-image: none; border-top: calc(6px * var(--k)) solid #7c4a2a; overflow: visible; }
+  html.pxui .panel > * { max-width: calc(180px * var(--k)); width: 100%; margin-inline: auto; }
+  html.pxui .stage-wrap { min-height: 0; }
+  html.pxui canvas#game { width: auto; }
+}
+@media (max-height: 820px) and (min-width: 881px) {
+  html.pxui .brand p { display: none; }
+}
+@media (max-height: 700px) and (min-width: 881px) {
+  html.pxui .hint { display: none; }
+  html.pxui .controls { position: sticky; bottom: calc(-3px * var(--k)); z-index: 2; padding-bottom: calc(3px * var(--k)); background-color: #0f0c1d; box-shadow: 0 calc(-3px * var(--k)) 0 #0f0c1d; margin-top: auto; }
+}
+  </style>
 </head>
 <body>
   <div class="app">
@@ -722,20 +883,27 @@
     </aside>
 
     <main class="stage-wrap">
-      <canvas id="game" width="1280" height="800" aria-label="SopraKnight concert hall game"></canvas>
+      <div class="stage-frame">
+        <canvas id="game" width="1280" height="800" aria-label="SopraKnight concert hall game"></canvas>
+      </div>
     </main>
   </div>
   <div class="toast" id="toast">Welcome to the final performance.</div>
 
   <!-- Shared pixel-art pack. Optional: without it the game falls back to images/*.png. -->
   <script src="../pixelart/sprites.js"></script>
+  <!-- Pixel UI kit (font, frames, icons, patterns). Optional: without it the game keeps its original look. -->
+  <script src="../pixelart/ui.js"></script>
   <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = 1280;      // logical stage size (hit-testing and layout maths); the backing store may differ in pixel mode
+    const H = 800;
     // Optional shared pixel-art pack; null => every draw path below falls back to the PNG art.
     const PA = (window.PixelArt && typeof window.PixelArt.render === 'function') ? window.PixelArt : null;
+    // Optional pixel UI kit; null => the original (smooth) look is kept.  Panel = 2 css px per art pixel (3 on full-HD+).
+    const PX = (PA && window.PixelUI && typeof window.PixelUI.install === 'function')
+      ? window.PixelUI.install({ kFor: (w) => (w >= 1790 && window.innerHeight >= 1180 ? 3 : 2) }) : null;
     const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const PALETTE = {
@@ -884,6 +1052,9 @@
       return state.running && !state.gameOver ? 'perform' : 'idle';
     }
 
+    // pixel icon span (PixelUI icons are drawn as CSS masks-free images; tone = colour variant)
+    const pxi = (name, tone = 'normal') => `<i class="pxi" style="--ic: var(--pxu-i-${name}-${tone}); --ich: var(--pxu-i-${name}-hover)"></i>`;
+
     function showToast(text) {
       const toast = document.getElementById('toast');
       toast.textContent = text;
@@ -911,6 +1082,10 @@
       button.classList.toggle('sound-off', !audioState.enabled);
       button.title = audioState.enabled ? 'Sound on' : 'Sound off';
       button.setAttribute('aria-label', audioState.enabled ? 'Turn sound off' : 'Turn sound on');
+      if (PX) {
+        button.innerHTML = pxi(audioState.enabled ? 'sound' : 'mute', audioState.enabled ? 'hope' : 'dim');
+        return;
+      }
       button.innerHTML = audioState.enabled
         ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M17 8c1.1 1 1.8 2.4 1.8 4s-.7 3-1.8 4M20 5.5A9 9 0 0 1 22 12a9 9 0 0 1-2 6.5" fill="none" stroke-linecap="round"></path></svg>`
         : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"></path><path d="M18 9l4 6M22 9l-4 6" fill="none" stroke-linecap="round"></path></svg>`;
@@ -1017,7 +1192,7 @@
       renderRoster();
       renderBonuses();
       document.getElementById('skillBtn').disabled = state.skillCooldown > 0 || !state.running;
-      document.getElementById('skillBtn').textContent = state.skillCooldown > 0 ? `Grand Wave ${Math.ceil(state.skillCooldown)}s` : 'Grand Wave';
+      document.getElementById('skillBtn').textContent = state.skillCooldown > 0 ? (PX ? `Wave ${Math.ceil(state.skillCooldown)}s` : `Grand Wave ${Math.ceil(state.skillCooldown)}s`) : 'Grand Wave';
     }
 
     function renderRoster(force = false) {
@@ -1040,6 +1215,7 @@
         button.disabled = state.setupDone;
         button.type = 'button';
         button.dataset.musician = type.id;
+        button.title = `${type.name}: ${type.role} (${type.cost})`;
         const power = Math.round(clamp(type.hope / 32) * 100);
         const tempo = Math.round(clamp(.82 / type.rate) * 100);
         button.innerHTML = `
@@ -1120,7 +1296,7 @@
 
     function renderBonuses() {
       const active = getBonuses();
-      document.getElementById('bonuses').innerHTML = active.length ? active.map((b) => `- ${b}`).join('<br>') : 'Place musicians to awaken ensemble effects.';
+      document.getElementById('bonuses').innerHTML = active.length ? active.map((b) => `${PX ? '\u266a' : '-'} ${b}`).join('<br>') : 'Place musicians to awaken ensemble effects.';
     }
 
     function getBonuses() {
@@ -2111,9 +2287,42 @@
 
     // Left-panel pixel busts (<canvas class="px-bust">): cards + the "Now Performing" portrait.
     // Redrawn only when (sprite, frame, size) changes; backing store = integer multiple of 64px.
+    let pxK = 2;
     function tickBusts(now) {
       if (!PA) return;
       const dpr = window.devicePixelRatio || 1;
+      if (PX) {
+        // pixel UI: art pixel = pxK css px; backing store holds whole device pixels per art pixel
+        const sc = Math.max(1, Math.round(pxK * dpr));
+        document.querySelectorAll('canvas.px-bust').forEach((c) => {
+          const d = c.dataset;
+          let id, size;
+          if (d.mode === 'card') {
+            const b = c.closest('.card');
+            id = `${d.type}.${b && b.classList.contains('selected') ? 'perform' : 'idle'}`;
+            size = 32;
+          } else {
+            const performer = state.musicians[state.performerProfileIndex % Math.max(1, state.musicians.length)];
+            let a = 'bust';
+            if (state.win) a = 'bust_cheer';
+            else if ((state.stageHitUntil || 0) > state.time) a = 'bust_hit';
+            else if (performer && performer.type.id === d.type && performer.castFlash > 0) a = 'bust_sing';
+            id = `${d.type}.${a}`;
+            size = 64;
+          }
+          if (!PA.has(id)) return;
+          const f = PA.frameAt(id, now);
+          const key = `${id}|${f}|${sc}`;
+          if (c._key === key) return;
+          c._key = key;
+          if (c.width !== size * sc) { c.width = size * sc; c.height = size * sc; }
+          c.style.width = (size * sc / dpr) + 'px'; c.style.height = (size * sc / dpr) + 'px';
+          const cx = c._ctx || (c._ctx = c.getContext('2d'));
+          cx.clearRect(0, 0, c.width, c.height);
+          PA.render(cx, id, f, 0, 0, sc, { anchor: 'topleft' });
+        });
+        return;
+      }
       document.querySelectorAll('canvas.px-bust').forEach((c) => {
         const d = c.dataset;
         let a = 'bust', box;
@@ -2177,6 +2386,7 @@
     }
 
     function draw() {
+      if (PX) { drawPixel(); return; }
       drawHall();
       for (const p of state.pulses) {
         const t = p.age / p.life;
@@ -2303,6 +2513,650 @@
       }
     }
 
+    // =====================================================================================
+    // Pixel renderer (only when pixelart/ui.js + sprites.js are loaded; otherwise the legacy canvas path above runs)
+    //
+    // The whole scene is drawn into a small buffer where 1 art pixel = 3 logical px (427 x 267).  Logical coordinates and
+    // hit-testing are unchanged (lanes, tiles, seats stay in 1280 x 800 space).  The buffer is then presented with
+    // nearest-neighbour scaling to an integer multiple of device pixels, so every art pixel is a crisp square.
+    // =====================================================================================
+    const BW = 427, BH = 267, U3 = 3;
+    const q = (v) => Math.round(v / U3);
+    const pxMk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+    const buf = pxMk(BW, BH);
+    const bg = buf.getContext('2d');
+    const KEY = PX ? PX.palette : {};
+    const BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    const ditherPats = {};
+
+    function nearestKey(hex) {
+      if (nearestKey.cache[hex]) return nearestKey.cache[hex];
+      const n = parseInt(hex.slice(1, 7), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+      let best = 'w', bd = 1e9;
+      for (const k in KEY) {
+        const v = parseInt(KEY[k].slice(1, 7), 16), d = ((v >> 16) - r) ** 2 + (((v >> 8) & 255) - g) ** 2 + ((v & 255) - b) ** 2;
+        if (d < bd) { bd = d; best = k; }
+      }
+      return (nearestKey.cache[hex] = best);
+    }
+    nearestKey.cache = {};
+    // musician colours -> palette keys (readable on planks and carpet)
+    const TYPE_KEY = { soprano: 'G', pianist: 'w', cellist: 'b', flutist: 'C', trumpeter: 'a', harpist: 'p' };
+    const keyOf = (c) => (c && c[0] === '#' ? nearestKey(c) : (KEY[c] ? c : 'w'));
+
+    function R(g, x, y, w, h, k) { g.fillStyle = KEY[k]; g.fillRect(x, y, w, h); }
+    function P(g, x, y, k) { g.fillStyle = KEY[k]; g.fillRect(x, y, 1, 1); }
+    // ordered dither fill of a rect: lvl 0..16 (16 = solid)
+    function D(g, x, y, w, h, k, lvl) {
+      if (lvl <= 0 || w <= 0 || h <= 0) return;
+      if (lvl >= 16) { R(g, x, y, w, h, k); return; }
+      const key = k + lvl;
+      let pat = ditherPats[key];
+      if (!pat) {
+        const c = pxMk(4, 4), x2 = c.getContext('2d');
+        x2.fillStyle = KEY[k];
+        for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if (BAYER4[j][i] < lvl) x2.fillRect(i, j, 1, 1);
+        pat = ditherPats[key] = g.createPattern(c, 'repeat');
+      }
+      g.fillStyle = pat;
+      g.fillRect(x, y, w, h);
+    }
+    // 1px circle outline (midpoint); dash = 3 on / 2 off along the arc
+    function RING(g, cx, cy, r, k, dash) {
+      g.fillStyle = KEY[k];
+      if (!dash) {
+        let x = r, y = 0, d = 1 - r;
+        const put = (a, b) => g.fillRect(cx + a, cy + b, 1, 1);
+        while (x >= y) {
+          put(x, y); put(y, x); put(-y, x); put(-x, y); put(-x, -y); put(-y, -x); put(y, -x); put(x, -y);
+          y++;
+          if (d < 0) d += 2 * y + 1; else { x--; d += 2 * (y - x) + 1; }
+        }
+        return;
+      }
+      const steps = Math.ceil(Math.PI * 2 * r * 1.5);
+      let lx = 1e9, ly = 1e9, n = 0;
+      for (let i = 0; i < steps; i++) {
+        const a = (i / steps) * Math.PI * 2, px = cx + Math.round(Math.cos(a) * r), py = cy + Math.round(Math.sin(a) * r);
+        if (px === lx && py === ly) continue;
+        lx = px; ly = py;
+        if ((n++ % 5) < 3) g.fillRect(px, py, 1, 1);
+      }
+    }
+    function DISC(g, cx, cy, r, k, lvl) {
+      for (let dy = -r; dy <= r; dy++) {
+        const hw = Math.floor(Math.sqrt(r * r + r * .5 - dy * dy));
+        D(g, cx - hw, cy + dy, hw * 2 + 1, 1, k, lvl);
+      }
+    }
+    function ELL(g, cx, cy, rx, ry, k, lvl) {
+      for (let dy = -ry; dy <= ry; dy++) {
+        const hw = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry + .01))) + .5);
+        D(g, cx - hw, cy + dy, hw * 2 + 1, 1, k, lvl);
+      }
+    }
+    function LINE(g, x0, y0, x1, y1, k, skip) {
+      g.fillStyle = KEY[k];
+      const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let e = dx + dy, n = 0;
+      for (;;) {
+        if (!skip || (n & 1) === 0) g.fillRect(x0, y0, 1, 1);
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * e;
+        if (e2 >= dy) { e += dy; x0 += sx; }
+        if (e2 <= dx) { e += dx; y0 += sy; }
+        n++;
+        if (n > 4000) break;
+      }
+    }
+    // dashed / solid 1px rectangle outline
+    function BOX(g, x, y, w, h, k, dash) {
+      g.fillStyle = KEY[k];
+      for (let i = 0; i < w; i++) { if (dash && ((i % 5) > 2)) continue; g.fillRect(x + i, y, 1, 1); g.fillRect(x + i, y + h - 1, 1, 1); }
+      for (let j = 1; j < h - 1; j++) { if (dash && ((j % 5) > 2)) continue; g.fillRect(x, y + j, 1, 1); g.fillRect(x + w - 1, y + j, 1, 1); }
+    }
+    function TXT(g, str, x, y, o) { return PX.drawText(g, str, x, y, o); }
+    function TILE(g, name, x, y, w, h, ox, oy) {
+      const p = PX.pattern(name);
+      g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+      const sx = x - (((ox || 0) % p.w) + p.w) % p.w, sy = y - (((oy || 0) % p.h) + p.h) % p.h;
+      for (let yy = sy; yy < y + h; yy += p.h) for (let xx = sx; xx < x + w; xx += p.w) g.drawImage(p.canvas, xx, yy);
+      g.restore();
+    }
+    const FRAME = (g, name, x, y, w, h) => PX.drawFrame(g, name, x, y, w, h, 1);
+
+    // ---- geometry (buffer coordinates) -------------------------------------------------------
+    const LANE_Y = lanes.map((l) => q(l.y));                         // lane centre rows
+    const LANE_H = 23;                                               // band height (+/- 11)
+    const STAGE = { x: 29, y: 37, w: 247, h: 163 };                  // wood frame of the stage
+    const SEATP = { x: 39, y: 215, w: 348, h: 50 };                  // audience seat panel
+    const SEAT_FEET = 21;                                            // sprite feet below the seat's logical row (buffer px)
+
+    // ---- static backdrop (wall, valance, drapes, stage, runway, floor, seat panel) --------------
+    const stat = pxMk(BW, BH);
+    function buildBackdrop() {
+      const g = stat.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      // wall + ceiling shade
+      TILE(g, 'hallwall', 0, 0, BW, BH);
+      D(g, 0, 0, BW, 12, 'k', 9); D(g, 0, 12, BW, 12, 'k', 5); D(g, 0, 24, BW, 12, 'k', 2);
+      // hall floor below the stage line (planks, shadowed) + baseboard
+      TILE(g, 'planks', 0, 197, BW, BH - 197);
+      D(g, 0, 197, BW, BH - 197, 'k', 9);
+      D(g, 0, 197, BW, 6, 'k', 5);
+      R(g, 0, 195, BW, 2, 'O'); R(g, 0, 194, BW, 1, 'B'); R(g, 0, 197, BW, 1, 'k');
+      // runway carpet bands (enemies walk here) and plank bands (stage floor)
+      for (let i = 0; i < 6; i++) {
+        const c = LANE_Y[i], y0 = c - 11;
+        R(g, 18, y0 - 1, 402, LANE_H + 2, 'k');
+        TILE(g, 'carpet', 18, y0, 402, LANE_H);
+        R(g, 18, y0, 402, 1, 'm');
+        for (let x = 20; x < 420; x += 6) P(g, x, c, 'm');
+      }
+      // stage: frame first, then planks in each lane
+      FRAME(g, 'wood', STAGE.x, STAGE.y, STAGE.w, STAGE.h);
+      R(g, STAGE.x + 6, STAGE.y + 6, STAGE.w - 12, STAGE.h - 12, 'k');
+      for (let i = 0; i < 6; i++) {
+        const y0 = LANE_Y[i] - 11;
+        TILE(g, 'planks', STAGE.x + 6, y0, STAGE.w - 12, LANE_H);
+      }
+      // footlights along the stage's right edge
+      for (let i = 0; i < 6; i++) { const y = LANE_Y[i]; R(g, STAGE.x + STAGE.w - 8, y - 2, 2, 5, 'k'); R(g, STAGE.x + STAGE.w - 8, y - 1, 2, 3, 'g'); P(g, STAGE.x + STAGE.w - 8, y - 1, 'G'); }
+      // lane labels on the wall (left of the stage)
+      lanes.forEach((l, i) => TXT(g, `L${i + 1}`, 9, LANE_Y[i] - 2, { font: 'tiny', color: 'y' }));
+      // valance (top) + side drapes
+      for (let x = 0; x < BW; x++) {
+        const pleat = (x % 8) < 2 ? 'R' : (x % 8) === 7 ? 'k' : 'x';
+        R(g, x, 0, 1, 6, pleat);
+        const d = Math.round(2.2 * Math.sin(Math.PI * ((x % 16) / 16)));
+        R(g, x, 6, 1, d + 1, pleat === 'R' ? 'x' : pleat);
+        R(g, x, 6 + d + 1, 1, 1, 'g'); if ((x & 3) === 0) P(g, x, 6 + d + 2, 'o');
+      }
+      R(g, 0, 5, BW, 1, 'o');
+      [0, BW - 7].forEach((dx) => {
+        for (let y = 8; y < 214; y++) for (let x = 0; x < 7; x++) {
+          const k = x === 0 || x === 6 ? 'k' : (x === 1 || x === 5) ? 'x' : (x === 2 ? 'R' : x === 3 ? 'r' : 'R');
+          P(g, dx + x, y, ((y + x) % 9 === 0 && x > 1 && x < 5) ? 'x' : k);
+        }
+        R(g, dx, 118, 7, 3, 'g'); R(g, dx, 118, 7, 1, 'G'); R(g, dx, 120, 7, 1, 'o');   // tie-back
+      });
+      // under-stage plaque
+      const sl = 'LOCKED STAGE TEAM', sw = PX.measure(sl) + 12;
+      FRAME(g, 'hallPlaque', Math.round(STAGE.x + STAGE.w / 2 - sw / 2), 199, sw, 15);
+      TXT(g, sl, Math.round(STAGE.x + STAGE.w / 2 - sw / 2) + 6, 203, { color: 'g' });
+      // "undead enter" marker above the runway (right wall)
+      TXT(g, 'UNDEAD ENTER FROM THIS SIDE →', 418, 33, { color: 'g', shadow: 'k', align: 'right' });
+      // audience gauge plaque (right of the stage plaque)
+      FRAME(g, 'hallPlaque', 222, 199, 196, 15);
+      TXT(g, 'AUDIENCE', 230, 203, { color: 'w' });
+      // seat panel
+      FRAME(g, 'hallPlaque', SEATP.x, SEATP.y, SEATP.w, SEATP.h);
+      TILE(g, 'carpet', SEATP.x + 4, SEATP.y + 4, SEATP.w - 8, SEATP.h - 8);
+      D(g, SEATP.x + 4, SEATP.y + 4, SEATP.w - 8, SEATP.h - 8, 'k', 8);
+      // message banner + auto badge frames
+      FRAME(g, 'hallPlaque', 11, 8, 331, 22);
+    }
+
+    // ---- title banner for the left panel (pixel violin ensemble replaces the photo) -----------
+    function makeBanner() {
+      const w = 148, h = 66, c = pxMk(w, h), g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      TILE(g, 'hallwall', 0, 0, w, h);
+      D(g, 0, 0, w, h, 'k', 6);
+      // stage floor
+      TILE(g, 'planks', 4, 54, w - 8, 8);
+      D(g, 4, 54, w - 8, 8, 'k', 3);
+      // spotlight cones (dither)
+      [[40, 'G'], [74, 'w'], [108, 'G']].forEach(([cx, k]) => {
+        for (let y = 26; y < 58; y++) {
+          const hw = 3 + Math.round((y - 26) * .35);
+          D(g, cx - hw, y, hw * 2 + 1, 1, k, y < 36 ? 3 : y < 46 ? 2 : 1);
+        }
+      });
+      // curtains at both sides
+      for (let i = 0; i < 2; i++) {
+        const dx = i ? w - 12 : 4;
+        TILE(g, 'curtain', dx, 4, 8, 52, 0, 0);
+        R(g, i ? dx : dx + 7, 4, 1, 52, 'o');
+      }
+      // ensemble
+      const cast = ['harpist', 'cellist', 'soprano', 'pianist', 'flutist', 'trumpeter'];
+      cast.forEach((id, i) => {
+        const cx = 27 + i * 19.5;
+        PA.render(g, `${id}.idle`, i % 2, Math.round(cx), 61, 1, {});
+      });
+      // title (2x) with outline and shadow, composited from the kit font
+      const tc = PX.textCanvas('SOPRAKNIGHT', { color: 'g', outline: 'k', shadow: 'o' });
+      g.drawImage(tc, Math.round((w - tc.width * 2) / 2), 5, tc.width * 2, tc.height * 2);
+      // frame
+      const f = PX.frame('hallPlaque');
+      const fc = pxMk(w, h), fg = fc.getContext('2d');
+      PX.drawFrame(fg, 'hallPlaque', 0, 0, w, h, 1);
+      // keep only the ring (centre transparent)
+      const keep = pxMk(w, h), kg = keep.getContext('2d');
+      kg.drawImage(fc, 0, 0);
+      kg.globalCompositeOperation = 'destination-out';
+      kg.fillRect(4, 4, w - 8, h - 8);
+      g.drawImage(keep, 0, 0);
+      return c.toDataURL('image/png');
+    }
+
+    // ---- DOM / canvas layout ---------------------------------------------------------------------
+    const pxView = { nb: 1, scale: 1 };
+    function pxLayout() {
+      const wrap = canvas.parentElement && canvas.parentElement.parentElement;
+      if (!wrap) return;
+      const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k')) || 2;
+      const cs = getComputedStyle(wrap);
+      const frame = 6 * k * 2;
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const mobile = window.matchMedia('(max-width: 880px)').matches;
+      const availW = Math.max(100, wrap.clientWidth - padX - frame);
+      const availH = mobile ? Infinity : Math.max(100, wrap.clientHeight - padY - frame);
+      const dpr = window.devicePixelRatio || 1;
+      const fit = Math.min(availW / BW, availH / BH);
+      const nDev = Math.floor(fit * dpr + 1e-6);
+      let scale = fit;
+      if (nDev >= 1 && nDev / (fit * dpr) >= .85) scale = nDev / dpr;     // whole device pixels per art pixel when that wastes < 15 % of the width
+      pxView.scale = scale;
+      pxView.nb = Math.max(1, Math.ceil(scale * dpr - 1e-6));
+      canvas.style.width = (BW * scale) + 'px';
+      canvas.style.height = (BH * scale) + 'px';
+      if (canvas.width !== BW * pxView.nb) { canvas.width = BW * pxView.nb; canvas.height = BH * pxView.nb; }
+    }
+
+    // ---- per-frame drawing -------------------------------------------------------------------------
+    const vigCache = {};
+    function vignette(level) {            // level 1..4, dither-banded dark edges
+      let c = vigCache[level];
+      if (c) return c;
+      c = vigCache[level] = pxMk(BW, BH);
+      const g = c.getContext('2d');
+      const bands = [[34, 2], [22, 4], [12, 7], [5, 10]];
+      bands.forEach(([wd, lv], i) => {
+        const l = Math.min(16, Math.round(lv * level / 2.5));
+        // draw as frame-shaped ring between the previous band and this one
+        const inner = i === 0 ? 0 : bands[i - 1][0];
+        const w2 = wd;
+        const strips = [[0, 0, BW, w2], [0, BH - w2, BW, w2], [0, 0, w2, BH], [BW - w2, 0, w2, BH]];
+        strips.forEach(([x, y, w, h]) => D(g, x, y, w, h, 'k', Math.max(1, Math.round(l / 2))));
+        void inner;
+      });
+      return c;
+    }
+
+    function drawPixelSeats() { /* seat backs are drawn with the audience (see drawPixelAudience) */ }
+
+    function seatIndexOf(a) { return Math.round((a.tx - 165) / 65); }
+    function drawPixelAudience() {
+      const seated = [], moving = [];
+      for (const a of state.audienceMembers) {
+        if (!a.type) continue;
+        const isSeated = a.age >= (a.wait || 0) && Math.hypot(a.tx - a.x, a.ty - a.y) < 4;
+        (isSeated ? seated : moving).push(a);
+      }
+      const g = bg;
+      const ix = SEATP.x + 4, iy = SEATP.y + 4, iw = SEATP.w - 8, ih = SEATP.h - 8;
+      g.save(); g.beginPath(); g.rect(ix, iy, iw, ih); g.clip();
+      const rows = [0, 1];
+      for (const row of rows) {
+        const sy = q(696 + row * 38);
+        // seated audience of this row (behind its seat backs)
+        for (const a of seated.filter((m) => (m.ty > 715 ? 1 : 0) === row).sort((p, r) => p.tx - r.tx)) {
+          PA.play(g, `${a.type}.audience`, pxTime() + (a.tx | 0) * 7, q(a.x), q(a.y) + SEAT_FEET, 1, {});
+        }
+        // seat backs for the row
+        for (const seat of seats.filter((s) => (s.y > 715 ? 1 : 0) === row)) {
+          const x = q(seat.x) - 9, y = sy + 7;
+          R(g, x, y, 18, 9, 'k');
+          R(g, x + 1, y + 1, 16, 7, 'x');
+          R(g, x + 1, y + 1, 16, 1, 'R');
+          R(g, x + 1, y + 7, 16, 1, 'k');
+          D(g, x + 1, y + 4, 16, 3, 'k', 3);
+          P(g, x + 8, y + 3, 'r'); P(g, x + 9, y + 3, 'r');
+        }
+      }
+      g.restore();
+      // those still walking to their seat are drawn on top, unclipped
+      for (const a of moving.sort((p, r) => p.y - r.y)) drawPixelWalker(a);
+    }
+
+
+    function drawPixelWalker(a) {
+      if (a.age < a.wait) {
+        const f = PA.frameAt(`${a.type}.restore`, a.age * 1000, { loop: false });
+        PA.render(bg, `${a.type}.restore`, f, q(a.x), q(a.y + (a.spriteSize || 100) * .34 + 2), 1, {});
+        return;
+      }
+      const d = Math.hypot(a.tx - a.x, a.ty - a.y);
+      if (a.d0 == null) a.d0 = Math.max(1, d);
+      const prog = clamp(1 - d / a.d0);
+      const hop = d > 3 ? Math.abs(Math.sin((a.age - a.wait) * 14)) * 3 : 0;
+      const off = 14 + (SEAT_FEET - 14) * prog;
+      PA.play(bg, `${a.type}.audience`, pxTime() + (a.tx | 0) * 7, q(a.x), q(a.y) + Math.round(off - hop), 1, {});
+    }
+
+    function drawPixelBanner() {
+      const g = bg;
+      const msg = state.message || '';
+      const small = PX.measure(msg) > 319;
+      TXT(g, msg, 16, small ? 13 : 12, { color: 'w', font: small ? 'tiny' : 'main' });
+      const sub = state.running ? `${state.spawnLeft + state.enemies.length} souls still moving through the hall.` : 'Set your artists by lane, then begin the one-concert challenge.';
+      TXT(g, sub, 16, 21, { color: 'l', font: 'tiny' });
+      if (state.autoMode) {
+        FRAME(g, 'btnOn', 366, 9, 35, 16);
+        TXT(g, 'AUTO', 383, 13, { color: 'g', align: 'center' });
+      }
+      // audience gauge
+      const ratio = clamp(state.audience / state.targetAudience);
+      R(g, 279, 203, 99, 7, 'k'); R(g, 280, 204, 97, 5, 'd');
+      const fillW = Math.round(95 * ratio);
+      if (fillW > 0) { R(g, 281, 205, fillW, 3, ratio >= 1 ? 'g' : 'T'); R(g, 281, 205, fillW, 1, ratio >= 1 ? 'G' : 'C'); }
+      TXT(g, `${state.audience}/${state.targetAudience}`, 385, 203, { color: 'g' });
+    }
+
+    // 16x16 "mini" of a 32x32 sprite frame: each 2x2 block keeps its most frequent colour (ties -> darker), so outlines survive
+    const miniCache = {};
+    function miniFrame(id, frame) {
+      const key = id + '#' + frame;
+      if (miniCache[key]) return miniCache[key];
+      const big = pxMk(32, 32), bx = big.getContext('2d');
+      PA.render(bx, id, frame, 0, 0, 1, { anchor: 'topleft' });
+      const src = bx.getImageData(0, 0, 32, 32).data;
+      const out = pxMk(16, 16), og = out.getContext('2d'), od = og.createImageData(16, 16);
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const cnt = {}; let opaque = 0, best = -1, bestN = 0, bestL = 1e9;
+        for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+          const p = ((y * 2 + j) * 32 + x * 2 + i) * 4;
+          if (src[p + 3] < 128) continue;
+          opaque++;
+          const k = (src[p] << 16) | (src[p + 1] << 8) | src[p + 2];
+          cnt[k] = (cnt[k] || 0) + 1;
+        }
+        if (opaque < 2) continue;
+        for (const k in cnt) {
+          const v = +k, lum = ((v >> 16) & 255) * 3 + ((v >> 8) & 255) * 6 + (v & 255);
+          if (cnt[k] > bestN || (cnt[k] === bestN && lum < bestL)) { best = v; bestN = cnt[k]; bestL = lum; }
+        }
+        const o = (y * 16 + x) * 4;
+        od.data[o] = (best >> 16) & 255; od.data[o + 1] = (best >> 8) & 255; od.data[o + 2] = best & 255; od.data[o + 3] = 255;
+      }
+      og.putImageData(od, 0, 0);
+      return (miniCache[key] = out);
+    }
+
+    function drawPixelPreview() {
+      if (state.setupDone) return;
+      const g = bg;
+      const x0 = 297, y0 = 43, w = 110, h = 151;
+      D(g, x0, y0, w, h, 'k', 11);
+      BOX(g, x0, y0, w, h, 'm', false);
+      undeadPlan.forEach((lanePlan, lane) => {
+        const c = LANE_Y[lane];
+        if (lane > 0) D(g, x0 + 2, c - 12, w - 4, 1, 'm', 8);
+        TXT(g, `L${lane + 1}`, x0 + 5, c - 3, { font: 'tiny', color: 'g' });
+        let x = x0 + 30;
+        for (const item of lanePlan) {
+          const id = `${item.type}.walk`;
+          g.drawImage(miniFrame(id, PA.frameAt(id, pxTime() + lane * 110)), x - 8, c - 7);
+          TXT(g, `x${item.count}`, x + 11, c - 2, { font: 'tiny', color: 'w', shadow: 'k' });
+          x += 38;
+        }
+      });
+    }
+
+    function drawPixelWarnings() {
+      if (!state.running) return;
+      const activeLanes = new Set(state.enemies.filter((e) => e.x > 980 || e.elite).map((e) => e.lane));
+      for (const entry of state.spawnQueue.slice(0, 8)) if (entry.delay - state.waveTimer < 2.4) activeLanes.add(entry.lane);
+      const step = (Math.floor(state.time * 5) & 1);
+      for (const lane of activeLanes) {
+        const c = LANE_Y[lane];
+        D(bg, 29, c - 11, 371, LANE_H, 'R', step ? 3 : 2);
+        R(bg, 29, c - 11, 371, 1, step ? 'R' : 'x');
+      }
+    }
+
+    const spotCache = {};
+    function drawPixelSpotlight() {
+      if (!state.setupDone || !state.musicians.length) return;
+      const performer = state.musicians[state.performerProfileIndex % state.musicians.length];
+      if (!performer) return;
+      const cx = q(performer.x), top = q(92), bottom = q(performer.y + 58);
+      const col = TYPE_KEY[performer.type.id] || 'G';
+      const key = col + '|' + (bottom - top);
+      let c = spotCache[key];
+      if (!c) {
+        c = spotCache[key] = pxMk(64, bottom - top);
+        const g = c.getContext('2d');
+        for (let y = 0; y < bottom - top; y++) {
+          const t = y / (bottom - top), hw = Math.round(14 + t * 15);
+          D(g, 32 - hw, y, hw * 2, 1, 'G', t < .3 ? 3 : t < .65 ? 2 : 1);
+          D(g, 32 - hw + 4, y, hw * 2 - 8, 1, col, t < .5 ? 2 : 1);
+        }
+      }
+      bg.drawImage(c, cx - 32, top);
+    }
+
+    function drawPixelRange(type, origin, alpha, preview) {
+      const profile = rangeProfile(type, origin);
+      const x1 = q(clamp(profile.x1, 54, 1220)), x2 = q(clamp(profile.x2, 54, 1220));
+      const y1 = q(lanes[profile.laneMin].y - 34), y2 = q(lanes[profile.laneMax].y + 34);
+      const x = Math.min(x1, x2), w = Math.abs(x2 - x1), h = y2 - y1;
+      const k = TYPE_KEY[type.id] || 'w';
+      D(bg, x, y1, w, h, k, Math.round(alpha * 10));
+      BOX(bg, x, y1, w, h, k, preview);
+      if (!preview) BOX(bg, x + 1, y1 + 1, w - 2, h - 2, k, true);
+      const ay = q(origin.y), ax0 = q(origin.x + 28), ax1 = Math.min(x2 - 6, q(1210));
+      if (ax1 > ax0) {
+        LINE(bg, ax0, ay, ax1, ay, 'w', false);
+        for (let i = 0; i < 4; i++) R(bg, ax1 - i, ay - (3 - i), 1, (3 - i) * 2 + 1, 'w');
+      }
+      const lab = profile.label, lw = PX.measure(lab, 'tiny') + 8;
+      const labelX = q(clamp(Math.max(profile.x1 + 10, profile.x2 - 144 - 10), 60, W - 144 - 60)), labelY = q(clamp(lanes[profile.laneMin].y - 34 + 8, 96, H - 80));
+      FRAME(bg, 'inset', labelX, labelY, lw + 6, 13);
+      TXT(bg, lab, labelX + 7, labelY + 4, { font: 'tiny', color: k });
+    }
+
+    // slot circles are pre-rendered once per look (empty / hovered / occupied) and blitted
+    const slotCache = {};
+    function slotSprite(kind) {
+      if (slotCache[kind]) return slotCache[kind];
+      const c = pxMk(33, 33), g = c.getContext('2d'), r = 14;
+      DISC(g, 16, 16, r - 2, 'k', kind === 'on' ? 5 : kind === 'hot' ? 3 : 2);
+      RING(g, 16, 16, r, kind === 'on' ? 'g' : kind === 'hot' ? 'w' : 'G', kind === 'off');
+      if (kind === 'hot') RING(g, 16, 16, r - 1, 'g', true);
+      return (slotCache[kind] = c);
+    }
+    function drawPixelTiles() {
+      const occupied = new Set(state.musicians.map((m) => m.tile));
+      for (const tile of stageTiles) {
+        const kind = occupied.has(tile) ? 'on' : (state.hoveredTile === tile && !state.setupDone) ? 'hot' : 'off';
+        bg.drawImage(slotSprite(kind), q(tile.x) - 16, q(tile.y) + 4 - 16);
+      }
+    }
+
+    function drawPixelPulses() {
+      for (const p of state.pulses) {
+        const t = p.age / p.life, r = Math.max(1, Math.round(p.radius * t / U3));
+        const k = keyOf(p.color);
+        RING(bg, q(p.x), q(p.y), r, k, t > .55);
+        if (t < .6) RING(bg, q(p.x), q(p.y), Math.max(1, r - 1), k, true);
+      }
+    }
+
+    function drawPixelBeams() {
+      const imp = PX.pattern('fxImpact').canvas;
+      for (const b of state.beams) {
+        const t = b.age / b.life, k = keyOf(b.color);
+        const x0 = q(b.x1 + 22), y0 = q(b.y1 - 6), x1 = q(b.x2 - 18), y1 = q(b.y2 - 8);
+        LINE(bg, x0, y0 - 1, x1, y1 - 1, k, t > .5);
+        LINE(bg, x0, y0, x1, y1, 'w', t > .35);
+        LINE(bg, x0, y0 + 1, x1, y1 + 1, k, t > .5);
+        const f = Math.min(3, Math.floor(t * 4));
+        bg.drawImage(imp, f * 16, 0, 16, 16, x1 - 8, y1 - 8, 16, 16);
+      }
+    }
+
+    const shadowCache = {};
+    function drawShadow(cx, cy, rx) {
+      let c = shadowCache[rx];
+      if (!c) { c = shadowCache[rx] = pxMk(rx * 2 + 1, 7); ELL(c.getContext('2d'), rx, 3, rx, 3, 'k', 7); }
+      bg.drawImage(c, cx - rx, cy - 3);
+    }
+    const gaugeCache = {};
+    function drawGauge(cx, cy, ar, n) {
+      const key = ar + '|' + n;
+      let c = gaugeCache[key];
+      if (!c) {
+        c = gaugeCache[key] = pxMk(ar * 2 + 3, Math.round(ar * .55) + 3);
+        const g = c.getContext('2d');
+        for (let i = 0; i < 13; i++) {
+          const a = Math.PI * (.08 + .84 * (i / 12));
+          P(g, ar + 1 + Math.round(Math.cos(a) * ar), 1 + Math.round(Math.sin(a) * ar * .55), i < n ? 'l' : 'd');
+        }
+      }
+      bg.drawImage(c, cx - ar - 1, cy - 1);
+    }
+
+    function drawPixelMusician(m) {
+      const flash = clamp((m.castFlash || 0) / .3);
+      const x = q(m.x), fy = q(m.y + 35);
+      drawShadow(x, fy, 11);
+      const k = TYPE_KEY[m.type.id] || 'w';
+      if (flash > 0) {
+        const r = 17 + Math.round(flash * 5);
+        DISC(bg, x, q(m.y - 6), r, k, 2);
+        RING(bg, x, q(m.y - 6), r, k, flash < .5);
+      }
+      const anim = musicianAnim(m);
+      const phase = (m.tile.lane * 170 + m.tile.col * 60);
+      const t = anim === 'hit' ? (state.time - ((state.stageHitUntil || 0) - .4)) * 1000 : pxTime() + phase;
+      PA.play(bg, `${m.type.id}.${anim}`, t, x, fy, 1, { hope: flash * .6 });
+      if (state.running) {
+        const cd = 1 - clamp((m.cooldown || 0) / (m.cooldownMax || m.type.rate));
+        const mx = x - 10, my = q(m.y + 48) + 1;
+        R(bg, mx, my, 20, 4, 'k'); R(bg, mx + 1, my + 1, 18, 2, 'd');
+        const fw = Math.round(18 * cd);
+        if (fw > 0) R(bg, mx + 1, my + 1, fw, 2, cd > .98 ? 'g' : k);
+      }
+    }
+
+    function drawPixelEnemy(e) {
+      const S = e.spriteSize;
+      const x = q(e.x), fy = q(e.y + S * .34 + 2);
+      drawShadow(x, q(e.y + S * .34), Math.round(S * .23 / U3));
+      const dR = clamp(e.despair / 100), hR = clamp(e.hope / e.hopeMax);
+      const dtA = state.time - (e.pxT == null ? state.time : e.pxT);
+      e.pxT = state.time;
+      e.animT = (e.animT || 0) + dtA * 1000 * Math.max(.35, e.slow) * (e.speed / 32);
+      const near = e.x < 170;
+      if (near && e.nearAt == null) e.nearAt = state.time;
+      const id = `${e.type}.${near ? 'attack' : 'walk'}`;
+      const t = prefersReducedMotion ? 0 : (near ? (state.time - e.nearAt) * 1000 : e.animT);
+      if (e.hope > 0) {
+        const rr = Math.round((e.radius + 4 + hR * 6) / U3) + 6;
+        RING(bg, x, q(e.y), rr, hR > .8 ? 'g' : 'T', hR < .5);
+      }
+      PA.play(bg, id, t, x, fy, 1, { despair: dR * .9, hope: Math.max(hR * .85, e.restoreFlash > 0 ? .5 : 0) });
+      // despair gauge: pixel half-ring under the feet; filled part shrinks as hope returns
+      const ay = q(e.y + S * .35) + 2, ar = Math.round(S * .18 / U3);
+      drawGauge(x, ay, ar, Math.max(0, Math.round(dR * 13)));
+      if (e.hope > 0) {
+        const w2 = Math.max(10, Math.round(Math.max(28, S * .46) / U3));
+        const hx = x - (w2 >> 1), hy = q(e.y + S * .12);
+        R(bg, hx, hy, w2, 4, 'k'); R(bg, hx + 1, hy + 1, w2 - 2, 2, 'd');
+        const fw = Math.round((w2 - 2) * hR);
+        if (fw > 0) R(bg, hx + 1, hy + 1, fw, 2, hR > .8 ? 'g' : 'T');
+        if (hR > .8 || e.restoreFlash > 0) BOX(bg, hx - 1, hy - 1, w2 + 2, 6, 'g', true);
+      }
+    }
+
+    function drawPixelParticles() {
+      for (const p of state.particles) {
+        if (p.life < .08) continue;
+        if (p.fx) {
+          const age = (.8 - p.life) * 1000;
+          PA.play(bg, p.fx === 'note' ? 'fx.note' : `fx.${p.fx}`, age + (p.x | 0) * 9, q(p.x), q(p.y) + 3, 1, {});
+        } else P(bg, q(p.x), q(p.y), 'g');
+      }
+    }
+
+    function drawPixelCurtain() {
+      if (state.curtain <= 0) return;
+      const t = clamp(state.curtain), wd = Math.round(BW * .5 * t);
+      if (wd < 1) return;
+      TILE(bg, 'curtain', 0, 0, wd, BH, 0, 0);
+      TILE(bg, 'curtain', BW - wd, 0, wd, BH, 0, 0);
+      D(bg, 0, 0, wd, BH, 'k', 2); D(bg, BW - wd, 0, wd, BH, 'k', 2);
+      R(bg, wd - 2, 0, 2, BH, 'o'); R(bg, wd - 1, 0, 1, BH, 'g');
+      R(bg, BW - wd, 0, 2, BH, 'o'); R(bg, BW - wd, 0, 1, BH, 'g');
+    }
+
+    function drawPixelEnd() {
+      if (!(state.gameOver || state.win)) return;
+      D(bg, 0, 0, BW, BH, 'k', 7);
+      const bw = 240, bh = 92, x = Math.round((BW - bw) / 2), y = Math.round((BH - bh) / 2) - 2;
+      const accent = state.win ? 'g' : 'R';
+      FRAME(bg, state.win ? 'wood' : 'velvet', x, y, bw, bh);
+      R(bg, x + 6, y + 6, bw - 12, bh - 12, 'k');
+      R(bg, x + 7, y + 7, bw - 14, 1, state.win ? 'o' : 'x'); R(bg, x + 7, y + bh - 8, bw - 14, 1, state.win ? 'o' : 'x');
+      const title = state.win ? 'Final Performance Complete' : 'The Hall Falls Silent';
+      const cx = x + bw / 2;
+      TXT(bg, title, cx, y + 13, { color: accent, outline: 'k', shadow: state.win ? 'o' : 'x', align: 'center' });
+      const gl = state.win ? '♪' : '☠';
+      const tw = PX.measure(title);
+      TXT(bg, gl, Math.round(cx - tw / 2) - 11, y + 13, { color: accent, outline: 'k' });
+      TXT(bg, gl, Math.round(cx + tw / 2) + 4, y + 13, { color: accent, outline: 'k' });
+      R(bg, x + 22, y + 28, bw - 44, 1, 'o'); R(bg, x + 22, y + 29, bw - 44, 1, 'k');
+      TXT(bg, `Audience restored  ${state.audience} / ${state.targetAudience}`, cx, y + 36, { color: 'w', align: 'center' });
+      TXT(bg, `Ensemble of ${state.musicians.length} - Morale ${Math.max(0, Math.floor(state.morale))}`, cx, y + 49, { color: 'y', align: 'center' });
+      const next = state.autoMode && state.autoPhase === 'countdown' ? `Auto restart in ${Math.ceil(state.restartCountdown)}` : 'Press Reset to conduct another prototype run.';
+      TXT(bg, next, cx, y + 68, { color: 'i', font: next.length > 36 ? 'tiny' : 'main', align: 'center' });
+    }
+
+    let pxBackdropReady = false;
+    function drawPixel() {
+      if (!pxBackdropReady) { buildBackdrop(); pxBackdropReady = true; }
+      const g = bg;
+      g.imageSmoothingEnabled = false;
+      g.drawImage(stat, 0, 0);
+      if (!prefersReducedMotion) {
+        // floating dust motes (1 px, blink in steps)
+        for (const mote of motes) {
+          const rise = (state.time * mote.speed + mote.phase * 60) % 520;
+          const fade = Math.sin((rise / 520) * Math.PI);
+          if (fade < .35) continue;
+          P(g, q(mote.x + Math.sin(state.time * .7 + mote.phase) * mote.sway), q(620 - rise), fade > .75 ? 'G' : 'o');
+        }
+      }
+      drawPixelBanner();
+      drawPixelPreview();
+      drawPixelWarnings();
+      drawPixelSpotlight();
+      const previewOrigin = state.hoveredTile && !state.setupDone ? { x: state.hoveredTile.x, y: state.hoveredTile.y, tile: state.hoveredTile } : null;
+      const previewType = musicianTypes.find((type) => type.id === state.selected);
+      if (previewOrigin && previewType) drawPixelRange(previewType, previewOrigin, .42, true);
+      if (state.hoveredMusician) drawPixelRange(state.hoveredMusician.type, state.hoveredMusician, .56, false);
+      drawPixelTiles();
+      drawPixelPulses();
+      drawPixelBeams();
+      const actors = [
+        ...state.musicians.map((actor) => ({ kind: 'musician', actor, layerDepth: actor.layerDepth })),
+        ...state.enemies.map((actor) => ({ kind: 'enemy', actor, layerDepth: actor.layerDepth }))
+      ].sort((a, b) => a.layerDepth - b.layerDepth);
+      for (const item of actors) { if (item.kind === 'musician') drawPixelMusician(item.actor); else drawPixelEnemy(item.actor); }
+      drawPixelAudience();
+      drawPixelParticles();
+      const mr = clamp(state.morale / 100);
+      if (mr < .35 && !state.win) g.drawImage(vignette(Math.max(1, Math.min(4, Math.ceil(((.35 - mr) / .35) * 4)))), 0, 0);
+      drawPixelCurtain();
+      drawPixelEnd();
+      // present: nearest-neighbour to the (integer multiple) backing store
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(buf, 0, 0, canvas.width, canvas.height);
+    }
+
     function loop(now) {
       const dt = Math.min(.05, (now - state.last) / 1000) * state.speed;
       state.last = now;
@@ -2312,6 +3166,20 @@
       requestAnimationFrame(loop);
     }
 
+    if (PX) {
+      // pixel skin: swap the SVG icons for kit icons, generate the title banner, size the canvas to whole pixels
+      const iconFor = { soundBtn: null, 'a:Homepage': 'home', 'a:YouTube': 'play', 'a:KITSCRIPT GitHub Pages': 'github' };
+      document.querySelectorAll('.quick-actions a.icon-btn').forEach((a) => {
+        const name = iconFor['a:' + a.getAttribute('aria-label')];
+        if (name) a.innerHTML = pxi(name, 'normal');
+      });
+      document.documentElement.style.setProperty('--px-banner', `url("${makeBanner()}")`);
+      const readK = () => { pxK = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k')) || 2; };
+      const relayout = () => { readK(); pxLayout(); };
+      relayout();
+      window.addEventListener('resize', relayout);
+      if (window.ResizeObserver) new ResizeObserver(relayout).observe(document.querySelector('.stage-wrap'));
+    }
     updateSoundButton();
     autoPlacementPlan = buildAutoPlacementPlan();
     updateHud();
