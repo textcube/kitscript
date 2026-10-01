@@ -3118,6 +3118,15 @@ html.pxui .toast.show { transform: translateX(-50%); }
       const g = bg;
       g.imageSmoothingEnabled = false;
       g.drawImage(stat, 0, 0);
+      if (!prefersReducedMotion) {
+        // floating dust motes (1 px, blink in steps)
+        for (const mote of motes) {
+          const rise = (state.time * mote.speed + mote.phase * 60) % 520;
+          const fade = Math.sin((rise / 520) * Math.PI);
+          if (fade < .35) continue;
+          P(g, q(mote.x + Math.sin(state.time * .7 + mote.phase) * mote.sway), q(620 - rise), fade > .75 ? 'G' : 'o');
+        }
+      }
       drawPixelBanner();
       drawPixelPreview();
       drawPixelWarnings();
