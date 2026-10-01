@@ -714,7 +714,7 @@ html.pxui .icon-label { font-size: 8px; line-height: calc(10px * var(--k)); font
 html.pxui .icon-btn .pxi { display: block; width: calc(12px * var(--k)); height: calc(12px * var(--k)); background: var(--ic) center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 html.pxui .icon-btn:hover .pxi { background-image: var(--ich); }
 /* ---- stat cards ---- */
-html.pxui .stats { grid-template-columns: repeat(2, 1fr); gap: calc(2px * var(--k)); }
+html.pxui .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2px * var(--k)); }
 html.pxui .stat, html.pxui .card {
   border: solid transparent; border-radius: 0; background: none; box-shadow: none; transition: none; image-rendering: pixelated;
   border-width: calc(4px * var(--k)); border-image: var(--pxu-f-card) 4 fill / calc(4px * var(--k)) / 0 stretch;
@@ -735,7 +735,9 @@ html.pxui #audienceStat { --meter-color: #82ecd2; }
 html.pxui #waveStat { --meter-color: #ffbb6e; }
 html.pxui .section-title { margin: 0; padding-bottom: var(--u); border-bottom: var(--u) solid #7c4a2a; font-size: var(--fp); line-height: var(--lp); font-weight: 400; color: #f7c95d; text-transform: uppercase; }
 /* ---- roster cards ---- */
-html.pxui .roster { gap: calc(2px * var(--k)); }
+html.pxui .roster { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(2px * var(--k)); }
+html.pxui .stats, html.pxui .controls, html.pxui .performer-meta { min-width: 0; }
+html.pxui .quick-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 html.pxui .card { min-height: 0; padding: 0; gap: 0; color: #fff8e8; align-content: start; }
 html.pxui .card:hover { transform: none; background: none; border-color: transparent; border-image: var(--pxu-f-cardOn) 4 fill / calc(4px * var(--k)) / 0 stretch; }
 html.pxui .card.selected { transform: none; background: none; border-color: transparent; box-shadow: none; border-image: var(--pxu-f-cardOn) 4 fill / calc(4px * var(--k)) / 0 stretch; }
@@ -744,8 +746,9 @@ html.pxui .card.unavailable { opacity: 1; border-image: var(--pxu-f-cardOff) 4 f
 html.pxui .card.unavailable canvas { opacity: .6; }
 html.pxui .card.unavailable .cost { color: #ff8d8d; }
 html.pxui .card-art { width: auto; height: auto; border: 0; border-radius: 0; background: none; box-shadow: none; padding: 0; margin: 0 auto; }
-html.pxui .card h2 { font-size: var(--ff); line-height: var(--lf); font-weight: 400; text-shadow: none; }
-html.pxui .card .cost { font-size: var(--ff); line-height: var(--lf); font-weight: 400; color: #f7c95d; }
+html.pxui .card h2 { font-size: 8px; line-height: calc(10px * var(--kf)); font-weight: 400; text-shadow: none; white-space: nowrap; }
+html.pxui .card .cost { font-size: 8px; line-height: calc(10px * var(--kf)); font-weight: 400; color: #f7c95d; }
+html.pxui .card { min-width: 0; overflow: hidden; }
 html.pxui .card-head { gap: calc(2px * var(--k)); margin: 0; }
 html.pxui .card p { display: none; }
 html.pxui .mini-stats { gap: var(--u); margin-top: var(--u); }
@@ -765,7 +768,7 @@ html.pxui .performer-art.exit { animation: px-slide-out .6s steps(9) both; }
 html.pxui .performer-copy { gap: calc(2px * var(--k)); }
 html.pxui .performer-copy h2 { font-size: var(--fp); line-height: var(--lp); font-weight: 400; text-shadow: none; color: #fff2ac; }
 html.pxui .performer-copy p { font-size: var(--ff); line-height: var(--lf); color: #bba78c; }
-html.pxui .performer-meta { gap: calc(2px * var(--k)); }
+html.pxui .performer-meta { gap: calc(2px * var(--k)); grid-template-columns: repeat(3, minmax(0, 1fr)); }
 html.pxui .performer-meta span {
   padding: 0; border: solid transparent; border-radius: 0; background: none; font-size: var(--ff); line-height: var(--lf); font-weight: 400; color: #ecdfc0; text-transform: none; text-align: center;
   border-width: calc(3px * var(--k)); border-image: var(--pxu-f-inset) 3 fill / calc(3px * var(--k)) / 0 stretch;
