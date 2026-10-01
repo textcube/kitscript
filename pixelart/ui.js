@@ -409,6 +409,25 @@
     }
     return im;
   };
+  // 32x32 concert-hall wallpaper (page backdrop): navy damask lattice, low contrast
+  patterns.hallwall = function () {
+    var im = new Img(32, 32), x, y;
+    im.rect(0, 0, 32, 32, 'n');
+    for (y = 0; y < 32; y++) for (x = 0; x < 32; x++) {
+      if ((x + y) % 16 === 0 || ((x - y) % 16 + 16) % 16 === 0) im.set(x, y, 'd');
+    }
+    for (var cy = 8; cy < 32; cy += 16) for (var cx = 8; cx < 32; cx += 16) { im.set(cx, cy, 'm'); im.set(cx - 1, cy, 'd'); im.set(cx + 1, cy, 'd'); im.set(cx, cy - 1, 'd'); im.set(cx, cy + 1, 'd'); }
+    for (cy = 0; cy < 32; cy += 16) for (cx = 0; cx < 32; cx += 16) im.set(cx, cy, 'o');
+    return im;
+  };
+  // 8x8 runway carpet: deep violet with a woven checker
+  patterns.carpet = function () {
+    var im = new Img(8, 8), x, y;
+    im.rect(0, 0, 8, 8, 'n');
+    for (y = 0; y < 8; y++) for (x = 0; x < 8; x++) if (((x >> 1) + (y >> 1)) % 2 === 0) im.set(x, y, 'd'); 
+    for (x = 0; x < 8; x += 4) im.set(x, 3, 'm');
+    return im;
+  };
   // 8x8 seat velvet
   patterns.velvet = function () { var im = new Img(8, 8); im.rect(0, 0, 8, 8, 'x'); for (var i = 0; i < 8; i += 2) im.set(i, (i + 1) & 7, 'R'); return im; };
   // 48x32 torch sheet (3 flame frames of 16x32): iron bracket + animated fire
