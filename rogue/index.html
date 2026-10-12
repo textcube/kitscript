@@ -1024,9 +1024,9 @@ html.pxui #stuck-timer { font-size: var(--fs-h) !important; margin-top: calc(3px
 
 <div id="log-panel"></div>
 
-<!-- Shared pixel-art pack. Optional: without it the game falls back to assets/*.png|svg. -->
-<script src="../pixelart/sprites.js"></script>
-<script src="../pixelart/ui.js"></script>
+<!-- Bundled pixel-art pack. Optional: without it the game falls back to assets/*.png|svg. -->
+<script src="pixelart/sprites.js"></script>
+<script src="pixelart/ui.js"></script>
 <script>
     /* -------------------------------------------------------------------------- */
     /* Config & Helpers                                                            */
@@ -1081,7 +1081,7 @@ html.pxui #stuck-timer { font-size: var(--fs-h) !important; margin-top: calc(3px
         return `--idle-float:${float}px; --idle-duration:${duration}s; --idle-delay:${delay}s; --idle-tilt:${tilt}deg;`;
     }
 
-    // Optional shared pixel-art pack (../pixelart/sprites.js). `PA` is null when
+    // Optional bundled pixel-art pack (pixelart/sprites.js). `PA` is null when
     // the file could not be loaded, and every art helper below then falls back
     // to the original assets/*.png|svg images.
     const PA = (window.PixelArt && typeof window.PixelArt.render === 'function') ? window.PixelArt : null;

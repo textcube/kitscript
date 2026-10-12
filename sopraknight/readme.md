@@ -169,7 +169,7 @@ Current auto behavior:
 
 ## Pixel-Art Integration
 
-The game loads the shared pack with `<script src="../pixelart/sprites.js"></script>` and draws every character with `PixelArt` instead of the 512px PNGs. **If `window.PixelArt` is missing (for example the `sopraknight/` folder is opened on its own) every draw path falls back to the old `images/` PNGs.** The PNGs stay in the repo for that reason; the only console message in that case is the browser's 404 for `sprites.js`.
+The game loads its bundled pack with `<script src="pixelart/sprites.js"></script>` and draws every character with `PixelArt` instead of the 512px PNGs. The `pixelart/sprites.js` and `pixelart/ui.js` files are local copies of the repository's shared pixel-art pack; they include all sprite, UI, and font data without external asset dependencies. The game renders from the data embedded in `sprites.js` and `ui.js`, so exported sprite sheets are not required or bundled. Copy the entire `sopraknight/` folder and open `index.html` to run the game independently with its pixel-art appearance. **If `window.PixelArt` is missing, every draw path falls back to the old `images/` PNGs.** The PNGs remain as fallback artwork.
 
 | Where | Pixel sprite | Hookup |
 |---|---|---|
@@ -184,7 +184,7 @@ Notes: lane geometry, hit radii, hope/despair math and balance are unchanged. Sp
 
 ## Pixel-Art UI Skin and Canvas Renderer
 
-Beyond the characters, the whole screen is pixel art when `../pixelart/ui.js` (`window.PixelUI`) and `sprites.js` are both loaded. **Without either of them the original smooth look and the legacy canvas code run unchanged** (`PX` is `null`: no `html.pxui` class, `draw()` falls through to `drawHall()` and friends).
+Beyond the characters, the whole screen is pixel art when `pixelart/ui.js` (`window.PixelUI`) and `sprites.js` are both loaded. **Without either of them the original smooth look and the legacy canvas code run unchanged** (`PX` is `null`: no `html.pxui` class, `draw()` falls through to `drawHall()` and friends).
 
 **Canvas (`drawPixel()`).** The scene is drawn into a 427 x 267 buffer where **1 art pixel = 3 logical px**; lanes, slot circles, seats, `canvasPoint()` hit-testing and every gameplay number stay in the 1280 x 800 logical space (`W`/`H` are now constants and everything is converted with `q(v) = round(v / 3)`). The buffer is presented with nearest-neighbour scaling:
 

@@ -1,6 +1,6 @@
 # Eternal Invasion: Roguelike Dungeon Edition
 
-단일 HTML 파일(약 1200줄)로 만든 브라우저 로그라이크 던전 게임이다. 플레이어 캐릭터("Sopranian" 연주자 6종)와 NPC(적, [pizza](../pizza) 프로젝트의 손님 스프라이트 재사용)는 공용 도트 스프라이트 팩([`../pixelart`](../pixelart))으로 그려지고(팩이 없으면 이미지 에셋 `assets/sopranian/`, `assets/undeath/`로 폴백), 아이템도 도트 아이콘이다. 효과음은 Web Audio API로 실시간 합성한다.
+단일 HTML 파일(약 1200줄)로 만든 브라우저 로그라이크 던전 게임이다. 플레이어 캐릭터("Sopranian" 연주자 6종)와 NPC(적, [pizza](../pizza) 프로젝트의 손님 스프라이트 재사용)는 내부에 복사한 도트 스프라이트 팩([`pixelart`](pixelart))으로 그려지고(팩이 없으면 이미지 에셋 `assets/sopranian/`, `assets/undeath/`로 폴백), 아이템도 도트 아이콘이다. 효과음은 Web Audio API로 실시간 합성한다.
 
 * https://kitscript.com/game
 * https://github.com/textcube/kitscript/
@@ -54,9 +54,9 @@
 - **반응형**: `--tile-size`가 `clamp(36px, 10vw, 96px)`라 모바일에서도 타일과 캐릭터가 충분히 크고, `body`는 세로 스크롤이 가능하다. 프로필 패널의 연주자 특성 텍스트(예: "-2 enemy ATK")는 480px 이하 폭에서 숨겨져(`.profile-note`) 좁은 화면에서 초상화를 가리지 않는다.
 - **상단 바**: 패딩·테두리·그림자를 키운 카드형 디자인이며, 아이콘 버튼(홈/유튜브/사운드)은 각각 다른 hover 색 대신 브랜드의 청록색(`--accent-mana`) 하나로 통일해 단순하게 정리했다. `#top-bar`는 `flex-wrap`을 켜두고 480px 이하에서 패딩·아이콘·배지 크기를 줄이는 미디어쿼리를 둬서, 브랜드/스탯/아이콘 세 그룹이 좁은 화면에서 두 줄로 자연스럽게 줄바꿈되고 넘치지 않는다. 이 작업 중 전역 `box-sizing: border-box`가 빠져 있던 것을 발견해 함께 추가했다(패딩이 있는 `width:100%` 요소가 좁은 화면에서 넘치는 근본 원인).
 
-## 도트 그래픽 적용 ([`../pixelart`](../pixelart) 연동)
+## 도트 그래픽 적용 ([`pixelart`](pixelart) 연동)
 
-`index.html` 은 `<script src="../pixelart/sprites.js">` 로 공용 도트 팩을 읽는다. **`window.PixelArt` 가 없으면(예: `rogue/` 폴더만 따로 열었을 때) 예전 PNG/SVG `<img>` 와 이모지 경로로 자동 폴백**하므로 `assets/` 는 그대로 남겨둔다. (이때 브라우저 콘솔에 `sprites.js` 404 한 줄이 뜨는 것은 정상이다.)
+`index.html` 은 `<script src="pixelart/sprites.js">` 와 `<script src="pixelart/ui.js">` 로 내부 도트 팩을 읽는다. 두 파일은 저장소 공용 픽셀아트 팩의 복사본이며, 캐릭터·아이템·UI·폰트 데이터를 모두 포함해 외부 아트워크 파일을 요청하지 않는다. 게임은 JavaScript에 내장된 데이터로 렌더링하므로, 사용하지 않는 스프라이트 시트는 복사하지 않는다. **`rogue/` 폴더 전체를 복사하고 `index.html` 을 열면 도트 그래픽을 유지한 채 독립 실행할 수 있다.** `window.PixelArt` 가 없으면 예전 PNG/SVG `<img>` 와 이모지 경로로 자동 폴백하므로 `assets/` 는 그대로 남겨둔다.
 
 | 영역 | 도트 스프라이트 | 연출 연결 |
 |---|---|---|
@@ -72,7 +72,7 @@
 * **기존 최적화 유지**: `tileSignature`/`updateTile` 의 "바뀐 타일만 갱신" 구조는 그대로다. 스프라이트의 걷기·환호 자세는 시그니처가 아니라 `gameState.player.moveAt` / `cheerUntil` / `faceX`(연출 전용 값, 게임 로직과 무관)를 스프라이트 루프가 직접 읽어 고르므로 타일을 다시 만들 필요가 없다. 떠오르는 CSS 부유 애니메이션(`wizard-idle`)은 도트 스프라이트가 자체 idle 을 가지므로 끄고, 타격 플래시·돌진·퇴장 CSS 는 그대로 쓴다.
 * 게임플레이·오토플레이·레이아웃 동작은 바뀌지 않았다 (`too-strong` 채도 저하 + ⚠, 플레이어 pulse, 클러스터 테두리 포함).
 
-## 도트 UI 스킨 ([`../pixelart/ui.js`](../pixelart/ui.js) 연동)
+## 도트 UI 스킨 ([`pixelart/ui.js`](pixelart/ui.js) 연동)
 
 캐릭터뿐 아니라 **화면의 모든 요소**를 같은 32색 팔레트의 도트로 그린다. 킷(`window.PixelUI`)이 없으면 `html.pxui` 클래스가 붙지 않아 예전 모습 그대로 동작한다(스킨 CSS 는 모두 `<style id="pxui-style">` 안에서 `html.pxui` 아래에만 있다).
 
@@ -87,7 +87,7 @@
 
 ## 개발 이력
 
-**도트 그래픽 적용** — 공용 픽셀아트 팩([`../pixelart`](../pixelart))으로 연주자·언데드·초상화·아이템·포탈 아트를 교체했다. 스프라이트마다 `<canvas>` + 공유 rAF 루프(정수 배율, 변경 시에만 재그리기)로 움직이고, 팩이 없으면 기존 PNG/SVG/이모지로 폴백한다. 자세한 연결표는 위 "도트 그래픽 적용" 절을 본다.
+**도트 그래픽 적용** — 내부 픽셀아트 팩([`pixelart`](pixelart))으로 연주자·언데드·초상화·아이템·포탈 아트를 교체했다. 스프라이트마다 `<canvas>` + 공유 rAF 루프(정수 배율, 변경 시에만 재그리기)로 움직이고, 팩이 없으면 기존 PNG/SVG/이모지로 폴백한다. 자세한 연결표는 위 "도트 그래픽 적용" 절을 본다.
 
 **프로필 초상화 상하 여백 불균형 수정 (2차)** — 박스 자체의 `margin-top` 잔재를 걷어낸 뒤에도(1차 수정) 캐릭터가 여전히 위로 치우쳐 보인다는 스크린샷을 받았다. `assets/sopranian/flutist.png`를 캔버스에 그려 알파 채널을 픽셀 단위로 스캔해보니 원본 이미지 속 캐릭터는 이미 거의 중앙(상단 여백 4.7%, 하단 여백 5.5%)에 위치해 있었다 — 그런데 `#player-profile-panel .profile-portrait img`/`#enemy-profile-panel .profile-portrait img`에 남아있던 `transform: translateY(5%)`(`4%`)가 이미 중앙에 있는 이미지를 추가로 아래로 밀어 다시 불균형을 만들고 있었다. 두 `translateY()`를 제거해 `object-fit: contain`이 원본 그대로 중앙 정렬하도록 되돌렸다. 계측 결과 이미지 박스의 상하 오버플로우 여백 차이가 2px 이내로 좁혀졌다.
 
