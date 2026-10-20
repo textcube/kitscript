@@ -1,6 +1,6 @@
 # Eternal Invasion: Pizza Edition
 
-A single-file, auto-playing merge game set in a wood-fired pizza shop. Pizzas merge and level up on a 5x5 counter grid while undead customers (zombie, ghost, skeleton, dracula, mummy, witch, frankenstein, pumpkin, imp) queue up with orders. Serve them before their hunger peaks or the kitchen falls to an undead riot.
+An auto-playing pixel-art merge game set in a wood-fired pizza shop. Pizzas merge and level up on a 5x5 counter grid while undead customers (zombie, ghost, skeleton, dracula, mummy, witch, frankenstein, pumpkin, imp) queue up with orders. Serve them before their hunger peaks or the kitchen falls to an undead riot.
 
 The game plays itself — it is a zero-input demo loop in the same spirit as the other kitscript modules, with sound as the only user control.
 
@@ -11,7 +11,25 @@ The game plays itself — it is a zero-input demo loop in the same spirit as the
 - No backend
 - Canvas 2D at a fixed 960x640 logical resolution, DPR-aware backing store
 - Responsive: the canvas scales down to fit the viewport (header wraps on narrow screens)
-- All shipped art is SVG under `pizza/assets/`, organized by category with `PROMPTS.txt` regeneration notes and a shared `STYLE_GUIDE.txt`
+- Default artwork: local `pixelart/pizza.js`, `pixelart/pizza.css`, and `pixelart/ui.js`; no image downloads or build step
+- Legacy SVG artwork remains under `assets/` as a fallback if the pixel renderer is unavailable
+
+## Pixel-Art Design
+
+The default renderer draws into a 480x320 pixel buffer and presents it at the game's existing 960x640 logical size with smoothing disabled. The original merge AI, nine customer archetypes, order generation, hunger, revenue, sound toggle, delivery timing, and automatic restart remain unchanged.
+
+On viewports narrower than 600px, a 284x454 portrait composition puts the board above four compact customer cards with recipe thumbnails and hunger meters. The canvas fits the available height in either orientation.
+
+- Warm brick oven, flickering block flames, animated chef, wooden worktop, and tiled shop floor.
+- Ten distinct 32px pizza recipes, from scored dough to a fully topped masterpiece, with numbered level badges.
+- Nine original customer sprites, each with waiting, angry, and satisfied expressions. Paper tickets show recipe thumbnails and stepped hunger meters.
+- Bitmap text, square frames, pixel button icons, revenue and bake meters, and a pixel game-over card.
+- Refined artwork uses integer-scanline silhouettes, shaded crusts and recipe-specific toppings instead of stacking every ingredient. Dark sage work surfaces separate the pizzas from the walnut counter. Customer faces have eye highlights, expressive mouths, layered clothing, and distinct ghost/monster silhouettes. Brass runners, an illuminated shop sign, and clipped red-header order tickets complete the shop skin.
+- Reduced-motion preference stops decorative chef, flame, and customer bobbing while keeping gameplay feedback visible.
+
+All active pixel artwork is generated locally from code. `pixelart/ui.js` is a bundled copy of the repository's UI kit for the bitmap font and header icons. The game does not load the shared parent `pixelart/` folder, exported sprite sheets, or legacy images in pixel mode. Copy the complete `pizza/` folder to run it independently.
+
+The sections below also describe the retained legacy renderer and asset pipeline.
 
 ## Game Loop
 

@@ -165,6 +165,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="pixelart/pizza.css">
 </head>
 <body>
 
@@ -215,6 +216,8 @@
         <canvas id="gameCanvas"></canvas>
     </div>
 
+<script src="pixelart/ui.js"></script>
+<script src="pixelart/pizza.js"></script>
 <script>
 /**
  * Eternal Invasion: Pizza Edition - Satisfied Customer Ver.
@@ -306,14 +309,16 @@ const ASSET_MANIFEST = {
 function setupCanvasResolution() {
     const dpr = window.devicePixelRatio || 1;
     const headerHeight = document.querySelector('.game-header')?.offsetHeight || 80;
-    const availWidth = Math.max(300, window.innerWidth - 62);
-    const availHeight = Math.max(220, window.innerHeight - headerHeight - 88);
-    const scale = Math.min(1, availWidth / WIDTH, availHeight / HEIGHT);
+    const viewHeight = window.PizzaPixel ? PizzaPixel.logicalHeight() : HEIGHT;
+    const availWidth = Math.max(240, window.innerWidth - (window.innerWidth < 600 ? 36 : 62));
+    const availHeight = Math.max(180, window.innerHeight - headerHeight - 52);
+    const scale = Math.min(1, availWidth / WIDTH, availHeight / viewHeight);
     canvas.style.width = `${Math.floor(WIDTH * scale)}px`;
-    canvas.style.height = `${Math.floor(HEIGHT * scale)}px`;
+    canvas.style.height = `${Math.floor(viewHeight * scale)}px`;
     canvas.width = Math.floor(WIDTH * dpr);
-    canvas.height = Math.floor(HEIGHT * dpr);
+    canvas.height = Math.floor(viewHeight * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
 }
 
 setupCanvasResolution();
@@ -1771,6 +1776,11 @@ function drawChef(x, y) {
 }
 
 function draw() {
+    if (window.PizzaPixel) {
+        PizzaPixel.draw(ctx, { grid, animations, customers, deliveries, effectParticles, bakePulses,
+            gold, gameTime, turnTimer, restartCountdown, over: currentState === GameState.OVER });
+        return;
+    }
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
     const bgImg = loadedImages.background;
@@ -2137,9 +2147,16 @@ function drawGameOver() {
 function loop(time) { update(time); draw(); requestAnimationFrame(loop); }
 
 window.addEventListener('resize', setupCanvasResolution);
-initGeneratedSprites();
-buildSceneLayer();
-loadAssets();
+if (window.PizzaPixel) {
+    PizzaPixel.install();
+    setupCanvasResolution();
+    resetGame();
+    requestAnimationFrame(loop);
+} else {
+    initGeneratedSprites();
+    buildSceneLayer();
+    loadAssets();
+}
 
 </script>
 </body>
