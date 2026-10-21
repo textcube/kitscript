@@ -508,7 +508,7 @@ async function loadAssets() {
     await Promise.all(tasks);
     assetLoadingProgress = 100;
     drawLoadingScreen(assetLoadingProgress);
-    resetGame();
+    resetGame(GameState.READY);
     requestAnimationFrame(loop);
 }
 
@@ -612,8 +612,18 @@ function createParticleSprites() {
 }
 
 
-const GameState = { PLAYING: 1, OVER: 2 };
-let currentState = GameState.PLAYING;
+const GameState = { READY: 0, PLAYING: 1, OVER: 2, PAUSED: 3, DEMO: 4 };
+let currentState = GameState.READY;
+const SPAWN_EVERY = 2.5;   // seconds between fresh dough
+const MAX_LEVEL = 10;
+const START_LIVES = 3;
+const BEST_KEY = 'pizza.bestRevenue';
+let lives = START_LIVES;
+let combo = 0, lastServeAt = -99;
+let best = 0, newBest = false, overAt = 0;
+let selected = -1;         // tile picked with a tap, waiting for a second tap
+let drag = null;           // { from, x, y, startX, startY, moved }
+try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) { best = 0; }
 let gold = 0;
 let lastTime = 0;
 let gameTime = 0;
@@ -666,6 +676,18 @@ const sfx = {
         o.connect(g); g.connect(audioCtx.destination);
         o.start(); o.stop(audioCtx.currentTime + 0.15);
     },
+    fail: () => {
+        if (!isSoundOn || !audioCtx) return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(220, audioCtx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(70, audioCtx.currentTime + 0.45);
+        g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.45);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.45);
+    },
     success: () => {
         if (!isSoundOn || !audioCtx) return;
         const o = audioCtx.createOscillator();
@@ -708,10 +730,13 @@ class Customer {
         this.nextCriticalFxAt = 0;
         this.undeadProfile = UNDEAD_ARCHETYPES[Math.floor(Math.random() * UNDEAD_ARCHETYPES.length)];
         this.requirements = [];
-        const count = Math.random() < 0.6 ? 1 : 2;
+        // Orders start simple and reach for bigger recipes as the night goes on.
+        const maxLevel = Math.min(8, 3 + Math.floor(gameTime / 40));
+        const count = Math.random() < (gameTime > 90 ? 0.45 : 0.65) ? 1 : 2;
         for (let i = 0; i < count; i++) {
-            this.requirements.push(Math.floor(Math.random() * 5) + 1);
+            this.requirements.push(2 + Math.floor(Math.random() * (maxLevel - 1)));
         }
+        this.storm = false; // true when the guest gave up and is storming out
         this.orderSeed = Math.random() * 1000;
     }
 
@@ -723,7 +748,7 @@ class Customer {
         if (this.isLeaving) {
             this.x += 300 * dt; // 오른쪽으로 퇴장
             this.leaveMoodTimer += dt;
-            this.animState = 'happyLeaving';
+            this.animState = this.storm ? 'angry' : 'happyLeaving';
             return;
         }
 
@@ -740,11 +765,15 @@ class Customer {
             this.y += (this.targetY - this.y) * 5 * dt;
         }
 
-        this.hunger += (0.35 + (gameTime / 600)) * dt; 
+        this.hunger += (0.45 + (gameTime / 500)) * dt;
         this.animState = this.hunger > 72 ? 'angry' : 'idle';
         if (this.hunger >= 100) {
+            // A starving guest storms out and costs a life.
             this.hunger = 100;
-            currentState = GameState.OVER;
+            this.isLeaving = true;
+            this.storm = true;
+            this.requirements = [];
+            loseLife();
         }
 
         if (this.hunger > 88) {
@@ -989,11 +1018,15 @@ class TileItem {
 
 // --- Systems ---
 
-function resetGame() {
+function resetGame(state = GameState.PLAYING) {
     grid = Array(GRID_SIZE * GRID_SIZE).fill(null);
-    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-        grid[i] = new TileItem(1, i);
-    }
+    // Start with a dozen dough balls so there is room to move things around.
+    const cells = grid.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 12);
+    cells.forEach(i => { grid[i] = new TileItem(1, i); });
+    lives = START_LIVES;
+    combo = 0; lastServeAt = -99;
+    newBest = false;
+    selected = -1; drag = null;
     customers = [];
     animations = [];
     effectParticles = [];
@@ -1004,8 +1037,218 @@ function resetGame() {
     turnTimer = 0;
     spawnTimer = 0;
     restartCountdown = 7;
-    currentState = GameState.PLAYING;
+    currentState = state;
 }
+
+function loseLife() {
+    lives = Math.max(0, lives - 1);
+    sfx.fail();
+    if (lives === 0) gameOver();
+}
+
+function gameOver() {
+    if (currentState === GameState.OVER) return;
+    if (currentState === GameState.DEMO) { startDemo(); return; } // the demo just opens again, no score kept
+    currentState = GameState.OVER;
+    overAt = performance.now();
+    selected = -1;
+    if (drag) { if (grid[drag.from]) grid[drag.from].dragging = false; drag = null; }
+    if (gold > best) {
+        best = gold; newBest = true;
+        try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) { /* storage unavailable */ }
+    }
+}
+
+// --- Player moves ---
+
+function cellAt(gx, gy) {
+    const step = TILE_SIZE + SPACING;
+    const ox = gx - GRID_START_X, oy = gy - GRID_START_Y;
+    if (ox < 0 || oy < 0) return -1;
+    const col = Math.floor(ox / step), row = Math.floor(oy / step);
+    if (col >= GRID_SIZE || row >= GRID_SIZE || ox % step > TILE_SIZE || oy % step > TILE_SIZE) return -1;
+    return row * GRID_SIZE + col;
+}
+
+// Merge equal pizzas, move into an empty cell, or swap two different pizzas.
+function playMove(from, to) {
+    const a = grid[from], b = grid[to];
+    if (from === to || !a || a.isAnimating || (b && b.isAnimating)) return false;
+    const pos = grid[to] ? b.getPos() : new TileItem(1, to).getPos();
+    if (b && b.level === a.level && a.level < MAX_LEVEL) {
+        grid[from] = null;
+        b.level++;
+        b.scale = 1.4;
+        spawnParticles(pos.x + TILE_SIZE / 2, pos.y + TILE_SIZE / 2, PIZZA_DATA[b.level - 1].color, 'flame');
+        bakePulses.push({ x: pos.x + TILE_SIZE / 2, y: pos.y + TILE_SIZE / 2, color: PIZZA_DATA[b.level - 1].color, age: 0, life: 0.5, radius: 74 });
+        sfx.merge();
+    } else {
+        grid[to] = a; a.index = to;
+        grid[from] = b || null; if (b) b.index = from;
+        sfx.move();
+    }
+    return true;
+}
+
+function pointerToGame(e) {
+    const rect = canvas.getBoundingClientRect();
+    const viewHeight = window.PizzaPixel ? PizzaPixel.logicalHeight() : HEIGHT;
+    const lx = (e.clientX - rect.left) / rect.width * WIDTH, ly = (e.clientY - rect.top) / rect.height * viewHeight;
+    return window.PizzaPixel ? PizzaPixel.toGame(lx, ly) : { x: lx, y: ly };
+}
+
+// --- Demo player ---
+// Attract mode on first load and after idling: a hand cursor plays like a person would. It pauses
+// to look the board over, reaches for a pizza, lifts it and drags it onto a match, favouring what
+// the waiting guests want. Any tap or key hands the kitchen to the player.
+const DEMO_IDLE_READY = 10000, DEMO_IDLE_OVER = 15000;
+let lastInputAt = 0;
+const bot = { phase: 'think', wait: 1, from: -1, to: -1, x: 480, y: 560, sx: 0, sy: 0, t: 0, dur: 0.4, bend: 0, pressed: false };
+const rand = (a, b) => a + Math.random() * (b - a);
+const tileCenter = i => { const p = new TileItem(1, i).getPos(); return { x: p.x + TILE_SIZE / 2, y: p.y + TILE_SIZE / 2 }; };
+const easeInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+function startDemo() {
+    resetGame(GameState.DEMO);
+    botReset();
+    bot.wait = 1.2;
+}
+
+function botReset() {
+    if (drag && drag.bot) { if (grid[drag.from]) grid[drag.from].dragging = false; drag = null; }
+    bot.pressed = false; bot.phase = 'think'; bot.wait = rand(0.25, 0.5);
+}
+
+function botPickMove() {
+    const byLevel = {};
+    grid.forEach((it, i) => { if (it && !it.isAnimating && !it.dragging && it.level < MAX_LEVEL) (byLevel[it.level] = byLevel[it.level] || []).push(i); });
+    const dist = (a, b) => Math.abs(a % GRID_SIZE - b % GRID_SIZE) + Math.abs(Math.floor(a / GRID_SIZE) - Math.floor(b / GRID_SIZE));
+    // The hungriest guest's recipe first: merge the biggest pair below it to work towards it.
+    const wants = customers.filter(c => !c.isLeaving).sort((a, b) => b.hunger - a.hunger).flatMap(c => c.requirements);
+    let level = null;
+    for (const lv of wants) {
+        for (let l = lv - 1; l >= 1 && level === null; l--) if ((byLevel[l] || []).length >= 2) level = l;
+        if (level !== null) break;
+    }
+    if (level === null || Math.random() < 0.15) {
+        // Otherwise tidy up like most players do: usually the smallest pizzas, now and then anything.
+        const pairs = Object.keys(byLevel).map(Number).filter(l => byLevel[l].length >= 2).sort((a, b) => a - b);
+        if (!pairs.length) return null;
+        level = Math.random() < 0.7 ? pairs[0] : pairs[Math.floor(Math.random() * pairs.length)];
+    }
+    const list = byLevel[level];
+    let pick = null;
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+        const d = dist(list[i], list[j]) + Math.random() * 1.5; // not always the textbook closest pair
+        if (!pick || d < pick.d) pick = { a: list[i], b: list[j], d };
+    }
+    return Math.random() < 0.5 ? { from: pick.a, to: pick.b } : { from: pick.b, to: pick.a };
+}
+
+function updateBot(dt) {
+    const sameLevel = () => grid[bot.from] && grid[bot.to] && !grid[bot.from].isAnimating && grid[bot.to].level === grid[bot.from].level;
+    if (bot.phase === 'think') {
+        // The resting hand drifts a little while it looks the board over.
+        bot.x += Math.sin(gameTime * 1.3) * 10 * dt; bot.y += Math.cos(gameTime * 1.7) * 7 * dt;
+        bot.wait -= dt;
+        if (bot.wait > 0) return;
+        const move = botPickMove();
+        if (!move) { bot.wait = rand(0.4, 0.8); return; }
+        Object.assign(bot, move, { phase: 'reach', t: 0, sx: bot.x, sy: bot.y, dur: rand(0.28, 0.5) });
+    } else if (bot.phase === 'reach') {
+        if (!sameLevel()) return botReset();
+        bot.t = Math.min(1, bot.t + dt / bot.dur);
+        const c = tileCenter(bot.from), e = easeInOut(bot.t);
+        bot.x = bot.sx + (c.x - bot.sx) * e; bot.y = bot.sy + (c.y - bot.sy) * e - Math.sin(Math.PI * bot.t) * 20;
+        if (bot.t >= 1) { bot.phase = 'grab'; bot.t = 0; bot.hold = rand(0.1, 0.22); bot.pressed = true; }
+    } else if (bot.phase === 'grab') {
+        bot.t += dt;
+        if (bot.t < bot.hold) return;
+        if (!sameLevel()) return botReset();
+        grid[bot.from].dragging = true;
+        drag = { from: bot.from, cell: bot.from, x: bot.x, y: bot.y, startX: bot.x, startY: bot.y, moved: true, bot: true };
+        Object.assign(bot, { phase: 'drag', t: 0, sx: bot.x, sy: bot.y, dur: rand(0.35, 0.65), bend: rand(-26, 26) });
+    } else if (bot.phase === 'drag') {
+        if (!grid[bot.from]) return botReset();
+        bot.t = Math.min(1, bot.t + dt / bot.dur);
+        const c = tileCenter(bot.to), e = easeInOut(bot.t), arc = Math.sin(Math.PI * e);
+        bot.x = bot.sx + (c.x - bot.sx) * e + arc * bot.bend; bot.y = bot.sy + (c.y - bot.sy) * e - arc * 14;
+        drag.x = bot.x; drag.y = bot.y;
+        if (bot.t >= 1) {
+            grid[bot.from].dragging = false; drag = null;
+            playMove(bot.from, bot.to); // if the target was served meanwhile this simply moves the pizza there
+            bot.pressed = false; bot.phase = 'think'; bot.wait = rand(0.35, 1.0);
+        }
+    }
+}
+
+function startOrResume() {
+    lastInputAt = performance.now();
+    if (currentState === GameState.DEMO) { botReset(); resetGame(GameState.READY); return true; }
+    if (currentState === GameState.READY) { resetGame(); return true; }
+    if (currentState === GameState.PAUSED) { currentState = GameState.PLAYING; return true; }
+    if (currentState === GameState.OVER && performance.now() - overAt > 900) { resetGame(); return true; }
+    return currentState !== GameState.PLAYING;
+}
+
+canvas.style.touchAction = 'none';
+canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (startOrResume()) return;
+    const p = pointerToGame(e), idx = cellAt(p.x, p.y);
+    if (idx === -1) { selected = -1; return; }
+    const item = grid[idx];
+    if (!item || item.isAnimating) { drag = { from: -1, cell: idx }; return; }
+    canvas.setPointerCapture(e.pointerId);
+    drag = { from: idx, cell: idx, x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false };
+});
+canvas.addEventListener('pointermove', e => {
+    if (!drag || drag.from === -1) return;
+    const p = pointerToGame(e);
+    drag.x = p.x; drag.y = p.y;
+    if (!drag.moved && Math.hypot(p.x - drag.startX, p.y - drag.startY) > 14) {
+        drag.moved = true;
+        if (grid[drag.from]) grid[drag.from].dragging = true;
+        selected = -1;
+    }
+});
+function endDrag(e, cancelled) {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (grid[d.from]) grid[d.from].dragging = false;
+    if (cancelled || currentState !== GameState.PLAYING) return;
+    if (d.from === -1) {
+        // Tapped an empty cell: drop the selected pizza there.
+        if (selected !== -1) playMove(selected, d.cell);
+        selected = -1;
+        return;
+    }
+    if (d.moved) {
+        const p = pointerToGame(e), to = cellAt(p.x, p.y);
+        if (to !== -1) playMove(d.from, to);
+        return;
+    }
+    // Tap-to-select, tap-to-place for players who prefer not to drag.
+    if (selected === -1) selected = d.from;
+    else if (selected === d.from) selected = -1;
+    else { playMove(selected, d.from); selected = -1; }
+}
+canvas.addEventListener('pointerup', e => endDrag(e, false));
+canvas.addEventListener('pointercancel', e => endDrag(e, true));
+
+window.addEventListener('keydown', e => {
+    lastInputAt = performance.now();
+    if (currentState === GameState.DEMO) { if (startOrResume()) e.preventDefault(); return; }
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+        if (currentState === GameState.PLAYING) currentState = GameState.PAUSED;
+        else if (currentState === GameState.PAUSED) currentState = GameState.PLAYING;
+    } else if (e.key === ' ' || e.key === 'Enter') {
+        if (startOrResume()) e.preventDefault();
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && currentState === GameState.PLAYING) currentState = GameState.PAUSED;
+});
 
 function processTurn() {
     if (animations.length > 0) return;
@@ -1089,17 +1332,16 @@ function update(time) {
     rafClock = time;
     const dt = Math.min((time - lastTime) / 1000, 0.1);
     lastTime = time;
-    if (currentState === GameState.OVER) {
-        restartCountdown -= dt;
-        if (restartCountdown <= 0) resetGame();
-        return;
-    }
+    // Idle on the title or results card drifts back into the demo.
+    const idleFor = performance.now() - lastInputAt;
+    if (currentState === GameState.READY && idleFor > DEMO_IDLE_READY) startDemo();
+    if (currentState === GameState.OVER && Math.min(idleFor, performance.now() - overAt) > DEMO_IDLE_OVER) startDemo();
+    if (currentState !== GameState.PLAYING && currentState !== GameState.DEMO) return;
     gameTime += dt;
     spawnTimer += dt;
-    turnTimer += dt;
+    if (currentState === GameState.DEMO) updateBot(dt);
 
-    if (turnTimer >= 2.0) { processTurn(); turnTimer = 0; }
-    if (spawnTimer >= 4.0) { spawnIngredient(); spawnTimer = 0; }
+    if (spawnTimer >= SPAWN_EVERY) { spawnIngredient(); spawnTimer = 0; }
 
     for (let i = animations.length - 1; i >= 0; i--) {
         const a = animations[i];
@@ -1136,7 +1378,8 @@ function update(time) {
 
     // 대기 중인 손님 수만 체크하여 스폰
     const waitingCount = customers.filter(c => !c.isLeaving).length;
-    if (waitingCount < 4 && Math.random() < 0.007) {
+    const spawnChance = waitingCount === 0 ? 0.03 : Math.min(0.016, 0.006 + gameTime * 0.00004);
+    if (waitingCount < 4 && Math.random() < spawnChance) {
         customers.push(new Customer());
     }
 
@@ -1148,11 +1391,16 @@ function update(time) {
         if (cust.x - cust.targetX >= 24) return; // 아직 입장 중이면 주문 대기
         for (let rIdx = 0; rIdx < cust.requirements.length; rIdx++) {
             const levelNeeded = cust.requirements[rIdx];
-            const gIdx = grid.findIndex(it => it && !it.isAnimating && it.level === levelNeeded);
+            const gIdx = grid.findIndex(it => it && !it.isAnimating && !it.dragging && it.level === levelNeeded);
             if (gIdx !== -1) {
                 const p = grid[gIdx].getPos();
+                if (selected === gIdx) selected = -1;
+                // Serving again within 4 seconds keeps a combo going: +20% per step, up to x2.
+                combo = gameTime - lastServeAt < 4 ? combo + 1 : 1;
+                lastServeAt = gameTime;
                 deliveries.push({
                     level: levelNeeded,
+                    value: Math.round(levelNeeded * 400 * Math.min(2, 1 + (combo - 1) * 0.2)),
                     sx: p.x + TILE_SIZE / 2,
                     sy: p.y + TILE_SIZE / 2,
                     tx: cust.x + 170,
@@ -1198,7 +1446,7 @@ function update(time) {
         }
         if (d.progress >= 1) {
             spawnParticles(d.tx, d.ty, PIZZA_DATA[d.level - 1].color, 'cheese');
-            gold += d.level * 400;
+            gold += d.value || d.level * 400;
             sfx.success();
         }
     });
@@ -1782,7 +2030,12 @@ function drawChef(x, y) {
 function draw() {
     if (window.PizzaPixel) {
         PizzaPixel.draw(ctx, { grid, animations, customers, deliveries, effectParticles, bakePulses,
-            gold, gameTime, turnTimer, restartCountdown, over: currentState === GameState.OVER });
+            gold, gameTime, restartCountdown, over: currentState === GameState.OVER,
+            mode: currentState === GameState.DEMO ? 'demo' : currentState === GameState.READY ? 'ready' : currentState === GameState.PAUSED ? 'paused' : currentState === GameState.OVER ? 'over' : 'playing',
+            bake: spawnTimer / SPAWN_EVERY, lives, maxLives: START_LIVES, best, newBest, combo, comboAge: gameTime - lastServeAt,
+            drag: drag && drag.moved ? { level: grid[drag.from] ? grid[drag.from].level : 1, x: drag.x, y: drag.y } : null,
+            dragLevel: drag && drag.moved && grid[drag.from] ? grid[drag.from].level : (selected !== -1 && grid[selected] ? grid[selected].level : 0),
+            selected, cursor: currentState === GameState.DEMO ? { x: bot.x, y: bot.y, pressed: bot.pressed } : null });
         return;
     }
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -2154,7 +2407,7 @@ window.addEventListener('resize', setupCanvasResolution);
 if (window.PizzaPixel) {
     PizzaPixel.install();
     setupCanvasResolution();
-    resetGame();
+    startDemo();
     requestAnimationFrame(loop);
 } else {
     initGeneratedSprites();

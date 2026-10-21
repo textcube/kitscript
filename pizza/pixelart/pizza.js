@@ -257,26 +257,37 @@
             b(34,1,1,7,'#fff2ac'); b(31,4,7,1,'#fff2ac'); b(34,4,1,1,'#ffffff'); b(4,8,1,5,'#fff2ac'); b(2,10,5,1,'#fff2ac');
         }
     }));
-    // 36x48 head chef: puffed toque, curled moustache, double-breasted whites.
-    const chef = sprite(36, 48, b => {
-        const O = P.ink, skin = '#f3b892', white = '#fff2d2', fold = '#d9cfb8';
-        [[4, 2, 12, 11], [11, 0, 14, 11], [20, 2, 12, 11]].forEach(([x, y, w, h]) => oval(b, x, y, w, h, O));
-        [[5, 3, 10, 9], [12, 1, 12, 9], [21, 3, 10, 9]].forEach(([x, y, w, h]) => oval(b, x, y, w, h, white));
-        b(10, 7, 1, 4, fold); b(24, 7, 1, 4, fold); b(14, 3, 4, 1, '#ffffff');
-        b(7, 9, 22, 6, O); b(8, 10, 20, 4, white); b(8, 13, 20, 1, fold); b(25, 10, 3, 3, fold);
-        b(5, 17, 4, 6, O); b(6, 18, 2, 4, skin); b(27, 17, 4, 6, O); b(28, 18, 2, 4, '#d9967a');
-        b(8, 15, 20, 14, O); b(9, 15, 18, 13, skin); b(24, 15, 3, 13, '#e3a284');
-        b(12, 18, 3, 3, O); b(21, 18, 3, 3, O); b(12, 18, 1, 1, '#ffffff'); b(21, 18, 1, 1, '#ffffff');
-        b(11, 16, 4, 1, '#7a5648'); b(21, 16, 4, 1, '#7a5648');
-        b(10, 22, 3, 1, '#ea8d8a'); b(23, 22, 3, 1, '#ea8d8a'); b(16, 20, 4, 3, '#e09a80'); b(16, 20, 2, 1, '#ffd2b8');
-        b(11, 23, 14, 2, '#5b3f36'); b(8, 24, 5, 2, '#5b3f36'); b(23, 24, 5, 2, '#5b3f36'); b(7, 23, 2, 1, '#5b3f36'); b(27, 23, 2, 1, '#5b3f36'); b(13, 23, 3, 1, '#7a5648');
-        b(15, 26, 6, 1, '#9c4a40');
-        b(11, 28, 14, 3, '#b84c45'); b(16, 30, 4, 3, '#d9625a'); b(17, 30, 1, 1, '#f08a80');
-        b(5, 30, 26, 15, O); b(6, 31, 24, 13, white); b(25, 31, 5, 13, fold); b(17, 31, 1, 13, fold);
-        [[13, 33], [20, 33], [13, 38], [20, 38]].forEach(([x, y]) => { b(x, y, 2, 2, '#bba78c'); b(x, y, 1, 1, '#fff'); });
-        b(0, 32, 6, 10, O); b(1, 33, 4, 8, white); b(30, 32, 6, 10, O); b(31, 33, 4, 8, fold);
-        b(0, 40, 6, 4, O); b(1, 40, 4, 3, skin); b(30, 40, 6, 4, O); b(31, 40, 4, 3, skin);
-        b(0, 42, 36, 2, '#efbc67'); b(0, 44, 36, 3, '#84563e'); b(0, 44, 36, 1, '#bc8555'); b(0, 47, 36, 1, O);
+    // 48x60 head chef, the same scale as the undead guests: towering toque, curled moustache,
+    // double-breasted whites and a pizza peel, standing behind the counter.
+    const chef = sprite(48, 60, b => {
+        const O = P.ink, skin = '#f3b892', shadeSkin = '#e3a284', white = '#fff2d2', fold = '#d9cfb8', hair = '#5b3f36';
+        // Toque: three puffs over a pleated band.
+        [[6, 3, 16, 14], [15, 0, 18, 15], [26, 3, 16, 14]].forEach(([x, y, w, h]) => oval(b, x, y, w, h, O));
+        [[7, 4, 14, 12], [16, 1, 16, 13], [27, 4, 14, 12]].forEach(([x, y, w, h]) => oval(b, x, y, w, h, white));
+        b(13, 9, 1, 5, fold); b(34, 9, 1, 5, fold); b(20, 3, 6, 1, '#ffffff'); b(9, 7, 3, 1, '#ffffff');
+        b(10, 13, 28, 8, O); b(11, 14, 26, 6, white); b(11, 19, 26, 1, fold);
+        [15, 20, 25, 30].forEach(x => b(x, 14, 1, 5, fold)); b(33, 14, 4, 5, fold);
+        // Head, ears and face.
+        b(7, 25, 5, 8, O); b(8, 26, 3, 6, skin); b(36, 25, 5, 8, O); b(37, 26, 3, 6, shadeSkin);
+        b(10, 21, 28, 19, O); b(11, 21, 26, 18, skin); b(32, 21, 5, 18, shadeSkin); b(13, 22, 10, 1, '#ffd2b8');
+        b(15, 23, 5, 1, hair); b(28, 23, 5, 1, hair);
+        b(16, 25, 3, 4, O); b(29, 25, 3, 4, O); b(16, 25, 1, 1, '#ffffff'); b(29, 25, 1, 1, '#ffffff');
+        b(13, 30, 4, 2, '#ea8d8a'); b(31, 30, 4, 2, '#ea8d8a');
+        b(21, 27, 6, 5, '#e09a80'); b(21, 27, 3, 2, '#ffd2b8'); b(25, 31, 2, 1, '#c97a66');
+        b(13, 32, 22, 3, hair); b(9, 33, 6, 3, hair); b(33, 33, 6, 3, hair); b(8, 32, 2, 2, hair); b(38, 32, 2, 2, hair);
+        b(15, 32, 5, 1, '#7a5648'); b(28, 32, 5, 1, '#7a5648');
+        b(20, 36, 8, 1, '#9c4a40'); b(21, 37, 6, 1, '#c86a5e');
+        // Neckerchief and double-breasted jacket.
+        b(14, 39, 20, 4, '#b84c45'); b(14, 39, 20, 1, '#d9625a'); b(21, 42, 6, 4, '#d9625a'); b(22, 42, 2, 1, '#f08a80');
+        b(8, 42, 32, 14, O); b(9, 43, 30, 13, white); b(33, 43, 6, 13, fold); b(23, 46, 1, 10, fold);
+        [[16, 46], [28, 46], [16, 51], [28, 51]].forEach(([x, y]) => { b(x, y, 3, 3, '#bba78c'); b(x, y, 1, 1, '#ffffff'); });
+        b(12, 43, 4, 4, white); b(32, 43, 4, 4, fold);
+        // Arms: left hand on the counter, right hand gripping a wooden peel.
+        b(2, 44, 8, 11, O); b(3, 45, 6, 9, white); b(2, 52, 8, 5, O); b(3, 52, 6, 4, skin);
+        b(43, 20, 3, 30, O); b(44, 20, 1, 29, '#c58d61'); b(41, 14, 7, 8, O); b(42, 15, 5, 6, '#d7a16b'); b(42, 15, 5, 1, '#efbc67');
+        b(38, 44, 8, 11, O); b(39, 45, 6, 9, fold); b(38, 46, 8, 5, O); b(39, 47, 6, 3, skin);
+        // Counter edge the chef stands behind.
+        b(0, 55, 48, 2, '#efbc67'); b(0, 55, 48, 1, '#fff0b0'); b(0, 57, 48, 2, '#84563e'); b(0, 59, 48, 1, O);
     });
     function item(level, x, y, scale = 1, badge = true) {
         const big = scale >= 0.9;
@@ -395,6 +406,14 @@
         b(4, 7, 3, 5, P.gold); b(5, 9, 1, 3, '#fff2ac');
     });
     const heart = sprite(7, 6, b => { b(0, 0, 3, 3, P.red); b(4, 0, 3, 3, P.red); b(0, 1, 7, 2, P.red); b(1, 3, 5, 1, P.red); b(2, 4, 3, 1, P.red); b(3, 5, 1, 1, P.red); b(1, 0, 1, 1, '#f5a0a0'); });
+    const glove = sprite(13, 16, b => {
+        const O = P.ink, W = '#fff8e6', S = '#cfc3a8';
+        b(2, 0, 3, 1, O); b(1, 1, 1, 7, O); b(5, 1, 1, 5, O); b(2, 1, 3, 6, W);
+        b(6, 5, 6, 1, O); b(12, 6, 1, 6, O); b(5, 6, 7, 6, W); b(7, 6, 1, 3, S); b(9, 6, 1, 3, S);
+        b(0, 8, 1, 4, O); b(1, 8, 1, 1, W); b(1, 9, 4, 4, W); b(1, 12, 1, 2, O);
+        b(2, 13, 10, 1, W); b(11, 12, 1, 2, S); b(2, 14, 10, 2, O); b(3, 14, 8, 1, '#b84c45');
+        b(2, 1, 1, 4, '#ffffff');
+    });
     // Edge vignette and warm oven light, baked once and laid over every frame.
     const shade = document.createElement('canvas'); shade.width = 480; shade.height = 320;
     (function () {
@@ -423,10 +442,13 @@
         }
         lastGold = state.gold;
         panel(8, 8, 96, 41); c.drawImage(coin, 14, 12); text('REVENUE', 31, 15, 'y');
+        for (let i = 0; i < (state.maxLives || 3); i++) {
+            c.globalAlpha = i < state.lives ? 1 : 0.25; c.drawImage(heart, 77 + i * 8, 14); c.globalAlpha = 1;
+        }
         const rising = shownGold < state.gold;
         text(Math.floor(shownGold).toLocaleString('en-US'), 16, 29, rising ? 'G' : 'g', shownGold < 1000000 ? 2 : 1);
         panel(193, 8, 79, 41); c.drawImage(flame, 200, 12); text('NEXT BAKE', 213, 15, 'y');
-        const fill = Math.max(0, Math.min(1, state.turnTimer / 2)), w = Math.floor(61 * fill);
+        const fill = Math.max(0, Math.min(1, state.bake || 0)), w = Math.floor(61 * fill);
         r(201, 30, 63, 9, P.ink); r(202, 31, 61, 7, '#2a2026');
         r(202, 31, w, 7, '#e0582c'); r(202, 31, w, 4, '#f08a3c'); r(202, 31, w, 1, P.gold);
         if (w > 1) r(201 + w, 31, 1, 7, '#fff2ac');
@@ -454,7 +476,8 @@
         c.drawImage(frameOf(type + ':' + mood, time, person.orderSeed), x, y, 48, 60);
         if (person.isLeaving) {
             const rise = Math.floor((time * 20 + person.orderSeed) % 10);
-            text('THANKS!', x + 24, y - 6, 'G', 1, 'center'); c.drawImage(heart, x + 38, y + 6 - rise);
+            if (person.storm) text('GRR!', x + 24, y - 6, 'r', 1, 'center');
+            else { text('THANKS!', x + 24, y - 6, 'G', 1, 'center'); c.drawImage(heart, x + 38, y + 6 - rise); }
             return;
         }
         if (person.x - person.targetX >= 24) return;
@@ -477,6 +500,62 @@
         r(tx + 15, ty + 39, fill, 4, bar); r(tx + 15, ty + 39, fill, 1, '#ffffff55');
         if (critical && Math.floor(time * 6) % 2) text('!', tx - 9, ty + 4, 'r', 2);
     }
+    // Title, pause and results cards, laid out for either the 480x320 scene or the 284x454 portrait.
+    function drawOverlay(g, W, H, state, now) {
+        if (!state.mode || state.mode === 'playing') return;
+        const fill = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+        if (state.mode === 'demo') {
+            const y = H > 400 ? H - 50 : H - 32, label = 'DEMO PLAY - TAP TO START', w = label.length * 6 + 24, x = Math.round(W / 2 - w / 2);
+            fill(x, y, w, 15, P.ink); fill(x + 1, y + 1, w - 2, 13, '#7a2a33'); fill(x + 1, y + 1, w - 2, 1, '#c9506a');
+            if (reducedMotion.matches || Math.floor(now * 2) % 2 === 0) UI.drawText(g, label, Math.round(W / 2), y + 4, { color: 'G', align: 'center' });
+            else UI.drawText(g, label, Math.round(W / 2), y + 4, { color: 'g', align: 'center' });
+            return;
+        }
+        const say = (s, x, y, color, scale = 1) => UI.drawText(g, s, Math.round(x), Math.round(y), { color, scale, align: 'center' });
+        const card = (x, y, w, h, rim) => { fill(x, y, w, h, P.ink); fill(x + 1, y + 1, w - 2, h - 2, rim); fill(x + 3, y + 3, w - 6, h - 6, '#3a2430'); fill(x + 1, y + h, w, 2, P.ink); };
+        const blink = reducedMotion.matches || Math.floor(now * 2.5) % 2 === 0;
+        const cx = Math.round(W / 2), w = Math.min(W - 16, 344);
+        fill(0, 0, W, H, '#17131bd0');
+        if (state.mode === 'ready') {
+            const h = 176, y = Math.round(H / 2 - h / 2);
+            card(cx - w / 2, y, w, h, '#bc8555');
+            fill(cx - w / 2 + 3, y + 3, w - 6, 26, '#7a2a33');
+            say('MIDNIGHT PIZZERIA', cx, y + 9, 'g', 2);
+            say('THE UNDEAD ARE HUNGRY. FEED THEM.', cx, y + 38, 'w');
+            const rows = [[pizzas[0], 'DRAG TWO MATCHING PIZZAS TOGETHER'], [pizzas[3], 'BIGGER PIZZAS FILL BIGGER ORDERS'], [heart, 'A STARVING GUEST COSTS A LIFE']];
+            rows.forEach(([icon, line], i) => {
+                const ry = y + 58 + i * 24, lx = Math.round(cx - w / 2 + 14);
+                if (icon === heart) g.drawImage(heart, lx + 5, ry + 2); else g.drawImage(icon, lx, ry - 4, 18, 18);
+                UI.drawText(g, line, lx + 24, ry + 2, { color: 'y' });
+            });
+            if (state.best) say('BEST ' + state.best.toLocaleString('en-US'), cx, y + 134, 'g');
+            if (blink) say('TAP TO OPEN THE KITCHEN', cx, y + 152, 'G');
+        } else if (state.mode === 'paused') {
+            card(cx - 80, H / 2 - 34, 160, 66, '#bc8555');
+            say('PAUSED', cx, H / 2 - 22, 'g', 2);
+            if (blink) say('TAP TO RESUME', cx, H / 2 + 8, 'G');
+        } else {
+            const h = 150, y = Math.round(H / 2 - h / 2);
+            if (W > 300) ['zombie', 'pumpkin', 'dracula', 'imp', 'skeleton'].forEach((type, i) => g.drawImage(actors[type + ':angry'], 0, 0, 48, 34, cx - 120 + i * 50, y - 33, 48, 34));
+            card(cx - w / 2, y, w, h, P.red);
+            fill(cx - w / 2 + 3, y + 3, w - 6, 22, '#7a2a33');
+            say('UNDEAD RIOT!', cx, y + 7, 'g', 2);
+            say('THE HUNGRY HORDE TOOK THE KITCHEN', cx, y + 32, 'w');
+            const lx = Math.round(cx - w / 2 + 18), rx = Math.round(cx + w / 2 - 18);
+            const line = (icon, label, value, ly) => { g.drawImage(icon, lx, ly - 3); UI.drawText(g, label, lx + 18, ly, { color: 'y' }); UI.drawText(g, value, rx, ly, { color: 'g', align: 'right' }); };
+            line(coin, 'REVENUE', state.gold.toLocaleString('en-US'), y + 54);
+            line(flame, 'SURVIVED', Math.floor(state.gameTime / 60) + ':' + String(Math.floor(state.gameTime % 60)).padStart(2, '0'), y + 74);
+            line(coin, 'BEST', (state.best || 0).toLocaleString('en-US'), y + 94);
+            if (state.newBest) say('NEW BEST!', cx, y + 112, blink ? 'G' : 'g');
+            if (blink) say('TAP TO PLAY AGAIN', cx, y + 130, 'G');
+        }
+    }
+    // Pointer position in the canvas's logical space -> game coordinates (960x640).
+    function toGame(lx, ly) {
+        if (!mobile()) return { x: lx, y: ly };
+        const k = 284 / 960;
+        return { x: 2 * (lx * k + 5), y: 2 * (ly * k - 114) };
+    }
     function draw(target, state) {
         c.imageSmoothingEnabled = false;
         c.drawImage(scene, 0, 0);
@@ -488,15 +567,21 @@
             r(120 + i * 5, 46 - Math.round(height * 0.35), 2, Math.round(height * 0.35), P.gold);
         }
         r(118, 45, 24, 1, '#fff0b0');
-        const chefY = 6 + Math.floor(Math.sin(time * 3));
-        c.drawImage(chef, 152, chefY, 36, 48);
-        if (Math.floor(time * 8) % 26 === 0 && time) { r(164, chefY + 18, 3, 3, '#f3b892'); r(173, chefY + 18, 3, 3, '#f3b892'); r(164, chefY + 19, 3, 1, P.ink); r(173, chefY + 19, 3, 1, P.ink); }
+        const chefY = Math.floor(Math.sin(time * 3));
         const now = performance.now() / 1000, dt = lastClock ? Math.min(0.1, now - lastClock) : 0; lastClock = now;
         // Warm light spilling from the oven mouth.
         c.globalAlpha = 0.10 + (reducedMotion.matches ? 0 : Math.sin(time * 9) * 0.03);
         oval(r, 98, 18, 64, 48, '#ff9a3c'); oval(r, 110, 28, 40, 30, '#ffc060');
         c.globalAlpha = 1;
         hud(state, reducedMotion.matches ? 0 : now, dt);
+        const drawChef = (g, x, y) => {
+            g.drawImage(chef, x, y);
+            if (Math.floor(time * 8) % 26 === 0 && time) {
+                g.fillStyle = '#f3b892'; g.fillRect(x + 16, y + 25, 3, 4); g.fillRect(x + 29, y + 25, 3, 4);
+                g.fillStyle = P.ink; g.fillRect(x + 16, y + 27, 3, 1); g.fillRect(x + 29, y + 27, 3, 1);
+            }
+        };
+        drawChef(c, 144, chefY);
         // Fresh dough is flung out of the oven and lands in its cell. A board refill (start or reset)
         // brings many tiles at once, so those simply appear.
         const fresh = state.grid.filter(it => it && !seen.has(it));
@@ -506,8 +591,14 @@
         let ovenFlash = 0;
         const flights = []; // portrait redraws in-flight dough in its own coordinates
         state.grid.forEach(it => {
-            if (!it || it.isAnimating) return;
+            if (!it || it.isAnimating || it.dragging) return;
             const p = it.getPos(), cx = (p.x + 42) / 2, cy = (p.y + 42) / 2;
+            const pick = state.grid.indexOf(it) === state.selected;
+            if (pick || (state.dragLevel && it.level === state.dragLevel && it.level < 10)) {
+                const glow = pick || Math.floor(now * 6) % 2 ? P.gold : '#fff2ac';
+                const bx = Math.round(cx - 21), by = Math.round(cy - 21);
+                r(bx, by, 42, 2, glow); r(bx, by + 40, 42, 2, glow); r(bx, by, 2, 42, glow); r(bx + 40, by, 2, 42, glow);
+            }
             if (!launches.has(it)) { item(it.level, cx, cy, it.scale); return; }
             const age = launches.get(it) + dt;
             if (age >= LAUNCH + 0.18 || reducedMotion.matches) { launches.delete(it); item(it.level, cx, cy, it.scale); return; }
@@ -563,9 +654,24 @@
             c.globalAlpha = 1;
             item(d.level, (d.sx + (d.tx - d.sx) * e) / 2, (d.sy + (d.ty - d.sy) * e - Math.sin(Math.PI * t) * 48) / 2, 1 - 0.42 * e);
         });
+        if (state.drag) {
+            const dx = state.drag.x / 2, dy = state.drag.y / 2;
+            r(Math.round(dx) - 12, Math.round(dy) + 18, 24, 3, '#17131b66');
+            item(state.drag.level, dx, dy - 4, 1.15, false);
+        }
+        if (state.cursor) {
+            const hx = Math.round(state.cursor.x / 2), hy = Math.round(state.cursor.y / 2);
+            if (state.cursor.pressed) { c.globalAlpha = 0.5; spark(hx, hy, 3, '#fff2ac'); c.globalAlpha = 1; }
+            c.drawImage(glove, hx - 3, hy + (state.cursor.pressed ? 1 : 0));
+        }
+        if (state.combo >= 2 && state.comboAge < 4) {
+            const label = 'COMBO X' + state.combo, w = label.length * 6 + 14;
+            r(147 - w / 2, 58, w, 11, P.ink); r(148 - w / 2, 59, w - 2, 9, '#c23a3a'); r(148 - w / 2, 59, w - 2, 1, '#f08a80');
+            text(label, 147, 60, 'G', 1, 'center');
+        }
         r(0, 309, 480, 11, P.ink);
-        text('MERGE. BAKE. SERVE.', 12, 311, 'g');
-        text('AUTO KITCHEN / ' + Math.floor(state.gameTime / 60) + ':' + String(Math.floor(state.gameTime % 60)).padStart(2, '0'), 468, 311, 'y', 1, 'right');
+        text('DRAG MATCHING PIZZAS TOGETHER TO MERGE', 12, 311, 'g');
+        text('BEST ' + (state.best || 0).toLocaleString('en-US'), 468, 311, 'y', 1, 'right');
         for (let i = popups.length - 1; i >= 0; i--) {
             const p = popups[i]; p.age += dt;
             if (p.age > 1.2) { popups.splice(i, 1); continue; }
@@ -574,21 +680,7 @@
         }
         c.globalAlpha = 1;
         c.drawImage(shade, 0, 0);
-        if (state.over) {
-            r(0, 0, 480, 320, '#17131bd9');
-            ['zombie', 'pumpkin', 'dracula', 'imp', 'skeleton'].forEach((type, i) => c.drawImage(actors[type + ':angry'], 0, 0, 48, 34, 120 + i * 50, 64, 48, 34));
-            panel(69, 97, 342, 140, '#3a2430', P.red);
-            r(72, 100, 336, 22, '#7a2a33'); r(72, 121, 336, 1, P.ink);
-            text('UNDEAD RIOT!', 240, 104, 'g', 2, 'center');
-            text('THE HUNGRY HORDE BREACHED THE KITCHEN', 240, 130, 'w', 1, 'center');
-            c.drawImage(coin, 120, 148); text('REVENUE', 138, 151, 'y'); text(state.gold.toLocaleString('en-US'), 360, 151, 'g', 1, 'right');
-            c.drawImage(flame, 121, 168); text('SURVIVED', 138, 171, 'y');
-            text(Math.floor(state.gameTime / 60) + ':' + String(Math.floor(state.gameTime % 60)).padStart(2, '0'), 360, 171, 'g', 1, 'right');
-            r(118, 186, 244, 1, '#6e4a4c');
-            text('REOPENING IN ' + Math.ceil(state.restartCountdown) + 's', 240, 194, 'G', 2, 'center');
-            const left = Math.max(0, Math.min(1, state.restartCountdown / 7));
-            r(120, 218, 240, 8, P.ink); r(121, 219, Math.floor(238 * (1 - left)), 6, P.gold); r(121, 219, Math.floor(238 * (1 - left)), 2, '#fff2ac');
-        }
+        if (!mobile()) drawOverlay(c, 480, 320, state, now);
         target.save(); target.imageSmoothingEnabled = false;
         if (mobile()) {
             const pc = portrait.getContext('2d'); pc.imageSmoothingEnabled = false;
@@ -598,10 +690,11 @@
             // Guests wait at a counter above the board, so finished pizzas are handed up to them.
             pc.fillStyle = '#251c22'; pc.fillRect(0, 75, 284, 92);
             for (let y = 77; y < 160; y += 8) for (let x = -((y / 8) % 2) * 9; x < 284; x += 18) { pc.fillStyle = '#2e2329'; pc.fillRect(x, y, 16, 6); }
+            drawChef(pc, 145, 18 + chefY);
             const guests = state.customers.filter(p => !p.isLeaving).slice(0, 4);
             // Guests slide in from the right to their spot at the counter; leavers hop out to the right.
             const ease = Math.min(1, dt * 6);
-            state.customers.forEach(p => { if (p.isLeaving && slotX.has(p.id) && !leavers.has(p.id)) leavers.set(p.id, { x: slotX.get(p.id), key: p.undeadProfile.type + ':happyLeaving', seed: p.orderSeed, age: 0 }); });
+            state.customers.forEach(p => { if (p.isLeaving && slotX.has(p.id) && !leavers.has(p.id)) leavers.set(p.id, { x: slotX.get(p.id), key: p.undeadProfile.type + (p.storm ? ':angry' : ':happyLeaving'), storm: p.storm, seed: p.orderSeed, age: 0 }); });
             slotX.forEach((_, id) => { if (!guests.some(p => p.id === id)) slotX.delete(id); });
             guests.forEach((person, i) => {
                 const goal = 12 + i * 66, prev = slotX.has(person.id) ? slotX.get(person.id) : 290;
@@ -625,8 +718,8 @@
                 if (l.x > 290 || reducedMotion.matches) { leavers.delete(id); return; }
                 const hop = -Math.abs(Math.round(Math.sin(l.age * 14) * 4)), lx = Math.round(l.x);
                 pc.drawImage(frameOf(l.key, time, l.seed), 0, 0, 48, 52, lx + 7, 98 + hop, 48, 52);
-                UI.drawText(pc, 'THANKS!', lx + 31, 90 + hop, { color: 'G', align: 'center' });
-                pc.drawImage(heart, lx + 44, 84 - Math.floor(l.age * 12));
+                UI.drawText(pc, l.storm ? 'GRR!' : 'THANKS!', lx + 31, 90 + hop, { color: l.storm ? 'r' : 'G', align: 'center' });
+                if (!l.storm) pc.drawImage(heart, lx + 44, 84 - Math.floor(l.age * 12));
             });
             if (!guests.length && !leavers.size) UI.drawText(pc, 'GUESTS ARE ON THEIR WAY...', 142, 116, { color: 'y', align: 'center' });
             // Counter top between the guests and the kitchen.
@@ -650,13 +743,9 @@
                 pc.drawImage(smallPizzas[d.level - 1], Math.round(x - size / 2), Math.round(y - size / 2), size, size);
                 if (t > 0.85) { pc.globalAlpha = (1 - t) / 0.15; pc.fillStyle = '#fff2ac'; pc.fillRect(tx - 29, 78, 58, 84); pc.globalAlpha = 1; }
             });
-            UI.drawText(pc, 'MERGE. BAKE. SERVE. / AUTO KITCHEN', 142, 434, { color: 'g', align: 'center' });
-            if (state.over) {
-                pc.fillStyle = '#17131be8'; pc.fillRect(0, 0, 284, 454);
-                UI.drawText(pc, 'UNDEAD RIOT!', 142, 180, { color: 'g', scale: 2, align: 'center' });
-                UI.drawText(pc, 'REVENUE ' + state.gold.toLocaleString('en-US'), 142, 206, { color: 'g', align: 'center' });
-                UI.drawText(pc, 'REOPENING IN ' + Math.ceil(state.restartCountdown) + 's', 142, 224, { color: 'G', align: 'center' });
-            }
+            UI.drawText(pc, 'DRAG MATCHING PIZZAS TO MERGE', 142, 430, { color: 'g', align: 'center' });
+            UI.drawText(pc, 'BEST ' + (state.best || 0).toLocaleString('en-US'), 142, 442, { color: 'y', align: 'center' });
+            drawOverlay(pc, 284, 454, state, now);
             target.drawImage(portrait, 0, 0, 960, logicalHeight());
         } else target.drawImage(buffer, 0, 0, 960, 640);
         target.restore();
@@ -668,5 +757,5 @@
         const mark = document.createElement('canvas'); mark.width = 32; mark.height = 32;
         mark.getContext('2d').drawImage(smallPizzas[3], 0, 0); document.querySelector('.brand-mark').appendChild(mark);
     }
-    root.PizzaPixel = { install, draw, logicalHeight };
+    root.PizzaPixel = { install, draw, logicalHeight, toGame };
 })(window);
