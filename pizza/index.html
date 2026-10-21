@@ -308,10 +308,14 @@ const ASSET_MANIFEST = {
 
 function setupCanvasResolution() {
     const dpr = window.devicePixelRatio || 1;
-    const headerHeight = document.querySelector('.game-header')?.offsetHeight || 80;
+    // Short landscape screens move the header into a side rail (see pixelart/pizza.css).
+    const header = document.querySelector('.game-header');
+    const rail = window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
+    const headerHeight = rail ? 0 : (header?.offsetHeight || 80);
+    const railWidth = rail ? (header?.offsetWidth || 60) : 0;
     const viewHeight = window.PizzaPixel ? PizzaPixel.logicalHeight() : HEIGHT;
-    const availWidth = Math.max(240, window.innerWidth - (window.innerWidth < 600 ? 36 : 62));
-    const availHeight = Math.max(180, window.innerHeight - headerHeight - 52);
+    const availWidth = Math.max(240, window.innerWidth - railWidth - (rail ? 32 : window.innerWidth < 600 ? 36 : 62));
+    const availHeight = Math.max(180, window.innerHeight - headerHeight - (rail ? 14 : 52));
     const scale = Math.min(1, availWidth / WIDTH, availHeight / viewHeight);
     canvas.style.width = `${Math.floor(WIDTH * scale)}px`;
     canvas.style.height = `${Math.floor(viewHeight * scale)}px`;

@@ -407,6 +407,8 @@
     })();
     let shownGold = 0, lastGold = 0, lastClock = 0, primed = false;
     const seen = new WeakSet(), launches = new Map(), LAUNCH = 0.55;
+    const slotX = new Map(), leavers = new Map(); // portrait guest positions and guests walking out
+    const cardSpot = new Map(); // portrait: customer id -> centre x of their card
     const popups = [];
     const spark = (x, y, s, color) => { r(x - s, y, s * 2 + 1, 1, color); r(x, y - s, 1, s * 2 + 1, color); r(x, y, 1, 1, '#ffffff'); };
     function hud(state, time, dt) {
@@ -502,6 +504,7 @@
         if (primed && fresh.length <= 3) fresh.forEach((it, n) => { if (it.level === 1) launches.set(it, -n * 0.12); });
         primed = true;
         let ovenFlash = 0;
+        const flights = []; // portrait redraws in-flight dough in its own coordinates
         state.grid.forEach(it => {
             if (!it || it.isAnimating) return;
             const p = it.getPos(), cx = (p.x + 42) / 2, cy = (p.y + 42) / 2;
@@ -511,7 +514,8 @@
             launches.set(it, age);
             if (age < 0) return;
             ovenFlash = Math.max(ovenFlash, 1 - age / 0.25);
-            if (age < LAUNCH) {
+            if (age < LAUNCH && mobile()) flights.push({ t: age / LAUNCH, cx, cy });
+            else if (age < LAUNCH) {
                 const t = age / LAUNCH, e = 1 - (1 - t) * (1 - t);
                 const x = 130 + (cx - 130) * e, y = 40 + (cy - 40) * e - Math.sin(Math.PI * t) * 34;
                 r(Math.round(x) - 7, Math.round(40 + (cy - 40) * e) + 12, 14, 2, '#17131b55');
@@ -553,7 +557,7 @@
         c.globalAlpha = 1;
         state.customers.forEach(person => customer(person, time));
         if (!state.customers.length) { text('THE NIGHT IS YOUNG...', 380, 164, 'y', 1, 'center'); text('HUNGRY GUESTS ARE ON THEIR WAY', 380, 179, 'y', 1, 'center'); }
-        state.deliveries.forEach(d => {
+        if (!mobile()) state.deliveries.forEach(d => {
             const t = Math.min(1, d.progress), e = t * t * (3 - 2 * t);
             for (let k = 1; k < 4; k++) { const q = Math.max(0, e - k * 0.06); c.globalAlpha = 0.5 / k; spark(Math.round((d.sx + (d.tx - d.sx) * q) / 2), Math.round((d.sy + (d.ty - d.sy) * q - Math.sin(Math.PI * Math.max(0, t - k * 0.06)) * 48) / 2), 1, P.gold); }
             c.globalAlpha = 1;
@@ -591,23 +595,62 @@
             pc.fillStyle = P.wall; pc.fillRect(0, 0, 284, 454);
             UI.drawText(pc, 'MIDNIGHT PIZZERIA', 142, 5, { color: 'g', align: 'center' });
             pc.drawImage(buffer, 0, 0, 282, 55, 1, 18, 282, 55);
-            pc.drawImage(buffer, 22, 58, 250, 250, 17, 77, 250, 250);
-            UI.drawText(pc, 'HUNGRY GUESTS / ' + state.customers.filter(p => !p.isLeaving).length, 142, 332, { color: 'y', align: 'center' });
-            state.customers.filter(p => !p.isLeaving).slice(0, 4).forEach((person, i) => {
-                const x = 12 + i * 66;
+            // Guests wait at a counter above the board, so finished pizzas are handed up to them.
+            pc.fillStyle = '#251c22'; pc.fillRect(0, 75, 284, 92);
+            for (let y = 77; y < 160; y += 8) for (let x = -((y / 8) % 2) * 9; x < 284; x += 18) { pc.fillStyle = '#2e2329'; pc.fillRect(x, y, 16, 6); }
+            const guests = state.customers.filter(p => !p.isLeaving).slice(0, 4);
+            // Guests slide in from the right to their spot at the counter; leavers hop out to the right.
+            const ease = Math.min(1, dt * 6);
+            state.customers.forEach(p => { if (p.isLeaving && slotX.has(p.id) && !leavers.has(p.id)) leavers.set(p.id, { x: slotX.get(p.id), key: p.undeadProfile.type + ':happyLeaving', seed: p.orderSeed, age: 0 }); });
+            slotX.forEach((_, id) => { if (!guests.some(p => p.id === id)) slotX.delete(id); });
+            guests.forEach((person, i) => {
+                const goal = 12 + i * 66, prev = slotX.has(person.id) ? slotX.get(person.id) : 290;
+                const x = Math.round(reducedMotion.matches ? goal : prev + (goal - prev) * ease);
+                slotX.set(person.id, x); cardSpot.set(person.id, x + 31);
+                const walking = Math.abs(goal - x) > 1, hop = walking && !reducedMotion.matches ? -Math.abs(Math.round(Math.sin(time * 18) * 2)) : 0;
                 const box = (dx, dy, w, h, color) => { pc.fillStyle = color; pc.fillRect(x + dx, dy, w, h); };
-                box(0, 345, 62, 88, P.ink); box(1, 346, 60, 86, P.wood); box(2, 347, 58, 84, P.dark);
-                pc.drawImage(frameOf(person.undeadProfile.type + ':' + person.animState, time, person.orderSeed), 0, 0, 48, 40, x + 7, 347, 48, 40);
-                box(4, 387, 54, 42, P.paper);
+                const critical = person.hunger > 85;
+                box(0, 78, 62, 84, P.ink); box(1, 79, 60, 82, critical ? '#7a2a33' : P.wood); box(2, 80, 58, 80, P.dark);
+                pc.drawImage(frameOf(person.undeadProfile.type + ':' + person.animState, time, person.orderSeed), 0, 0, 48, 40, x + 7, 81 + hop, 48, 40);
+                box(4, 121, 54, 37, '#f6e6c0'); box(4, 121, 54, 1, '#fff8e6');
                 person.requirements.forEach((level, j) => {
-                    pc.drawImage(smallPizzas[level - 1], x + 5 + j * 26, 389, 24, 24);
-                    UI.drawText(pc, String(level), x + 15 + j * 26, 413, { color: 'O' });
+                    pc.drawImage(smallPizzas[level - 1], x + 5 + j * 26, 122, 24, 24);
+                    UI.drawText(pc, String(level), x + 15 + j * 26, 145, { color: 'O' });
                 });
-                pc.drawImage(heart, x + 5, 422); box(13, 422, 42, 5, P.ink); box(14, 423, 40, 3, '#b49a76');
-                box(14, 423, Math.floor((1 - person.hunger / 100) * 40), 3, person.hunger > 85 ? P.red : person.hunger > 60 ? P.gold : P.green);
+                pc.drawImage(heart, x + 5, 151); box(13, 151, 42, 5, P.ink); box(14, 152, 40, 3, '#b49a76');
+                box(14, 152, Math.floor((1 - person.hunger / 100) * 40), 3, critical ? P.red : person.hunger > 60 ? P.gold : P.green);
             });
-            if (!state.customers.some(p => !p.isLeaving)) UI.drawText(pc, 'GUESTS ARE ON THEIR WAY...', 142, 381, { color: 'y', align: 'center' });
-            UI.drawText(pc, 'MERGE. BAKE. SERVE. / AUTO KITCHEN', 142, 441, { color: 'g', align: 'center' });
+            leavers.forEach((l, id) => {
+                l.age += dt; l.x += dt * (40 + l.age * 160);
+                if (l.x > 290 || reducedMotion.matches) { leavers.delete(id); return; }
+                const hop = -Math.abs(Math.round(Math.sin(l.age * 14) * 4)), lx = Math.round(l.x);
+                pc.drawImage(frameOf(l.key, time, l.seed), 0, 0, 48, 52, lx + 7, 98 + hop, 48, 52);
+                UI.drawText(pc, 'THANKS!', lx + 31, 90 + hop, { color: 'G', align: 'center' });
+                pc.drawImage(heart, lx + 44, 84 - Math.floor(l.age * 12));
+            });
+            if (!guests.length && !leavers.size) UI.drawText(pc, 'GUESTS ARE ON THEIR WAY...', 142, 116, { color: 'y', align: 'center' });
+            // Counter top between the guests and the kitchen.
+            pc.fillStyle = P.ink; pc.fillRect(0, 162, 284, 9);
+            pc.fillStyle = '#bc8555'; pc.fillRect(0, 163, 284, 2);
+            pc.fillStyle = P.wood; pc.fillRect(0, 165, 284, 5);
+            pc.drawImage(buffer, 22, 58, 250, 250, 17, 172, 250, 250);
+            flights.forEach(({ t, cx, cy }) => {
+                const e = 1 - (1 - t) * (1 - t), tx = cx - 5, ty = cy + 114;
+                const x = 131 + (tx - 131) * e, y = 58 + (ty - 58) * e - Math.sin(Math.PI * t) * 30, size = Math.round(18 + 14 * t);
+                pc.drawImage(smallPizzas[0], Math.round(x - size / 2), Math.round(y - size / 2), size, size);
+            });
+            state.deliveries.forEach(d => {
+                const t = Math.min(1, d.progress), e = t * t * (3 - 2 * t);
+                const sx = d.sx / 2 - 5, sy = d.sy / 2 + 114, tx = cardSpot.get(d.custId) ?? 142, ty = 134;
+                const arc = q => Math.sin(Math.PI * q) * 26;
+                pc.fillStyle = P.gold;
+                for (let k = 1; k < 4; k++) { const q = Math.max(0, e - k * 0.07); pc.globalAlpha = 0.5 / k; pc.fillRect(Math.round(sx + (tx - sx) * q), Math.round(sy + (ty - sy) * q - arc(Math.max(0, t - k * 0.07))), 2, 2); }
+                pc.globalAlpha = 1;
+                const size = Math.round(32 - 10 * e), x = sx + (tx - sx) * e, y = sy + (ty - sy) * e - arc(t);
+                pc.drawImage(smallPizzas[d.level - 1], Math.round(x - size / 2), Math.round(y - size / 2), size, size);
+                if (t > 0.85) { pc.globalAlpha = (1 - t) / 0.15; pc.fillStyle = '#fff2ac'; pc.fillRect(tx - 29, 78, 58, 84); pc.globalAlpha = 1; }
+            });
+            UI.drawText(pc, 'MERGE. BAKE. SERVE. / AUTO KITCHEN', 142, 434, { color: 'g', align: 'center' });
             if (state.over) {
                 pc.fillStyle = '#17131be8'; pc.fillRect(0, 0, 284, 454);
                 UI.drawText(pc, 'UNDEAD RIOT!', 142, 180, { color: 'g', scale: 2, align: 'center' });
