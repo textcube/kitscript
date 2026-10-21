@@ -1,0 +1,92 @@
+/* Local pixel skin. The game canvas uses a 480 x 320 art buffer. */
+html.pxui body {
+    background: #17131b;
+    background-image: repeating-linear-gradient(0deg, transparent 0 30px, #211b25 30px 32px);
+    color: #fff2d2;
+    font-family: var(--pxu-font);
+    height: 100dvh;
+}
+html.pxui .game-header {
+    max-width: 1000px;
+    flex-shrink: 0;
+    background: #30232b;
+    border: 4px solid #100e16;
+    border-top: 0;
+    box-shadow: inset 0 -4px #735044, 0 4px #bb8050;
+    padding: 0 24px;
+}
+html.pxui .brand-mark, html.pxui .icon-btn {
+    border-radius: 0;
+    background: #513b3c;
+    border: 2px solid #110f18;
+    box-shadow: inset 2px 2px #b57c59, inset -2px -2px #2e242d, 2px 2px #110f18;
+    transition: none;
+    image-rendering: pixelated;
+}
+html.pxui .brand-mark { background: #efbc67; }
+html.pxui .brand-mark svg, html.pxui .icon-btn svg { display: none; }
+html.pxui .icon-btn.sound-btn svg.icon-off,
+html.pxui .icon-btn.sound-btn svg.icon-on { display: none; }
+html.pxui .brand-mark canvas { width: 32px; height: 32px; border-radius: 0; }
+html.pxui .brand-name {
+    color: #f7c95d;
+    font-size: 24px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-shadow: 2px 2px #100e16;
+}
+html.pxui .game-subtitle { color: #d1aa8d; font-size: 16px; font-weight: 400; }
+html.pxui .icon-btn::after {
+    content: ''; width: 24px; height: 24px;
+    background: var(--pizza-icon) center / contain no-repeat;
+    image-rendering: pixelated;
+}
+html.pxui .icon-btn:hover, html.pxui .icon-btn:focus-visible {
+    background: #855844; outline: 2px solid #f7c95d; outline-offset: 2px;
+    transform: none; color: #fff2d2;
+}
+html.pxui .sound-btn.active { background: #36564a; border-color: #82ecd2; box-shadow: inset 2px 2px #729b68, 2px 2px #100e16; }
+html.pxui .sound-btn { --pizza-icon: var(--pxu-i-mute-normal); }
+html.pxui .sound-btn.active { --pizza-icon: var(--pxu-i-sound-gold); }
+html.pxui .canvas-container {
+    background: #714938; padding: 8px; margin-top: 20px;
+    border: 4px solid #100e16; border-radius: 0;
+    box-shadow: inset 2px 2px #c58d61, inset -2px -2px #30232b, 6px 6px #100e16;
+    max-width: calc(100vw - 28px); box-sizing: border-box;
+}
+html.pxui #gameCanvas { display: block; border-radius: 0; image-rendering: pixelated; }
+@media (max-width: 720px) {
+    html.pxui .game-header { padding: 10px 12px; gap: 8px; }
+    html.pxui .brand-zone { gap: 8px; }
+    html.pxui .brand-name { font-size: 16px; }
+    html.pxui .game-subtitle { font-size: 8px; max-width: 220px; line-height: 16px; }
+    html.pxui .canvas-container { padding: 4px; margin-top: 12px; }
+    html.pxui .link-zone { gap: 8px; }
+}
+/* Phones in landscape: browser chrome eats most of the height, so the header
+   becomes a slim left rail and the board gets the full viewport height. */
+@media (orientation: landscape) and (max-height: 520px) {
+    html.pxui body { flex-direction: row; justify-content: center; align-items: center; height: 100dvh; }
+    html.pxui .game-header {
+        width: auto; height: 100dvh; max-width: none; flex-direction: column; flex-wrap: nowrap;
+        justify-content: center; gap: 12px; padding: 8px 10px;
+        border: 4px solid #100e16; border-left: 0; border-top: 0; border-bottom: 0;
+        box-shadow: inset -4px 0 #735044, 4px 0 #bb8050;
+    }
+    html.pxui .brand-text { display: none; }
+    html.pxui .link-zone { flex-direction: column; gap: 10px; }
+    html.pxui .brand-mark, html.pxui .icon-btn { width: 36px; height: 36px; }
+    html.pxui .canvas-container { margin: 0 0 0 14px; padding: 3px; max-width: none; }
+}
+/* Phones in portrait: keep the header on one row so the buttons don't wrap
+   under the brand and steal height from the board. */
+@media (max-width: 720px) and (orientation: portrait) {
+    html.pxui .game-header { flex-wrap: nowrap; height: auto; padding: 8px 10px; gap: 8px; }
+    html.pxui .brand-zone { min-width: 0; flex: 1 1 auto; }
+    html.pxui .brand-text { min-width: 0; display: flex; flex-direction: column; }
+    html.pxui .game-subtitle { max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    html.pxui .link-zone { flex-shrink: 0; gap: 6px; }
+    html.pxui .brand-mark, html.pxui .icon-btn { width: 32px; height: 32px; }
+    html.pxui .icon-btn::after { width: 20px; height: 20px; }
+    html.pxui .canvas-container { margin-top: 8px; }
+}
