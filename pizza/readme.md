@@ -1,8 +1,8 @@
 # Eternal Invasion: Pizza Edition
 
-An auto-playing pixel-art merge game set in a wood-fired pizza shop. Pizzas merge and level up on a 5x5 counter grid while undead customers (zombie, ghost, skeleton, dracula, mummy, witch, frankenstein, pumpkin, imp) queue up with orders. Serve them before their hunger peaks or the kitchen falls to an undead riot.
+A pixel-art merge game set in a wood-fired pizza shop. Drag matching pizzas together on a 5x5 counter to bake bigger recipes while undead customers (zombie, ghost, skeleton, dracula, mummy, witch, frankenstein, pumpkin, imp) queue up with orders. Serve them before they starve or the kitchen falls to an undead riot.
 
-The game plays itself — it is a zero-input demo loop in the same spirit as the other kitscript modules, with sound as the only user control.
+The player merges by dragging one pizza onto a matching one, or by tapping one and then the other. Orders are served automatically once a matching pizza is on the board. Keyboard: Space/Enter starts or retries, P/Esc pauses.
 
 ## Current Build
 
@@ -16,7 +16,7 @@ The game plays itself — it is a zero-input demo loop in the same spirit as the
 
 ## Pixel-Art Design
 
-The default renderer draws into a 480x320 pixel buffer and presents it at the game's existing 960x640 logical size with smoothing disabled. The original merge AI, nine customer archetypes, order generation, hunger, revenue, sound toggle, delivery timing, and automatic restart remain unchanged.
+The default renderer draws into a 480x320 pixel buffer and presents it at the game's existing 960x640 logical size with smoothing disabled. It also draws the title, pause and results cards, lives, combo ribbon, drag preview and merge-target outlines.
 
 On viewports narrower than 600px, a 284x454 portrait composition puts the board above four compact customer cards with recipe thumbnails and hunger meters. The canvas fits the available height in either orientation.
 
@@ -33,16 +33,20 @@ The sections below also describe the retained legacy renderer and asset pipeline
 
 ## Game Loop
 
-1. The 5x5 grid starts full of level-1 dough tiles.
-2. Every 2 seconds the merge turn runs; every 4 seconds a new dough spawns in an empty cell.
-3. Undead customers join the queue (up to 4 waiting) with 1-2 order items of levels 1-5.
-4. When the grid holds a pizza matching an order item, it is served automatically: revenue increases by `level x 400` and the item is consumed.
-5. A fully served customer leaves happy; hunger reaching 100 on any customer ends the run.
-6. Game over auto-restarts after a 7-second countdown.
+1. The page opens in a demo: a glove cursor plays like a person, pausing to think, then picking up a pizza and dragging it onto a match. It favours the recipe the hungriest guest is waiting for and otherwise tidies up small pizzas, with some randomness. The demo restarts itself when it loses and never touches the best score. Any tap or key leaves the demo for the title card. Idling 10 s on the title card or 15 s on the results card returns to the demo.
+   The title card explains the rules; tap (or press Space) to open the kitchen.
+2. The 5x5 grid starts with 12 dough balls; a new dough is baked every 2.5 seconds into an empty cell.
+3. Drag a pizza onto an equal one to merge it one level up (max 10). Dropping on an empty cell moves it; dropping on a different pizza swaps them.
+4. Undead guests queue up (up to 4) with 1-2 orders. Order levels start at 2-3 and reach up to 8 as the night goes on; guests also arrive faster and get hungry sooner.
+5. A matching pizza on the board is served automatically for `level x 400`. Serving again within 4 seconds builds a combo worth +20% per step, up to x2.
+6. A guest whose hunger reaches 100 storms out and costs one of 3 lives. Losing the last life ends the run.
+7. The results card shows revenue, time survived and the best revenue (saved in localStorage); tap to play again. The game pauses when the tab is hidden.
 
 ## Main Systems
 
 ### Merge AI (`processTurn`)
+
+No longer called: merging is now the player's job (`playMove` and the pointer handlers in `index.html`). The function is kept for reference.
 
 - Scans tiles from highest level down.
 - For each tile, finds the nearest same-level tile (Manhattan distance).
