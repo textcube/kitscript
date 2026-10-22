@@ -1,62 +1,109 @@
-# Eternal Invasion: Cowboy Edition
+# Eternal Invasion — Cowboy Defense
 
-A single-file HTML5 canvas defense game. A cowboy stands on the left of a night-desert scene and auto-aims / auto-fires at monsters marching in from the right. The player's only job is choosing the right weapon for the situation — five slots (Revolver, Shotgun, Rifle, Dynamite, Gatling) selected by keys 1–5 or clicking the dock, each with its own damage, reload circle, penetration, and firing behavior. Waves escalate: kill quotas grow and spawn intervals shrink.
+밤의 황야를 지키는 자동 전투 게임입니다. 카우보이는 자동 조준·사격하고, 사용자는 상황에 맞는 무기를 선택합니다. 입력 없이 30초가 지나면 AI가 무기까지 선택하며, 패배하면 7초 후 자동으로 다시 시작합니다.
 
-## Design Identity (attract-first)
+## 아트와 레벨 구성
 
-Like other kitscript games, this game is built to be watchable, not just playable:
+SKIN2D의 SD 비율·레이어 스킨·반투명 아케이드 UI를 기반으로 화면과 캐릭터를 다시 디자인했습니다.
 
-- Starts instantly with no menu.
-- The cowboy always auto-aims and auto-fires — combat runs itself as a spectacle.
-- Player input is minimal and strategic: pick one of five weapons. Nothing else.
-- After 30 seconds without input, an AI takes over weapon selection too (`[AI]` tag on the HUD), so an unattended screen keeps playing intelligently.
-- On defeat, the game auto-restarts after 7 seconds, looping forever as an attract demo.
+- 주인공 3종: **해질녘 보안관 / 숲바람 정찰병 / 별빛 사냥꾼**. 전투를 멈추지 않고 외형을 선택합니다. 전투 성능은 동일합니다.
+- 적 4종: 해골 보행병·복면 돌격병·철갑 거인·날개 달린 군체. 얼굴·장비·몸통·실루엣을 구분했습니다.
+- 기본 스킨은 **512×512 SKIN2D SD** 아틀라스입니다. 큰 머리·짧은 팔다리와 독립된 헤어/모자 레이어를 사용합니다. 기존 v0/v1 PNG도 불러올 수 있습니다.
+- 초상화·체력·스테이지 힌트·지역 진행·대장 체력·무기 선택을 분리했습니다. 모바일에서도 캐릭터를 텍스트로 가리지 않습니다.
+- 브랜드·소리·일시정지·언어·꾸미기 버튼을 전장 상단의 하늘 영역 안으로 통합했습니다. 화면 크기가 바뀔 때 게임 크기를 맞추고, 전투 중 대장·단계 안내는 공통 상태 영역을 사용해 화면 폭을 유지합니다. 모바일의 게임 허브·YouTube 링크는 꾸미기 메뉴 안에서도 접근할 수 있습니다.
 
-Improvements must preserve this identity. Do not add menus, difficulty selectors, or anything that blocks the instant-start / auto-loop flow.
+| 지역 | 스테이지 | 전투 구성 | 대장 패턴 |
+|---|---|---|---|
+| 노을 협곡 | 1–15 | 무기 적응과 초기 혼합 공세 | 호위병 소환 |
+| 먼지바람 마을 | 16–30 | 돌격병과 소형 적의 혼합 | 주기적 돌진 |
+| 달빛 철도 | 31–50 | 빠른 공세와 철갑 적 | 일반 탄환 피해 35% 감소, 관통·폭발은 그대로 |
+| 붉은 바위 관문 | 51–65 | 좁은 길과 다중 진입로 교대 | 주기적 돌진 |
+| 별빛 수정 광산 | 66–80 | 밀집한 소형 적과 강화된 대장 | 소형 군체 소환 |
+| 황혼의 요새 | 81–100 | 혼합 전술의 최종 시험 | 장갑 대장 |
 
-## Current Features
+각 배경은 전용 구조물을 가진 독립 장면입니다. 최초 방문 시 렌더링해 캐시하므로 매 프레임 구조물을 다시 만들지 않습니다.
 
-- Five weapons with distinct stats (damage / reload / projectile speed / penetration / spread count / bomb radius) and per-slot SVG reload-progress rings.
-- Four enemy types (walker, runner, brute, swarm) with randomized palettes, procedural walk/arm/leg animation, hit-flash, and y-depth sorting against the player.
-- Auto-aim with smoothed turret rotation, muzzle flash, recoil, shell-casing and dust particles, screen shake.
-- Wave system with growing kill quotas and accelerating spawns.
-- AI weapon evaluator (brutes → rifle, close threat → shotgun, big crowds → dynamite/gatling).
-- Procedural night-desert background: twinkling stars, meteors, moon, mountain silhouettes, cacti/palms, sand grains.
-- WebAudio procedural SFX per weapon plus noise-based explosion.
-- DOM HUD: wave, health bar, active loadout; game-over overlay with 7-second auto-restart countdown.
+5레벨마다 일반 적 처치 목표 직후 대장이 등장합니다. 대장을 처치해야 다음 레벨로 진행하며, 처치 시 체력을 최대 20 회복합니다. 대장이 방어선을 돌파하면 패배합니다. 100개 스테이지를 완주하면 다음 원정으로 이어집니다. 반복 원정의 강화 폭에는 상한을 두었습니다. 전체 레벨 이름과 전술 설계는 [LEVELS.md](LEVELS.md)에 있습니다.
 
-## Code Review & Improvement Plan (2026-07-09)
+## 실행과 배포
 
-Full review of `cowboy/index.html` (468 lines). Ordered by priority. None of these change the attract-first scope.
+`index.html`을 바로 엽니다. 실행에 필요한 파일은 아래 두 개뿐입니다.
 
-### P1 — Bugs (fix first)
+- `cowboy/index.html`
+- `cowboy/skin2d/runtime.js`
 
-1. **Enemy spawn distribution collapses from wave 4**: `spawn()` draws one random `r` and applies overlapping bands in sequence (`r<0.3` → runner, then `r<0.2` → brute, then `r<0.4` → swarm), each overwriting the last. Once wave ≥ 4, any `r < 0.4` ends up as swarm — brutes and runners never spawn again, flattening the difficulty curve. Rewrite with non-overlapping probability bands that preserve the intended mix (e.g. wave ≥ 3: brute 20%; wave ≥ 2: runner 30%; wave ≥ 4: swarm 40%; remainder walker — allocate bands cumulatively so all unlocked types keep spawning).
-2. **Array mutation during iteration corrupts combat logic**: enemies, bullets, particles, and meteors are all `splice()`d inside `forEach` loops, skipping the next element each time. Worse, penetrating bullets track hits by enemy **index** (`b.hitList.includes(ei)`) — when a killed enemy is spliced out, indices shift and a rifle round can hit the same enemy twice or skip one entirely. And after a dynamite bullet explodes and splices itself, the enemy loop keeps processing the same (removed) bullet and can splice a second, unrelated bullet. Fix: switch to mark-and-filter removal (dead/expired flags applied after the loops), track `hitList` by enemy object reference (or unique id) instead of index, and stop processing a bullet immediately once it is consumed.
-3. **Dynamite kills don't advance the wave**: `explode()` increments `waveKillCount` but the wave-completion check (`waveKillCount >= waveTotalCount` → next wave) and `updateUI()` live only in the bullet-hit path, so a wave finished by splash damage doesn't advance until the next direct hit. Centralize kill handling in one `killEnemy(enemy)` function (particles, kill count, wave-completion check, UI update) called from both paths.
-4. **No delta-time — game speed is tied to display refresh rate**: `animTime += 0.05`, enemy movement (`e.x -= e.spd`), walk animation, bullets, particles, recoil/shake decay, and the meteor spawn probability (`Math.random() < 0.006` per frame) all advance per `requestAnimationFrame` tick — 2.4× faster on a 144 Hz display. Fix: compute a clamped `dt` and scale per-frame updates by `dt * 60` to preserve the current 60 fps tuning. The `Date.now()`-based reload/spawn/idle timers are already frame-rate independent — leave them.
-5. **HP not clamped**: `this.hp` can go negative (brute hit at low HP), producing an invalid negative CSS width for the health bar. Clamp HP to `[0, 100]` when applying damage.
+개발 서버, 네트워크, 별도 설치나 빌드는 필요하지 않습니다. 게임 허브와 YouTube 링크만 인터넷을 사용합니다. MovieBaker 원본 프로젝트는 수정하지 않았습니다.
 
-### P2 — Attract & UX hardening
+## 조작
 
-6. **Persistent best wave**: no score or record exists. Store the best wave reached in `localStorage` (key `cowboy_best_wave`, try/catch guarded), show `BEST WAVE` on the HUD and show the reached wave + best on the game-over overlay (the overlay currently shows no results at all).
-7. **Faster AI weapon evaluation**: in auto mode the weapon evaluator runs only every 60 seconds, so the AI visibly ignores brutes/swarms for up to a minute — a dull attract show. Re-evaluate every ~5 seconds while in auto mode (switch only when the recommendation differs, which `autoEvaluateWeapon` already handles).
-8. **Persist sound preference**: `localStorage` key `cowboy_sound_on`; restore the button state on load, defer AudioContext creation to the first user gesture; also `resume()` a suspended context inside `play()`.
-9. **Instant restart**: on the game-over overlay, restart immediately on click or key press (keep the 7-second auto-restart).
-10. **Responsive + HiDPI canvas**: the canvas is fixed at 800×500 CSS pixels — it clips on small screens and renders blurry on retina displays. Scale the viewport down with CSS (preserve the 8:5 ratio and 800×500 logical coordinates) and scale the backing store by `devicePixelRatio` with `ctx.setTransform`.
-11. **Minor cleanup**: start the game loop directly instead of waiting for `window.onload` (the script already runs after the DOM); update the restart countdown text only when the second value changes; clear `meteors` in `reset()`.
+- 기본 언어는 **영어**입니다. 언어 버튼으로 한국어/영어를 즉시 전환하며 선택을 브라우저에 저장합니다. 저장소가 차단되어도 전환할 수 있습니다.
 
-### P3 — Deferred (do not start in this pass)
+- 숫자 **1–5**, 무기 버튼 클릭/터치, Tab + Enter/Space로 무기를 선택합니다.
+- **일시정지 / 계속하기**: 전투와 재장전·AI·재시작 타이머를 함께 멈추거나 재개합니다. 다른 탭으로 전환해도 같은 방식으로 멈춥니다.
+- **Sound ON/OFF**: 기기에서 생성하는 효과음을 켜고 끕니다. 최초 사용자 입력 후 오디오를 시작하며, 음소거 설정과 최고 웨이브는 브라우저에 보관합니다. 저장소가 차단되어도 게임은 계속 동작합니다.
+- 패배 후 **다시 도전**을 누르거나, 아무 조작 없이 7초를 기다리면 새 게임을 시작합니다.
 
-- Touch/mobile weapon-dock ergonomics.
-- New weapons, enemy types, or boss waves.
-- Balance tuning (weapon damage vs. enemy HP curves).
+| 무기 | 역할 |
+|---|---|
+| Revolver | 균형 잡힌 단발 사격 |
+| Shotgun | 근거리 6발 확산 |
+| Rifle | 최대 6명 관통 |
+| Dynamite | 밀집한 적에게 폭발 피해 |
+| Gatling | 빠른 연속 사격 |
 
-### Non-goals
+## 캐릭터 꾸미기
 
-- No start menus, pause screens, or difficulty selectors — instant start and the auto-restart loop are the core of the attract identity.
-- No frameworks or build steps; the game stays one self-contained HTML file.
+접이식 **캐릭터 꾸미기** 메뉴에서 PNG 불러오기·기본 스킨 저장·기본 외형 복원을 사용합니다.
 
-## Local File
+- SKIN2D의 실제 PNG 검증·슬라이싱·계층 골격·키프레임 샘플러·렌더러를 사용합니다.
+- 기본 주인공 3종과 몬스터 4종은 각각 512×512 SD 아틀라스를 사용합니다. 사격·걷기·달리기·피격·사망 모션을 게임 상태에 연결했습니다.
+- 총 그림과 탄환 출발점은 같은 무기 관절을 사용합니다. PNG 외형을 바꿔도 무기 성능은 유지합니다.
+- 256·512·768·1024px 정사각형 PNG, 최대 8MB를 지원합니다. SKIN2D v0/v1/SD 식별을 지원합니다.
+- 크기와 PNG 시그니처를 디코딩 전에 검사합니다. 실패 시 이전 외형을 유지하며, 복원 후 늦게 완료된 파일이 외형을 덮어쓰지 않습니다.
+- 파일은 기기 안에서만 처리합니다. 선택한 외형은 현재 실행 중에만 유지됩니다.
+- `createImageBitmap`이 없는 브라우저에서는 일반 이미지 디코딩으로 처리합니다.
 
-- Main game: `cowboy/index.html`
+원본 코드와 재빌드 방법은 [skin2d/README.md](skin2d/README.md)에 있습니다. 런타임 번들은 약 62KB이며 배포 결과물에 포함되어 있습니다.
+
+## 품질 개선
+
+- 체력·웨이브·무기 HUD를 전장 밖으로 옮겼습니다. 모바일에서 도구 메뉴가 게임을 밀어내지 않도록 접었습니다.
+- 키보드 포커스, 무기 선택 상태, 체력 접근성 정보, 44px 이상 모바일 도구 버튼을 제공합니다.
+- 꾸미기 메뉴는 작은 가로 화면에서도 화면과 전장 안에 배치되며, 긴 내용은 메뉴 내부에서 스크롤합니다. Escape로 닫으면 꾸미기 버튼으로 초점이 돌아갑니다.
+- 일시정지 시 단계 안내의 남은 시간도 유지하며, 소리 재생 재개가 거부되어도 처리되지 않은 오류를 남기지 않습니다.
+- 탄환의 이동 구간 전체를 검사하고, 경로상 가까운 적부터 판정해 빠른 탄환의 통과와 잘못된 명중 순서를 막습니다.
+- 관통탄은 이미 맞은 적을 다시 때리지 않습니다. 다이너마이트는 직접 피해와 폭발 피해를 중복 적용하지 않습니다.
+- 폭발 처치도 웨이브 진행에 반영합니다. 체력은 0 아래로 떨어지지 않고, 패배한 프레임에서 추가 전투를 중단합니다.
+- 이동·조준·반동은 프레임 시간에 따라 계산합니다. 효과·탄환·몬스터·사망 잔상을 제한하고, 렌더링 배율은 최대 DPR 2로 제한합니다.
+- 폭발 범위 링, 피격 체력 막대, 사망 모션과 퇴장을 제공합니다. 동작 줄이기 설정에서는 화면 흔들림을 끕니다.
+
+## 검증
+
+Playwright와 Microsoft Edge가 있는 환경에서 저장소 루트 기준으로 실행합니다.
+
+```sh
+node scripts/test-cowboy-skin2d.mjs
+node scripts/test-cowboy-combat.mjs
+node scripts/test-cowboy-levels.mjs
+node scripts/test-cowboy-viewport.mjs
+node scripts/test-cowboy-controls.mjs
+node scripts/test-cowboy-language.mjs
+node scripts/test-cowboy-width-stability.mjs
+node scripts/test-cowboy-campaign.mjs
+```
+
+검증 범위:
+
+- 로컬 파일 실행, 5종 무기, 총구 좌표, PNG 저장/재적용, 손상·과대 파일, 복원 경쟁 상태, 이미지 디코더 폴백
+- 실제 SKIN2D 라이브러리 PNG 호환 (`SKIN2D_TEST_PNG` 환경 변수로 파일 지정)
+- 탄환 통과·가까운 적 우선 명중·폭발 단일 피해·관통 중복 방지·웨이브 전환·사망/재시작
+- 60/144Hz 이동 일치, 일시정지, AI 전환, 키보드 선택, 저장소 차단
+- 100개 스테이지 전환·20개 대장전·대장 소환/돌진/장갑·처치 회복·방어선 돌파 패배·6종 배경 구분
+- 10분 분량 자동 전투 시뮬레이션과 효과 개수 상한
+- 320/375/550/1100px 화면과 모바일 터치 환경
+- 일반 전투·대장전에서 320×568, 375×667, 390×844, 768×600, 1100×850, 1440×900 화면의 도구 막대 내부 배치와 무기 도크 노출
+- 844×390 가로 화면과 문서 스크롤 후 메뉴 배치, Escape 초점 복원, 오디오 재개 거부, 일시정지 안내 시간, 패배 후 메뉴 닫기·재시작
+- 영어 기본값·한국어 전환·언어 저장·저장소 차단 시 전환, 대장/안내/언어 변경 중 화면 폭 유지
+- 각 레벨을 체력 100으로 시작하는 실제 자동 전투 시뮬레이션으로 100레벨 전체 통과 확인 (고정 난수)
+
+브라우저 자동화 검증이며 실제 iOS/Android 기기에서의 QA는 별도로 수행해야 합니다. 결제·계정·서버 기능은 포함하지 않습니다.

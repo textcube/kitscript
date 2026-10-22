@@ -1,0 +1,59 @@
+{
+  "id": "idle",
+  "name": "대기",
+  "duration": 1200,
+  "loop": true,
+  "tracks": {
+    "torso": [
+      { "t": 0, "y": 1, "rot": 0, "ease": "inOutSine" },
+      { "t": 600, "y": -1, "rot": 0.8, "ease": "inOutSine" },
+      { "t": 1200, "y": 1, "rot": 0 }
+    ],
+    "leg_f": [
+      { "t": 0, "rot": -4, "y": -1, "ease": "inOutSine" },
+      { "t": 600, "rot": -4, "y": 1, "ease": "inOutSine" },
+      { "t": 1200, "rot": -4, "y": -1 }
+    ],
+    "leg_b": [
+      { "t": 0, "rot": 5, "y": -1, "ease": "inOutSine" },
+      { "t": 600, "rot": 5, "y": 1, "ease": "inOutSine" },
+      { "t": 1200, "rot": 5, "y": -1 }
+    ],
+    "head": [
+      { "t": 0, "rot": 1, "ease": "inOutSine" },
+      { "t": 650, "rot": -1.5, "ease": "inOutSine" },
+      { "t": 1200, "rot": 1 }
+    ],
+    "hair_back": [
+      { "t": 0, "rot": 0.6, "ease": "inOutSine" },
+      { "t": 750, "rot": -0.8, "ease": "inOutSine" },
+      { "t": 1200, "rot": 0.6 }
+    ],
+    "arm_f": [
+      { "t": 0, "rot": 4, "ease": "inOutSine" },
+      { "t": 700, "rot": 1.5, "ease": "inOutSine" },
+      { "t": 1200, "rot": 4 }
+    ],
+    "arm_b": [
+      { "t": 0, "rot": -8, "ease": "inOutSine" },
+      { "t": 700, "rot": -5.5, "ease": "inOutSine" },
+      { "t": 1200, "rot": -8 }
+    ],
+    "weapon": [
+      { "t": 0, "rot": 75, "ease": "inOutSine" },
+      { "t": 700, "rot": 77, "ease": "inOutSine" },
+      { "t": 1200, "rot": 75 }
+    ],
+    "extra": [
+      { "t": 0, "rot": -12, "ease": "inOutSine" },
+      { "t": 500, "rot": -20, "ease": "inOutSine" },
+      { "t": 1200, "rot": -12 }
+    ],
+    "tail": [
+      { "t": 0, "rot": -70, "ease": "inOutSine" },
+      { "t": 600, "rot": -78, "ease": "inOutSine" },
+      { "t": 1200, "rot": -70 }
+    ]
+  },
+  "events": []
+}

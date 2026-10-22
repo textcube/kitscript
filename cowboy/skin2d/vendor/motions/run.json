@@ -1,0 +1,255 @@
+{
+  "id": "run",
+  "name": "달리기",
+  "duration": 400,
+  "loop": true,
+  "tracks": {
+    "root": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "y": 0
+      },
+      {
+        "t": 100,
+        "ease": "inOutSine",
+        "y": -7
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "y": 0
+      },
+      {
+        "t": 300,
+        "ease": "inOutSine",
+        "y": -7
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "y": 0
+      }
+    ],
+    "torso": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 12
+      },
+      {
+        "t": 100,
+        "ease": "inOutSine",
+        "rot": 15
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": 12
+      },
+      {
+        "t": 300,
+        "ease": "inOutSine",
+        "rot": 15
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": 12
+      }
+    ],
+    "head": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -9
+      },
+      {
+        "t": 100,
+        "ease": "inOutSine",
+        "rot": -12
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": -9
+      },
+      {
+        "t": 300,
+        "ease": "inOutSine",
+        "rot": -12
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": -9
+      }
+    ],
+    "leg_f": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -46,
+        "sy": 1
+      },
+      {
+        "t": 100,
+        "ease": "inOutSine",
+        "rot": 0,
+        "sy": 1
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": 46,
+        "sy": 0.84
+      },
+      {
+        "t": 300,
+        "ease": "inOutSine",
+        "rot": 0,
+        "sy": 0.72
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": -46,
+        "sy": 1
+      }
+    ],
+    "leg_b": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 46,
+        "sy": 0.84
+      },
+      {
+        "t": 100,
+        "ease": "inOutSine",
+        "rot": 0,
+        "sy": 0.72
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": -46,
+        "sy": 1
+      },
+      {
+        "t": 300,
+        "ease": "inOutSine",
+        "rot": 0,
+        "sy": 1
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": 46,
+        "sy": 0.84
+      }
+    ],
+    "arm_f": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 38
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": -56
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": 38
+      }
+    ],
+    "arm_b": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -56
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": 38
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": -56
+      }
+    ],
+    "hair_back": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -6
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": 4
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": -6
+      }
+    ],
+    "weapon": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 35
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": 120
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": 35
+      }
+    ],
+    "extra": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -24
+      },
+      {
+        "t": 200,
+        "ease": "inOutSine",
+        "rot": -8
+      },
+      {
+        "t": 400,
+        "ease": "inOutSine",
+        "rot": -24
+      }
+    ],
+    "tail": [
+      { "t": 0, "rot": -96, "ease": "inOutSine" },
+      { "t": 100, "rot": -104, "ease": "inOutSine" },
+      { "t": 200, "rot": -96, "ease": "inOutSine" },
+      { "t": 300, "rot": -104, "ease": "inOutSine" },
+      { "t": 400, "rot": -96 }
+    ]
+  },
+  "events": [
+    {
+      "t": 0,
+      "type": "footstep"
+    },
+    {
+      "t": 200,
+      "type": "footstep"
+    }
+  ]
+}

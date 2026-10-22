@@ -1,0 +1,82 @@
+{
+  "id": "hit",
+  "name": "피격",
+  "duration": 400,
+  "loop": false,
+  "tracks": {
+    "root": [
+      { "t": 0, "x": 0, "ease": "outQuad" },
+      { "t": 70, "x": -11, "ease": "outQuad" },
+      { "t": 170, "x": -13, "ease": "inOutQuad" },
+      { "t": 400, "x": 0 }
+    ],
+    "torso": [
+      { "t": 0, "rot": 0, "y": 0, "ease": "outQuad" },
+      { "t": 60, "rot": -16, "y": -0.4, "ease": "outQuad" },
+      { "t": 170, "rot": -12, "y": -0.4, "ease": "inOutQuad" },
+      { "t": 320, "rot": 2, "y": 0, "ease": "inOutSine" },
+      { "t": 400, "rot": 0, "y": 0 }
+    ],
+    "head": [
+      { "t": 0, "rot": 1, "ease": "outQuad" },
+      { "t": 70, "rot": -20, "ease": "outQuad" },
+      { "t": 180, "rot": -12, "ease": "inOutQuad" },
+      { "t": 320, "rot": 4, "ease": "inOutSine" },
+      { "t": 400, "rot": 1 }
+    ],
+    "hair_back": [
+      { "t": 0, "rot": 0, "ease": "outQuad" },
+      { "t": 90, "rot": 8, "ease": "outQuad" },
+      { "t": 220, "rot": -4, "ease": "inOutSine" },
+      { "t": 400, "rot": 0 }
+    ],
+    "arm_f": [
+      { "t": 0, "rot": 4, "ease": "outQuad" },
+      { "t": 70, "rot": -38, "ease": "outQuad" },
+      { "t": 180, "rot": -26, "ease": "inOutQuad" },
+      { "t": 400, "rot": 4 }
+    ],
+    "arm_b": [
+      { "t": 0, "rot": -8, "ease": "outQuad" },
+      { "t": 70, "rot": -58, "ease": "outQuad" },
+      { "t": 180, "rot": -40, "ease": "inOutQuad" },
+      { "t": 400, "rot": -8 }
+    ],
+    "weapon": [
+      { "t": 0, "rot": 75, "ease": "outQuad" },
+      { "t": 80, "rot": 130, "ease": "outQuad" },
+      { "t": 200, "rot": 106, "ease": "inOutQuad" },
+      { "t": 400, "rot": 75 }
+    ],
+    "leg_f": [
+      { "t": 0, "rot": -4, "ease": "outQuad" },
+      { "t": 60, "rot": 2, "ease": "outQuad" },
+      { "t": 170, "rot": 2, "ease": "inOutQuad" },
+      { "t": 320, "rot": -6, "ease": "inOutSine" },
+      { "t": 400, "rot": -4 }
+    ],
+    "leg_b": [
+      { "t": 0, "rot": 5, "ease": "outQuad" },
+      { "t": 60, "rot": 28, "ease": "outQuad" },
+      { "t": 170, "rot": 22, "ease": "inOutQuad" },
+      { "t": 320, "rot": 3, "ease": "inOutSine" },
+      { "t": 400, "rot": 5 }
+    ],
+    "extra": [
+      { "t": 0, "rot": -12, "ease": "outQuad" },
+      { "t": 80, "rot": 4, "ease": "outQuad" },
+      { "t": 220, "rot": -22, "ease": "inOutSine" },
+      { "t": 400, "rot": -12 }
+    ],
+    "tail": [
+      { "t": 0, "rot": -70, "ease": "inOutSine" },
+      { "t": 80, "rot": -48, "ease": "inOutSine" },
+      { "t": 220, "rot": -88, "ease": "inOutSine" },
+      { "t": 400, "rot": -70 }
+    ]
+  },
+  "events": [
+    { "t": 0, "type": "flash", "color": "#ffffff", "ms": 150 },
+    { "t": 0, "type": "shake", "px": 2, "ms": 200 }
+  ]
+}

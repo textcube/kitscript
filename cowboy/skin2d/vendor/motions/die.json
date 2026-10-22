@@ -1,0 +1,299 @@
+{
+  "id": "die",
+  "name": "쓰러짐",
+  "duration": 900,
+  "loop": false,
+  "tracks": {
+    "root": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "x": -5,
+        "y": -4,
+        "rot": -12
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "x": 80,
+        "y": -34,
+        "rot": -78
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "x": 100,
+        "y": -38,
+        "rot": -90
+      },
+      {
+        "t": 760,
+        "ease": "inOutSine",
+        "x": 100,
+        "y": -38,
+        "rot": -90
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "x": 100,
+        "y": -38,
+        "rot": -90
+      }
+    ],
+    "torso": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 0
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": -12
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -3
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": 0
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": 0
+      }
+    ],
+    "head": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 1
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": -18
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -10
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -6
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -6
+      }
+    ],
+    "arm_f": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 4
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": -48
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -22
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": 38
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": 38
+      }
+    ],
+    "arm_b": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -8
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": -64
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -28
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -18
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -18
+      }
+    ],
+    "leg_f": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -4
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": 8
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -18
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -8
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -8
+      }
+    ],
+    "leg_b": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 5
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": 22
+      },
+      {
+        "t": 420,
+        "ease": "inOutSine",
+        "rot": -10
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -4
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -4
+      }
+    ],
+    "weapon": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 75
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": 95
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": 97
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": 97
+      }
+    ],
+    "extra": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": -12
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": 5
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -18
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -18
+      }
+    ],
+    "tail": [
+      { "t": 0, "rot": -70, "ease": "inOutSine" },
+      { "t": 160, "rot": -52, "ease": "inOutSine" },
+      { "t": 420, "rot": -104, "ease": "inOutSine" },
+      { "t": 560, "rot": -56, "ease": "inOutSine" },
+      { "t": 900, "rot": -56 }
+    ],
+    "hair_back": [
+      {
+        "t": 0,
+        "ease": "inOutSine",
+        "rot": 0
+      },
+      {
+        "t": 160,
+        "ease": "inOutSine",
+        "rot": 12
+      },
+      {
+        "t": 560,
+        "ease": "inOutSine",
+        "rot": -4
+      },
+      {
+        "t": 900,
+        "ease": "inOutSine",
+        "rot": -4
+      }
+    ]
+  },
+  "events": [
+    {
+      "t": 560,
+      "type": "land"
+    },
+    {
+      "t": 560,
+      "type": "shake",
+      "px": 2,
+      "ms": 140
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "id": "walk",
+  "name": "걷기",
+  "duration": 600,
+  "loop": true,
+  "tracks": {
+    "leg_f": [
+      { "t": 0, "rot": -24, "sy": 1, "ease": "inOutSine" },
+      { "t": 300, "rot": 24, "sy": 1, "ease": "inOutSine" },
+      { "t": 450, "sy": 0.88, "ease": "inOutSine" },
+      { "t": 600, "rot": -24, "sy": 1 }
+    ],
+    "leg_b": [
+      { "t": 0, "rot": 24, "sy": 1, "ease": "inOutSine" },
+      { "t": 150, "sy": 0.88, "ease": "inOutSine" },
+      { "t": 300, "rot": -24, "sy": 1, "ease": "inOutSine" },
+      { "t": 600, "rot": 24, "sy": 1 }
+    ],
+    "torso": [
+      { "t": 0, "y": 1.5, "rot": 3, "ease": "outQuad" },
+      { "t": 150, "y": -1, "rot": 4, "ease": "inQuad" },
+      { "t": 300, "y": 1.5, "rot": 3, "ease": "outQuad" },
+      { "t": 450, "y": -1, "rot": 4, "ease": "inQuad" },
+      { "t": 600, "y": 1.5, "rot": 3 }
+    ],
+    "head": [
+      { "t": 0, "rot": 1.5, "ease": "inOutSine" },
+      { "t": 150, "rot": -1, "ease": "inOutSine" },
+      { "t": 300, "rot": 1.5, "ease": "inOutSine" },
+      { "t": 450, "rot": -1, "ease": "inOutSine" },
+      { "t": 600, "rot": 1.5 }
+    ],
+    "hair_back": [
+      { "t": 0, "rot": -1.5, "ease": "inOutSine" },
+      { "t": 200, "rot": 1.5, "ease": "inOutSine" },
+      { "t": 300, "rot": -1.5, "ease": "inOutSine" },
+      { "t": 500, "rot": 1.5, "ease": "inOutSine" },
+      { "t": 600, "rot": -1.5 }
+    ],
+    "arm_f": [
+      { "t": 0, "rot": 22, "ease": "inOutSine" },
+      { "t": 300, "rot": -20, "ease": "inOutSine" },
+      { "t": 600, "rot": 22 }
+    ],
+    "arm_b": [
+      { "t": 0, "rot": -24, "ease": "inOutSine" },
+      { "t": 300, "rot": 18, "ease": "inOutSine" },
+      { "t": 600, "rot": -24 }
+    ],
+    "weapon": [
+      { "t": 0, "rot": 65, "ease": "inOutSine" },
+      { "t": 300, "rot": 85, "ease": "inOutSine" },
+      { "t": 600, "rot": 65 }
+    ],
+    "extra": [
+      { "t": 0, "rot": -16, "ease": "inOutSine" },
+      { "t": 180, "rot": -8, "ease": "inOutSine" },
+      { "t": 300, "rot": -16, "ease": "inOutSine" },
+      { "t": 480, "rot": -8, "ease": "inOutSine" },
+      { "t": 600, "rot": -16 }
+    ],
+    "tail": [
+      { "t": 0, "rot": -68, "ease": "inOutSine" },
+      { "t": 150, "rot": -78, "ease": "inOutSine" },
+      { "t": 300, "rot": -68, "ease": "inOutSine" },
+      { "t": 450, "rot": -78, "ease": "inOutSine" },
+      { "t": 600, "rot": -68 }
+    ]
+  },
+  "events": [
+    { "t": 0, "type": "footstep" },
+    { "t": 300, "type": "footstep" }
+  ]
+}
