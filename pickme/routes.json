@@ -1,0 +1,346 @@
+[
+  {
+    "url": "https://quizcon.net",
+    "theme": "city",
+    "label": "QUIZCON",
+    "image": "./images/thumbnails/quizcon.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/city/",
+    "theme": "city",
+    "label": "NEO-CITY",
+    "image": "./images/thumbnails/city.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/star/",
+    "theme": "space",
+    "label": "STAR-SHIP",
+    "image": "./images/thumbnails/star.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/hack/",
+    "theme": "tool",
+    "label": "HACKING-DRONE",
+    "image": "./images/thumbnails/hack.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/",
+    "theme": "default",
+    "label": "GAME HUB",
+    "image": "./images/thumbnails/game.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/tool/",
+    "theme": "default",
+    "label": "TOOL HUB",
+    "image": "./images/thumbnails/tool.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/rogue/",
+    "theme": "city",
+    "label": "ROGUELIKE",
+    "image": "./images/thumbnails/rogue.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/solomade/",
+    "theme": "city",
+    "label": "SOLOMADE",
+    "image": "./images/thumbnails/solomade.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/pizza/",
+    "theme": "tool",
+    "label": "RESTAURANT",
+    "image": "./images/thumbnails/pizza.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/tank/",
+    "theme": "tool",
+    "label": "TANK DEFENSE",
+    "image": "./images/thumbnails/tank.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/avatar/",
+    "theme": "city",
+    "label": "AVATAR FACTORY",
+    "image": "./images/thumbnails/avatar.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/bird/",
+    "theme": "space",
+    "label": "BIRD JUMPER",
+    "image": "./images/thumbnails/bird.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/bizcard/",
+    "theme": "tool",
+    "label": "BIZ-CARD",
+    "image": "./images/thumbnails/bizcard.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/bomb/",
+    "theme": "default",
+    "label": "BOMB DEFENSE",
+    "image": "./images/thumbnails/bomb.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/cable/",
+    "theme": "default",
+    "label": "CABLE-CAR DEFENSE",
+    "image": "./images/thumbnails/cable.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/clip/",
+    "theme": "city",
+    "label": "CLIPBOARD PRO",
+    "image": "./images/thumbnails/clip.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/clipcut/",
+    "theme": "city",
+    "label": "CLIP-CUT",
+    "image": "./images/thumbnails/clipcut.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/clock/",
+    "theme": "tool",
+    "label": "CLOCK DEFENSE",
+    "image": "./images/thumbnails/clock.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/cowboy/",
+    "theme": "tool",
+    "label": "COWBOY DEFENSE",
+    "image": "./images/thumbnails/cowboy.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/drone/",
+    "theme": "city",
+    "label": "DRONE DEFENSE",
+    "image": "./images/thumbnails/drone.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/space/",
+    "theme": "tool",
+    "label": "SPACE HUNTER",
+    "image": "./images/thumbnails/space.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/wave/",
+    "theme": "tool",
+    "label": "WAVE",
+    "image": "./images/thumbnails/wave.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/model/",
+    "theme": "default",
+    "label": "MODEL2SPRITE",
+    "image": "./images/thumbnails/model.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/motion/",
+    "theme": "default",
+    "label": "MOTION FACTORY",
+    "image": "./images/thumbnails/motion.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/ocean/",
+    "theme": "city",
+    "label": "OCEAN DEFENSE",
+    "image": "./images/thumbnails/ocean.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/skin2d/",
+    "theme": "city",
+    "label": "SKIN2D",
+    "image": "./images/thumbnails/skin2d.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/pandemic/",
+    "theme": "tool",
+    "label": "PANDEMIC",
+    "image": "./images/thumbnails/pandemic.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/pilot/",
+    "theme": "tool",
+    "label": "DAWN OF STRIKE BACK",
+    "image": "./images/thumbnails/pilot.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/puzzle/",
+    "theme": "city",
+    "label": "PUZZLE DEFENSE",
+    "image": "./images/thumbnails/puzzle.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/terminal/",
+    "theme": "space",
+    "label": "TERMINAL",
+    "image": "./images/thumbnails/terminal.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/webgl/StartUpRPG/",
+    "theme": "city",
+    "label": "UNITY RPG",
+    "image": "./images/thumbnails/startup-rpg.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/webgl/StartUpSkill/",
+    "theme": "space",
+    "label": "VFX SANDBOX",
+    "image": "./images/thumbnails/startup-skill.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/chroma/",
+    "theme": "tool",
+    "label": "CHROMA MERGE",
+    "image": "./images/thumbnails/chroma.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/book/",
+    "theme": "tool",
+    "label": "ARCHITECT .AI",
+    "image": "./images/thumbnails/book.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/water/",
+    "theme": "city",
+    "label": "WATER-WORLD",
+    "image": "./images/thumbnails/water.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/locomotion/",
+    "theme": "tool",
+    "label": "LOCOMOTION",
+    "image": "./images/thumbnails/locomotion.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/spell/",
+    "theme": "tool",
+    "label": "SPELL CLAW",
+    "image": "./images/thumbnails/spell.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/word/",
+    "theme": "tool",
+    "label": "SHERIFF OF WORD CITY",
+    "image": "./images/thumbnails/word.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/writer/",
+    "theme": "tool",
+    "label": "SEMANTIC WRITER",
+    "image": "./images/thumbnails/writer.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/reader/",
+    "theme": "tool",
+    "label": "AUTO READER",
+    "image": "./images/thumbnails/reader.webp",
+    "weight": 3,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/album/",
+    "theme": "tool",
+    "label": "ALBUM BUILDER",
+    "image": "./images/thumbnails/album.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/sopraknight/",
+    "theme": "space",
+    "label": "SOPRA-KNIGHT",
+    "image": "./images/thumbnails/sopraknight.webp",
+    "weight": 2,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/link/",
+    "theme": "tool",
+    "label": "Local Message Desk",
+    "image": "./images/thumbnails/link.webp",
+    "weight": 2,
+    "enabled": true
+  }
+]

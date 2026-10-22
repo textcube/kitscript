@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>PICK ME - RETRO STAGE SELECT (MANUAL OVERRIDE)</title>
+  <title>PICK ME | 게임과 도구 랜덤 선택 - KITSCRIPT</title>
+  <meta name="description" content="KITSCRIPT의 게임과 제작 도구를 한눈에 둘러보세요. 원하는 메뉴로 바로 이동하거나 레트로 룰렛으로 다음 스테이지를 골라보세요.">
+  <link rel="canonical" href="https://kitscript.com/pickme/">
   <style>
     :root {
       --bg: #080808;
@@ -12,7 +14,7 @@
       --text: #ffffff;
       --shadow: #000000;
       --crt-line: rgba(18, 16, 16, 0.15);
-      --cols: 3;
+      --cols: 6;
       --card-h: 140px;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-right: env(safe-area-inset-right, 0px);
@@ -134,6 +136,7 @@
     }
 
     #stop-btn {
+      display: none;
       position: absolute;
       top: calc(0.8rem + var(--safe-top));
       right: calc(0.8rem + var(--safe-right));
@@ -154,6 +157,8 @@
       cursor: pointer;
     }
 
+    body.enhanced #stop-btn { display: block; }
+
     #stop-btn:hover,
     #stop-btn:focus-visible {
       color: #000;
@@ -162,7 +167,7 @@
         var(--panel-bg);
     }
     #stop-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--shadow); }
-    #stop-btn.hidden { display: none; }
+    body.enhanced #stop-btn.hidden { display: none; }
 
     #stop-btn::after {
       content: "";
@@ -189,6 +194,8 @@
     }
 
     .pick-card {
+      color: var(--text);
+      text-decoration: none;
       min-height: var(--card-h);
       height: var(--card-h);
       background: var(--panel-bg);
@@ -213,6 +220,19 @@
       background: rgba(0, 0, 0, 0.65);
       z-index: 1;
       transition: background 0.2s;
+    }
+
+    .pick-card img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .pick-card:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
     }
 
     .pick-card:hover {
@@ -281,7 +301,7 @@
     @media (max-width: 600px) {
       #status-container { margin-top: calc(4.2rem + var(--safe-top)); }
       .status-text { font-size: 1.4rem; min-width: 240px; }
-      #pick-grid { gap: 0.35rem; }
+      #pick-grid { gap: 0.35rem; --cols: 4; }
       body {
         padding: 0.8rem max(0.25rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(0.25rem, var(--safe-left));
       }
@@ -344,86 +364,197 @@
   </nav>
 
   <div id="status-container">
-    <h1 id="status" class="status-text">READY</h1>
+    <h1 id="status" class="status-text">PICK ME</h1>
     <p class="main-label">> STAGE SELECT <</p>
     <button id="stop-btn" type="button">&#9632; STOP</button>
   </div>
 
-  <div id="pick-grid"></div>
+  <nav id="pick-grid" aria-label="게임과 도구 메뉴">
+    <!-- BEGIN GENERATED CARDS -->
+    <a class="pick-card" href="https://quizcon.net" data-url="https://quizcon.net" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/quizcon.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>QUIZCON</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/city/" data-url="https://kitscript.com/game/city/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/city.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>NEO-CITY</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/star/" data-url="https://kitscript.com/game/star/" data-weight="2" data-theme="space">
+      <img src="./images/thumbnails/star.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>STAR-SHIP</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/hack/" data-url="https://kitscript.com/game/hack/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/hack.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>HACKING-DRONE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/" data-url="https://kitscript.com/game/" data-weight="2" data-theme="default">
+      <img src="./images/thumbnails/game.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>GAME HUB</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/tool/" data-url="https://kitscript.com/tool/" data-weight="1" data-theme="default">
+      <img src="./images/thumbnails/tool.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>TOOL HUB</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/rogue/" data-url="https://kitscript.com/game/rogue/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/rogue.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>ROGUELIKE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/solomade/" data-url="https://kitscript.com/game/solomade/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/solomade.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>SOLOMADE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/pizza/" data-url="https://kitscript.com/game/pizza/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/pizza.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>RESTAURANT</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/tank/" data-url="https://kitscript.com/game/tank/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/tank.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>TANK DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/avatar/" data-url="https://kitscript.com/game/avatar/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/avatar.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>AVATAR FACTORY</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/bird/" data-url="https://kitscript.com/game/bird/" data-weight="2" data-theme="space">
+      <img src="./images/thumbnails/bird.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>BIRD JUMPER</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/bizcard/" data-url="https://kitscript.com/game/bizcard/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/bizcard.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>BIZ-CARD</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/bomb/" data-url="https://kitscript.com/game/bomb/" data-weight="2" data-theme="default">
+      <img src="./images/thumbnails/bomb.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>BOMB DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/cable/" data-url="https://kitscript.com/game/cable/" data-weight="1" data-theme="default">
+      <img src="./images/thumbnails/cable.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>CABLE-CAR DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/clip/" data-url="https://kitscript.com/game/clip/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/clip.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>CLIPBOARD PRO</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/clipcut/" data-url="https://kitscript.com/game/clipcut/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/clipcut.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>CLIP-CUT</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/clock/" data-url="https://kitscript.com/game/clock/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/clock.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>CLOCK DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/cowboy/" data-url="https://kitscript.com/game/cowboy/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/cowboy.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>COWBOY DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/drone/" data-url="https://kitscript.com/game/drone/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/drone.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>DRONE DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/space/" data-url="https://kitscript.com/game/space/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/space.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>SPACE HUNTER</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/wave/" data-url="https://kitscript.com/game/wave/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/wave.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>WAVE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/model/" data-url="https://kitscript.com/game/model/" data-weight="2" data-theme="default">
+      <img src="./images/thumbnails/model.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>MODEL2SPRITE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/motion/" data-url="https://kitscript.com/game/motion/" data-weight="1" data-theme="default">
+      <img src="./images/thumbnails/motion.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>MOTION FACTORY</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/ocean/" data-url="https://kitscript.com/game/ocean/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/ocean.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>OCEAN DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/skin2d/" data-url="https://kitscript.com/game/skin2d/" data-weight="1" data-theme="city">
+      <img src="./images/thumbnails/skin2d.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>SKIN2D</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/pandemic/" data-url="https://kitscript.com/game/pandemic/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/pandemic.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>PANDEMIC</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/pilot/" data-url="https://kitscript.com/game/pilot/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/pilot.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>DAWN OF STRIKE BACK</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/puzzle/" data-url="https://kitscript.com/game/puzzle/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/puzzle.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>PUZZLE DEFENSE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/terminal/" data-url="https://kitscript.com/game/terminal/" data-weight="2" data-theme="space">
+      <img src="./images/thumbnails/terminal.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>TERMINAL</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/webgl/StartUpRPG/" data-url="https://kitscript.com/webgl/StartUpRPG/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/startup-rpg.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>UNITY RPG</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/webgl/StartUpSkill/" data-url="https://kitscript.com/webgl/StartUpSkill/" data-weight="2" data-theme="space">
+      <img src="./images/thumbnails/startup-skill.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>VFX SANDBOX</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/chroma/" data-url="https://kitscript.com/game/chroma/" data-weight="3" data-theme="tool">
+      <img src="./images/thumbnails/chroma.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>CHROMA MERGE</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/book/" data-url="https://kitscript.com/game/book/" data-weight="3" data-theme="tool">
+      <img src="./images/thumbnails/book.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>ARCHITECT .AI</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/water/" data-url="https://kitscript.com/game/water/" data-weight="3" data-theme="city">
+      <img src="./images/thumbnails/water.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>WATER-WORLD</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/locomotion/" data-url="https://kitscript.com/game/locomotion/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/locomotion.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>LOCOMOTION</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/spell/" data-url="https://kitscript.com/game/spell/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/spell.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>SPELL CLAW</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/word/" data-url="https://kitscript.com/game/word/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/word.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>SHERIFF OF WORD CITY</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/writer/" data-url="https://kitscript.com/game/writer/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/writer.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>SEMANTIC WRITER</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/reader/" data-url="https://kitscript.com/game/reader/" data-weight="3" data-theme="tool">
+      <img src="./images/thumbnails/reader.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.3</span><span>AUTO READER</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/album/" data-url="https://kitscript.com/game/album/" data-weight="1" data-theme="tool">
+      <img src="./images/thumbnails/album.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.1</span><span>ALBUM BUILDER</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/sopraknight/" data-url="https://kitscript.com/game/sopraknight/" data-weight="2" data-theme="space">
+      <img src="./images/thumbnails/sopraknight.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>SOPRA-KNIGHT</span>
+    </a>
+    <a class="pick-card" href="https://kitscript.com/game/link/" data-url="https://kitscript.com/game/link/" data-weight="2" data-theme="tool">
+      <img src="./images/thumbnails/link.webp" alt="" width="256" height="256" loading="lazy" decoding="async">
+      <span class="weight-indicator" aria-hidden="true">LV.2</span><span>Local Message Desk</span>
+    </a>
+    <!-- END GENERATED CARDS -->
+  </nav>
 
   <script>
-    const ROUTES = [
-      { url: "https://quizcon.net", weight: 1, theme: "city", label: "QUIZCON", image: "https://quizcon.net/brand/quizcon-worlds-hero.webp", enabled: true },
-      { url: "https://kitscript.com/game/city/", weight: 3, theme: "city", label: "NEO-CITY", image: "https://kitscript.com/game/quiz/images/retrogames/street-fighter-ii/street-fighter-ii_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/star/", weight: 2, theme: "space", label: "STAR-SHIP", image: "https://kitscript.com/game/quiz/images/retrogames/pong/pong_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/hack/", weight: 1, theme: "tool", label: "HACKING-DRONE", image: "https://kitscript.com/game/quiz/images/retrogames/robotron-2084/robotron-2084_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/", weight: 2, theme: "default", label: "GAME HUB", image: "https://kitscript.com/game/quiz/images/retrogames/boulder-dash/boulder-dash_action_01.png", enabled: true },
-      { url: "https://kitscript.com/tool/", weight: 1, theme: "default", label: "TOOL HUB", image: "https://kitscript.com/game/quiz/images/retrogames/micro-machines/micro-machines_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/rogue/", weight: 1, theme: "city", label: "ROGUELIKE", image: "https://kitscript.com/game/quiz/images/retrogames/ristar/ristar_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/solomade/", weight: 1, theme: "city", label: "SOLOMADE", image: "https://kitscript.com/game/quiz/images/retrogames/mario-kart-64/mario-kart-64_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/pizza/", weight: 2, theme: "tool", label: "RESTAURANT", image: "https://kitscript.com/game/quiz/images/retrogames/yoshi-s-island/yoshi-s-island_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/tank/", weight: 1, theme: "tool", label: "TANK DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/shining-force-ii/shining-force-ii_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/avatar/", weight: 3, theme: "city", label: "AVATAR FACTORY", image: "https://kitscript.com/game/quiz/images/retrogames/resident-evil-2/resident-evil-2_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/bird/", weight: 2, theme: "space", label: "BIRD JUMPER", image: "https://kitscript.com/game/quiz/images/retrogames/pilotwings/pilotwings_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/bizcard/", weight: 1, theme: "tool", label: "BIZ-CARD", image: "https://kitscript.com/game/quiz/images/retrogames/braid/braid_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/bomb/", weight: 2, theme: "default", label: "BOMB DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/star-fox/star-fox_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/cable/", weight: 1, theme: "default", label: "CABLE-CAR DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/parasol-stars/parasol-stars_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/clip/", weight: 1, theme: "city", label: "CLIPBOARD PRO", image: "https://kitscript.com/game/quiz/images/retrogames/cave-story/cave-story_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/clipcut/", weight: 1, theme: "city", label: "CLIP-CUT", image: "https://kitscript.com/game/quiz/images/retrogames/crystalis/crystalis_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/clock/", weight: 2, theme: "tool", label: "CLOCK DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/bomberman-94/bomberman-94_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/cowboy/", weight: 1, theme: "tool", label: "COWBOY DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/mother/mother_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/drone/", weight: 3, theme: "city", label: "DRONE DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/gran-turismo/gran-turismo_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/space/", weight: 1, theme: "tool", label: "SPACE HUNTER", image: "https://kitscript.com/game/quiz/images/retrogames/space-invaders/space-invaders_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/wave/", weight: 1, theme: "tool", label: "WAVE", image: "https://kitscript.com/game/quiz/images/retrogames/pac-man/pac-man_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/model/", weight: 2, theme: "default", label: "MODEL2SPRITE", image: "https://kitscript.com/game/quiz/images/retrogames/frogger/frogger_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/motion/", weight: 1, theme: "default", label: "MOTION FACTORY", image: "https://kitscript.com/game/quiz/images/retrogames/dig-dug/dig-dug_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/ocean/", weight: 1, theme: "city", label: "OCEAN DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/1942/1942_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/skin2d/", weight: 1, theme: "city", label: "SKIN2D", image: "https://kitscript.com/game/quiz/images/retrogames/ghosts-n-goblins/ghosts-n-goblins_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/pandemic/", weight: 2, theme: "tool", label: "PANDEMIC", image: "https://kitscript.com/game/quiz/images/retrogames/bomberman/bomberman_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/pilot/", weight: 1, theme: "tool", label: "DAWN OF STRIKE BACK", image: "https://kitscript.com/game/quiz/images/retrogames/xevious/xevious_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/puzzle/", weight: 3, theme: "city", label: "PUZZLE DEFENSE", image: "https://kitscript.com/game/quiz/images/retrogames/r-type/r-type_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/terminal/", weight: 2, theme: "space", label: "TERMINAL", image: "https://kitscript.com/game/quiz/images/retrogames/star-wars-arcade/star-wars-arcade_action_01.png", enabled: true },
-      { url: "https://kitscript.com/webgl/StartUpRPG/", weight: 3, theme: "city", label: "UNITY RPG", image: "https://kitscript.com/game/quiz/images/retrogames/actraiser/actraiser_action_01.png", enabled: true },
-      { url: "https://kitscript.com/webgl/StartUpSkill/", weight: 2, theme: "space", label: "VFX SANDBOX", image: "https://kitscript.com/game/quiz/images/retrogames/metal-warriors/metal-warriors_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/chroma/", weight: 3, theme: "tool", label: "CHROMA MERGE", image: "https://kitscript.com/game/quiz/images/retrogames/arkanoid/arkanoid_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/book/", weight: 3, theme: "tool", label: "ARCHITECT .AI", image: "https://kitscript.com/game/quiz/images/retrogames/ridge-racer/ridge-racer_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/water/", weight: 3, theme: "city", label: "WATER-WORLD", image: "https://kitscript.com/game/quiz/images/retrogames/bubble-bobble/bubble-bobble_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/metaball/", weight: 1, theme: "tool", label: "METABALL MASKING", image: "https://kitscript.com/game/quiz/images/retrogames/marble-madness/marble-madness_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/spell/", weight: 2, theme: "tool", label: "SPELL CLAW", image: "https://kitscript.com/game/quiz/images/retrogames/defender/defender_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/word/", weight: 1, theme: "tool", label: "SHERIFF OF WORD CITY", image: "https://kitscript.com/game/quiz/images/retrogames/double-dragon/double-dragon_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/writer/", weight: 2, theme: "tool", label: "SEMANTIC WRITER", image: "https://kitscript.com/game/quiz/images/retrogames/mega-man-3/mega-man-3_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/reader/", weight: 3, theme: "tool", label: "AUTO READER", image: "https://kitscript.com/game/quiz/images/retrogames/r-type/r-type_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/album/", weight: 1, theme: "tool", label: "ALBUM BUILDER", image: "https://kitscript.com/game/quiz/images/retrogames/crystalis/crystalis_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/sopraknight/", weight: 2, theme: "space", label: "SOPRA-KNIGHT", image: "https://kitscript.com/game/quiz/images/retrogames/metal-warriors/metal-warriors_action_01.png", enabled: true },
-      { url: "https://kitscript.com/game/link/", weight: 2, theme: "tool", label: "Local Message Desk", image: "https://kitscript.com/game/quiz/images/retrogames/centipede/centipede_action_01.png", enabled: true }
-    ];
-
-    const ROOT_STAGE_DIRS = [
-    ];
-
-    const THEME_IMAGES = {
-      city: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=400&q=80",
-      space: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&q=80",
-      tool: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&q=80",
-      default: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400&q=80"
-    };
-
-    const CURATED_LABELS = {
-      city: "NEO-CITY",
-      star: "STAR-SHIP",
-      hack: "HACKING-DRONE",
-      rogue: "ROGUELIKE",
-      solomade: "SOLOMADE",
-      pizza: "RESTAURANT",
-      tank: "TANK",
-      tool: "TOOL HUB"
-    };
-
-    const SPACE_DIRS = new Set(["avatar", "bird", "drone", "invasion", "ocean", "pilot", "space", "star"]);
-    const CITY_DIRS = new Set(["city", "cowboy", "pandemic", "pizza", "rogue", "shop", "solomade", "world", "zone"]);
-    const TOOL_DIRS = new Set(["bizcard", "bomb", "cable", "clip", "clipcut", "clock", "hack", "model", "motion", "one", "puzzle", "quiz", "tank", "terminal", "tool"]);
-
-    const ROUTE_POOL = mergeRoutes(ROUTES, buildAutoRoutes(ROOT_STAGE_DIRS));
+    // Cards are present in the source HTML; JavaScript only enhances the selector.
+    const ALL_CARDS = Array.from(document.querySelectorAll('#pick-grid .pick-card'));
+    const ROUTE_POOL = ALL_CARDS.map(card => ({
+      url: card.href,
+      weight: Number(card.dataset.weight),
+      theme: card.dataset.theme,
+      enabled: true
+    }));
 
     const STORAGE_KEY = "pickme_last_url";
     const statusEl = document.getElementById('status');
@@ -434,50 +565,6 @@
     let isStopped = false;
     let shuffleTimeout = null;
     let currentRouteList = [];
-
-    function buildAutoRoutes(dirNames) {
-      return dirNames.map((dir) => {
-        const theme = inferTheme(dir);
-        return {
-          url: buildRouteUrl(dir),
-          weight: inferWeight(dir),
-          theme,
-          label: CURATED_LABELS[dir] || slugToLabel(dir),
-          image: THEME_IMAGES[theme] || THEME_IMAGES.default,
-          enabled: true
-        };
-      });
-    }
-
-    function mergeRoutes(curated, generated) {
-      const map = new Map();
-      [...curated, ...generated].forEach((route) => {
-        const key = route.url;
-        if (!map.has(key)) map.set(key, route);
-      });
-      return Array.from(map.values());
-    }
-
-    function buildRouteUrl(dir) {
-      if (dir === "tool") return "https://kitscript.com/tool/";
-      return `https://kitscript.com/game/${dir}/`;
-    }
-
-    function inferTheme(dir) {
-      if (SPACE_DIRS.has(dir)) return "space";
-      if (CITY_DIRS.has(dir)) return "city";
-      if (TOOL_DIRS.has(dir)) return "tool";
-      return "default";
-    }
-
-    function inferWeight(dir) {
-      if (["city", "star", "space", "pizza"].includes(dir)) return 2;
-      return 1;
-    }
-
-    function slugToLabel(dir) {
-      return dir.replace(/[-_]+/g, " ").toUpperCase();
-    }
 
     function resolveSafeUrl(path) {
       if (!path || path.trim() === "") return "/";
@@ -495,6 +582,7 @@
     }
 
     function init() {
+      document.body.classList.add("enhanced");
       currentRouteList = filterRoutes();
       if (currentRouteList.length === 0) {
         window.location.replace(resolveSafeUrl("/"));
@@ -508,10 +596,10 @@
 
       // 개별 카드 클릭 이벤트 위임
       gridEl.addEventListener('click', (e) => {
+        const card = e.target.closest('a.pick-card');
+        if (!card || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         if (isFinalized) return;
-        
-        const card = e.target.closest('.pick-card');
-        if (!card) return;
+        e.preventDefault();
 
         // 랜덤 루프 중단
         if (shuffleTimeout) clearTimeout(shuffleTimeout);
@@ -546,29 +634,28 @@
       const params = new URLSearchParams(window.location.search);
       const targetTheme = params.get('theme');
       let list = ROUTE_POOL.filter(r => r.enabled && r.url);
-      if (targetTheme) list = list.filter(r => r.theme === targetTheme);
+      if (['city', 'space', 'tool', 'default'].includes(targetTheme)) list = list.filter(r => r.theme === targetTheme);
       if (list.length === 0) return [];
-      const lastUrl = localStorage.getItem(STORAGE_KEY);
+      const lastUrl = readLastUrl();
       const filteredList = list.filter(r => r.url !== lastUrl);
       return filteredList.length > 0 ? filteredList : list;
     }
 
     function setupTheme() {
       const params = new URLSearchParams(window.location.search);
-      const theme = params.get('theme') || 'default';
-      document.body.className = `theme-${theme}`;
+      const requested = params.get('theme');
+      const theme = ['city', 'space', 'tool', 'default'].includes(requested) ? requested : 'default';
+      document.body.classList.remove('theme-default');
+      document.body.classList.add(`theme-${theme}`);
+    }
+
+    function readLastUrl() {
+      try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
     }
 
     function renderCards(list) {
-      gridEl.innerHTML = "";
-      list.forEach((item, idx) => {
-        const card = document.createElement('div');
-        card.className = 'pick-card';
-        if (item.image) card.style.backgroundImage = `url('${item.image}')`;
-        card.innerHTML = `<div class="weight-indicator">LV.${item.weight}</div><span>${item.label}</span>`;
-        card.dataset.url = item.url;
-        gridEl.appendChild(card);
-      });
+      const visibleUrls = new Set(list.map(item => item.url));
+      gridEl.replaceChildren(...ALL_CARDS.filter(card => visibleUrls.has(card.href)));
     }
 
     function updateGridMetrics(count) {
@@ -657,7 +744,7 @@
       winnerCard.classList.add('winner');
       statusEl.innerText = "STAGE START";
       
-      localStorage.setItem(STORAGE_KEY, targetUrl);
+      try { localStorage.setItem(STORAGE_KEY, targetUrl); } catch {}
 
       setTimeout(() => {
         window.location.replace(resolveSafeUrl(targetUrl));

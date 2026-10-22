@@ -1,0 +1,647 @@
+[
+  {
+    "id": "quizcon",
+    "prompt": "Create one square representative menu cover image for QUIZCON, a browser quiz game hub. Polished original retro arcade pixel-art illustration, neon accents on dark navy, a quiz console with glowing question-mark hologram and playful colorful quiz worlds, strong centered composition readable as a 256px thumbnail, full bleed square, no lettering, no logos, no watermark. Requested final format 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/quizcon.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/quizcon.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "city",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for NEO-CITY. Subject: a lone explorer walking a rainy neon futuristic alley. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/city.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/city.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "star",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for STAR-SHIP. Subject: a starship exploring a luminous alien planet in deep space. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/star.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/star.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "hack",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for HACKING-DRONE. Subject: a friendly hacking drone converting enemy drones beside an orbital station. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/hack.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/hack.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "game",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for GAME HUB. Subject: a lively cluster of original arcade cabinets and game controllers. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/game.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/game.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "tool",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for TOOL HUB. Subject: a futuristic workbench of useful digital tools and glowing utility panels. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/tool.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/tool.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "rogue",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for ROGUELIKE. Subject: a small armored adventurer entering a mysterious dungeon with treasure. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/rogue.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/rogue.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "solomade",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SOLOMADE. Subject: a miniature imaginative platform game world built by a solo creator. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/solomade.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/solomade.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "pizza",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for RESTAURANT. Subject: a cozy bustling pizza restaurant with a fresh pizza and oven. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/pizza.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/pizza.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "tank",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for TANK DEFENSE. Subject: an armored tank defending a fortified base. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/tank.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/tank.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "avatar",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for AVATAR FACTORY. Subject: a character creation workstation displaying varied cute avatars. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/avatar.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/avatar.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "bird",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for BIRD JUMPER. Subject: a cheerful little bird leaping between floating platforms. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/bird.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/bird.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "bizcard",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for BIZ-CARD. Subject: a refined stack of business cards and a glowing design workspace. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/bizcard.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/bizcard.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "bomb",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for BOMB DEFENSE. Subject: a defensive turret intercepting cartoon bombs with bright shields. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/bomb.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/bomb.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "cable",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for CABLE-CAR DEFENSE. Subject: an armored cable car crossing mountains while defending its route. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/cable.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/cable.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "clip",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for CLIPBOARD PRO. Subject: a digital clipboard with neatly arranged note cards. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/clip.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/clip.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "clipcut",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for CLIP-CUT. Subject: a video editing timeline with scissors and film strips. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/clipcut.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/clipcut.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "clock",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for CLOCK DEFENSE. Subject: a giant clockwork tower with defensive gears and turrets. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/clock.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/clock.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "cowboy",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for COWBOY DEFENSE. Subject: a cowboy defending a western town at sunset. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/cowboy.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/cowboy.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "drone",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for DRONE DEFENSE. Subject: a swarm of defender drones protecting a futuristic city. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/drone.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/drone.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "space",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SPACE HUNTER. Subject: a sleek space fighter hunting alien ships in an asteroid field. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/space.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/space.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "wave",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for WAVE. Subject: flowing luminous wave patterns around an abstract arcade arena. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/wave.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/wave.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "model",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for MODEL2SPRITE. Subject: a 3D character on a turntable transforming into a pixel sprite sheet. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/model.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/model.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "motion",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for MOTION FACTORY. Subject: a character animation studio with sequential running poses. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/motion.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/motion.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "ocean",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for OCEAN DEFENSE. Subject: a naval defense ship protecting an ocean outpost. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/ocean.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/ocean.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "skin2d",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SKIN2D. Subject: a 2D character outfit customization workbench with colorful costumes. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/skin2d.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/skin2d.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "pandemic",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for PANDEMIC. Subject: a strategic city map with glowing medical shields stopping a virus. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/pandemic.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/pandemic.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "pilot",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for DAWN OF STRIKE BACK. Subject: a heroic fighter plane banking over a dawn battlefield. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/pilot.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/pilot.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "puzzle",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for PUZZLE DEFENSE. Subject: colorful puzzle tiles powering a defensive tower. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/puzzle.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/puzzle.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "terminal",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for TERMINAL. Subject: a retro computer terminal glowing with abstract green code glyphs. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/terminal.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/terminal.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "startup-rpg",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for UNITY RPG. Subject: a fantasy adventurer facing a magical stone castle. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/startup-rpg.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/startup-rpg.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "startup-skill",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for VFX SANDBOX. Subject: a magical effects testing arena with swirling fire ice and lightning. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/startup-skill.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/startup-skill.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "chroma",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for CHROMA MERGE. Subject: colorful luminous blocks combining into brilliant color crystals. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/chroma.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/chroma.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "book",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for ARCHITECT .AI. Subject: an open book projecting a luminous architectural model. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/book.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/book.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "water",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for WATER-WORLD. Subject: a tiny floating settlement and lush islands on a sparkling sea. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/water.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/water.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "locomotion",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for LOCOMOTION. Subject: a stylized humanoid demonstrating walking and running with motion trails. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/locomotion.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/locomotion.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "spell",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SPELL CLAW. Subject: a magical arcade claw machine grabbing glowing spell runes. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/spell.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/spell.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "word",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SHERIFF OF WORD CITY. Subject: a western sheriff guarding a town made of alphabet blocks. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/word.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/word.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "writer",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SEMANTIC WRITER. Subject: a writing desk with connected concept cards and a glowing manuscript. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/writer.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/writer.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "reader",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for AUTO READER. Subject: an open book with a play symbol and flowing narration light. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/reader.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/reader.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "album",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for ALBUM BUILDER. Subject: an open photo album with neatly arranged vivid picture tiles. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/album.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/album.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "sopraknight",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for SOPRA-KNIGHT. Subject: a valiant knight with a luminous blade in a dramatic fantasy arena. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/sopraknight.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/sopraknight.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "link",
+    "prompt": "Use case: stylized-concept. Asset type: representative square menu cover for LOCAL MESSAGE DESK. Subject: a cozy desktop message station connecting nearby computers with light trails. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Final intended image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/link.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/link.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  }
+]
