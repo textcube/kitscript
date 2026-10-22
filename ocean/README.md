@@ -1,61 +1,59 @@
-# Eternal Invasion: Ocean Edition
+# Ocean — Operation Blue Horizon
 
-A single-file HTML5 canvas defense game. Enemy aircraft and surface ships invade from the right across three air lanes and three surface lanes; the player's submarine and three auto-firing escort ships defend the base on the left. Win by surviving 300 seconds or reaching 50,000 points.
+설치나 빌드 없이 `index.html` 하나로 실행하는 자동 전투 해양 방어 게임입니다. 인터넷 없이 `file://`로 실행할 수 있습니다. 외부 이미지·폰트·라이브러리는 사용하지 않습니다.
 
-## Design Identity (attract-first)
+## 플레이
 
-Like other kitscript games, this game is built to be watchable, not just playable:
+접속 즉시 잠수함과 세 척의 호위함이 전투를 시작합니다. 100단계를 완료하면 승리합니다. 잠수함 또는 기지 체력이 0이 되거나 대장이 기지를 돌파하면 패배합니다. 종료 후 7초 뒤 1단계부터 자동 재배치하며 버튼 또는 R 키로 즉시 다시 시작할 수 있습니다.
 
-- Starts instantly with no menu.
-- The submarine auto-fires (A-LAUNCH) and the three escort ships fight on their own, so the game plays itself as a spectacle.
-- Player input is low-density: move (arrows/WASD) and an optional manual launch (Space) with a shorter cooldown.
-- On win/lose, the game auto-restarts after 7 seconds (or immediately via the R key / on-screen button), so it loops forever as an attract demo.
+- 이동: WASD / 방향키, 화면 방향 버튼, 깊은 물 영역 드래그
+- 추가 발사: Space / LAUNCH 버튼 누르기. 자동 조준과 자동 발사는 계속 동작합니다.
+- 일시정지: Pause / P. 탭이 숨겨지면 전투와 재시작 타이머도 정지합니다.
+- 6초 동안 조작하지 않으면 부드러운 자동 순찰로 돌아갑니다.
+- 소리는 기본 OFF이며 첫 입력 후 브라우저에서 생성합니다. 소리 설정과 최고 점수는 기기에 저장합니다.
 
-Improvements must preserve this identity. Do not add menus, difficulty selection screens, or anything that blocks the instant-start / auto-loop flow.
+## 100단계 캠페인
 
-## Current Features
+| 단계 | 해역 | 구성 |
+|---|---|---|
+| 1–10 | Breakwater Bay | 초기 정찰과 선봉대 |
+| 11–20 | Coral Passage | 좁은 레인과 혼합 공세 |
+| 21–30 | Trade Winds | 항공 공세와 호송 함대 |
+| 31–40 | Greywater Strait | 해협 돌파 |
+| 41–50 | Storm Shelf | 강화된 적 체력 |
+| 51–60 | Glacier Reach | 빠른 공세와 기함 |
+| 61–70 | Midnight Trench | 야간 혼합 공세 |
+| 71–80 | Ember Archipelago | 강화된 폭뢰 공격 |
+| 81–90 | Iron Blockade | 중장갑 함대 |
+| 91–100 | Blue Horizon | 마지막 함대와 체력 36의 최종 기함 |
 
-- Three-band battlefield: sky (air enemies), surface lanes (enemy ships + escort fleet), deep water (player submarine and base).
-- Homing missiles with underwater-to-air acceleration and splash effects at the waterline.
-- Escort ships with heat/overheat gauges and auto-targeting.
-- Enemy scaling: speed and fire rate increase with elapsed time.
-- Bombs: air bombs dropped by aircraft, depth charges with a 4-second fuse dropped by ships.
-- Chain explosions with area damage (`checkExplosionDamage`).
-- WebAudio-based procedural SFX (launch, hit, explosion, splash) behind a sound toggle.
-- Canvas-drawn HUD: score/target, progress timer, manual/auto launch cooldown gauges, fleet heat gauge.
-- Game over overlay with auto-restart countdown, click-to-restart button, and R-key restart.
+각 해역의 5·10번째 작전은 대장전입니다. 일반 공세를 처리한 뒤 대장이 등장하고, 격파해야 다음 단계로 이동합니다. 각 단계의 적 수·항공 비율·레인·간격·체력·이동/공격 속도에 차이가 있습니다. 단계 종료 시 잠수함은 일반전 5, 회복 작전 12, 대장전 25를 회복합니다. 기지는 일반전 2, 대장전 10을 회복합니다. 기함 격파 보상은 2,000점입니다.
 
-## Code Review & Improvement Plan (2026-07-09)
+전체 작전명과 수치는 [LEVELS.md](LEVELS.md)에 정리했습니다. 점수와 경과 시간만으로 승리 조건을 건너뛸 수 없으며, 100번째 기함을 격파해야 캠페인이 완료됩니다.
 
-Full review of `ocean/index.html` (697 lines). Ordered by priority. None of these change the attract-first scope.
+## 이번 개선
 
-### P1 — Gameplay bugs (fix first)
+- 하늘·원경·수면·심해 광선·해저와 함선/잠수함 외형 재작업
+- 직접 그린 SVG 소리·일시정지·홈·YouTube 아이콘: 상태 전환, 접근성 이름, 설명, 모바일 44px 터치 영역
+- 읽을 수 있는 HTML 상태판, 단계별 안내, 키보드로 접근 가능한 종료/재시작 UI
+- 모바일 방향 버튼과 드래그, 포인터 취소·창 초점 상실 시 입력 해제
+- 화면 크기에 맞춘 안정적 배치, DPR 2까지 선명한 캔버스, 동작 줄이기 지원
+- 미사일 이동 구간 충돌 및 가장 가까운 한 표적만 타격; 비활성 표적 제외
+- 적 폭발과 아군 폭발의 피해 대상 구분, 연속 피격 보호, 체력 하한
+- 같은 프레임에서 사망과 승리 조건이 겹치면 패배 우선
+- 순간이동 없는 자동 순찰, 프레임 간격에 따른 이동·회전·효과 계산
+- 적/탄환/폭탄/폭발/입자 개수 제한과 탄환 수명 제한
+- 저장소 차단·오디오 미지원/재개 거부 대응, 사용이 끝난 오디오 노드 해제
 
-1. **Air bombs are inert**: `Bomb` with `type === 'air'` has `timer = 999`, never explodes, and there is no collision check against the submarine, escorts, or the water surface — air bombs simply fall off-screen and do nothing. Every air enemy's attack is therefore harmless. Fix: detonate air bombs when they reach the waterline (`SURFACE_LAYER`) with a splash plus a small explosion (e.g. radius ~55) that uses the existing `checkExplosionDamage`, and/or detonate on proximity to the submarine. Keep depth charges as they are.
-2. **Frame-rate dependent probabilities**: enemy spawning (`Math.random() < spawnProb` per frame), escort firing (`Math.random() < 0.012` per frame), and bubble spawning (`Math.random() < 0.12` per frame) all run per-frame, so a 144 Hz display gets ~2.4× the spawn and fire rate of a 60 Hz display. Convert each to a per-second rate scaled by `dt` (e.g. `Math.random() < ratePerSecond * dt`).
-3. **Negative HP bar rendering**: `sub.hp` and `base.hp` can go below zero before the lose check, making the HP bar rectangles draw with negative width. Clamp HP to 0 on damage (or clamp the bar ratio with `Math.max(0, ...)`).
-4. **Game keys scroll the page**: Space and arrow keys are not `preventDefault()`ed; in an iframe or scrollable embed they scroll the host page. Prevent default for the game's control keys only.
+## 검증
 
-### P2 — Attract & UX hardening
+저장소 루트에서 Playwright와 Microsoft Edge가 있는 환경으로 실행합니다.
 
-5. **Persistent best score**: store the best score in `localStorage` (e.g. key `ocean_best_score`), show `BEST: n` on the HUD and on the game-over overlay. This gives the endless attract loop a visible long-term hook.
-6. **Persist sound preference**: remember the sound on/off choice in `localStorage` and restore it on load (WebAudio still requires the first user gesture — keep `initAudio()` on the first click/keydown before honoring a stored "on" preference).
-7. **Responsive canvas scaling**: the canvas is fixed at 960×540 and clips on smaller screens. Scale it down with CSS (preserving the 16:9 ratio and the 960×540 logical resolution) and correct mouse coordinates in the restart-button hit test by the actual scale factor (`canvas.width / rect.width`).
-8. **Idle attract motion**: when there is no player input for ~6 seconds, let the submarine drift gently (e.g. slow sine-wave patrol within its movement bounds) so an unattended screen still looks alive. Any real key input takes over instantly and resets the idle timer. Keep it subtle — no auto-dodging AI.
-9. **Minor cleanup**: remove the redundant `if (isSoundOn)` guard around `sfx.launch(120)` in `Enemy.shoot()` (the sfx functions already check `isSoundOn`), and clamp the gauge label position so HUD text never overlaps the gauges.
+```sh
+node scripts/test-ocean.mjs
+node scripts/test-ocean-levels.mjs
+```
 
-### P3 — Deferred (do not start in this pass)
+빠른 미사일 단일 충돌, 피해 대상과 연속 피격, 승패 우선순위, 60/144Hz 이동 일치, 순찰 이동량, 대기/재시작, 폭탄·기함, 모바일 터치 취소, 320/390/844/1440px 배치, 저장소/오디오 불가를 검사합니다. 고정 난수로 세 차례의 약 5분 연속 전투와 각 단계를 체력 100으로 시작하는 100단계 개별 전투를 시뮬레이션합니다. 100회 전환·20회 대장전 차단·최종 승리·대장 돌파 패배 및 아이콘 크기와 상태 유지도 검사합니다.
 
-- Touch controls for mobile.
-- Escort ships taking damage / temporary disable (changes balance; needs playtesting).
-- Wave/stage structure or new enemy types.
-- Visual rework of the surface-lane waterline (surface ships render above the drawn wave line at `SURFACE_LAYER`; acceptable as a pseudo-3D lane presentation for now).
-
-### Non-goals
-
-- No start menus, pause screens, or difficulty selectors — instant start and the 7-second auto-restart loop are the core of the attract identity.
-- No frameworks or build steps; the game stays one self-contained HTML file.
-
-## Local File
-
-- Main game: `ocean/index.html`
+`OCEAN_SCREENSHOT`에 경로를 주면 검증 후 화면을 저장합니다. 자동화는 Edge 기반이며 실제 iOS/Android 기기 검수는 별도입니다. 결제·광고·계정·서버 순위표는 포함하지 않습니다.

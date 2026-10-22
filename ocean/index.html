@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eternal Invasion: Ocean Edition</title>
+    <meta name="description" content="Command a submarine and its escort fleet through 100 ocean defense stages. Automatic combat, keyboard and touch controls. Play offline.">
     <style>
         :root {
             --primary-color: #00faff;
@@ -104,6 +105,51 @@
             aspect-ratio: 16 / 9;
             display: block;
         }
+        * { box-sizing:border-box; }
+        body { height:auto;min-height:100svh;overflow:auto;padding:20px 12px;background:radial-gradient(ellipse at 50% 0,#15304b,#060f1d 65%);color:#e4f3ff; }
+        button,a { -webkit-tap-highlight-color:transparent; }
+        button { font-family:inherit; }
+        button:focus-visible,a:focus-visible,canvas:focus-visible { outline:3px solid #ffd897;outline-offset:3px; }
+        .game-header,.dashboard,.canvas-container,.command-deck,.briefing { width:min(1100px,100%,max(620px,calc((100svh - 380px)*1.77778)));max-width:none; }
+        .game-header { height:auto;min-height:66px;padding:12px 18px;background:#12263b;border:1px solid #a4d8ff24;border-radius:18px 18px 0 0;box-shadow:none;gap:12px; }
+        .brand-name { font-size:16px;letter-spacing:.12em;color:#92e6e4; }
+        .game-title { color:#9ab6ce;font-size:10px; }
+        .link-zone { align-items:center;flex-wrap:wrap;justify-content:flex-end; }
+        .nav-btn { min-height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;border-color:#a4d8ff24;background:#ffffff07;color:#c7deef; }
+        .dashboard { padding:16px 18px;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:20px;background:#0d2033;border-inline:1px solid #a4d8ff24; }
+        .eyebrow { display:block;color:#85a7c3;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px; }
+        .dashboard strong { font-size:22px;color:#eff9ff; }
+        .dashboard small { display:block;font-size:11px;color:#aac7db;margin-top:5px; }
+        progress { width:100%;height:7px;accent-color:#78e2ce;display:block;margin-top:8px; }
+        .canvas-container { margin:0;isolation:isolate;border:1px solid #a4d8ff24; }
+        canvas { max-width:none;width:100%;border:0;box-shadow:none;touch-action:none; }
+        .result { position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#061322ed;text-align:center;padding:18px; }
+        .result[hidden] { display:none; }
+        .result h1 { font-size:clamp(20px,4vw,42px);margin:4px;color:#9de8d7; }
+        .result p { margin:6px;color:#b4ccdc;font-size:clamp(12px,2vw,16px); }
+        .command-deck { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;background:#12263b;border:1px solid #a4d8ff24;border-top:0;border-radius:0 0 18px 18px; }
+        .dpad { display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:4px; }
+        .dpad button { border:1px solid #aacbea30;border-radius:10px;background:#213c54;color:#e4f7ff;font-size:18px;touch-action:none; }
+        .dpad button:first-child { grid-column:2; }.dpad button:nth-child(2){grid-column:1;}
+        .dpad button:active,.dpad button.held { background:#417b8a; }
+        .launch { min-width:150px;min-height:64px;border:1px solid #a0f6da66;border-radius:12px;background:linear-gradient(120deg,#1f706e,#195263);color:#e4fff6;touch-action:none;font-weight:800;letter-spacing:.08em; }
+        .launch small { display:block;font-size:10px;font-weight:400;letter-spacing:0;margin-top:5px; }
+        .deck-info { flex:1;color:#9fbdd0;font-size:12px;line-height:1.7; }
+        .briefing { padding:14px 4px;color:#89a9c1;display:flex;justify-content:space-between;gap:20px;font-size:11px;line-height:1.7; }
+        #pauseBadge { position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:8px 14px;background:#061322dc;border:1px solid #a4d8ff44;border-radius:20px;color:#b4e8e6;font-size:12px;pointer-events:none; }
+        @media(max-width:600px) {
+            .game-header,.dashboard,.canvas-container,.command-deck,.briefing{width:100%;}
+            body{padding:8px}.game-header{padding:10px;gap:6px}.brand-zone{gap:0}.game-title{display:none}.brand-name{font-size:12px}.link-zone{gap:4px}.nav-btn{min-height:44px;padding:6px 9px;font-size:10px}.link-zone a{display:none}
+            .dashboard{padding:12px 10px;gap:12px;grid-template-columns:1.3fr 1fr}.dashboard>div:last-child{grid-column:1/-1;display:flex;align-items:center;gap:12px}.dashboard>div:last-child progress{flex:1;margin:0}.dashboard strong{font-size:17px}.eyebrow{font-size:9px}.dashboard small{font-size:10px}
+            .command-deck{padding:12px 10px;gap:8px}.deck-info{display:none}.launch{min-width:128px}.briefing{flex-wrap:wrap;gap:8px}.result p{margin:3px}.result .eyebrow{display:none}
+        }
+        @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+        .link-zone .icon-button { width:44px;height:44px;min-height:44px;padding:10px;display:inline-flex;border-radius:12px; }
+        .icon-button svg { width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round; }
+        #soundToggle[aria-pressed="false"] .sound-wave,#soundToggle[aria-pressed="true"] .sound-off,#pauseToggle[aria-pressed="false"] .play-icon,#pauseToggle[aria-pressed="true"] .pause-icon { display:none; }
+        .game-header .brand-name{font-size:clamp(10px,2.8vw,16px);letter-spacing:.06em;}
+        .dashboard>div{min-width:0;}#sectorName{display:block;font-size:clamp(15px,2vw,22px);}#sectorHint{min-height:30px;}
+        #sectorHint{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
     </style>
 </head>
 <body>
@@ -111,24 +157,39 @@
     <header class="game-header">
         <div class="brand-zone">
             <span class="brand-name">BUNTGAMES</span>
-            <span class="game-title">Eternal Invasion</span>
+            <span class="game-title">Ocean / Fleet command</span>
         </div>
         <div class="link-zone">
-            <button id="soundToggle" class="nav-btn sound-btn">Sound: OFF</button>
-            <a href="https://kitscript.com/game" target="_blank" class="nav-btn">Homepage</a>
-            <a href="https://www.youtube.com/@textcube" target="_blank" class="nav-btn" style="border-color: #ff000044;">YouTube</a>
+            <button id="soundToggle" class="nav-btn sound-btn icon-button" type="button" aria-pressed="false" aria-label="Enable sound" title="Enable sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3Z"/><path class="sound-wave" d="M16 8q4 4 0 8m3-11q7 7 0 14"/><path class="sound-off" d="m16 9 6 6m0-6-6 6"/></svg></button>
+            <button id="pauseToggle" class="nav-btn icon-button" type="button" aria-pressed="false" aria-label="Pause mission" title="Pause mission"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="m8 5 11 7-11 7Z"/></svg></button>
+            <a href="https://kitscript.com/game" class="nav-btn icon-button" aria-label="Game hub" title="Game hub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg></a>
+            <a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="nav-btn icon-button" aria-label="YouTube channel (opens a new tab)" title="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3Z"/></svg></a>
         </div>
     </header>
 
+    <section class="dashboard" aria-label="Mission status">
+        <div><span class="eyebrow">Operation blue horizon</span><strong id="sectorName">001 / First Contact</strong><small id="sectorHint">Clear the first contacts. Automatic escorts cover the lanes.</small></div>
+        <div><span class="eyebrow">Fleet score</span><strong id="scoreValue">0</strong><small id="bestValue">BEST 0</small></div>
+        <div><span class="eyebrow" id="missionTime">STAGE 1 / 100</span><progress id="missionProgress" max="100" value="0" aria-label="Mission progress"></progress><small id="healthValue">Hull 100 · Base 120</small></div>
+    </section>
     <div class="canvas-container">
-        <canvas id="gameCanvas"></canvas>
+        <canvas id="gameCanvas" tabindex="0" aria-label="Ocean battlefield. Move with arrow keys or WASD; Space launches a missile. Automatic combat is active.">A browser with Canvas support is required.</canvas>
+        <div id="pauseBadge" hidden>Mission paused</div>
+        <section id="result" class="result" aria-label="Mission result" hidden>
+            <span class="eyebrow">Operation debrief</span><h1 id="resultTitle">Mission complete</h1><p id="resultScore"></p><p id="resultCountdown"></p><button class="nav-btn" id="restartButton" type="button">Deploy again</button>
+        </section>
     </div>
+    <section class="command-deck" aria-label="Submarine controls">
+        <div class="dpad" aria-label="Movement"><button data-key="ArrowUp" aria-label="Move up">↑</button><button data-key="ArrowLeft" aria-label="Move left">←</button><button data-key="ArrowDown" aria-label="Move down">↓</button><button data-key="ArrowRight" aria-label="Move right">→</button></div>
+        <div class="deck-info"><b id="controlMode">AUTO PATROL</b><br>WASD / arrows to move · Space to launch<br>Drag the submarine in deep water. Release to resume patrol.</div>
+        <button class="launch" data-key="Space" aria-label="Launch missile" type="button">LAUNCH <small id="launchStatus">Hold for rapid targeting</small></button>
+    </section>
+    <footer class="briefing"><span>100 stages · 10 regions · 20 flagships. Protect your submarine and the coastal base.<br>Auto targeting is always active. Manual launch adds supporting fire.</span><span><a class="nav-btn" href="https://kitscript.com/game">Game hub</a> <a class="nav-btn" href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer">YouTube ↗</a></span></footer>
 
 <script>
 /**
  * Eternal Invasion: Ocean Edition - Triple Escort Fleet Ver.
- * [Senior Game Dev Implementation]
- * - 목표 점수: 50,000점 (장기전 최적화)
+ * - 100-stage campaign, 10 regions, 20 boss encounters.
  * - 브랜드: BUNTGAMES (대문자)
  * - 방어 시스템: 3개 수면 레인에 각각 호위함 1대 배치 (총 3대)
  */
@@ -138,15 +199,17 @@ const ctx = canvas.getContext('2d');
 
 const WIDTH = 960;
 const HEIGHT = 540;
-const AIR_LAYER = HEIGHT / 3;      
-const SURFACE_LAYER = HEIGHT * 2 / 3; 
+const AIR_LAYER = HEIGHT / 3;
+const SURFACE_LAYER = HEIGHT * 2 / 3;
 
 canvas.width = WIDTH;
 canvas.height = HEIGHT;
+function scaleCanvas(){const dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(WIDTH*dpr);canvas.height=Math.round(HEIGHT*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
+scaleCanvas();window.addEventListener('resize',scaleCanvas);
 
 // 승리 조건
-const TARGET_TIME = 300; 
-const TARGET_SCORE = 50000; // 50,000점으로 변경
+const TOTAL_LEVELS = 100;
+
 
 const GameState = { PLAYING: 1, WIN: 2, LOSE: 3 };
 let currentState = GameState.PLAYING;
@@ -155,13 +218,121 @@ let gameTime = 0;
 let lastTime = 0;
 let restartTimer = 7.0;
 let idleTime = 0; // 플레이어 입력이 없었던 경과 시간 (attract 모드용)
+let paused = false, spawnClock = 1.5, flagshipSpawned = false;
+let levelNumber=1, spawnedThisLevel=0, bossDefeated=false;
+let pointerTarget = null;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const LEVELS = [
+    {"id":1,"zone":"Breakwater Bay","name":"First Contact","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":4,"interval":2.4,"airChance":0.45,"lanes":[0,1],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":2,"zone":"Breakwater Bay","name":"Harbor Lights","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":5,"interval":2.28,"airChance":0.2,"lanes":[1,2],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":3,"zone":"Breakwater Bay","name":"Low Flyers","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":6,"interval":2.16,"airChance":0.9,"lanes":[0,1,2],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":4,"zone":"Breakwater Bay","name":"Tidal Crossing","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":7,"interval":2.04,"airChance":0.35,"lanes":[1],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":5,"zone":"Breakwater Bay","name":"Breakwater Sentinel","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":8,"interval":1.92,"airChance":0.45,"lanes":[0,2],"hp":1,"speed":1,"fireRate":1,"bossHp":8,"repair":25},
+    {"id":6,"zone":"Breakwater Bay","name":"Safe Passage","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":4,"interval":2.8,"airChance":0.6,"lanes":[0,1],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":12},
+    {"id":7,"zone":"Breakwater Bay","name":"Reef Shadows","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":5,"interval":2.28,"airChance":0.7,"lanes":[0,2],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":8,"zone":"Breakwater Bay","name":"Convoy Wake","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":6,"interval":2.16,"airChance":0.15,"lanes":[0,1,2],"hp":1,"speed":1,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":9,"zone":"Breakwater Bay","name":"Outer Buoys","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":7,"interval":2.04,"airChance":0.55,"lanes":[0,1,2],"hp":1,"speed":1.15,"fireRate":1,"bossHp":0,"repair":5},
+    {"id":10,"zone":"Breakwater Bay","name":"Guardian of the Bay","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":10,"interval":1.92,"airChance":0.35,"lanes":[0,1,2],"hp":1,"speed":1,"fireRate":1,"bossHp":14,"repair":25},
+    {"id":11,"zone":"Coral Passage","name":"Coral Gate","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":4,"interval":2.3,"airChance":0.45,"lanes":[0,1],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":12,"zone":"Coral Passage","name":"Narrow Channel","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":5,"interval":2.18,"airChance":0.2,"lanes":[1,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":13,"zone":"Coral Passage","name":"Wingbeat Reef","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":6,"interval":2.06,"airChance":0.9,"lanes":[0,1,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":14,"zone":"Coral Passage","name":"Split Current","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":7,"interval":1.94,"airChance":0.35,"lanes":[1],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":15,"zone":"Coral Passage","name":"Coral Vanguard","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":8,"interval":1.82,"airChance":0.45,"lanes":[0,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":10,"repair":25},
+    {"id":16,"zone":"Coral Passage","name":"Sheltered Lagoon","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":4,"interval":2.7,"airChance":0.6,"lanes":[0,1],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":12},
+    {"id":17,"zone":"Coral Passage","name":"Deepwater Echo","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":5,"interval":2.18,"airChance":0.7,"lanes":[0,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":18,"zone":"Coral Passage","name":"Twin Reefs","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":6,"interval":2.06,"airChance":0.15,"lanes":[0,1,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":19,"zone":"Coral Passage","name":"Hidden Anchorage","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":7,"interval":1.94,"airChance":0.55,"lanes":[0,1,2],"hp":1,"speed":1.27,"fireRate":1.07,"bossHp":0,"repair":5},
+    {"id":20,"zone":"Coral Passage","name":"Keeper of the Passage","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":10,"interval":1.82,"airChance":0.35,"lanes":[0,1,2],"hp":1,"speed":1.12,"fireRate":1.07,"bossHp":16,"repair":25},
+    {"id":21,"zone":"Trade Winds","name":"Tailwind","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":5,"interval":2.2,"airChance":0.45,"lanes":[0,1],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":22,"zone":"Trade Winds","name":"Whitecaps","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":6,"interval":2.08,"airChance":0.2,"lanes":[1,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":23,"zone":"Trade Winds","name":"Cloud Squadron","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":7,"interval":1.96,"airChance":0.9,"lanes":[0,1,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":24,"zone":"Trade Winds","name":"Merchant Route","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":8,"interval":1.84,"airChance":0.35,"lanes":[1],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":25,"zone":"Trade Winds","name":"Windward Commander","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":9,"interval":1.72,"airChance":0.45,"lanes":[0,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":12,"repair":25},
+    {"id":26,"zone":"Trade Winds","name":"Calm Waters","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":5,"interval":2.6,"airChance":0.6,"lanes":[0,1],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":12},
+    {"id":27,"zone":"Trade Winds","name":"Crosswind","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":6,"interval":2.08,"airChance":0.7,"lanes":[0,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":28,"zone":"Trade Winds","name":"Sailors Warning","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":7,"interval":1.96,"airChance":0.15,"lanes":[0,1,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":29,"zone":"Trade Winds","name":"Trade Route Siege","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":8,"interval":1.84,"airChance":0.55,"lanes":[0,1,2],"hp":1,"speed":1.39,"fireRate":1.14,"bossHp":0,"repair":5},
+    {"id":30,"zone":"Trade Winds","name":"Admiral of the Winds","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":11,"interval":1.72,"airChance":0.35,"lanes":[0,1,2],"hp":1,"speed":1.24,"fireRate":1.14,"bossHp":18,"repair":25},
+    {"id":31,"zone":"Greywater Strait","name":"Mist Line","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":5,"interval":2.1,"airChance":0.45,"lanes":[0,1],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":32,"zone":"Greywater Strait","name":"Silent Cargo","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":6,"interval":1.98,"airChance":0.2,"lanes":[1,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":33,"zone":"Greywater Strait","name":"Grey Skies","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":7,"interval":1.86,"airChance":0.9,"lanes":[0,1,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":34,"zone":"Greywater Strait","name":"Choke Point","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":8,"interval":1.74,"airChance":0.35,"lanes":[1],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":35,"zone":"Greywater Strait","name":"Strait Watcher","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":9,"interval":1.62,"airChance":0.45,"lanes":[0,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":14,"repair":25},
+    {"id":36,"zone":"Greywater Strait","name":"Fogbound Rescue","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":5,"interval":2.5,"airChance":0.6,"lanes":[0,1],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":12},
+    {"id":37,"zone":"Greywater Strait","name":"Northern Current","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":6,"interval":1.98,"airChance":0.7,"lanes":[0,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":38,"zone":"Greywater Strait","name":"Close Quarters","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":7,"interval":1.86,"airChance":0.15,"lanes":[0,1,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":39,"zone":"Greywater Strait","name":"Last Ferry","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":8,"interval":1.74,"airChance":0.55,"lanes":[0,1,2],"hp":1,"speed":1.51,"fireRate":1.21,"bossHp":0,"repair":5},
+    {"id":40,"zone":"Greywater Strait","name":"Greywater Dreadnought","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":11,"interval":1.62,"airChance":0.35,"lanes":[0,1,2],"hp":1,"speed":1.36,"fireRate":1.21,"bossHp":20,"repair":25},
+    {"id":41,"zone":"Storm Shelf","name":"Pressure Drop","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":6,"interval":2,"airChance":0.45,"lanes":[0,1],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":42,"zone":"Storm Shelf","name":"Rain Curtain","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":7,"interval":1.88,"airChance":0.2,"lanes":[1,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":43,"zone":"Storm Shelf","name":"Thunder Wings","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":8,"interval":1.76,"airChance":0.9,"lanes":[0,1,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":44,"zone":"Storm Shelf","name":"Rolling Swell","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":9,"interval":1.64,"airChance":0.35,"lanes":[1],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":45,"zone":"Storm Shelf","name":"Storm Herald","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":10,"interval":1.52,"airChance":0.45,"lanes":[0,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":16,"repair":25},
+    {"id":46,"zone":"Storm Shelf","name":"Eye of the Storm","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":6,"interval":2.4,"airChance":0.6,"lanes":[0,1],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":12},
+    {"id":47,"zone":"Storm Shelf","name":"Lightning Run","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":7,"interval":1.88,"airChance":0.7,"lanes":[0,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":48,"zone":"Storm Shelf","name":"Blackwater Fleet","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":8,"interval":1.76,"airChance":0.15,"lanes":[0,1,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":49,"zone":"Storm Shelf","name":"Breaking Wave","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":9,"interval":1.64,"airChance":0.55,"lanes":[0,1,2],"hp":2,"speed":1.63,"fireRate":1.28,"bossHp":0,"repair":5},
+    {"id":50,"zone":"Storm Shelf","name":"Master of the Tempest","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":12,"interval":1.52,"airChance":0.35,"lanes":[0,1,2],"hp":2,"speed":1.48,"fireRate":1.28,"bossHp":22,"repair":25},
+    {"id":51,"zone":"Glacier Reach","name":"Ice Approach","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":6,"interval":1.9,"airChance":0.45,"lanes":[0,1],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":52,"zone":"Glacier Reach","name":"Frozen Wake","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":7,"interval":1.78,"airChance":0.2,"lanes":[1,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":53,"zone":"Glacier Reach","name":"Polar Wings","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":8,"interval":1.66,"airChance":0.9,"lanes":[0,1,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":54,"zone":"Glacier Reach","name":"Iceberg Alley","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":9,"interval":1.54,"airChance":0.35,"lanes":[1],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":55,"zone":"Glacier Reach","name":"Frost Vanguard","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":10,"interval":1.42,"airChance":0.45,"lanes":[0,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":18,"repair":25},
+    {"id":56,"zone":"Glacier Reach","name":"Thawing Harbor","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":6,"interval":2.3,"airChance":0.6,"lanes":[0,1],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":12},
+    {"id":57,"zone":"Glacier Reach","name":"Blue Ice","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":7,"interval":1.78,"airChance":0.7,"lanes":[0,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":58,"zone":"Glacier Reach","name":"Shattered Floes","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":8,"interval":1.66,"airChance":0.15,"lanes":[0,1,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":59,"zone":"Glacier Reach","name":"Whiteout","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":9,"interval":1.54,"airChance":0.55,"lanes":[0,1,2],"hp":2,"speed":1.75,"fireRate":1.35,"bossHp":0,"repair":5},
+    {"id":60,"zone":"Glacier Reach","name":"Glacier Leviathan","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":12,"interval":1.42,"airChance":0.35,"lanes":[0,1,2],"hp":2,"speed":1.6,"fireRate":1.35,"bossHp":24,"repair":25},
+    {"id":61,"zone":"Midnight Trench","name":"Deep Signal","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":7,"interval":1.8,"airChance":0.45,"lanes":[0,1],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":62,"zone":"Midnight Trench","name":"Sonar Ghosts","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":8,"interval":1.68,"airChance":0.2,"lanes":[1,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":63,"zone":"Midnight Trench","name":"Night Squadron","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":9,"interval":1.56,"airChance":0.9,"lanes":[0,1,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":64,"zone":"Midnight Trench","name":"Dark Convoy","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":10,"interval":1.44,"airChance":0.35,"lanes":[1],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":65,"zone":"Midnight Trench","name":"Trench Sentinel","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":11,"interval":1.32,"airChance":0.45,"lanes":[0,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":20,"repair":25},
+    {"id":66,"zone":"Midnight Trench","name":"Quiet Depths","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":7,"interval":2.2,"airChance":0.6,"lanes":[0,1],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":12},
+    {"id":67,"zone":"Midnight Trench","name":"Abyssal Echo","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":8,"interval":1.68,"airChance":0.7,"lanes":[0,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":68,"zone":"Midnight Trench","name":"Moonless Water","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":9,"interval":1.56,"airChance":0.15,"lanes":[0,1,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":69,"zone":"Midnight Trench","name":"Deepwater Siege","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":10,"interval":1.44,"airChance":0.55,"lanes":[0,1,2],"hp":2,"speed":1.87,"fireRate":1.42,"bossHp":0,"repair":5},
+    {"id":70,"zone":"Midnight Trench","name":"Lord of the Trench","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":13,"interval":1.32,"airChance":0.35,"lanes":[0,1,2],"hp":2,"speed":1.72,"fireRate":1.42,"bossHp":26,"repair":25},
+    {"id":71,"zone":"Ember Archipelago","name":"Ashfall","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":7,"interval":1.7,"airChance":0.45,"lanes":[0,1],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":72,"zone":"Ember Archipelago","name":"Cinder Route","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":8,"interval":1.58,"airChance":0.2,"lanes":[1,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":73,"zone":"Ember Archipelago","name":"Firebird Patrol","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":9,"interval":1.46,"airChance":0.9,"lanes":[0,1,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":74,"zone":"Ember Archipelago","name":"Lava Channel","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":10,"interval":1.34,"airChance":0.35,"lanes":[1],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":75,"zone":"Ember Archipelago","name":"Ember Warden","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":11,"interval":1.22,"airChance":0.45,"lanes":[0,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":22,"repair":25},
+    {"id":76,"zone":"Ember Archipelago","name":"Island Shelter","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":7,"interval":2.1,"airChance":0.6,"lanes":[0,1],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":12},
+    {"id":77,"zone":"Ember Archipelago","name":"Volcanic Wake","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":8,"interval":1.58,"airChance":0.7,"lanes":[0,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":78,"zone":"Ember Archipelago","name":"Twin Calderas","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":9,"interval":1.46,"airChance":0.15,"lanes":[0,1,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":79,"zone":"Ember Archipelago","name":"Red Horizon","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":10,"interval":1.34,"airChance":0.55,"lanes":[0,1,2],"hp":2,"speed":1.99,"fireRate":1.49,"bossHp":0,"repair":5},
+    {"id":80,"zone":"Ember Archipelago","name":"Cinder Crown","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":13,"interval":1.22,"airChance":0.35,"lanes":[0,1,2],"hp":2,"speed":1.84,"fireRate":1.49,"bossHp":28,"repair":25},
+    {"id":81,"zone":"Iron Blockade","name":"Steel Curtain","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":8,"interval":1.6,"airChance":0.45,"lanes":[0,1],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":82,"zone":"Iron Blockade","name":"Supply Line","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":9,"interval":1.48,"airChance":0.2,"lanes":[1,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":83,"zone":"Iron Blockade","name":"Iron Wings","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":10,"interval":1.36,"airChance":0.9,"lanes":[0,1,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":84,"zone":"Iron Blockade","name":"Armored Passage","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":11,"interval":1.24,"airChance":0.35,"lanes":[1],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":85,"zone":"Iron Blockade","name":"Blockade Marshal","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":12,"interval":1.12,"airChance":0.45,"lanes":[0,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":24,"repair":25},
+    {"id":86,"zone":"Iron Blockade","name":"Relief Convoy","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":8,"interval":2,"airChance":0.6,"lanes":[0,1],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":12},
+    {"id":87,"zone":"Iron Blockade","name":"Broken Chain","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":9,"interval":1.48,"airChance":0.7,"lanes":[0,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":88,"zone":"Iron Blockade","name":"Fortress Fleet","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":10,"interval":1.36,"airChance":0.15,"lanes":[0,1,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":89,"zone":"Iron Blockade","name":"Final Barrier","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":11,"interval":1.24,"airChance":0.55,"lanes":[0,1,2],"hp":3,"speed":2.11,"fireRate":1.56,"bossHp":0,"repair":5},
+    {"id":90,"zone":"Iron Blockade","name":"Iron Armada","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":14,"interval":1.12,"airChance":0.35,"lanes":[0,1,2],"hp":3,"speed":1.96,"fireRate":1.56,"bossHp":30,"repair":25},
+    {"id":91,"zone":"Blue Horizon","name":"Dawn Signal","tactic":"Patrol","hint":"Clear the first contacts. Automatic escorts cover the lanes.","quota":8,"interval":1.5,"airChance":0.45,"lanes":[0,1],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":92,"zone":"Blue Horizon","name":"Homeward Current","tactic":"Convoy","hint":"Surface-heavy convoy. Hold launch to add fire against armored ships.","quota":9,"interval":1.38,"airChance":0.2,"lanes":[1,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":93,"zone":"Blue Horizon","name":"Last Squadron","tactic":"Air raid","hint":"Aircraft approach in three lanes. Stay deep to avoid surface blasts.","quota":10,"interval":1.26,"airChance":0.9,"lanes":[0,1,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":94,"zone":"Blue Horizon","name":"Final Crossing","tactic":"Channel","hint":"A narrow approach concentrates the fleet. Watch falling depth charges.","quota":11,"interval":1.14,"airChance":0.35,"lanes":[1],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":95,"zone":"Blue Horizon","name":"Horizon Vanguard","tactic":"Vanguard","hint":"Clear the escorts, then destroy the vanguard to advance.","quota":12,"interval":1.02,"airChance":0.45,"lanes":[0,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":26,"repair":25},
+    {"id":96,"zone":"Blue Horizon","name":"Beacon of Hope","tactic":"Recovery","hint":"A lighter patrol gives you time to reposition before the next assault.","quota":8,"interval":1.9,"airChance":0.6,"lanes":[0,1],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":12},
+    {"id":97,"zone":"Blue Horizon","name":"United Fleet","tactic":"Crossfire","hint":"Separated air lanes divide escort fire. Add manual missile support.","quota":9,"interval":1.38,"airChance":0.7,"lanes":[0,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":98,"zone":"Blue Horizon","name":"Open Sea","tactic":"Armor","hint":"Armored ships dominate. Keep moving below their depth charges.","quota":10,"interval":1.26,"airChance":0.15,"lanes":[0,1,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":99,"zone":"Blue Horizon","name":"All Hands","tactic":"Surge","hint":"A mixed surge closes in. Protect the base and maintain supporting fire.","quota":11,"interval":1.14,"airChance":0.55,"lanes":[0,1,2],"hp":3,"speed":2.23,"fireRate":1.63,"bossHp":0,"repair":5},
+    {"id":100,"zone":"Blue Horizon","name":"The Last Flagship","tactic":"Flagship","hint":"Defeat the regional flagship. Its escape ends the mission.","quota":14,"interval":0.9,"airChance":0.35,"lanes":[0,1,2],"hp":3,"speed":2.08,"fireRate":1.63,"bossHp":36,"repair":25}
+];
+const levelFor = stage => LEVELS[Math.max(0,Math.min(99,Math.floor(stage)-1))];
+const sector = () => levelFor(levelNumber);
 
-const restartBtn = { x: WIDTH / 2 - 100, y: 380, w: 200, h: 50 };
+
 
 // --- 최고 점수 (localStorage) ---
 let bestScore = 0;
 try {
-    bestScore = parseInt(localStorage.getItem('ocean_best_score'), 10) || 0;
+    bestScore = Math.max(0, Math.min(1000000000, parseInt(localStorage.getItem('ocean_best_score'), 10) || 0));
 } catch (e) {}
 
 function updateBestScore() {
@@ -176,8 +347,10 @@ let audioCtx = null;
 let isSoundOn = false;
 
 function initAudio() {
-    if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+    } catch(e) {}
 }
 
 const sfx = {
@@ -194,6 +367,7 @@ const sfx = {
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.1);
+        osc.onended=()=>{osc.disconnect();gain.disconnect();};
     },
     explosion: (vol = 0.2, duration = 0.5, lowFreq = 100) => {
         if (!isSoundOn || !audioCtx) return;
@@ -211,11 +385,12 @@ const sfx = {
             const gain = audioCtx.createGain();
             gain.gain.setValueAtTime(vol, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            
+
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(audioCtx.destination);
             noise.start();
+            noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};
         } catch(e) {}
     },
     hit: () => {
@@ -230,6 +405,7 @@ const sfx = {
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.05);
+        osc.onended=()=>{osc.disconnect();gain.disconnect();};
     },
     splash: () => {
         if (!isSoundOn || !audioCtx) return;
@@ -243,7 +419,7 @@ const soundToggle = document.getElementById('soundToggle');
 try {
     if (localStorage.getItem('ocean_sound_on') === 'on') {
         isSoundOn = true;
-        soundToggle.textContent = "Sound: ON";
+        soundToggle.setAttribute("aria-label", "Mute sound"); soundToggle.title="Mute sound";
         soundToggle.classList.add('active');
     }
 } catch (e) {}
@@ -251,7 +427,6 @@ try {
 function unlockAudioOnGesture() {
     if (isSoundOn) {
         initAudio();
-        if (audioCtx) audioCtx.resume();
     }
     window.removeEventListener('click', unlockAudioOnGesture);
     window.removeEventListener('keydown', unlockAudioOnGesture);
@@ -263,39 +438,45 @@ soundToggle.addEventListener('click', () => {
     initAudio();
     isSoundOn = !isSoundOn;
     if (isSoundOn) {
-        audioCtx.resume();
-        soundToggle.textContent = "Sound: ON";
+        soundToggle.setAttribute("aria-label", "Mute sound"); soundToggle.title="Mute sound";
         soundToggle.classList.add('active');
     } else {
-        soundToggle.textContent = "Sound: OFF";
+        soundToggle.setAttribute("aria-label", "Enable sound"); soundToggle.title="Enable sound";
         soundToggle.classList.remove('active');
     }
     try { localStorage.setItem('ocean_sound_on', isSoundOn ? 'on' : 'off'); } catch (e) {}
+    soundToggle.setAttribute('aria-pressed',String(isSoundOn));
 });
+soundToggle.setAttribute('aria-pressed',String(isSoundOn));
 
 // 입력 관리
 const keys = {};
 const GAME_KEYS = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 window.addEventListener('keydown', e => {
+    if(e.ctrlKey||e.metaKey||e.altKey||e.target.closest('button,a,input,select,textarea'))return;
     keys[e.code] = true;
     if (GAME_KEYS.includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR' && (currentState !== GameState.PLAYING)) resetGame();
+    if (e.code === 'KeyP' && !e.repeat) togglePause();
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
-
-canvas.addEventListener('mousedown', e => {
-    if (currentState !== GameState.PLAYING) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
-        if (mouseX >= restartBtn.x && mouseX <= restartBtn.x + restartBtn.w &&
-            mouseY >= restartBtn.y && mouseY <= restartBtn.y + restartBtn.h) {
-            resetGame();
-        }
-    }
+function clearInput(){Object.keys(keys).forEach(key=>keys[key]=false);pointerTarget=null;document.querySelectorAll('.held').forEach(node=>node.classList.remove('held'));}
+function togglePause(){paused=!paused;clearInput();lastTime=0;document.getElementById('pauseToggle').setAttribute('aria-label',paused?'Resume mission':'Pause mission');document.getElementById('pauseToggle').title=paused?'Resume mission':'Pause mission';document.getElementById('pauseToggle').setAttribute('aria-pressed',String(paused));document.getElementById('pauseBadge').hidden=!paused;}
+document.getElementById('pauseToggle').onclick=togglePause;
+document.getElementById('restartButton').onclick=()=>{resetGame();canvas.focus({preventScroll:true});};
+window.addEventListener('blur',clearInput);
+document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;});
+document.querySelectorAll('[data-key]').forEach(button=>{
+    button.addEventListener('pointerdown',event=>{event.preventDefault();button.setPointerCapture(event.pointerId);keys[button.dataset.key]=true;button.classList.add('held');idleTime=0;unlockAudioOnGesture();});
+    const release=()=>{keys[button.dataset.key]=false;button.classList.remove('held');};
+    button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
+    button.addEventListener('keydown',event=>{if(event.code==='Space'||event.code==='Enter'){event.preventDefault();keys[button.dataset.key]=true;}});
+    button.addEventListener('keyup',release);button.addEventListener('blur',release);
 });
+function pointOnCanvas(event){const r=canvas.getBoundingClientRect();return {x:(event.clientX-r.left)*WIDTH/r.width,y:(event.clientY-r.top)*HEIGHT/r.height};}
+canvas.addEventListener('pointerdown',event=>{const p=pointOnCanvas(event);if(p.y<SURFACE_LAYER||currentState!==GameState.PLAYING)return;canvas.setPointerCapture(event.pointerId);pointerTarget={...p,id:event.pointerId};idleTime=0;unlockAudioOnGesture();});
+canvas.addEventListener('pointermove',event=>{if(pointerTarget?.id===event.pointerId)pointerTarget={...pointOnCanvas(event),id:event.pointerId};});
+['pointerup','pointercancel','lostpointercapture'].forEach(name=>canvas.addEventListener(name,()=>pointerTarget=null));
 
 const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
 
@@ -308,7 +489,7 @@ class Particle {
     update(dt) {
         this.x += this.vx * dt * 60;
         this.y += this.vy * dt * 60;
-        if (this.type === 'bubble') this.vy -= 0.03; 
+        if (this.type === 'bubble') this.vy -= 1.8*dt;
         this.life -= dt;
     }
     draw() {
@@ -329,7 +510,7 @@ class Explosion {
     update(dt) { this.life -= dt; }
     draw() {
         const ratio = 1 - this.life / this.maxLife;
-        const currentR = this.radius * Math.sin(ratio * Math.PI);
+        const currentR = Math.max(0.01,this.radius * Math.sin(Math.max(0,Math.min(1,ratio)) * Math.PI));
         const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, currentR);
         grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
         grad.addColorStop(0.2, 'rgba(255, 255, 100, 0.7)');
@@ -351,9 +532,13 @@ class Missile {
         this.accelerated = false;
         this.active = true;
         this.turnSpeed = 0.05;
+        this.previousX=x;this.previousY=y;this.life=12;
         if (isPlayer) sfx.launch(200);
     }
     update(dt) {
+        this.previousX=this.x;this.previousY=this.y;this.life-=dt;
+        if(!this.active)return;
+        if(!this.target?.active)this.target=getNearestEnemy(this.x,this.y);
         if (this.isPlayer && !this.accelerated && this.y < SURFACE_LAYER) {
             this.accelerated = true;
             this.speed = 6.8;
@@ -366,16 +551,16 @@ class Missile {
             let diff = targetAngle - this.angle;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            this.angle += diff * this.turnSpeed;
+            this.angle += diff * (1-Math.pow(1-this.turnSpeed,dt*60));
         }
         this.x += Math.cos(this.angle) * this.speed * dt * 60;
         this.y += Math.sin(this.angle) * this.speed * dt * 60;
 
-        if (Math.random() < 0.3) {
+        if (!reducedMotion.matches && Math.random() < 1-Math.exp(-18*dt)) {
             particles.push(new Particle(this.x, this.y, this.accelerated ? '#fff' : '#0af', 1, 0, 0, 0.3));
         }
 
-        if (this.x < 0 || this.x > WIDTH || this.y < 0 || this.y > HEIGHT) this.active = false;
+        if (this.life<=0 || this.x < -40 || this.x > WIDTH+120 || this.y < -40 || this.y > HEIGHT+40) this.active = false;
     }
     draw() {
         ctx.save();
@@ -399,6 +584,7 @@ class Bomb {
         this.timer = type === 'depth' ? 4.0 : 999;
     }
     update(dt) {
+        if(!this.active)return;
         this.y += this.vy * dt * 60;
         if (this.type === 'depth') {
             this.timer -= dt;
@@ -413,7 +599,7 @@ class Bomb {
         if (!this.active) return;
         this.active = false;
         explosions.push(new Explosion(this.x, this.y, radius));
-        checkExplosionDamage(this.x, this.y, radius);
+        checkExplosionDamage(this.x, this.y, radius, true);
         sfx.explosion(0.3, 0.6, 120);
     }
     draw() {
@@ -429,8 +615,8 @@ class Bomb {
 
 class Enemy {
     constructor(type, lane) {
-        this.type = type; 
-        this.lane = lane; 
+        this.type = type;
+        this.lane = lane;
         this.x = WIDTH + 100;
         if (type === 'air') {
             this.y = 45 + (lane * 45);
@@ -439,23 +625,25 @@ class Enemy {
         }
         this.baseSpeed = (0.15 + Math.random() * 0.1);
         this.speed = this.baseSpeed;
-        this.hp = type === 'air' ? 1 : 4;
+        this.hp = type === 'air' ? sector().hp : 3+sector().hp;
+        this.maxHp=this.hp;
         this.active = true;
         this.shootTimer = 2 + Math.random() * 4;
     }
     update(dt) {
-        this.speed = this.baseSpeed * (1 + (gameTime / 60));
+        if(!this.active)return;
+        this.speed = this.baseSpeed * sector().speed;
         this.x -= this.speed * dt * 60;
         this.shootTimer -= dt;
         if (this.shootTimer <= 0) {
             this.shoot();
-            this.shootTimer = (3 + Math.random() * 5) / (1 + gameTime / 150);
+            this.shootTimer = (3 + Math.random() * 5) / sector().fireRate;
         }
         if (this.x < 80) {
             base.hp = Math.max(0, base.hp - 15);
             this.active = false;
+            if(this.flagship){finishMission(false);return;}
             explosions.push(new Explosion(this.x, this.y, 80));
-            checkExplosionDamage(this.x, this.y, 80);
             sfx.explosion(0.4, 0.8, 80);
         }
     }
@@ -467,17 +655,22 @@ class Enemy {
         ctx.save();
         ctx.translate(this.x, this.y);
         if (this.type === 'air') {
-            ctx.fillStyle = '#ff3b3b';
+            ctx.fillStyle = '#e6a78c';
             ctx.beginPath();
             ctx.moveTo(-25, 0); ctx.lineTo(15, -8); ctx.lineTo(25, 0); ctx.lineTo(15, 8); ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#900';
-            ctx.fillRect(-10, -18, 5, 36); 
+            ctx.fillStyle = '#914f63';
+            ctx.fillRect(-10, -18, 5, 36);
+            ctx.fillStyle='#c2e2ed';ctx.fillRect(-14,-3,12,6);
         } else {
-            ctx.fillStyle = '#ff8c00';
+            if(this.flagship)ctx.scale(1.45,1.3);
+            ctx.fillStyle = this.flagship?'#b8a5c9':'#cf977c';
             ctx.beginPath();
             ctx.moveTo(-45, 0); ctx.lineTo(35, 0); ctx.lineTo(25, 20); ctx.lineTo(-35, 20); ctx.closePath(); ctx.fill();
             ctx.fillStyle = '#333';
             ctx.fillRect(-10, -15, 15, 15);
+            ctx.fillStyle='#e6d6b5';ctx.fillRect(-24,-6,48,4);ctx.fillStyle='#aac9db';ctx.fillRect(-8,-13,9,5);
+            ctx.strokeStyle='#a7d8e254';ctx.beginPath();ctx.moveTo(-39,23);ctx.lineTo(54,23);ctx.stroke();
+            if(this.flagship){ctx.fillStyle='#112335';ctx.fillRect(-40,-29,80,4);ctx.fillStyle='#eac6f8';ctx.fillRect(-40,-29,80*Math.max(0,this.hp/this.maxHp),4);}
         }
         ctx.restore();
     }
@@ -501,7 +694,7 @@ class EscortShip {
             let target = getNearestEnemy(this.x, this.y, 650);
             if (target) {
                 this.gunAngle = Math.atan2(target.y - this.y, target.x - this.x);
-                if (Math.random() < 0.72 * dt) { // 0.012/frame @60fps -> per-second rate
+                if (Math.random() < 1-Math.exp(-0.9*dt)) {
                     missiles.push(new Missile(this.x, this.y - 15, target, false));
                     this.heat += 20;
                     if (this.heat >= 100) this.overheated = true;
@@ -513,11 +706,12 @@ class EscortShip {
     draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.fillStyle = '#555e6b';
+        ctx.fillStyle = '#8ba8bd';
         ctx.beginPath();
         ctx.moveTo(-45, 0); ctx.lineTo(35, 0); ctx.lineTo(25, 25); ctx.lineTo(-35, 25); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#3a414a';
         ctx.fillRect(-12, -12, 16, 12);
+        ctx.fillStyle='#93e2d1';ctx.fillRect(-8,-9,8,5);ctx.fillStyle='#e2c389';ctx.fillRect(-32,4,53,3);
         ctx.save();
         ctx.translate(5, -8);
         ctx.rotate(this.gunAngle);
@@ -540,9 +734,15 @@ function resetGame() {
     score = 0; gameTime = 0; restartTimer = 7.0; idleTime = 0;
     enemies = []; missiles = []; bombs = []; explosions = []; particles = [];
     sub = { x: 250, y: 460, hp: 100, manualCooldown: 0, autoCooldown: 0 };
-    base = { x: 60, y: 450, hp: 120 }; 
+    base = { x: 60, y: 450, hp: 120 };
     escorts = [new EscortShip(0), new EscortShip(1), new EscortShip(2)];
     currentState = GameState.PLAYING;
+    levelNumber=1;spawnedThisLevel=0;bossDefeated=false;spawnClock=1.5;flagshipSpawned=false;lastTime=0;clearInput();
+    if(paused)togglePause();
+    document.getElementById('result').hidden=true;
+    sub.invulnerable=0;
+    syncHUD();
+    if(document.activeElement===document.getElementById('restartButton'))canvas.focus({preventScroll:true});
 }
 
 function createSplash(x, y, count) {
@@ -551,14 +751,18 @@ function createSplash(x, y, count) {
     }
 }
 
-function checkExplosionDamage(ex, ey, er) {
-    if (dist(sub.x, sub.y, ex, ey) < er + 20) sub.hp = Math.max(0, sub.hp - 12);
-    if (dist(base.x, base.y, ex, ey) < er + 55) base.hp = Math.max(0, base.hp - 10);
+function checkExplosionDamage(ex, ey, er, hostile=false) {
+    if(hostile){
+        if(sub.invulnerable<=0 && dist(sub.x,sub.y,ex,ey)<er+20){sub.hp=Math.max(0,sub.hp-5);sub.invulnerable=1.2;}
+        if(dist(base.x,base.y,ex,ey)<er+55)base.hp=Math.max(0,base.hp-10);
+        return;
+    }
     enemies.forEach(e => {
         if (e.active && dist(e.x, e.y, ex, ey) < er + 30) {
-            e.hp -= 2.5; 
+            e.hp -= 2.5;
             if (e.hp <= 0) {
-                e.active = false; score += e.type === 'air' ? 100 : 80;
+                e.active = false; score += e.flagship?2000:e.type === 'air' ? 100 : 160;
+                if(e.flagship)bossDefeated=true;
                 explosions.push(new Explosion(e.x, e.y, 60));
                 sfx.explosion(0.2, 0.4, 150);
             }
@@ -567,21 +771,24 @@ function checkExplosionDamage(ex, ey, er) {
 }
 
 function update(time) {
-    const dt = Math.min((time - lastTime) / 1000, 0.1);
+    if(paused||document.hidden){lastTime=0;return;}
+    const dt = lastTime===0?0:Math.max(0,Math.min((time - lastTime) / 1000, 0.1));
     lastTime = time;
     if (currentState !== GameState.PLAYING) {
         restartTimer -= dt;
         if (restartTimer <= 0) resetGame();
+        syncHUD();
         return;
     }
     gameTime += dt;
+    sub.invulnerable=Math.max(0,sub.invulnerable-dt);
 
-    if (Math.random() < 7.2 * dt) { // 0.12/frame @60fps -> per-second rate
+    if (!reducedMotion.matches && Math.random() < 1-Math.exp(-7.2*dt)) {
         particles.push(new Particle(Math.random() * WIDTH, HEIGHT + 10, 'rgba(255,255,255,0.15)', Math.random() * 2 + 1, 0, -1, 5, 'bubble'));
     }
 
     const subSpeed = 2.6;
-    const movementInput = keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] ||
+    const movementInput = pointerTarget || keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'] ||
         keys['ArrowUp'] || keys['KeyW'] || keys['ArrowDown'] || keys['KeyS'] || keys['Space'];
     if (movementInput) {
         idleTime = 0;
@@ -595,8 +802,13 @@ function update(time) {
         const patrolRangeX = ((WIDTH - 50) - 160) / 2 * 0.7;
         const patrolCenterY = (SURFACE_LAYER + 40 + (HEIGHT - 40)) / 2;
         const patrolRangeY = ((HEIGHT - 40) - (SURFACE_LAYER + 40)) / 2 * 0.6;
-        sub.x = patrolCenterX + Math.sin(gameTime * 0.3) * patrolRangeX;
-        sub.y = patrolCenterY + Math.sin(gameTime * 0.15) * patrolRangeY;
+        const targetX=patrolCenterX+Math.sin(gameTime*0.3)*patrolRangeX;
+        const targetY=patrolCenterY+Math.sin(gameTime*0.15)*patrolRangeY;
+        sub.x+=Math.max(-70*dt,Math.min(70*dt,targetX-sub.x));
+        sub.y+=Math.max(-40*dt,Math.min(40*dt,targetY-sub.y));
+    } else if(pointerTarget) {
+        sub.x+=Math.max(-156*dt,Math.min(156*dt,pointerTarget.x-sub.x));
+        sub.y+=Math.max(-110*dt,Math.min(110*dt,pointerTarget.y-sub.y));
     } else {
         if (keys['ArrowLeft'] || keys['KeyA']) sub.x -= subSpeed * dt * 60;
         if (keys['ArrowRight'] || keys['KeyD']) sub.x += subSpeed * dt * 60;
@@ -621,51 +833,85 @@ function update(time) {
 
     escorts.forEach(e => e.update(dt));
 
-    let spawnRate = (0.007 + (gameTime / 1500)) * 60; // per-frame(60fps) 확률을 초당 발생률로 환산
-    if (Math.random() < spawnRate * dt) {
-        const lane = Math.floor(Math.random() * 3);
-        const type = Math.random() > 0.4 ? 'air' : 'surface';
+    spawnClock-=dt;
+    if(spawnClock<=0 && enemies.length<60 && spawnedThisLevel<sector().quota) {
+        spawnClock=sector().interval;spawnedThisLevel++;
+        const lanes=sector().lanes;
+        const lane = lanes[(spawnedThisLevel-1)%lanes.length];
+        const type = Math.random() < sector().airChance ? 'air' : 'surface';
         enemies.push(new Enemy(type, lane));
     }
+    if(spawnedThisLevel>=sector().quota&&!enemies.some(e=>e.active)&&sector().bossHp&&!flagshipSpawned)spawnFlagship();
 
     [...enemies, ...missiles, ...bombs, ...explosions, ...particles].forEach(e => e.update(dt));
+    if(currentState!==GameState.PLAYING){syncHUD();return;}
 
     missiles.forEach(m => {
         if (!m.active) return;
-        enemies.forEach(e => {
-            if (e.active && dist(m.x, m.y, e.x, e.y) < 35) {
+        const impacts=[...enemies.filter(e=>e.active).map(e=>({entity:e,radius:e.flagship?55:35,bomb:false})),...bombs.filter(b=>b.active).map(b=>({entity:b,radius:20,bomb:true}))]
+            .map(hit=>({...hit,t:segmentHit(m.previousX,m.previousY,m.x,m.y,hit.entity.x,hit.entity.y,hit.radius)})).filter(hit=>hit.t!==null).sort((a,b)=>a.t-b.t);
+        const hit=impacts[0];
+        if(hit){
+            m.active=false;
+            if(hit.bomb){hit.entity.explode();return;}
+            const e=hit.entity;
+            if (e.active) {
                 m.active = false; e.hp--;
-                explosions.push(new Explosion(m.x, m.y, 35, 0.3)); 
+                explosions.push(new Explosion(m.x, m.y, 35, 0.3));
                 sfx.hit();
-                
+
                 if (e.hp <= 0) {
-                    e.active = false; score += e.type === 'air' ? 100 : 80;
+                    e.active = false; score += e.flagship?2000:e.type === 'air' ? 100 : 160;
+                    if(e.flagship)bossDefeated=true;
                     explosions.push(new Explosion(e.x, e.y, 75));
                     checkExplosionDamage(e.x, e.y, 75);
                 }
             }
-        });
-        bombs.forEach(b => {
-            if (b.active && dist(m.x, m.y, b.x, b.y) < 20) {
-                m.active = false; b.explode();
-            }
-        });
+        }
     });
 
-    enemies = enemies.filter(e => e.active);
-    missiles = missiles.filter(m => m.active);
-    bombs = bombs.filter(b => b.active);
-    explosions = explosions.filter(e => e.life > 0);
-    particles = particles.filter(p => p.life > 0);
+    enemies = enemies.filter(e => e.active).slice(-60);
+    missiles = missiles.filter(m => m.active).slice(-100);
+    bombs = bombs.filter(b => b.active).slice(-100);
+    explosions = explosions.filter(e => e.life > 0).slice(-50);
+    particles = particles.filter(p => p.life > 0).slice(-350);
 
     updateBestScore();
-    if (sub.hp <= 0 || base.hp <= 0) currentState = GameState.LOSE;
-    if (gameTime >= TARGET_TIME || score >= TARGET_SCORE) currentState = GameState.WIN;
+    if (sub.hp <= 0 || base.hp <= 0) finishMission(false);
+    else if(spawnedThisLevel>=sector().quota&&!enemies.length&&(!sector().bossHp||bossDefeated))advanceLevel();
+    syncHUD();
+}
+
+function segmentHit(ax,ay,bx,by,cx,cy,r){
+    const dx=bx-ax,dy=by-ay,ox=ax-cx,oy=ay-cy,a=dx*dx+dy*dy,c=ox*ox+oy*oy-r*r;
+    if(c<=0)return 0;if(a===0)return null;
+    const b=2*(ox*dx+oy*dy),d=b*b-4*a*c;if(d<0)return null;
+    const t=(-b-Math.sqrt(d))/(2*a);return t>=0&&t<=1?t:null;
+}
+function spawnFlagship(){const ship=new Enemy('surface',1);ship.hp=sector().bossHp;ship.maxHp=ship.hp;ship.flagship=true;ship.baseSpeed=.12;enemies.push(ship);flagshipSpawned=true;}
+function advanceLevel(){
+    if(levelNumber===TOTAL_LEVELS){finishMission(true);return;}
+    sub.hp=Math.min(100,sub.hp+sector().repair);base.hp=Math.min(120,base.hp+(sector().bossHp?10:2));
+    levelNumber++;spawnedThisLevel=0;flagshipSpawned=false;bossDefeated=false;spawnClock=2;
+    enemies=[];bombs=[];missiles=[];explosions=[];
+}
+function finishMission(win){currentState=win?GameState.WIN:GameState.LOSE;clearInput();updateBestScore();document.getElementById('result').hidden=false;document.getElementById('resultTitle').textContent=win?'100 stages · Ocean secured':'Fleet lost';document.getElementById('restartButton').focus({preventScroll:true});}
+function syncHUD(){
+    document.getElementById('sectorName').textContent=`${String(levelNumber).padStart(3,'0')} / ${sector().name}`;
+    document.getElementById('sectorHint').textContent=sector().hint;
+    document.getElementById('scoreValue').textContent=score.toLocaleString();document.getElementById('bestValue').textContent=`BEST ${bestScore.toLocaleString()}`;
+    document.getElementById('missionTime').textContent=`STAGE ${levelNumber} / 100 · ${Math.floor(gameTime/60)}:${String(Math.floor(gameTime%60)).padStart(2,'0')}`;
+    document.getElementById('missionProgress').value=currentState===GameState.WIN?100:levelNumber-1;document.getElementById('healthValue').textContent=`Hull ${sub.hp} · Base ${base.hp}`;
+    document.querySelector('.dashboard .eyebrow').textContent=sector().zone;
+    document.getElementById('launchStatus').textContent=sub.manualCooldown>0?`Rearming ${sub.manualCooldown.toFixed(1)}s`:'Ready · hold to launch';
+    document.getElementById('controlMode').textContent=idleTime>6?'AUTO PATROL':'MANUAL HELM';
+    if(currentState!==GameState.PLAYING){document.getElementById('resultScore').textContent=`Stage ${levelNumber} / 100 · Score ${score.toLocaleString()} · Best ${bestScore.toLocaleString()}`;document.getElementById('resultCountdown').textContent=`Next deployment in ${Math.ceil(restartTimer)}s`;}
 }
 
 function getNearestEnemy(x, y, range = 9999) {
     let nearest = null; let minDist = range;
     enemies.forEach(e => {
+        if(!e.active)return;
         let d = dist(x, y, e.x, e.y);
         if (d < minDist) { minDist = d; nearest = e; }
     });
@@ -674,26 +920,38 @@ function getNearestEnemy(x, y, range = 9999) {
 
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const palettes=[['#142c4d','#7093ad','#346c88'],['#18444f','#8bc7c0','#327c83'],['#244a73','#b0c9db','#3c83a5'],['#293c50','#879aa8','#426474'],['#20283f','#646e8a','#33495e'],['#243e59','#a8cfda','#4d8798'],['#101c37','#3e5276','#1f395b'],['#4b2d48','#d79e85','#6b6379'],['#272d40','#858c9d','#3e5368'],['#2b536c','#f0c8a2','#4c879a']];
+    const palette=palettes[Math.min(9,Math.floor((levelNumber-1)/10))];
     const sky = ctx.createLinearGradient(0, 0, 0, AIR_LAYER);
-    sky.addColorStop(0, '#02050a'); sky.addColorStop(1, '#0c1a35');
+    sky.addColorStop(0, palette[0]); sky.addColorStop(1, palette[1]);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, WIDTH, AIR_LAYER);
     const surface = ctx.createLinearGradient(0, AIR_LAYER, 0, SURFACE_LAYER);
-    surface.addColorStop(0, '#0c2244'); surface.addColorStop(1, '#050c18');
+    surface.addColorStop(0, palette[2]); surface.addColorStop(1, '#174158');
     ctx.fillStyle = surface; ctx.fillRect(0, AIR_LAYER, WIDTH, SURFACE_LAYER - AIR_LAYER);
     const sea = ctx.createLinearGradient(0, SURFACE_LAYER, 0, HEIGHT);
-    sea.addColorStop(0, '#051833'); sea.addColorStop(1, '#000000');
+    sea.addColorStop(0, '#10344b'); sea.addColorStop(1, '#071b2d');
     ctx.fillStyle = sea; ctx.fillRect(0, SURFACE_LAYER, WIDTH, HEIGHT - SURFACE_LAYER);
+    // Layered silhouettes and deterministic light keep the scene legible and inexpensive.
+    ctx.fillStyle='#f3d9af';ctx.beginPath();ctx.arc(780,65,25,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#bed9e221';for(let i=0;i<5;i++){ctx.beginPath();ctx.ellipse(i*210+80,40+i%2*28,75,9,0,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#1b3d55';ctx.beginPath();ctx.moveTo(0,AIR_LAYER);for(let x=0;x<=WIDTH;x+=30)ctx.lineTo(x,AIR_LAYER-15-16*Math.sin(x*.013)-8*Math.cos(x*.036));ctx.lineTo(WIDTH,AIR_LAYER);ctx.fill();
+    ctx.strokeStyle='#9cdae61c';ctx.lineWidth=1;
+    for(let i=0;i<24;i++){const x=(i*139+(reducedMotion.matches?0:gameTime*8))%WIDTH,y=195+(i*29)%150;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+24+i%4*12,y);ctx.stroke();}
+    ctx.fillStyle='#8cdad807';for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(90+i*170,SURFACE_LAYER);ctx.lineTo(180+i*170,HEIGHT);ctx.lineTo(230+i*170,HEIGHT);ctx.lineTo(110+i*170,SURFACE_LAYER);ctx.fill();}
+    ctx.fillStyle='#0a2334';for(let i=0;i<32;i++){ctx.beginPath();ctx.ellipse(i*33,HEIGHT,25,8+i%4*5,0,0,Math.PI*2);ctx.fill();}
 
     ctx.strokeStyle = 'rgba(76, 201, 240, 0.4)';
     ctx.lineWidth = 2; ctx.beginPath();
     for (let x = 0; x <= WIDTH; x += 25) {
-        ctx.lineTo(x, SURFACE_LAYER + Math.sin(x * 0.05 + gameTime * 2.2) * 5);
+        ctx.lineTo(x, SURFACE_LAYER + Math.sin(x * 0.05 + (reducedMotion.matches?0:gameTime * 2.2)) * 5);
     }
     ctx.stroke();
 
     ctx.fillStyle = '#1e2229';
     ctx.beginPath(); ctx.arc(base.x, base.y + 25, 65, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = '#222'; ctx.fillRect(base.x - 45, base.y - 5, 90, 35);
+    ctx.fillStyle = '#47667a'; ctx.fillRect(base.x - 45, base.y - 5, 90, 35);
+    ctx.fillStyle='#a8e8e0';for(let i=0;i<4;i++)ctx.fillRect(base.x-31+i*18,base.y+4,8,7);
+    ctx.strokeStyle='#729aac';ctx.lineWidth=2;ctx.strokeRect(base.x-45,base.y-5,90,35);
     ctx.fillStyle = '#0f0'; ctx.fillRect(base.x - 35, base.y - 15, 70 * (base.hp / 120), 5);
 
     escorts.forEach(e => e.draw());
@@ -701,34 +959,24 @@ function draw() {
     ctx.save();
     ctx.translate(sub.x, sub.y);
     const subGrad = ctx.createLinearGradient(0, -18, 0, 18);
-    subGrad.addColorStop(0, '#00faff'); subGrad.addColorStop(1, '#004466');
+    subGrad.addColorStop(0, '#d6e5d1'); subGrad.addColorStop(.4, '#86bcb1'); subGrad.addColorStop(1, '#346b79');
     ctx.fillStyle = subGrad;
     ctx.beginPath(); ctx.ellipse(0, 0, 38, 16, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#003344'; ctx.beginPath(); ctx.arc(18, -4, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#333'; ctx.fillRect(-6, -24, 4, 14); 
+    ctx.fillStyle = '#333'; ctx.fillRect(-6, -24, 4, 14);
+    ctx.fillStyle='#b9dcd4';ctx.fillRect(-10,-21,17,10);ctx.fillStyle='#eac477';ctx.fillRect(-28,7,47,3);
+    ctx.fillStyle='#15384b';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(-15+i*13,-2,4,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle='#8cbcad';ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(-46,-15);ctx.lineTo(-46,15);ctx.closePath();ctx.fill();
+    if(sub.invulnerable>0){ctx.strokeStyle='#cffaf0';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,47,25,0,0,Math.PI*2);ctx.stroke();}
     ctx.fillStyle = '#0f0'; ctx.fillRect(-28, 28, 56 * (sub.hp / 100), 4);
     ctx.restore();
 
     [...enemies, ...missiles, ...bombs, ...explosions, ...particles].forEach(e => e.draw());
 
-    // UI
-    ctx.fillStyle = 'rgba(0, 250, 255, 0.9)';
-    ctx.font = 'bold 20px Segoe UI';
-    ctx.fillText(`SCORE: ${score.toLocaleString()} / ${TARGET_SCORE.toLocaleString()}`, 25, 40);
-    ctx.fillStyle = '#ffd700';
-    ctx.font = '13px Segoe UI';
-    ctx.fillText(`BEST: ${bestScore.toLocaleString()}`, 25, 60);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`PROGRESS: ${gameTime.toFixed(1)}s / ${TARGET_TIME}s`, 25, 80);
-
-    drawGauge(WIDTH - 190, 25, 160, "M-LAUNCH", 1 - sub.manualCooldown / 1.1, sub.manualCooldown <= 0 ? '#0f0' : '#f80');
-    drawGauge(WIDTH - 190, 50, 160, "A-LAUNCH", 1 - sub.autoCooldown / 2.2, '#0af');
-    
-    let maxHeat = Math.max(...escorts.map(e => e.heat));
-    let isAnyOverheated = escorts.some(e => e.overheated);
-    drawGauge(WIDTH - 190, 75, 160, "FLEET HEAT", maxHeat / 100, isAnyOverheated ? '#f00' : '#ff0');
-
-    if (currentState !== GameState.PLAYING) drawGameOverOverlay();
+    // Gauges stay in the unoccupied lower-water strip; status text lives in the DOM.
+    drawGauge(180, HEIGHT-19, 100, 'HULL', sub.hp/100, '#81dfc4');
+    drawGauge(430, HEIGHT-19, 100, 'BASE', base.hp/120, '#9dc9ff');
+    drawGauge(720, HEIGHT-19, 170, 'ESCORT HEAT', Math.max(...escorts.map(e=>e.heat))/100, '#f2bf7e');
 }
 
 function drawGauge(x, y, w, label, ratio, color) {
@@ -740,31 +988,9 @@ function drawGauge(x, y, w, label, ratio, color) {
     ctx.textAlign = 'left';
 }
 
-function drawGameOverOverlay() {
-    ctx.fillStyle = 'rgba(0,0,0,0.92)';
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    const win = currentState === GameState.WIN;
-    ctx.fillStyle = win ? '#0f0' : '#f44';
-    ctx.font = 'bold 56px Segoe UI';
-    ctx.textAlign = 'center';
-    ctx.fillText(win ? "MISSION SUCCESS" : "MISSION FAILED", WIDTH / 2, HEIGHT / 2 - 40);
-    ctx.font = '22px Segoe UI'; ctx.fillStyle = '#fff';
-    ctx.fillText(`SCORE: ${score.toLocaleString()}`, WIDTH / 2, HEIGHT / 2 + 10);
-    ctx.font = '16px Segoe UI'; ctx.fillStyle = '#ffd700';
-    ctx.fillText(`BEST: ${bestScore.toLocaleString()}`, WIDTH / 2, HEIGHT / 2 + 34);
-    ctx.font = '22px Segoe UI'; ctx.fillStyle = '#fff';
-    ctx.fillText(`${restartTimer.toFixed(1)}s to Auto-Reboot...`, WIDTH / 2, HEIGHT / 2 + 62);
-    ctx.fillStyle = '#1a1d23'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-    ctx.fillRect(restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
-    ctx.strokeRect(restartBtn.x, restartBtn.y, restartBtn.w, restartBtn.h);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Segoe UI';
-    ctx.fillText("IMMEDIATE REBOOT", WIDTH / 2, restartBtn.y + 32);
-    ctx.textAlign = 'left';
-}
-
 function loop(time) {
     update(time);
-    draw();
+    if(!document.hidden)draw();
     requestAnimationFrame(loop);
 }
 
