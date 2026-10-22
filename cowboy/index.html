@@ -334,6 +334,41 @@
           #top-bar .bunt-logo { font-size:12px; }
           #top-bar .arena-control { width:40px; height:40px; min-width:40px; min-height:40px; }
         }
+        /* The toolbar sizes itself to the arena, not the window, so the brand never collides with buttons. */
+        .battlefield { container-type:inline-size; }
+        @container (max-width:400px) {
+          #top-bar { inset:6px 6px auto !important; padding:3px 4px 3px 8px !important; gap:4px !important; }
+          #top-bar .bunt-logo { font-size:10px !important; letter-spacing:.02em; }
+          #top-bar .nav-controls { gap:3px !important; }
+          #top-bar .arena-control { width:32px !important; height:32px !important; min-width:32px !important; min-height:32px !important; border-radius:8px !important; }
+          #top-bar .arena-control svg { width:16px; height:16px; }
+          #language-btn { font-size:10px !important; }
+        }
+        @media (max-width:760px) and (max-height:739px) { #chapter-route { display:none; } }
+        /* Landscape phones: arena left, status column right, weapons as a vertical rail. */
+        @media (orientation:landscape) and (max-height:500px) {
+          body { flex-direction:row; align-items:center; justify-content:center; padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+          #viewport { display:grid; grid-template-columns:var(--game-width) 170px; grid-template-rows:auto auto 1fr; width:auto; margin:0; border-radius:14px 0 0 14px; }
+          .battlefield { grid-column:1; grid-row:1/4; }
+          #hud-overlay { grid-column:2; grid-row:1; grid-template-columns:1fr; gap:6px; padding:8px 10px; }
+          #chapter-route,.play-hint { display:none; }
+          #battle-status { grid-column:2; grid-row:2; }
+          #battle-status-hint { font-size:9px; padding:0 6px; text-align:center; }
+          #boss-hud { padding:6px 8px; font-size:9px; flex-wrap:wrap; gap:3px; }
+          .wave-summary { text-align:left; }
+          #hero-avatar,#level-hint,.wave-summary > small:last-child { display:none !important; }
+          #level-name { font-size:14px !important; }
+          #weapon-dock { width:68px; height:calc(var(--game-width) / 1.6); flex-direction:column; padding:6px; gap:5px; border-radius:0 14px 14px 0; border-left:0; }
+          .weapon-slot { flex:1 1 0; height:auto !important; min-height:0; border-radius:9px; }
+          .weapon-slot > svg:not(.reload-svg) { width:18px; height:18px; }
+          .slot-name { font-size:7px !important; margin-top:2px; }
+        }
+        /* On phones the cosmetic roster lives in the Customize panel to give the arena more room. */
+        #hero-dock.in-panel { width:auto; padding:0; gap:6px; background:none; border:0; flex-direction:column; align-items:stretch; }
+        #hero-dock.in-panel .roster-label { display:none; }
+        #hero-dock.in-panel #hero-choices { flex-direction:column; gap:6px; }
+        #hero-dock.in-panel .hero-choice { min-height:52px; padding:4px 10px; }
+        #hero-dock.in-panel .hero-choice small { display:block; }
         .hp-row #hero-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         #hp-text { white-space:nowrap; flex:none; }
         @media (max-width:360px) {
@@ -1229,20 +1264,32 @@
                 const hintHeight=hint.getBoundingClientRect().height+parseFloat(hintStyle.marginTop)+parseFloat(hintStyle.marginBottom);
                 // Measure the slot row, not the dock: on tall phones the dock grows to fill leftover height.
                 const fullBleed=matchMedia('(max-width:760px) and (orientation:portrait)').matches;
-                const slotRow=fullBleed?100:document.querySelector('.weapon-slot').getBoundingClientRect().height+16;
+                const tallPhone=matchMedia('(max-width:760px) and (orientation:portrait) and (min-height:740px)').matches;
+                const slotRow=tallPhone?100:document.querySelector('.weapon-slot').getBoundingClientRect().height+16;
+                const heroDockEl=document.getElementById('hero-dock');
                 const chrome=document.getElementById('hud-overlay').getBoundingClientRect().height+
                     document.getElementById('chapter-route').getBoundingClientRect().height+38+
-                    document.getElementById('hero-dock').getBoundingClientRect().height+
+                    (heroDockEl.classList.contains('in-panel')?0:heroDockEl.getBoundingClientRect().height)+
                     slotRow+hintHeight+18;
                 const availableWidth=Math.max(1,Math.min(1000,innerWidth-(fullBleed?0:24)));
                 const minimum=innerWidth>760&&innerHeight>700?600:280;
-                const width=Math.max(Math.min(minimum,availableWidth),Math.min(availableWidth,Math.max(0,innerHeight-chrome)*1.6));
+                const landscapePhone=matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+                const width=landscapePhone?Math.max(200,Math.min(innerHeight*1.6,innerWidth-170-68-8)):Math.max(Math.min(minimum,availableWidth),Math.min(availableWidth,Math.max(0,innerHeight-chrome)*1.6));
                 const next=Math.floor(width);
                 if(document.documentElement.style.getPropertyValue('--game-width')!==`${next}px`)document.documentElement.style.setProperty('--game-width',`${next}px`);
             });
         }
         window.addEventListener('resize',queueGameFit);
-        queueGameFit();
+        const heroDock=document.getElementById('hero-dock'),compactLayout=matchMedia('(max-width:760px), (max-height:500px)');
+        function placeHeroDock(){
+            const inPanel=compactLayout.matches;
+            if(inPanel&&heroDock.parentNode!==skinPanel)skinPanel.insertBefore(heroDock,document.getElementById('skin-import'));
+            else if(!inPanel&&heroDock.parentNode===skinPanel)document.getElementById('weapon-dock').before(heroDock);
+            heroDock.classList.toggle('in-panel',inPanel);
+            queueGameFit();
+        }
+        compactLayout.addEventListener('change',placeHeroDock);
+        placeHeroDock();
 
         try {
             if(localStorage.getItem('cowboy_sound_on') === 'on') {
