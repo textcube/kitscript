@@ -959,6 +959,76 @@ html.pxui .overlay p { font-size: var(--fs-b) !important; line-height: var(--lh-
 html.pxui #stuck-timer { font-size: var(--fs-h) !important; margin-top: calc(3px * var(--k)) !important; }
 
     </style>
+    <style id="character-layout">
+        /* Reserve real space for labels: wrapping text must never cover art. */
+        .profile-panel {
+            container-type: inline-size;
+            min-width: 0;
+            min-height: 0;
+            padding-top: 28px;
+            gap: 4px;
+        }
+        #player-profile-panel .profile-portrait,
+        #enemy-profile-panel .profile-portrait {
+            flex: 1 1 0;
+            width: 100%;
+            height: 0;
+            min-height: 0;
+            margin: 0;
+            aspect-ratio: auto;
+        }
+        #player-profile-panel .profile-portrait img,
+        #enemy-profile-panel .profile-portrait img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        .profile-panel .profile-stats {
+            position: static;
+            flex: 0 0 auto;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+        .profile-panel .profile-name,
+        .profile-panel .profile-value { max-width: 100%; }
+        @container (max-width: 120px) {
+            .profile-note { display: none; }
+        }
+        .tile.tile-enemy .char-container,
+        .tile.tile-player .char-container {
+            flex: 1 1 0;
+            min-height: 0;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        .tile.tile-enemy .stat-container {
+            position: static;
+            flex: 0 0 auto;
+            width: 100%;
+            white-space: nowrap;
+        }
+        .tile.tile-player .stat-container { display: none; }
+        html.pxui .profile-panel {
+            padding-top: calc(8px * var(--k));
+            gap: calc(1px * var(--k));
+        }
+        html.pxui #player-profile-panel .profile-portrait,
+        html.pxui #enemy-profile-panel .profile-portrait {
+            height: 0;
+            margin: 0;
+        }
+        html.pxui #player-profile-panel .profile-portrait .char-container.px,
+        html.pxui #enemy-profile-panel .profile-portrait .char-container.px {
+            align-items: center;
+        }
+        html.pxui .profile-panel .profile-stats { position: static; }
+        /* A single, compact line leaves room for sprites at every pixel scale. */
+        html.pxui .tile .unit-stat { font-size: calc(4px * var(--k)); line-height: calc(6px * var(--k)); }
+    </style>
 </head>
 <body>
 
@@ -1086,7 +1156,19 @@ html.pxui #stuck-timer { font-size: var(--fs-h) !important; margin-top: calc(3px
     // to the original assets/*.png|svg images.
     const PA = (window.PixelArt && typeof window.PixelArt.render === 'function') ? window.PixelArt : null;
     // Pixel UI kit (frames, bitmap font, icons). Needs the sprite pack as well; otherwise the original look is kept.
-    const PX = (PA && window.PixelUI) ? window.PixelUI.install({ kFor: (w) => (w >= 1100 ? 3 : w >= 720 ? 2 : 1) }) : null;
+    // Fit the board to the available width instead of leaving a 268px board
+    // centered on every phone/tablet below the old 720px breakpoint.
+    const PX = (PA && window.PixelUI) ? window.PixelUI.install({
+        kFor: (w) => Math.min(3, Math.max(0.75, (w - 16) / 268))
+    }) : null;
+    if (PX) {
+        const fitMobileText = () => {
+            const k = Number(document.documentElement.dataset.pxk);
+            document.documentElement.style.setProperty('--m-small', Math.min(2, k));
+        };
+        fitMobileText();
+        window.addEventListener('resize', fitMobileText);
+    }
     const pxCanvas = (kind, attrs = '', fit = kind === 'card' ? 'round' : PX ? 'k' : kind.startsWith('panel') ? 'cover' : 'round') => `<canvas class="px-sprite" data-px="${kind}" data-fit="${fit}" ${attrs}></canvas>`;
 
     const getPerformerArt = (stateClass = 'ani-idle', type = getPlayerType(), seed = type.id, kind = 'player') => PA ? `
@@ -1161,18 +1243,25 @@ html.pxui #stuck-timer { font-size: var(--fs-h) !important; margin-top: calc(3px
             const p = c.parentElement; if (!p) return false;
             const pw = p.clientWidth, ph = p.clientHeight; if (!pw || !ph) return false;
             const inf = PA.info(id), r = dpr(), box = Math.min(pw, ph) * r;
+            const profile = c.dataset.px === 'panelPlayer' || c.dataset.px === 'panelEnemy';
             if (c.dataset.fit === 'k') {                 // pixel UI: every sprite pixel = k css px, like the frames and the font
-                const sck = Math.max(1, Math.round((parseFloat(document.documentElement.dataset.pxk) || 2) * r));
+                const desired = Math.round((parseFloat(document.documentElement.dataset.pxk) || 2) * r);
+                const sck = Math.max(1, Math.min(desired, Math.floor(Math.min(pw * r / inf.w, ph * r / inf.h))));
                 c.width = inf.w * sck; c.height = inf.h * sck;
-                c.style.width = (c.width / r) + 'px'; c.style.height = (c.height / r) + 'px';
+                const displayScale = profile ? Math.min(sck / r, pw / inf.w, ph / inf.h) : sck / r;
+                c.style.width = (inf.w * displayScale) + 'px'; c.style.height = (inf.h * displayScale) + 'px';
                 c._sc = sck; c._key = null; c._fit = true; c._w = inf.w;
                 return true;
             }
-            let sc = c.dataset.fit === 'floor' ? Math.floor(box / inf.w) : Math.round(box / inf.w);
+            let sc = profile ? Math.floor(Math.min(pw * r / inf.w, ph * r / inf.h))
+                : c.dataset.fit === 'floor' ? Math.floor(box / inf.w) : Math.round(box / inf.w);
             if (c.dataset.fit === 'round' && sc > 1 && sc * inf.w > box * 1.15) sc--;   // 'cover' may overflow (the portrait box clips)
             sc = Math.max(1, sc);
             c.width = inf.w * sc; c.height = inf.h * sc;
-            c.style.width = (c.width / r) + 'px'; c.style.height = (c.height / r) + 'px';
+            // Tiny panels can be smaller than one source frame. Keep the
+            // backing pixels intact, but contain the displayed canvas too.
+            const displayScale = profile ? Math.min(sc / r, pw / inf.w, ph / inf.h) : sc / r;
+            c.style.width = (inf.w * displayScale) + 'px'; c.style.height = (inf.h * displayScale) + 'px';
             c._sc = sc; c._key = null; c._fit = true; c._w = inf.w;
             return true;
         }
