@@ -268,6 +268,109 @@
           #hero-dock { padding-block:6px; }
           #weapon-dock { padding-block:6px; }
         }
+        /* v2: progression — gold, armory, checkpoints, run summary. */
+        #gold-line { display:block; font-size:10px; color:#ffd77a; margin-top:2px; }
+        #gold-line b { font-variant-numeric:tabular-nums; }
+        #game-over { gap:6px; padding:16px; }
+        .run-stats { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin:6px 0 10px; font-size:13px; color:#d8d6ea; }
+        .run-stats b { display:block; font-size:20px; color:#ffe2a8; font-variant-numeric:tabular-nums; }
+        .over-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+        .over-actions .btn-ui { min-height:44px; padding:10px 16px; }
+        .btn-primary { background:linear-gradient(135deg,#e2a952,#c9734a) !important; color:#1d1408 !important; border-color:#ffd99a !important; font-weight:800 !important; }
+        #armory { position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center; padding:16px; background:#070912c9; backdrop-filter:blur(6px); }
+        #armory[hidden] { display:none; }
+        .armory-card { width:min(460px,100%); max-height:calc(100dvh - 32px); overflow-y:auto; background:#232942; border:1px solid #c6b6ff44; border-radius:18px; padding:18px; box-shadow:0 20px 60px #000a; }
+        .armory-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .armory-head h2 { margin:0; font-size:18px; color:#fff1dc; }
+        .armory-gold { color:#ffd77a; font-weight:700; font-size:14px; }
+        .armory-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #ffffff10; }
+        .armory-row > div { flex:1; min-width:0; }
+        .armory-row strong { display:block; font-size:13px; color:#ece9ff; }
+        .armory-row small { display:block; font-size:10px; color:#a7abc9; margin-top:2px; }
+        .pips { display:flex; gap:2px; margin-top:5px; }
+        .pips i { width:10px; height:4px; border-radius:2px; background:#ffffff14; }
+        .pips i.on { background:#ffcf7a; }
+        .armory-row .btn-ui { min-width:84px; min-height:40px; font-variant-numeric:tabular-nums; }
+        .armory-row .btn-ui:disabled { opacity:.4; cursor:not-allowed; }
+        .armory-foot { margin-top:12px; display:flex; justify-content:flex-end; }
+        /* v2 UI/UX pass: readable sizes, clear danger state, visible economy. */
+        body { justify-content:safe center; }
+        #top-bar .nav-controls > a { display:none; } /* external links live in the Customize panel */
+        #stage-notice { background:#2b2542; font-weight:700; letter-spacing:.02em; }
+        .hp-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+        #hp-text { font-size:11px; font-weight:700; color:#a6ead0; font-variant-numeric:tabular-nums; }
+        #gold-line { display:inline-flex; align-items:center; gap:4px; margin:4px 0 2px; padding:2px 9px; border-radius:99px; background:#ffd77a1a; border:1px solid #ffd77a40; font-size:13px; font-weight:700; }
+        .battlefield::after { content:''; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .3s; box-shadow:inset 0 0 70px 10px #ff2b3c; border-radius:inherit; }
+        #viewport.low-hp .battlefield::after { opacity:.55; animation:danger-pulse 1.1s ease-in-out infinite; }
+        #viewport.low-hp #health-fill { background:linear-gradient(90deg,#ff5d6c,#ff9c8a); }
+        #viewport.low-hp #hp-text { color:#ff8d95; }
+        @keyframes danger-pulse { 50% { opacity:.25; } }
+        #armory-btn { position:relative; }
+        #armory-btn.can-buy::after { content:''; position:absolute; top:4px; right:4px; width:8px; height:8px; border-radius:50%; background:#ffcf5a; box-shadow:0 0 0 2px #17203a, 0 0 8px #ffcf5a; }
+        .slot-lv { position:absolute; left:6px; top:6px; z-index:2; padding:1px 5px; border-radius:6px; background:#ffcf7a26; color:#ffd98f; font-size:9px; font-weight:800; }
+        .weapon-slot.reloading > svg:not(.reload-svg) { opacity:.55; }
+        .weapon-slot:hover { border-color:#ffffff40; background:#ffffff0c; }
+        .weapon-slot:active { transform:scale(.97); }
+        .play-hint { font-size:11px; }
+        @media(max-width:760px), (max-height:700px) {
+          .slot-name { font-size:9px !important; }
+          #level-kicker,.eyebrow { font-size:9px; }
+          #auto-mode,.wave-summary > small { font-size:9px; }
+          #gold-line { font-size:12px; padding:1px 7px; }
+          .slot-lv { font-size:8px; left:4px; top:4px; }
+        }
+        @media (prefers-reduced-motion: reduce) { #viewport.low-hp .battlefield::after { animation:none; } }
+        /* v2 tidy: two-tone uppercase brand, icon-only toolbar, full-bleed portrait layout. */
+        #top-bar .bunt-logo { font-size:14px; font-weight:900; letter-spacing:.06em; }
+        .bunt-logo .b1 { color:#ffcf5a; } .bunt-logo .b2 { color:#b9a8ff; }
+        #top-bar { padding:4px 6px 4px 12px; }
+        #top-bar .control-label { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+        #top-bar .arena-control { width:36px; height:36px; min-width:36px; padding:0; border-radius:10px; background:#ffffff0d; border-color:#ffffff1f; }
+        #top-bar .skin-tools summary { background:#ffffff0d; border-color:#ffffff1f; }
+        #top-bar .skin-tools[open] summary,#pause-btn[aria-pressed="true"] { background:#b9a8ff33; border-color:#b9a8ff88; color:#fff; }
+        #language-btn { font-size:11px !important; font-weight:800; letter-spacing:.04em; }
+        .weapon-brief { display:none; }
+        @media (max-width:760px), (max-height:700px) {
+          #top-bar .bunt-logo { font-size:12px; }
+          #top-bar .arena-control { width:40px; height:40px; min-width:40px; min-height:40px; }
+        }
+        .hp-row #hero-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #hp-text { white-space:nowrap; flex:none; }
+        @media (max-width:360px) {
+          #top-bar { padding:3px 4px 3px 8px; gap:4px; }
+          #top-bar .bunt-logo { font-size:10px; letter-spacing:.02em; }
+          #top-bar .nav-controls { gap:3px; }
+          #top-bar .arena-control { width:34px; height:34px; min-width:34px; min-height:34px; }
+        }
+        @media (max-width:760px) and (orientation:portrait) {
+          body { justify-content:flex-start; padding-bottom:0; }
+          #viewport { margin-top:0; border-radius:0; border-width:0 0 1px; }
+          #hero-dock { border-width:0 0 1px; }
+          #weapon-dock { flex:1 1 auto; flex-wrap:wrap; align-content:space-between; border-width:0; border-radius:0; padding:10px 8px max(10px,env(safe-area-inset-bottom)); }
+          .weapon-slot { flex:1 1 0; height:72px; }
+          .play-hint { display:none; }
+        }
+        @media (max-width:760px) and (orientation:portrait) and (min-height:740px) {
+          .weapon-brief { display:grid; grid-template-columns:1fr auto; gap:2px 10px; width:100%; padding:10px 12px; border-radius:12px; background:#ffffff08; border:1px solid #ffffff12; }
+          .weapon-brief strong { font-size:14px; color:var(--stage-accent); letter-spacing:.04em; }
+          .weapon-brief #brief-help { grid-column:1; font-size:12px; color:#b7b9d0; }
+          .weapon-brief #brief-stats { grid-column:2; grid-row:1/3; align-self:center; font-size:12px; font-weight:700; color:#e8e6fa; font-variant-numeric:tabular-nums; }
+          #weapon-dock { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); grid-template-rows:auto minmax(84px,150px); align-content:end; gap:10px 6px; }
+          .weapon-brief { grid-column:1/-1; }
+          .weapon-slot { height:auto; }
+          .weapon-slot > svg:not(.reload-svg) { width:30px; height:30px; }
+          .slot-name { font-size:11px !important; margin-top:8px; }
+          .weapon-slot .reload-svg { inset:auto; top:calc(50% - 32px); left:calc(50% - 26px); width:52px; height:52px; }
+          .weapon-slot > svg:not(.reload-svg) { margin-bottom:12px; }
+          .weapon-slot .slot-name { position:absolute; left:0; right:0; bottom:12px; margin:0; text-align:center; }
+          .brief-bars { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px; }
+          .brief-bars span { font-size:10px; color:#a7abc9; letter-spacing:.04em; }
+          .brief-bars i { display:block; height:5px; margin-top:4px; border-radius:4px; background:#ffffff12; overflow:hidden; }
+          .brief-bars i b { display:block; height:100%; background:var(--stage-accent); border-radius:inherit; }
+          .hero-choice { min-height:62px; }
+          .hero-choice img { width:36px; height:48px; }
+          .hero-choice strong { font-size:11px; }
+        }
     </style>
 </head>
 <body>
@@ -277,7 +380,7 @@
         <canvas id="canvas" role="img" aria-label="Cowboy automatically aiming and firing in a western battlefield" data-i18n-aria="canvasDescription"><span id="canvas-fallback">Your browser must support Canvas to play.</span></canvas>
         <div id="top-bar">
         <div class="branding">
-            <span class="bunt-logo">BuntGames</span>
+            <span class="bunt-logo" aria-label="BuntGames"><span class="b1">BUNT</span><span class="b2">GAMES</span></span>
             <span class="game-title">COWBOY DEFENSE</span>
         </div>
         <div class="nav-controls">
@@ -286,6 +389,7 @@
             <a href="https://kitscript.com/game" class="btn-ui" target="_blank" rel="noopener noreferrer">Homepage</a>
             <button id="language-btn" class="btn-ui arena-control" type="button" aria-label="Switch language to Korean" title="Switch language to Korean">한국어</button>
             <button id="sound-btn" class="btn-ui arena-control" type="button" aria-pressed="false" aria-label="Turn sound on" title="Turn sound on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path class="sound-waves" d="M17 8q4 4 0 8M19 5q7 7 0 14"/><path class="sound-cross" d="m17 9 5 6m0-6-5 6"/></svg><span class="control-label">Sound</span></button>
+            <button id="armory-btn" class="btn-ui arena-control" type="button" aria-label="Armory" title="Armory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg><span class="control-label">Armory</span></button>
             <button id="pause-btn" class="btn-ui arena-control" type="button" aria-pressed="false" aria-label="Pause" title="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-bars" d="M8 5v14M16 5v14"/><path class="play-shape" d="m8 5 11 7-11 7Z"/></svg><span class="control-label">Pause</span></button>
             <details class="skin-tools">
                 <summary class="btn-ui arena-control" aria-label="Customize sheriff" title="Customize sheriff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 3-6 4 3 5 3-2v11h8V10l3 2 3-5-6-4q-4 4-8 0Z"/></svg><span class="control-label">Customize</span></summary>
@@ -307,13 +411,13 @@
         <div id="hud-overlay">
             <div class="hero-profile">
                 <img id="hero-avatar" alt="" width="54" height="68">
-                <div><span class="eyebrow" data-i18n="yourSheriff">YOUR SHERIFF</span><strong id="hero-name">Sunset Sheriff</strong>
+                <div><span class="eyebrow" data-i18n="yourSheriff">YOUR SHERIFF</span><div class="hp-row"><strong id="hero-name">Sunset Sheriff</strong><span id="hp-text">100</span></div>
                     <div class="hp-track"><div id="health-fill" role="progressbar" aria-label="Sheriff health" data-i18n-aria="sheriffHealth" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div>
                     <small id="auto-mode">Auto aim · auto fire</small>
                 </div>
             </div>
             <div class="stage-summary"><span id="level-kicker" class="eyebrow">CHAPTER 01 / SUNSET MESA</span><strong id="level-name">First Patrol</strong><small id="level-hint">Hold off the first wave with your revolver.</small></div>
-            <div class="wave-summary"><span class="eyebrow">WAVE <b id="wave-val">1</b> · <span id="wave-progress">0 / 8</span></span><strong id="weapon-val">REVOLVER</strong><small id="weapon-help">Balanced single shot</small><small>BEST <span id="best-wave-val">1</span></small></div>
+            <div class="wave-summary"><span class="eyebrow">WAVE <b id="wave-val">1</b> · <span id="wave-progress">0 / 8</span></span><strong id="weapon-val">REVOLVER</strong><small id="weapon-help">Balanced single shot</small><span id="gold-line">● <b id="gold-val">0</b></span><small>BEST <span id="best-wave-val">1</span></small></div>
         </div>
         <div id="chapter-route" aria-label="Chapter progress" data-i18n-aria="chapterProgress"></div>
         <div id="battle-status"><span id="battle-status-hint" aria-hidden="true">STAGE 01 / 100 · SUNSET MESA</span><div id="boss-hud" role="group" aria-label="Boss fight" data-i18n-aria="bossFight" hidden><span id="boss-name">Boss</span><div class="boss-track"><div id="boss-health" role="progressbar" aria-label="Boss health" data-i18n-aria="bossHealth" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div></div>
@@ -321,13 +425,26 @@
         <div id="game-over" role="region" aria-label="Battle over" data-i18n-aria="battleOver">
             <h2 id="mission-failed" style="font-size: 4rem; color: var(--danger);">MISSION FAILED</h2>
             <p style="font-size: 1.3rem; color: #eee; margin: 4px 0;"><span id="reached-label">Reached Wave</span> <span id="final-wave-val">1</span> &nbsp;|&nbsp; <span id="best-wave-label">Best Wave</span> <span id="final-best-wave-val">1</span></p>
-            <button id="restart-btn" type="button" class="btn-ui" data-i18n="retry">Try Again</button>
+            <div class="run-stats"><span><b id="stat-kills">0</b><span id="stat-kills-label">Kills</span></span><span><b id="stat-gold">0</b><span id="stat-gold-label">Gold earned</span></span></div>
+            <div class="over-actions">
+                <button id="restart-btn" type="button" class="btn-ui btn-primary">Continue</button>
+                <button id="over-armory-btn" type="button" class="btn-ui" data-i18n="armory">Armory</button>
+                <button id="new-run-btn" type="button" class="btn-ui" data-i18n="newRun">New expedition</button>
+            </div>
             <p id="retry-msg" style="font-size: 1.2rem; color: #ccc;">Restarting in 7...</p>
+        </div>
+    </div>
+    <div id="armory" role="dialog" aria-modal="true" aria-labelledby="armory-title" hidden>
+        <div class="armory-card">
+            <div class="armory-head"><h2 id="armory-title" data-i18n="armory">Armory</h2><span class="armory-gold">● <span id="armory-gold">0</span></span></div>
+            <div id="armory-rows"></div>
+            <div class="armory-foot"><button id="armory-close" type="button" class="btn-ui btn-primary" data-i18n="close">Back to battle</button></div>
         </div>
     </div>
 
     <section id="hero-dock" aria-label="Choose sheriff appearance" data-i18n-aria="heroSelection"><span class="roster-label">Sheriff<br><small>Choose a look</small></span><div id="hero-choices"></div></section>
     <div id="weapon-dock" role="group" aria-label="Choose a weapon, keys 1 through 5" data-i18n-aria="weaponSelection">
+        <div class="weapon-brief" aria-hidden="true"><strong id="brief-name">REVOLVER</strong><span id="brief-help">Balanced single shot</span><span id="brief-stats"></span><div class="brief-bars"><span id="bar-dmg-label">POWER<i><b id="bar-dmg"></b></i></span><span id="bar-rate-label">FIRE RATE<i><b id="bar-rate"></b></i></span><span id="bar-reach-label">CROWD<i><b id="bar-reach"></b></i></span></div></div>
         <button type="button" class="weapon-slot selected" data-id="0" id="slot-0" aria-pressed="true">
             <svg class="reload-svg" viewBox="0 0 100 100"><circle class="reload-circle-bg" cx="50" cy="50" r="45"></circle><circle class="reload-circle-progress" id="progress-0" cx="50" cy="50" r="45"></circle></svg>
             <span class="slot-key">1</span>
@@ -371,6 +488,9 @@
                 weaponHelp:['Balanced single shot','Six-shot close-range spread','Pierces up to six enemies','Explosive damage to groups','Rapid consecutive fire'], armor:'Armored · vulnerable to piercing', charge:'Charging', summon:'Summons guards',
                 bossAppears:'Boss appears', expedition:'Expedition', completed:'Wilds cleared', bossDefeated:'Boss defeated · health restored', nextWave:'Next wave', waveLabel:'WAVE', bestLabel:'BEST', missionFailed:'MISSION FAILED', reached:'Reached Wave', bestWave:'Best Wave', retryIn:'Restarting in', weapons:['REVOLVER','SHOTGUN','RIFLE','DYNAMITE','GATLING'],
                 heroNames:{cowboy:'Sunset Sheriff',ranger:'Forest Ranger',huntress:'Starlight Huntress'}, heroRoles:{cowboy:'Guardian of the wilds',ranger:'Railway sharpshooter',huntress:'Guide to the mines'},
+                stageStart:'First patrol', regionClear:'Region cleared · health restored',
+                armory:'Armory', newRun:'New expedition', close:'Back to battle', continueAt:n=>`Continue · Stage ${n}`, kills:'Kills', goldEarned:'Gold earned', checkpointSaved:'Checkpoint saved',
+                upgrade:'Upgrade', maxed:'MAX', power:'Power', fortify:'Fortified Hat', fortifyHelp:'Max health +10 per level', powerHelp:'Damage +12% per level', confirmNewRun:'Start over from Stage 1? Gold and upgrades are kept.',
             },
             ko: {
                 skinTitle:'나만의 보안관', skinDescription:'SKIN2D PNG 한 장으로 외형을 바꾸세요.<br>256~1024px 정사각형 · 최대 8MB', skinImport:'PNG 불러오기', skinDownload:'기본 스킨 저장', skinReset:'기본 외형 복원', skinNote:'선택한 외형은 현재 실행 중에만 유지됩니다.', relatedPages:'관련 페이지', gameHub:'게임 허브 ↗', yourSheriff:'나의 보안관', sheriffHealth:'보안관 체력', chapterProgress:'지역 진행', bossFight:'대장전', bossHealth:'대장 체력', battleOver:'전투 종료', retry:'다시 도전', heroSelection:'보안관 외형 선택', weaponSelection:'무기 선택 — 숫자 1부터 5', canvasDescription:'카우보이가 몬스터를 자동으로 조준하고 사격하는 황야 전장',
@@ -378,6 +498,8 @@
                 weaponHelp:['균형 잡힌 단발 사격','근거리 6발 확산','최대 6명 관통','밀집한 적에게 폭발 피해','빠른 연속 사격'], armor:'장갑 · 관통에 약함', charge:'돌진', summon:'호위 소환',
                 stageStart:'첫 번째 순찰', bossAppears:'대장 출현', expedition:'원정', completed:'황야 완주', bossDefeated:'대장 처치 · 체력 회복', regionClear:'지역 완료 · 체력 회복', nextWave:'다음 공세', waveLabel:'웨이브', bestLabel:'최고', missionFailed:'임무 실패', reached:'도달한 웨이브', bestWave:'최고 웨이브', retryIn:'재시작까지', weapons:['리볼버','산탄총','라이플','다이너마이트','개틀링'],
                 heroNames:{cowboy:'해질녘 보안관',ranger:'숲바람 정찰병',huntress:'별빛 사냥꾼'}, heroRoles:{cowboy:'황야의 수호자',ranger:'철로를 지키는 명사수',huntress:'광산의 길잡이'},
+                armory:'무기고', newRun:'새 원정', close:'전투로 돌아가기', continueAt:n=>`이어하기 · ${n}단계`, kills:'처치', goldEarned:'획득 골드', checkpointSaved:'체크포인트 저장',
+                upgrade:'강화', maxed:'최대', power:'위력', fortify:'강철 모자', fortifyHelp:'레벨마다 최대 체력 +10', powerHelp:'레벨마다 피해 +12%', confirmNewRun:'1단계부터 다시 시작할까요? 골드와 강화는 유지됩니다.',
 
             }
         };
@@ -393,7 +515,7 @@
             document.querySelectorAll('[data-i18n]').forEach(node=>{const text=tr(node.dataset.i18n);if(text!==undefined)node.innerHTML=text;});
             document.querySelectorAll('[data-i18n-aria]').forEach(node=>node.setAttribute('aria-label',tr(node.dataset.i18nAria)));
             document.getElementById('canvas-fallback').textContent=locale==='en'?'Your browser must support Canvas to play.':'플레이하려면 브라우저가 Canvas를 지원해야 합니다.';
-            const languageButton=document.getElementById('language-btn');languageButton.textContent=locale==='en'?'한국어':'English';languageButton.setAttribute('aria-label',locale==='en'?'Switch language to Korean':'Switch language to English');languageButton.title=languageButton.getAttribute('aria-label');
+            const languageButton=document.getElementById('language-btn');languageButton.textContent=locale==='en'?'KO':'EN';languageButton.setAttribute('aria-label',locale==='en'?'Switch language to Korean':'Switch language to English');languageButton.title=languageButton.getAttribute('aria-label');
             const sound=document.getElementById('sound-btn'),soundText=sound.getAttribute('aria-pressed')==='true'?tr('soundOff'):tr('soundOn');sound.setAttribute('aria-label',soundText);sound.title=soundText;sound.querySelector('.control-label').textContent=tr('sound');
             const customize=document.querySelector('.skin-tools summary');customize.setAttribute('aria-label',tr('customize'));customize.title=tr('customize');customize.querySelector('.control-label').textContent=tr('customize');
             document.querySelectorAll('#chapter-route .chapter-stop').forEach((stop,index)=>{const chapter=CowboySkin.CHAPTERS[index];if(!chapter)return;const name=locale==='en'?chapter.en:chapter.name;stop.title=name;stop.querySelector('span').textContent=name;});
@@ -427,6 +549,8 @@
                 if(!this.enabled || !this.ctx) return;
                 if(this.ctx.state === 'suspended') this.ctx.resume().catch(()=>{});
                 if(type==='exp') { this.playExplosion(); return; }
+                if(type==='buy') { [660, 990].forEach((f, i) => { const o = this.ctx.createOscillator(), g = this.ctx.createGain(), t = this.ctx.currentTime + i * 0.07; o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.08, t); g.gain.linearRampToValueAtTime(0, t + 0.12); o.connect(g); g.connect(this.ctx.destination); o.start(t); o.stop(t + 0.12); }); return; }
+                if(type!=='hit') this.playCrack({rev:[0.09,2400,0.22],sht:[0.18,1200,0.3],rif:[0.12,3200,0.25],gat:[0.04,2800,0.12]}[type]);
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.connect(gain); gain.connect(this.ctx.destination);
@@ -443,6 +567,18 @@
                 gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + dur);
                 osc.start(); osc.stop(this.ctx.currentTime + dur);
                 osc.onended=()=>{osc.disconnect();gain.disconnect();};
+            },
+            // Short filtered noise burst layered over the tone gives shots a percussive crack.
+            playCrack(spec) {
+                if(!spec) return;
+                const [dur, freq, vol] = spec, now = this.ctx.currentTime;
+                if(!this.noise) { this.noise = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.25, this.ctx.sampleRate); const d = this.noise.getChannelData(0); for(let i=0; i<d.length; i++) d[i] = Math.random() * 2 - 1; }
+                const src = this.ctx.createBufferSource(), filter = this.ctx.createBiquadFilter(), gain = this.ctx.createGain();
+                src.buffer = this.noise; filter.type = 'bandpass'; filter.frequency.setValueAtTime(freq, now); filter.frequency.exponentialRampToValueAtTime(200, now + dur);
+                gain.gain.setValueAtTime(vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                src.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                src.start(now); src.stop(now + dur);
+                src.onended = () => { src.disconnect(); filter.disconnect(); gain.disconnect(); };
             },
             playExplosion() {
                 if(!this.ctx) return;
@@ -483,6 +619,28 @@
             const mq = matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
             mq.addEventListener('change', () => { applyCanvasScale(); watchDPR(); }, { once: true });
         })();
+
+        // Persistent meta-progression: gold, weapon/health upgrades and the last boss checkpoint.
+        const MAX_UPGRADE = 10, MAX_FORTIFY = 5;
+        const Progress = {
+            gold: 0, power: [0,0,0,0,0], fortify: 0, checkpoint: 1,
+            load() {
+                try {
+                    const data = JSON.parse(localStorage.getItem('cowboy_progress') || '{}');
+                    const int = (v, max) => Number.isSafeInteger(v) && v >= 0 ? Math.min(v, max) : 0;
+                    this.gold = int(data.gold, 1e9);
+                    if(Array.isArray(data.power)) this.power = this.power.map((_, i) => int(data.power[i], MAX_UPGRADE));
+                    this.fortify = int(data.fortify, MAX_FORTIFY);
+                    this.checkpoint = Math.max(1, int(data.checkpoint, 1e6));
+                } catch(e) {}
+            },
+            save() { try { localStorage.setItem('cowboy_progress', JSON.stringify({gold:this.gold,power:this.power,fortify:this.fortify,checkpoint:this.checkpoint})); } catch(e) {} },
+            powerCost(level) { return Math.round(40 * Math.pow(level + 1, 1.6)); },
+            fortifyCost(level) { return Math.round(120 * Math.pow(level + 1, 1.7)); },
+            damageScale(weapon) { return 1 + this.power[weapon] * 0.12; },
+            maxHp() { return 100 + this.fortify * 10; },
+        };
+        Progress.load();
 
         function loadBestWave() { try { const n=Number(localStorage.getItem('cowboy_best_wave')); return Number.isSafeInteger(n) && n>0 && n<1000000 ? n : 1; } catch(e) { return 1; } }
         function saveBestWave(w) { try { localStorage.setItem('cowboy_best_wave', String(w)); } catch(e) {} }
@@ -527,9 +685,10 @@
 
             get level() { return CowboySkin.levelFor(this.wave); }
 
-            reset() {
-                this.state = 'playing'; this.hp = 100; this.wave = 1; this.enemies = []; this.bullets = []; this.particles = []; this.fallen = []; this.kills = 0; this.cowboyRecoil = 0; this.lastTime = undefined;
-                this.currentWeapon = 0; this.lastShotTimes = [0,0,0,0,0]; this.waveKillCount = 0; this.waveTotalCount = CowboySkin.levelFor(1).quota; this.bossSpawned=false;this.bossDefeated=false;
+            reset(startWave = 1) {
+                this.maxHp = Progress.maxHp();
+                this.state = 'playing'; this.hp = this.maxHp; this.wave = startWave; this.runKills = 0; this.runGold = 0; this.popups = []; this.enemies = []; this.bullets = []; this.particles = []; this.fallen = []; this.kills = 0; this.cowboyRecoil = 0; this.lastTime = undefined;
+                this.currentWeapon = 0; this.lastShotTimes = [0,0,0,0,0]; this.waveKillCount = 0; this.waveTotalCount = CowboySkin.levelFor(startWave).quota; this.bossSpawned=false;this.bossDefeated=false;
                 this.spawnIndex=0;this.noticeUntil=0;
                 this.noticeKey='';this.noticeDetail='';
                 this.nextSpawn = 0; this.shake = 0; this.gameOverTick = 0; this.aimAngle = 0; this.targetAimAngle = 0;
@@ -545,7 +704,9 @@
             bindEvents() {
                 window.addEventListener('keydown', (e) => {
                     if(e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input,textarea,select,[contenteditable="true"]')) return;
-                    if(this.state === 'gameover' && e.key === 'Enter' && e.target===document.body) { e.preventDefault(); this.reset(); return; }
+                    if(this.state === 'gameover' && e.key === 'Enter' && e.target===document.body) { e.preventDefault(); this.reset(Progress.checkpoint); return; }
+                    if(e.key === 'Escape' && !document.getElementById('armory').hidden) { Armory.close(); e.preventDefault(); return; }
+                    if(!document.getElementById('armory').hidden) return;
                     if(e.key === 'Escape') {
                         const menu=document.querySelector('.skin-tools');
                         if(menu.open) {menu.open=false;menu.querySelector('summary').focus({preventScroll:true});e.preventDefault();}
@@ -560,7 +721,12 @@
                 });
                 document.getElementById('pause-btn').onclick = () => {this.paused=!this.paused;this.syncPause();};
                 document.addEventListener('visibilitychange',()=>this.syncPause());
-                document.getElementById('restart-btn').onclick = () => this.reset();
+                document.getElementById('restart-btn').onclick = () => this.reset(Progress.checkpoint);
+                document.getElementById('new-run-btn').onclick = () => { if(Progress.checkpoint <= 1 || confirm(tr('confirmNewRun'))) { Progress.checkpoint = 1; Progress.save(); this.reset(1); } };
+                document.getElementById('armory-btn').onclick = () => Armory.open();
+                document.getElementById('over-armory-btn').onclick = () => Armory.open();
+                window.addEventListener('pagehide', () => Progress.save());
+                this.progressCircles = WEAPONS.map((_, i) => document.getElementById(`progress-${i}`));
                 document.getElementById('sound-btn').onclick = (e) => { const on = AudioEngine.toggle(); e.currentTarget.setAttribute('aria-pressed',String(on));e.currentTarget.setAttribute('aria-label',on?tr('soundOff'):tr('soundOn'));e.currentTarget.title=on?tr('soundOff'):tr('soundOn'); };
 
             }
@@ -579,8 +745,33 @@
                 document.getElementById('weapon-val').textContent = wn;
                 document.querySelectorAll('.weapon-slot .slot-name').forEach((label,index)=>label.textContent=tr('weapons')[index]);
                 document.getElementById('weapon-help').textContent = tr('weaponHelp')[this.currentWeapon];
-                document.getElementById('health-fill').style.width = this.hp + '%';
+                document.getElementById('health-fill').style.width = (this.hp / this.maxHp * 100) + '%';
                 document.getElementById('health-fill').setAttribute('aria-valuenow',String(this.hp));
+                document.getElementById('health-fill').setAttribute('aria-valuemax',String(this.maxHp));
+                document.getElementById('gold-val').textContent = Progress.gold.toLocaleString();
+                const cw = WEAPONS[this.currentWeapon];
+                document.getElementById('brief-name').textContent = tr('weapons')[this.currentWeapon] + (Progress.power[this.currentWeapon] ? ` · Lv${Progress.power[this.currentWeapon]}` : '');
+                document.getElementById('brief-help').textContent = tr('weaponHelp')[this.currentWeapon];
+                document.getElementById('brief-stats').textContent = locale === 'en' ? `DMG ${Math.round(cw.dmg * Progress.damageScale(this.currentWeapon))} · ${cw.reload / 1000}s` : `피해 ${Math.round(cw.dmg * Progress.damageScale(this.currentWeapon))} · ${cw.reload / 1000}초`;
+                // Relative bars: burst damage, shots per second and how many enemies one shot can affect.
+                const crowd = cw.type === 'bomb' ? 1 : cw.type === 'spread' ? 0.7 : Math.min(1, cw.pen / 6);
+                document.getElementById('bar-dmg').style.width = `${Math.min(100, cw.dmg * (cw.count || 1) * Progress.damageScale(this.currentWeapon) / 2.2)}%`;
+                document.getElementById('bar-rate').style.width = `${Math.min(100, 8000 / cw.reload)}%`;
+                document.getElementById('bar-reach').style.width = `${Math.max(15, crowd * 100)}%`;
+                [['bar-dmg-label', 'POWER', '위력'], ['bar-rate-label', 'FIRE RATE', '연사'], ['bar-reach-label', 'CROWD', '광역']].forEach(([id, en, ko]) => document.getElementById(id).firstChild.textContent = locale === 'en' ? en : ko);
+                document.getElementById('hp-text').textContent = `${Math.ceil(this.hp)} / ${this.maxHp}`;
+                document.getElementById('viewport').classList.toggle('low-hp', this.state === 'playing' && this.hp <= this.maxHp * 0.3);
+                const affordable = Progress.power.some(l => l < MAX_UPGRADE && Progress.gold >= Progress.powerCost(l)) || (Progress.fortify < MAX_FORTIFY && Progress.gold >= Progress.fortifyCost(Progress.fortify));
+                document.getElementById('armory-btn').classList.toggle('can-buy', affordable);
+                document.querySelectorAll('.weapon-slot').forEach((slot, i) => {
+                    let badge = slot.querySelector('.slot-lv');
+                    if(Progress.power[i] > 0) { if(!badge) { badge = document.createElement('span'); badge.className = 'slot-lv'; slot.appendChild(badge); } badge.textContent = `Lv${Progress.power[i]}`; }
+                    else if(badge) badge.remove();
+                });
+                document.getElementById('restart-btn').textContent = tr('continueAt')(CowboySkin.levelFor(Progress.checkpoint).index + 1);
+                document.getElementById('stat-kills-label').textContent = tr('kills');
+                document.getElementById('stat-gold-label').textContent = tr('goldEarned');
+                document.getElementById('armory-btn').setAttribute('aria-label',tr('armory'));document.getElementById('armory-btn').title=tr('armory');document.querySelector('#armory-btn .control-label').textContent=tr('armory');
                 const level=this.level;
                 const chapterIndex=level.chapterIndex;
                 document.getElementById('level-kicker').textContent=`CHAPTER ${String(chapterIndex+1).padStart(2,'0')} / ${locale==='en'?level.chapter.en:level.chapter.name}${level.cycle?' · '+(locale==='en'?'LOOP ':'회차 ')+(level.cycle+1):''}`;
@@ -675,7 +866,8 @@
                 this.wave++;this.waveKillCount=0;this.waveTotalCount=this.level.quota;
                 this.bossSpawned=false;this.bossDefeated=false;this.spawnIndex=0;
                 this.enemies=[];this.bullets=[];this.nextSpawn=Date.now()+1400;
-                if(clearedBoss)this.hp=Math.min(100,this.hp+20);
+                if(clearedBoss){this.hp=Math.min(this.maxHp,this.hp+20);Progress.checkpoint=this.wave;}
+                Progress.save();
                 this.noticeKey=completed?'complete':clearedBoss?'bossDefeated':'next';this.noticeDetail={};this.noticeUntil=Date.now()+2800;this.renderNotice();
                 if(this.wave>this.bestWave){this.bestWave=this.wave;saveBestWave(this.bestWave);}
                 this.updateUI();
@@ -699,13 +891,17 @@
                 for(let i=0; i<6; i++) this.particles.push({ x: mx, y: my, vx: Math.cos(ang+(Math.random()-0.5)*1.2)*(8+Math.random()*10), vy: Math.sin(ang+(Math.random()-0.5)*1.2)*(8+Math.random()*10), life: 0.6, size: 2, color: '#fff', gravity: 0.1 });
                 this.particles.push({ x: pivotX, y: pivotY, vx: -2-Math.random()*2, vy: -5-Math.random()*3, life: 1.2, size: 3, color: '#d4af37', gravity: 0.3 });
 
-                if(w.type === 'spread') { for(let i=0; i<w.count; i++) { const s = (i-(w.count-1)/2)*0.18; this.bullets.push({ x: mx, y: my, vx: Math.cos(ang+s)*w.spd, vy: Math.sin(ang+s)*w.spd, ...w, hitList: [] }); } }
-                else { this.bullets.push({ x: mx, y: my, vx: Math.cos(ang)*w.spd, vy: Math.sin(ang)*w.spd, ...w, hitList: [] }); }
+                const dmg = Math.round(w.dmg * Progress.damageScale(this.currentWeapon));
+                if(w.type === 'spread') { for(let i=0; i<w.count; i++) { const s = (i-(w.count-1)/2)*0.18; this.bullets.push({ x: mx, y: my, vx: Math.cos(ang+s)*w.spd, vy: Math.sin(ang+s)*w.spd, ...w, dmg, hitList: [] }); } }
+                else { this.bullets.push({ x: mx, y: my, vx: Math.cos(ang)*w.spd, vy: Math.sin(ang)*w.spd, ...w, dmg, hitList: [] }); }
             }
 
             killEnemy(e) {
                 if(e.dead) return;
-                e.dead = true; this.kills++;
+                e.dead = true; this.kills++; this.runKills++;
+                const bounty = Math.round((e.isBoss ? 30 + this.level.chapterIndex * 10 : {walker:2,runner:2,brute:8,swarm:1}[e.typeKey] || 1) * (1 + Math.min(this.level.cycle, 3) * 0.5));
+                Progress.gold += bounty; this.runGold += bounty;
+                this.addPopup(e.x, e.y - e.size, `+${bounty}`, '#ffd77a');
                 this.fallen.push({...e,deathAt:performance.now()});
                 this.createParticles(e.x, e.y, e.color, 25);
                 this.waveKillCount++;
@@ -727,15 +923,15 @@
                     const elapsed = (now - this.gameOverTick) / 1000;
                     const secLeft = Math.max(0, Math.ceil(7 - elapsed));
                     if(this.lastDisplayedSec !== secLeft) { this.lastDisplayedSec = secLeft; document.getElementById('retry-msg').textContent = `${tr('retryIn')} ${secLeft}...`; }
-                    if(elapsed >= 7) this.reset(); return;
+                    if(elapsed >= 7) this.reset(Progress.checkpoint); return;
                 }
                 if(now - this.lastInteractionTime > 30000) { if(!this.isAutoMode) { this.isAutoMode = true; this.lastAutoSwapTime = now-5000; this.updateUI(); } if(now - this.lastAutoSwapTime >= 5000) { this.autoEvaluateWeapon(); this.lastAutoSwapTime = now; }}
                 if(now > this.nextSpawn) this.spawn();
 
                 WEAPONS.forEach((w, i) => {
                     const el = now - this.lastShotTimes[i]; const pr = Math.min(1, el / w.reload);
-                    const circle = document.getElementById(`progress-${i}`);
-                    if(circle) circle.style.strokeDashoffset = 283 * (1 - pr);
+                    const circle = this.progressCircles[i];
+                    if(circle) { circle.style.strokeDashoffset = 283 * (1 - pr); const slot = circle.ownerSVGElement.parentNode, busy = pr < 1; if(slot.classList.contains('reloading') !== busy) slot.classList.toggle('reloading', busy); }
                 });
 
                 this.enemies.forEach(e => {
@@ -759,8 +955,11 @@
                     if(e.x < COWBOY_X + 25) {
                         const dmg = e.isBoss ? this.hp : e.typeKey === 'brute' ? 30 : 10;
                         this.hp = Math.max(0, this.hp - dmg); this.shake = 25; e.dead = true; this.updateUI();
+                        try { if(navigator.vibrate) navigator.vibrate(e.isBoss ? 200 : 40); } catch(err) {}
                         if(this.hp <= 0 && this.state === 'playing') {
-                            this.state = 'gameover'; this.gameOverTick = now; this.lastDisplayedSec = null;
+                            this.state = 'gameover'; this.gameOverTick = now; this.lastDisplayedSec = null; Progress.save();
+                            document.getElementById('stat-kills').textContent = this.runKills;
+                            document.getElementById('stat-gold').textContent = this.runGold.toLocaleString();
                             if(this.wave > this.bestWave) { this.bestWave = this.wave; saveBestWave(this.bestWave); }
                             document.getElementById('final-wave-val').textContent = this.wave;
                             document.getElementById('final-best-wave-val').textContent = this.bestWave;
@@ -794,7 +993,7 @@
                         if(e.dead)continue;
                         b.hitList.push(e);AudioEngine.play('hit');
                         if(b.type==='bomb'){this.explode(hitX,hitY,b.radius,b.dmg);b.dead=true;}
-                        else{e.hp-=b.dmg*(e.armor && b.pen<6?1-e.armor:1);e.hitFlash=5;if(b.hitList.length>=b.pen)b.dead=true;}
+                        else{const dealt=b.dmg*(e.armor && b.pen<6?1-e.armor:1);e.hp-=dealt;e.hitFlash=5;this.addPopup(hitX,hitY-12,Math.round(dealt),e.armor&&b.pen<6?'#9aa3c0':'#fff');if(b.hitList.length>=b.pen)b.dead=true;}
                         if(e.hp<=0)this.killEnemy(e);
                         if(b.dead || this.wave!==combatWave)break;
                     }
@@ -822,12 +1021,18 @@
                 this.particles=this.particles.slice(-400);this.bullets=this.bullets.slice(-250);
                 this.fallen=this.fallen.filter(e=>performance.now()-e.deathAt<750).slice(-24);
                 this.blasts=this.blasts.filter(b=>performance.now()-b.at<450).slice(-8);
+                this.popups.forEach(p=>{p.y-=0.6*frameScale;p.life-=0.022*frameScale;});
+                this.popups=this.popups.filter(p=>p.life>0).slice(-40);
+            }
+
+            addPopup(x, y, text, color) {
+                this.popups.push({x:x+(Math.random()-0.5)*14, y, text:String(text), color, life:1});
             }
 
             explode(x, y, r, dmg) {
                 this.shake = 30; AudioEngine.play('exp');
                 this.blasts.push({x,y,r,at:performance.now()});
-                const wave=this.wave;for(const e of this.enemies){if(this.wave!==wave)break;if(!e.dead&&Math.hypot(e.x-x,e.y-y)<r){e.hp-=dmg;e.hitFlash=5;if(e.hp<=0)this.killEnemy(e);}}
+                const wave=this.wave;for(const e of this.enemies){if(this.wave!==wave)break;if(!e.dead&&Math.hypot(e.x-x,e.y-y)<r){e.hp-=dmg;this.addPopup(e.x,e.y-e.size*0.8,dmg,'#ffb36b');e.hitFlash=5;if(e.hp<=0)this.killEnemy(e);}}
             }
 
             createParticles(x, y, color, count) {
@@ -875,6 +1080,11 @@
                     ctx.fillStyle = `rgba(255,255,255,${al})`; ctx.beginPath(); ctx.arc(0,0,mf.size*0.3,0,Math.PI*2); ctx.fill();
                     ctx.restore();
                 }
+                if(this.popups.length) {
+                    ctx.save(); ctx.textAlign='center'; ctx.font='800 15px "Segoe UI",sans-serif'; ctx.lineWidth=3; ctx.strokeStyle='#120f1c';
+                    for(const p of this.popups) { ctx.globalAlpha=Math.min(1,p.life*1.6); ctx.strokeText(p.text,p.x,p.y); ctx.fillStyle=p.color; ctx.fillText(p.text,p.x,p.y); }
+                    ctx.restore();
+                }
                 ctx.restore();
             }
 
@@ -903,6 +1113,50 @@
         }
 
         const game = new EternalInvasion();
+
+        const Armory = {
+            el: document.getElementById('armory'), wasPaused: false, opener: null,
+            open() {
+                if(!this.el.hidden) return;
+                this.opener = document.activeElement; this.wasPaused = game.paused;
+                game.paused = true; game.syncPause();
+                document.querySelector('.skin-tools').open = false;
+                this.render(); this.el.hidden = false;
+                document.getElementById('armory-close').focus({preventScroll:true});
+            },
+            close() {
+                if(this.el.hidden) return;
+                this.el.hidden = true; game.paused = this.wasPaused; game.syncPause();
+                if(this.opener && this.opener.focus) this.opener.focus({preventScroll:true});
+            },
+            pips(level, max) { return `<span class="pips" aria-hidden="true">${Array.from({length:max},(_,i)=>`<i class="${i<level?'on':''}"></i>`).join('')}</span>`; },
+            row(id, name, help, level, max, cost) {
+                const maxed = level >= max, label = maxed ? tr('maxed') : `● ${cost.toLocaleString()}`;
+                return `<div class="armory-row"><div><strong>${name} · Lv ${level}</strong><small>${help}</small>${this.pips(level,max)}</div><button type="button" class="btn-ui" data-buy="${id}" ${maxed||Progress.gold<cost?'disabled':''} aria-label="${tr('upgrade')} ${name} ${maxed?'':cost}">${label}</button></div>`;
+            },
+            render() {
+                document.getElementById('armory-gold').textContent = Progress.gold.toLocaleString();
+                const rows = WEAPONS.map((w, i) => this.row(i, tr('weapons')[i], `${tr('power')} ${Math.round(w.dmg*Progress.damageScale(i))} · ${tr('powerHelp')}`, Progress.power[i], MAX_UPGRADE, Progress.powerCost(Progress.power[i])));
+                rows.push(this.row('hp', tr('fortify'), `HP ${Progress.maxHp()} · ${tr('fortifyHelp')}`, Progress.fortify, MAX_FORTIFY, Progress.fortifyCost(Progress.fortify)));
+                document.getElementById('armory-rows').innerHTML = rows.join('');
+            },
+            buy(id) {
+                if(id === 'hp') {
+                    const cost = Progress.fortifyCost(Progress.fortify);
+                    if(Progress.fortify >= MAX_FORTIFY || Progress.gold < cost) return;
+                    Progress.gold -= cost; Progress.fortify++;
+                    const gain = Progress.maxHp() - game.maxHp; game.maxHp += gain; if(game.state === 'playing') game.hp += gain;
+                } else {
+                    const i = Number(id), cost = Progress.powerCost(Progress.power[i]);
+                    if(Progress.power[i] >= MAX_UPGRADE || Progress.gold < cost) return;
+                    Progress.gold -= cost; Progress.power[i]++;
+                }
+                Progress.save(); AudioEngine.play('buy'); this.render(); game.updateUI();
+                const again = this.el.querySelector(`[data-buy="${id}"]`); if(again && !again.disabled) again.focus({preventScroll:true}); else document.getElementById('armory-close').focus({preventScroll:true});
+            },
+        };
+        document.getElementById('armory-close').onclick = () => Armory.close();
+        Armory.el.addEventListener('click', e => { const b = e.target.closest('[data-buy]'); if(b) Armory.buy(b.dataset.buy); else if(e.target === Armory.el) Armory.close(); });
         const skinFile = document.getElementById('skin-file');
         const skinStatus = document.getElementById('skin-status');
         const heroAvatar=document.getElementById('hero-avatar');
@@ -973,11 +1227,14 @@
                 const hint=document.querySelector('.play-hint');
                 const hintStyle=getComputedStyle(hint);
                 const hintHeight=hint.getBoundingClientRect().height+parseFloat(hintStyle.marginTop)+parseFloat(hintStyle.marginBottom);
+                // Measure the slot row, not the dock: on tall phones the dock grows to fill leftover height.
+                const fullBleed=matchMedia('(max-width:760px) and (orientation:portrait)').matches;
+                const slotRow=fullBleed?100:document.querySelector('.weapon-slot').getBoundingClientRect().height+16;
                 const chrome=document.getElementById('hud-overlay').getBoundingClientRect().height+
                     document.getElementById('chapter-route').getBoundingClientRect().height+38+
                     document.getElementById('hero-dock').getBoundingClientRect().height+
-                    document.getElementById('weapon-dock').getBoundingClientRect().height+hintHeight+18;
-                const availableWidth=Math.max(1,Math.min(1000,innerWidth-24));
+                    slotRow+hintHeight+18;
+                const availableWidth=Math.max(1,Math.min(1000,innerWidth-(fullBleed?0:24)));
                 const minimum=innerWidth>760&&innerHeight>700?600:280;
                 const width=Math.max(Math.min(minimum,availableWidth),Math.min(availableWidth,Math.max(0,innerHeight-chrome)*1.6));
                 const next=Math.floor(width);
