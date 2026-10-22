@@ -110,7 +110,7 @@
         button,a { -webkit-tap-highlight-color:transparent; }
         button { font-family:inherit; }
         button:focus-visible,a:focus-visible,canvas:focus-visible { outline:3px solid #ffd897;outline-offset:3px; }
-        .game-header,.dashboard,.canvas-container,.command-deck,.briefing { width:min(1100px,100%,max(620px,calc((100svh - 380px)*1.77778)));max-width:none; }
+        .game-header,.dashboard,.canvas-container,.command-deck,.briefing { width:min(1100px,100%,max(620px,calc((100svh - 420px)*1.77778)));max-width:none; }
         .game-header { height:auto;min-height:66px;padding:12px 18px;background:#12263b;border:1px solid #a4d8ff24;border-radius:18px 18px 0 0;box-shadow:none;gap:12px; }
         .brand-name { font-size:16px;letter-spacing:.12em;color:#92e6e4; }
         .game-title { color:#9ab6ce;font-size:10px; }
@@ -150,13 +150,65 @@
         .game-header .brand-name{font-size:clamp(10px,2.8vw,16px);letter-spacing:.06em;}
         .dashboard>div{min-width:0;}#sectorName{display:block;font-size:clamp(15px,2vw,22px);}#sectorHint{min-height:30px;}
         #sectorHint{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;}
+        /* v2: two-tone brand, salvage economy, dockyard, debrief and phone layouts. */
+        .brand-name .b1{color:#ffcf5a;}.brand-name .b2{color:#92e6e4;}
+        .dock-button{display:inline-flex;align-items:center;gap:8px;margin-top:8px;min-height:36px;padding:4px 10px;border-radius:10px;border:1px solid #ffd77a44;background:#ffd77a12;color:#e4f3ff;font-size:12px;cursor:pointer;position:relative;}
+        .dock-button:hover{background:#ffd77a22;}
+        .dock-button.can-buy::after{content:'';position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:#ffcf5a;box-shadow:0 0 0 2px #0d2033,0 0 8px #ffcf5a;}
+        .salvage{color:#ffd77a;font-weight:700;font-variant-numeric:tabular-nums;}
+        .dock-label{color:#c7deef;font-weight:600;}
+        .primary-btn{background:linear-gradient(120deg,#2a8f86,#1f6573)!important;border-color:#a0f6da88!important;color:#f0fffa!important;}
+        .result-stats{display:flex;gap:22px;margin:8px 0 12px;color:#b4ccdc;font-size:12px;}
+        .result-stats b{display:block;font-size:22px;color:#ffe2a8;font-variant-numeric:tabular-nums;}
+        .result-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+        .result-actions .nav-btn{min-height:44px;padding:8px 16px;font-size:12px;}
+        .dockyard{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;background:#030a14cc;backdrop-filter:blur(6px);}
+        .dockyard[hidden]{display:none;}
+        .dock-card{width:min(440px,100%);max-height:calc(100svh - 32px);overflow-y:auto;padding:18px;border-radius:18px;background:#12263b;border:1px solid #a4d8ff33;box-shadow:0 20px 60px #000a;}
+        .dock-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+        .dock-head h2{margin:0;font-size:18px;color:#eff9ff;}
+        .dock-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #ffffff10;}
+        .dock-row>div{flex:1;min-width:0;}
+        .dock-row strong{display:block;font-size:13px;color:#eff9ff;}
+        .dock-row small{display:block;font-size:11px;color:#9fbdd0;margin-top:2px;}
+        .pips{display:flex;gap:2px;margin-top:6px;}.pips i{width:12px;height:4px;border-radius:2px;background:#ffffff14;}.pips i.on{background:#78e2ce;}
+        .dock-row .nav-btn{min-width:86px;font-variant-numeric:tabular-nums;}
+        .dock-row .nav-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+        .dock-foot{display:flex;justify-content:flex-end;margin-top:12px;}
+        @media(max-width:600px){
+            .dashboard{padding:10px;gap:8px 12px;}#sectorHint{display:none;}.dashboard strong{font-size:16px;}
+            .dock-button{margin-top:4px;min-height:32px;}
+            .command-deck{padding:8px 10px;}.dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(2,40px);}
+            .launch{min-height:56px;}.briefing{display:none;}
+        }
+        @media(orientation:landscape) and (max-height:500px){
+            body{display:grid;grid-template-columns:min(calc(100vw - 232px),calc((100svh - 16px)*1.7778)) 212px;grid-template-areas:"canvas header" "canvas dash" "canvas deck";grid-template-rows:auto auto 1fr;justify-content:center;align-content:center;padding:8px;height:100svh;overflow:hidden;}
+            .game-header,.dashboard,.canvas-container,.command-deck{width:auto;}
+            .canvas-container{grid-area:canvas;border-radius:14px 0 0 14px;overflow:hidden;align-self:center;}
+            .game-header{grid-area:header;flex-wrap:wrap;padding:6px 8px;min-height:0;border-radius:0 14px 0 0;gap:4px;}
+            .brand-zone{width:100%;}.game-title{display:none;}.game-header .brand-name{font-size:11px;}
+            .link-zone{width:100%;justify-content:space-between;gap:4px;}
+            .link-zone .icon-button{width:44px;height:36px;min-height:36px;padding:6px;}
+            .dashboard{grid-area:dash;grid-template-columns:1fr 1fr;gap:6px;padding:8px;}
+            .dashboard>div:first-child{grid-column:1/-1;}
+            .dashboard>div:last-child{grid-column:1/-1;}
+            #sectorHint,#bestValue,.dashboard .eyebrow:not(#missionTime){display:none;}
+            .dashboard strong,#sectorName{font-size:13px!important;}
+            .dashboard small{font-size:10px;margin-top:2px;}
+            .dock-button{margin-top:0;min-height:30px;padding:2px 8px;font-size:11px;}
+            .command-deck{grid-area:deck;padding:8px;gap:6px;border-radius:0 0 14px 0;align-items:center;}
+            .dpad{grid-template-columns:repeat(3,34px);grid-template-rows:repeat(2,34px);gap:3px;}
+            .dpad button{font-size:14px;}
+            .launch{min-width:0;flex:1;min-height:70px;font-size:12px;}.launch small{display:none;}
+            .deck-info,.briefing{display:none;}
+        }
     </style>
 </head>
 <body>
 
     <header class="game-header">
         <div class="brand-zone">
-            <span class="brand-name">BUNTGAMES</span>
+            <span class="brand-name" aria-label="BuntGames"><span class="b1">BUNT</span><span class="b2">GAMES</span></span>
             <span class="game-title">Ocean / Fleet command</span>
         </div>
         <div class="link-zone">
@@ -169,14 +221,24 @@
 
     <section class="dashboard" aria-label="Mission status">
         <div><span class="eyebrow">Operation blue horizon</span><strong id="sectorName">001 / First Contact</strong><small id="sectorHint">Clear the first contacts. Automatic escorts cover the lanes.</small></div>
-        <div><span class="eyebrow">Fleet score</span><strong id="scoreValue">0</strong><small id="bestValue">BEST 0</small></div>
+        <div><span class="eyebrow">Fleet score</span><strong id="scoreValue">0</strong><small id="bestValue">BEST 0</small><button id="dockButton" class="dock-button" type="button" aria-label="Open dockyard upgrades"><span class="salvage">◆ <b id="salvageValue">0</b></span><span class="dock-label">Dockyard</span></button></div>
         <div><span class="eyebrow" id="missionTime">STAGE 1 / 100</span><progress id="missionProgress" max="100" value="0" aria-label="Mission progress"></progress><small id="healthValue">Hull 100 · Base 120</small></div>
     </section>
     <div class="canvas-container">
         <canvas id="gameCanvas" tabindex="0" aria-label="Ocean battlefield. Move with arrow keys or WASD; Space launches a missile. Automatic combat is active.">A browser with Canvas support is required.</canvas>
         <div id="pauseBadge" hidden>Mission paused</div>
         <section id="result" class="result" aria-label="Mission result" hidden>
-            <span class="eyebrow">Operation debrief</span><h1 id="resultTitle">Mission complete</h1><p id="resultScore"></p><p id="resultCountdown"></p><button class="nav-btn" id="restartButton" type="button">Deploy again</button>
+            <span class="eyebrow">Operation debrief</span><h1 id="resultTitle">Mission complete</h1><p id="resultScore"></p>
+            <div class="result-stats"><span><b id="statKills">0</b>Ships sunk</span><span><b id="statSalvage">0</b>Salvage earned</span></div>
+            <div class="result-actions"><button class="nav-btn primary-btn" id="restartButton" type="button">Deploy again</button><button class="nav-btn" id="resultDock" type="button">Dockyard</button><button class="nav-btn" id="newCampaign" type="button">New campaign</button></div>
+            <p id="resultCountdown"></p>
+        </section>
+        <section id="dockyard" class="dockyard" role="dialog" aria-modal="true" aria-labelledby="dockTitle" hidden>
+            <div class="dock-card">
+                <div class="dock-head"><h2 id="dockTitle">Dockyard</h2><span class="salvage">◆ <b id="dockSalvage">0</b></span></div>
+                <div id="dockRows"></div>
+                <div class="dock-foot"><button class="nav-btn primary-btn" id="dockClose" type="button">Back to mission</button></div>
+            </div>
         </section>
     </div>
     <section class="command-deck" aria-label="Submarine controls">
@@ -342,6 +404,38 @@ function updateBestScore() {
     }
 }
 
+// --- 영구 진행: 회수 자원, 조선소 강화, 기함 체크포인트 ---
+const UPGRADES = [
+    {id:'torpedo', name:'Torpedo warheads', help:'Submarine missile damage +25%', max:8, base:60},
+    {id:'reload', name:'Rapid loaders', help:'Submarine launch cooldown −7%', max:5, base:80},
+    {id:'hull', name:'Reinforced hull', help:'Submarine max hull +10', max:5, base:70},
+    {id:'cooling', name:'Escort coolant', help:'Escort heat build-up −10%', max:5, base:50},
+];
+const Progress = {
+    salvage:0, levels:{torpedo:0,reload:0,hull:0,cooling:0}, checkpoint:1,
+    load(){try{const d=JSON.parse(localStorage.getItem('ocean_progress')||'{}');const n=(v,max)=>Number.isSafeInteger(v)&&v>=0?Math.min(v,max):0;
+        this.salvage=n(d.salvage,1e9);UPGRADES.forEach(u=>this.levels[u.id]=n(d.levels?.[u.id],u.max));this.checkpoint=Math.max(1,Math.min(TOTAL_LEVELS,n(d.checkpoint,TOTAL_LEVELS)));}catch(e){}},
+    save(){try{localStorage.setItem('ocean_progress',JSON.stringify({salvage:this.salvage,levels:this.levels,checkpoint:this.checkpoint}));}catch(e){}},
+    cost(u){return Math.round(u.base*Math.pow(this.levels[u.id]+1,1.5));},
+    torpedoDamage(){return 1+this.levels.torpedo*.25;},
+    reloadScale(){return 1-this.levels.reload*.07;},
+    maxHull(){return 100+this.levels.hull*10;},
+    heatScale(){return 1-this.levels.cooling*.1;},
+    affordable(){return UPGRADES.some(u=>this.levels[u.id]<u.max&&this.salvage>=this.cost(u));},
+};
+Progress.load();
+window.addEventListener('pagehide',()=>Progress.save());
+let runKills=0, runSalvage=0, floaters=[], banner=null, hitFlash=0;
+function rewardKill(e){
+    score+=e.flagship?2000:e.type==='air'?100:160;
+    if(e.flagship)bossDefeated=true;
+    const bounty=e.flagship?40+Math.floor((levelNumber-1)/10)*10:e.type==='air'?3:5;
+    Progress.salvage+=bounty;runSalvage+=bounty;runKills++;
+    floaters.push({x:e.x,y:e.y-26,text:`+${bounty}`,life:1.1});
+    if(floaters.length>30)floaters.shift();
+}
+function showBanner(title,sub,tone='#92e6e4'){banner={title,sub,tone,life:2.6};}
+
 // --- 사운드 엔진 ---
 let audioCtx = null;
 let isSoundOn = false;
@@ -453,17 +547,38 @@ soundToggle.setAttribute('aria-pressed',String(isSoundOn));
 const keys = {};
 const GAME_KEYS = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 window.addEventListener('keydown', e => {
+    if(!document.getElementById('dockyard').hidden){if(e.code==='Escape'){e.preventDefault();Dockyard.close();}return;}
     if(e.ctrlKey||e.metaKey||e.altKey||e.target.closest('button,a,input,select,textarea'))return;
     keys[e.code] = true;
     if (GAME_KEYS.includes(e.code)) e.preventDefault();
-    if (e.code === 'KeyR' && (currentState !== GameState.PLAYING)) resetGame();
+    if (e.code === 'KeyR' && (currentState !== GameState.PLAYING)) resetGame(Progress.checkpoint);
     if (e.code === 'KeyP' && !e.repeat) togglePause();
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
 function clearInput(){Object.keys(keys).forEach(key=>keys[key]=false);pointerTarget=null;document.querySelectorAll('.held').forEach(node=>node.classList.remove('held'));}
 function togglePause(){paused=!paused;clearInput();lastTime=0;document.getElementById('pauseToggle').setAttribute('aria-label',paused?'Resume mission':'Pause mission');document.getElementById('pauseToggle').title=paused?'Resume mission':'Pause mission';document.getElementById('pauseToggle').setAttribute('aria-pressed',String(paused));document.getElementById('pauseBadge').hidden=!paused;}
 document.getElementById('pauseToggle').onclick=togglePause;
-document.getElementById('restartButton').onclick=()=>{resetGame();canvas.focus({preventScroll:true});};
+document.getElementById('restartButton').onclick=()=>{resetGame(Progress.checkpoint);canvas.focus({preventScroll:true});};
+document.getElementById('newCampaign').onclick=()=>{if(Progress.checkpoint<=1||confirm('Start over from stage 1? Salvage and upgrades are kept.')){Progress.checkpoint=1;Progress.save();resetGame(1);canvas.focus({preventScroll:true});}};
+const Dockyard={
+    el:document.getElementById('dockyard'),wasPaused:false,opener:null,
+    open(){if(!this.el.hidden)return;this.opener=document.activeElement;this.wasPaused=paused;if(!paused)togglePause();document.getElementById('pauseBadge').hidden=true;this.render();this.el.hidden=false;document.getElementById('dockClose').focus({preventScroll:true});},
+    close(){if(this.el.hidden)return;this.el.hidden=true;if(!this.wasPaused&&paused)togglePause();else document.getElementById('pauseBadge').hidden=!paused;this.opener?.focus?.({preventScroll:true});},
+    render(){
+        document.getElementById('dockSalvage').textContent=Progress.salvage.toLocaleString();
+        document.getElementById('dockRows').innerHTML=UPGRADES.map(u=>{const lv=Progress.levels[u.id],maxed=lv>=u.max,cost=Progress.cost(u);
+            return `<div class="dock-row"><div><strong>${u.name} · Lv ${lv}</strong><small>${u.help}</small><span class="pips" aria-hidden="true">${Array.from({length:u.max},(_,i)=>`<i class="${i<lv?'on':''}"></i>`).join('')}</span></div><button class="nav-btn" type="button" data-buy="${u.id}" ${maxed||Progress.salvage<cost?'disabled':''} aria-label="Upgrade ${u.name}${maxed?' (maxed)':', costs '+cost}">${maxed?'MAX':'◆ '+cost.toLocaleString()}</button></div>`;}).join('');
+    },
+    buy(id){const u=UPGRADES.find(x=>x.id===id),cost=Progress.cost(u);if(Progress.levels[id]>=u.max||Progress.salvage<cost)return;
+        Progress.salvage-=cost;Progress.levels[id]++;
+        if(id==='hull'){const gain=Progress.maxHull()-sub.maxHp;sub.maxHp+=gain;if(currentState===GameState.PLAYING)sub.hp+=gain;}
+        Progress.save();sfx.launch(520);this.render();syncHUD();
+        const again=this.el.querySelector(`[data-buy="${id}"]`);(again&&!again.disabled?again:document.getElementById('dockClose')).focus({preventScroll:true});},
+};
+document.getElementById('dockButton').onclick=()=>Dockyard.open();
+document.getElementById('resultDock').onclick=()=>Dockyard.open();
+document.getElementById('dockClose').onclick=()=>Dockyard.close();
+Dockyard.el.addEventListener('click',e=>{const b=e.target.closest('[data-buy]');if(b)Dockyard.buy(b.dataset.buy);else if(e.target===Dockyard.el)Dockyard.close();});
 window.addEventListener('blur',clearInput);
 document.addEventListener('visibilitychange',()=>{clearInput();lastTime=0;});
 document.querySelectorAll('[data-key]').forEach(button=>{
@@ -696,7 +811,7 @@ class EscortShip {
                 this.gunAngle = Math.atan2(target.y - this.y, target.x - this.x);
                 if (Math.random() < 1-Math.exp(-0.9*dt)) {
                     missiles.push(new Missile(this.x, this.y - 15, target, false));
-                    this.heat += 20;
+                    this.heat += 20 * Progress.heatScale();
                     if (this.heat >= 100) this.overheated = true;
                     sfx.launch(300 + (this.lane * 50));
                 }
@@ -730,14 +845,16 @@ class EscortShip {
 let sub, base, escorts = [];
 let enemies = [], missiles = [], bombs = [], explosions = [], particles = [];
 
-function resetGame() {
+function resetGame(startLevel = 1) {
     score = 0; gameTime = 0; restartTimer = 7.0; idleTime = 0;
     enemies = []; missiles = []; bombs = []; explosions = []; particles = [];
-    sub = { x: 250, y: 460, hp: 100, manualCooldown: 0, autoCooldown: 0 };
+    runKills = 0; runSalvage = 0; floaters = []; hitFlash = 0;
+    sub = { x: 250, y: 460, hp: Progress.maxHull(), maxHp: Progress.maxHull(), manualCooldown: 0, autoCooldown: 0 };
     base = { x: 60, y: 450, hp: 120 };
     escorts = [new EscortShip(0), new EscortShip(1), new EscortShip(2)];
     currentState = GameState.PLAYING;
-    levelNumber=1;spawnedThisLevel=0;bossDefeated=false;spawnClock=1.5;flagshipSpawned=false;lastTime=0;clearInput();
+    levelNumber=Math.max(1,Math.min(TOTAL_LEVELS,startLevel));spawnedThisLevel=0;bossDefeated=false;spawnClock=1.5;flagshipSpawned=false;lastTime=0;clearInput();
+    showBanner(`Stage ${levelNumber} · ${sector().name}`,sector().zone);
     if(paused)togglePause();
     document.getElementById('result').hidden=true;
     sub.invulnerable=0;
@@ -753,7 +870,7 @@ function createSplash(x, y, count) {
 
 function checkExplosionDamage(ex, ey, er, hostile=false) {
     if(hostile){
-        if(sub.invulnerable<=0 && dist(sub.x,sub.y,ex,ey)<er+20){sub.hp=Math.max(0,sub.hp-5);sub.invulnerable=1.2;}
+        if(sub.invulnerable<=0 && dist(sub.x,sub.y,ex,ey)<er+20){sub.hp=Math.max(0,sub.hp-5);sub.invulnerable=1.2;hitFlash=.45;try{navigator.vibrate?.(40);}catch(err){}}
         if(dist(base.x,base.y,ex,ey)<er+55)base.hp=Math.max(0,base.hp-10);
         return;
     }
@@ -761,8 +878,7 @@ function checkExplosionDamage(ex, ey, er, hostile=false) {
         if (e.active && dist(e.x, e.y, ex, ey) < er + 30) {
             e.hp -= 2.5;
             if (e.hp <= 0) {
-                e.active = false; score += e.flagship?2000:e.type === 'air' ? 100 : 160;
-                if(e.flagship)bossDefeated=true;
+                e.active = false; rewardKill(e);
                 explosions.push(new Explosion(e.x, e.y, 60));
                 sfx.explosion(0.2, 0.4, 150);
             }
@@ -776,7 +892,7 @@ function update(time) {
     lastTime = time;
     if (currentState !== GameState.PLAYING) {
         restartTimer -= dt;
-        if (restartTimer <= 0) resetGame();
+        if (restartTimer <= 0) resetGame(Progress.checkpoint);
         syncHUD();
         return;
     }
@@ -824,12 +940,15 @@ function update(time) {
 
     if (keys['Space'] && sub.manualCooldown <= 0) {
         let target = getNearestEnemy(sub.x, sub.y);
-        if (target) { missiles.push(new Missile(sub.x, sub.y, target, true)); sub.manualCooldown = 1.1; }
+        if (target) { missiles.push(new Missile(sub.x, sub.y, target, true)); sub.manualCooldown = 1.1 * Progress.reloadScale(); }
     }
     if (sub.autoCooldown <= 0) {
         let target = getNearestEnemy(sub.x, sub.y, 450);
-        if (target) { missiles.push(new Missile(sub.x, sub.y, target, true)); sub.autoCooldown = 2.2; }
+        if (target) { missiles.push(new Missile(sub.x, sub.y, target, true)); sub.autoCooldown = 2.2 * Progress.reloadScale(); }
     }
+    hitFlash=Math.max(0,hitFlash-dt);
+    if(banner){banner.life-=dt;if(banner.life<=0)banner=null;}
+    floaters.forEach(f=>{f.y-=28*dt;f.life-=dt;});floaters=floaters.filter(f=>f.life>0);
 
     escorts.forEach(e => e.update(dt));
 
@@ -856,13 +975,12 @@ function update(time) {
             if(hit.bomb){hit.entity.explode();return;}
             const e=hit.entity;
             if (e.active) {
-                m.active = false; e.hp--;
+                m.active = false; e.hp -= m.isPlayer ? Progress.torpedoDamage() : 1;
                 explosions.push(new Explosion(m.x, m.y, 35, 0.3));
                 sfx.hit();
 
                 if (e.hp <= 0) {
-                    e.active = false; score += e.flagship?2000:e.type === 'air' ? 100 : 160;
-                    if(e.flagship)bossDefeated=true;
+                    e.active = false; rewardKill(e);
                     explosions.push(new Explosion(e.x, e.y, 75));
                     checkExplosionDamage(e.x, e.y, 75);
                 }
@@ -888,20 +1006,29 @@ function segmentHit(ax,ay,bx,by,cx,cy,r){
     const b=2*(ox*dx+oy*dy),d=b*b-4*a*c;if(d<0)return null;
     const t=(-b-Math.sqrt(d))/(2*a);return t>=0&&t<=1?t:null;
 }
-function spawnFlagship(){const ship=new Enemy('surface',1);ship.hp=sector().bossHp;ship.maxHp=ship.hp;ship.flagship=true;ship.baseSpeed=.12;enemies.push(ship);flagshipSpawned=true;}
+function spawnFlagship(){const ship=new Enemy('surface',1);ship.hp=sector().bossHp;ship.maxHp=ship.hp;ship.flagship=true;ship.baseSpeed=.12;enemies.push(ship);flagshipSpawned=true;showBanner(sector().tactic==='Flagship'?'Flagship approaching':'Vanguard approaching','Sink it before it reaches the base','#ffb37a');}
 function advanceLevel(){
-    if(levelNumber===TOTAL_LEVELS){finishMission(true);return;}
-    sub.hp=Math.min(100,sub.hp+sector().repair);base.hp=Math.min(120,base.hp+(sector().bossHp?10:2));
+    if(levelNumber===TOTAL_LEVELS){Progress.checkpoint=1;Progress.save();finishMission(true);return;}
+    const clearedBoss=!!sector().bossHp;
+    sub.hp=Math.min(sub.maxHp,sub.hp+sector().repair);base.hp=Math.min(120,base.hp+(clearedBoss?10:2));
     levelNumber++;spawnedThisLevel=0;flagshipSpawned=false;bossDefeated=false;spawnClock=2;
     enemies=[];bombs=[];missiles=[];explosions=[];
+    if(clearedBoss)Progress.checkpoint=levelNumber;
+    Progress.save();
+    showBanner(clearedBoss?`Checkpoint · Stage ${levelNumber}`:`Stage ${levelNumber} · ${sector().name}`,clearedBoss?`${sector().name} · hull repaired`:sector().zone,clearedBoss?'#ffd77a':'#92e6e4');
 }
-function finishMission(win){currentState=win?GameState.WIN:GameState.LOSE;clearInput();updateBestScore();document.getElementById('result').hidden=false;document.getElementById('resultTitle').textContent=win?'100 stages · Ocean secured':'Fleet lost';document.getElementById('restartButton').focus({preventScroll:true});}
+function finishMission(win){currentState=win?GameState.WIN:GameState.LOSE;clearInput();updateBestScore();Progress.save();document.getElementById('result').hidden=false;document.getElementById('resultTitle').textContent=win?'100 stages · Ocean secured':'Fleet lost';
+    document.getElementById('statKills').textContent=runKills.toLocaleString();document.getElementById('statSalvage').textContent=runSalvage.toLocaleString();
+    document.getElementById('restartButton').focus({preventScroll:true});}
 function syncHUD(){
     document.getElementById('sectorName').textContent=`${String(levelNumber).padStart(3,'0')} / ${sector().name}`;
     document.getElementById('sectorHint').textContent=sector().hint;
     document.getElementById('scoreValue').textContent=score.toLocaleString();document.getElementById('bestValue').textContent=`BEST ${bestScore.toLocaleString()}`;
     document.getElementById('missionTime').textContent=`STAGE ${levelNumber} / 100 · ${Math.floor(gameTime/60)}:${String(Math.floor(gameTime%60)).padStart(2,'0')}`;
-    document.getElementById('missionProgress').value=currentState===GameState.WIN?100:levelNumber-1;document.getElementById('healthValue').textContent=`Hull ${sub.hp} · Base ${base.hp}`;
+    document.getElementById('missionProgress').value=currentState===GameState.WIN?100:levelNumber-1;document.getElementById('healthValue').textContent=`Hull ${Math.ceil(sub.hp)}/${sub.maxHp} · Base ${base.hp}`;
+    document.getElementById('salvageValue').textContent=Progress.salvage.toLocaleString();
+    document.getElementById('dockButton').classList.toggle('can-buy',Progress.affordable());
+    document.getElementById('restartButton').textContent=Progress.checkpoint>1?`Continue · Stage ${Progress.checkpoint}`:'Deploy again';
     document.querySelector('.dashboard .eyebrow').textContent=sector().zone;
     document.getElementById('launchStatus').textContent=sub.manualCooldown>0?`Rearming ${sub.manualCooldown.toFixed(1)}s`:'Ready · hold to launch';
     document.getElementById('controlMode').textContent=idleTime>6?'AUTO PATROL':'MANUAL HELM';
@@ -968,13 +1095,27 @@ function draw() {
     ctx.fillStyle='#15384b';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(-15+i*13,-2,4,0,Math.PI*2);ctx.fill();}
     ctx.fillStyle='#8cbcad';ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(-46,-15);ctx.lineTo(-46,15);ctx.closePath();ctx.fill();
     if(sub.invulnerable>0){ctx.strokeStyle='#cffaf0';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,47,25,0,0,Math.PI*2);ctx.stroke();}
-    ctx.fillStyle = '#0f0'; ctx.fillRect(-28, 28, 56 * (sub.hp / 100), 4);
+    ctx.fillStyle = sub.hp/sub.maxHp<=.3?'#ff6b6b':'#0f0'; ctx.fillRect(-28, 28, 56 * (sub.hp / sub.maxHp), 4);
     ctx.restore();
 
     [...enemies, ...missiles, ...bombs, ...explosions, ...particles].forEach(e => e.draw());
 
+    ctx.save();ctx.textAlign='center';ctx.font='800 15px Segoe UI';ctx.lineWidth=3;ctx.strokeStyle='#071b2d';
+    for(const f of floaters){ctx.globalAlpha=Math.min(1,f.life*1.5);ctx.strokeText(f.text,f.x,f.y);ctx.fillStyle='#ffd77a';ctx.fillText(f.text,f.x,f.y);}
+    ctx.restore();
+    // Danger edge: flashes on hits, pulses while the hull is critical.
+    const critical=currentState===GameState.PLAYING&&sub.hp/sub.maxHp<=.3;
+    const danger=Math.max(hitFlash/.45*.6,critical?(reducedMotion.matches?.35:.25+.2*Math.sin(gameTime*6)):0);
+    if(danger>0){const g=ctx.createRadialGradient(WIDTH/2,HEIGHT/2,HEIGHT*.35,WIDTH/2,HEIGHT/2,WIDTH*.62);g.addColorStop(0,'rgba(255,40,60,0)');g.addColorStop(1,`rgba(255,40,60,${danger})`);ctx.fillStyle=g;ctx.fillRect(0,0,WIDTH,HEIGHT);}
+    if(banner&&currentState===GameState.PLAYING){
+        const a=Math.min(1,banner.life/.4,(2.6-banner.life)/.3);ctx.save();ctx.globalAlpha=Math.max(0,a);
+        ctx.fillStyle='rgba(6,19,34,.82)';ctx.fillRect(WIDTH/2-230,64,460,64);ctx.fillStyle=banner.tone;ctx.fillRect(WIDTH/2-230,64,460,3);
+        ctx.textAlign='center';ctx.fillStyle='#eff9ff';ctx.font='800 22px Segoe UI';ctx.fillText(banner.title,WIDTH/2,96);
+        ctx.fillStyle='#9fbdd0';ctx.font='600 13px Segoe UI';ctx.fillText(banner.sub,WIDTH/2,117);ctx.restore();
+    }
+
     // Gauges stay in the unoccupied lower-water strip; status text lives in the DOM.
-    drawGauge(180, HEIGHT-19, 100, 'HULL', sub.hp/100, '#81dfc4');
+    drawGauge(180, HEIGHT-19, 100, 'HULL', sub.hp/sub.maxHp, '#81dfc4');
     drawGauge(430, HEIGHT-19, 100, 'BASE', base.hp/120, '#9dc9ff');
     drawGauge(720, HEIGHT-19, 170, 'ESCORT HEAT', Math.max(...escorts.map(e=>e.heat))/100, '#f2bf7e');
 }
