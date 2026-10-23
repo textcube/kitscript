@@ -2,168 +2,80 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BUNT GAMES | 8-BIT Eternal Invasion</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuntGames — Eternal Invasion Arcade</title>
+    <meta name="description" content="A living pixel-art arcade. Defend the sanctuary, charge your Genesis Burst, and discover the BuntGames collection.">
+    <meta name="theme-color" content="#111726">
     <style>
-        :root {
-            --primary-gold: #ffcc00;
-            --magic-blue: #00ffff;
-            --danger: #ff0055;
-            --font-pixel: 'Press Start 2P', cursive;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: var(--font-pixel); color: #fff; }
-
-        /* Background & Dim */
-        #video-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden; }
-        #video-background iframe {
-            width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.77vh;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border: none; filter: brightness(0.62) contrast(1.08) saturate(1.08);
-        }
-
-        #dim-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.45) 100%); z-index: 0; pointer-events: none; }
-
-        /* Game Canvas */
-        #gameCanvas { position: fixed; top: 0; left: 0; z-index: 1; image-rendering: pixelated; }
-
-        /* UI Layer */
-        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-        #ui-layer * { pointer-events: auto; }
-
-        #brand-header { 
-            padding: 10px 20px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: rgba(0,0,0,0.9); 
-            border-bottom: 4px solid var(--primary-gold);
-            gap: 10px;
-        }
-
-        .brand-logo { display: flex; flex-direction: column; gap: 3px; min-width: 140px; }
-        .brand-main { font-size: 11px; color: var(--primary-gold); letter-spacing: 1px; }
-        .brand-sub { font-size: 6px; color: #fff; letter-spacing: 1px; opacity: 0.8; }
-
-        #center-hud { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
-        #score-area { font-size: 14px; color: #fff; text-shadow: 2px 2px #f00; letter-spacing: 2px; }
-
-        #gauge-container { display: flex; flex-direction: column; gap: 3px; width: 100%; max-width: 240px; }
-        .bar-wrapper { display: flex; align-items: center; gap: 6px; }
-        .bar-label { font-size: 6px; color: #fff; width: 25px; text-align: left; }
-        .bar-bg { flex: 1; height: 8px; background: #333; border: 1px solid #fff; position: relative; overflow: hidden; }
-        .bar-fill { height: 100%; transition: width 0.2s; }
-        .bar-fill.hp { background: #f00; }
-        .bar-fill.exp { background: #0ff; }
-
-        .brand-links { display: flex; gap: 8px; min-width: 100px; justify-content: flex-end; }
-        .link-btn { padding: 4px 6px; font-size: 6px; text-decoration: none; color: #fff; border: 1.5px solid #fff; white-space: nowrap; }
-        .link-btn:hover { background: #fff; color: #000; }
-
-        #info-bar { padding: 5px 20px; text-align: center; font-size: 8px; color: var(--primary-gold); background: rgba(0,0,0,0.4); }
-
-        .module-group { position: absolute; top: 55%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; padding: 20px; }
-        #left-modules { left: 0; }
-        #right-modules { right: 0; }
-
-        .module-btn { width: 160px; height: 40px; background: #000; border: 3px solid var(--primary-gold); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 7px; border-radius: 4px; }
-        .module-btn:hover:not(.locked) { background: var(--primary-gold); color: #000; transform: scale(1.05); }
-        .module-btn.locked { opacity: 0.3; cursor: not-allowed; border-color: #555; }
-
-        #bottom-controls { padding: 30px; display: flex; flex-direction: column; align-items: center; }
-        #stat-tickets { font-size: 9px; margin-bottom: 15px; color: var(--magic-blue); text-shadow: 2px 2px #000; letter-spacing: 1px; }
-
-        #aoe-button { 
-            padding: 15px 40px; font-size: 12px; background: #000; border: 4px solid var(--magic-blue); color: var(--magic-blue); 
-            cursor: pointer; font-family: var(--font-pixel); box-shadow: 4px 4px #000; transition: all 0.1s; border-radius: 30px;
-        }
-        #aoe-button.active { 
-            border-color: var(--primary-gold); 
-            color: var(--primary-gold); 
-            animation: blink 0.5s infinite; 
-            cursor: pointer;
-        }
-        #aoe-button.disabled { 
-            opacity: 0.2; 
-            cursor: not-allowed; 
-            border-color: #555; 
-            color: #555; 
-            box-shadow: none; 
-            animation: none;
-        }
-
-        #sound-toggle { background:transparent; border:none; color:#555; font-size:8px; cursor:pointer; margin-top:15px; text-decoration: underline; }
-
-        @keyframes blink { 0%, 100% { filter: brightness(1.3); transform: scale(1); } 50% { filter: brightness(0.7); transform: scale(1.05); } }
-        #toast-container { position: fixed; top: 140px; left: 50%; transform: translateX(-50%); pointer-events: none; }
-        .toast { padding: 10px 20px; border: 2px solid #fff; font-size: 10px; background: #000; margin-bottom: 5px; box-shadow: 4px 4px #000; animation: fadeInUp 0.3s ease-out; }
-
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        @media (max-width: 850px) {
-            #brand-header { flex-direction: column; padding: 10px; gap: 10px; }
-            .brand-logo { align-items: center; min-width: auto; }
-            .module-group { top: 56%; padding: 10px; gap: 8px; }
-            #left-modules, #right-modules { width: 50%; }
-            #left-modules { left: 0; right: auto; }
-            #right-modules { right: 0; left: auto; }
-            .module-btn { width: 100%; height: 32px; font-size: 6px; }
-        }
-    </style>
+:root{--primary-gold:#f5d39b;--magic-blue:#8be7dc;--danger:#f185a3;--font-pixel:ui-monospace,'Cascadia Code',Consolas,monospace;--panel:#1a2336;--muted:#9aaac1}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0,#29334e 0,transparent 50%),#101522;color:#edf3ff;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.5}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--magic-blue);outline-offset:4px}button:disabled{cursor:not-allowed}a{color:inherit}button{cursor:pointer}.shell{width:min(1160px,calc(100% - 48px));margin:auto}#brand-header{display:flex;justify-content:space-between;align-items:center;padding:26px 0;gap:16px}.brand-logo{display:flex;align-items:center;gap:12px;text-decoration:none}.brand-emblem{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#f5d39b15;border:1px solid #f5d39b50;color:var(--primary-gold);font-size:23px}.brand-main{display:block;font-weight:850;letter-spacing:.13em;font-size:15px}.brand-sub{display:block;font-size:9px;color:var(--muted);letter-spacing:.2em}.brand-links{display:flex;gap:8px}.link-btn{width:44px;height:44px;display:grid;place-items:center;border:1px solid #ffffff1c;border-radius:12px;background:#ffffff04;color:#bac9df;text-decoration:none}.link-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}.link-btn:hover{border-color:#8be7dc88;color:#8be7dc}.intro{display:flex;justify-content:space-between;gap:32px;align-items:end;margin:14px 0 26px}.eyebrow{font:11px var(--font-pixel);letter-spacing:.15em;text-transform:uppercase;color:var(--magic-blue)}h1{font-size:clamp(30px,4.3vw,54px);line-height:1.1;letter-spacing:-.045em;margin:12px 0 0;font-weight:800}h1 span{color:var(--primary-gold)}.intro p{max-width:310px;font-size:13px;line-height:1.8;color:var(--muted);margin:0}.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#8be7dc;margin-right:8px;box-shadow:0 0 12px #8be7dc77}.arcade-frame{border:1px solid #ffffff20;border-radius:20px;overflow:hidden;box-shadow:0 24px 80px #0003;background:#151e30}#center-hud{display:grid;grid-template-columns:1fr 1.3fr 1fr;align-items:center;gap:30px;padding:18px 24px;background:linear-gradient(120deg,#222d43,#192438);border-bottom:1px solid #ffffff0b}#score-area .eyebrow{font-size:9px;color:var(--muted);margin-bottom:3px;display:block}#score{font:700 23px var(--font-pixel);letter-spacing:.06em;color:#f1deb8}#gauge-container{display:grid;gap:7px}.bar-wrapper{display:flex;gap:12px;align-items:center}.bar-label{font:10px var(--font-pixel);color:#b5c3d6;width:22px}.bar-bg{height:6px;border-radius:6px;overflow:hidden;flex:1;background:#090f1f}.bar-fill{height:100%;border-radius:6px}.bar-fill.hp{background:linear-gradient(90deg,#be7196,#f4a7b1)}.bar-fill.exp{background:linear-gradient(90deg,#588faf,#99e7dd)}#info-bar{text-align:right;color:#c4d2e5;font:11px var(--font-pixel)}#info-bar small{display:block;color:#8295af;font:10px system-ui;margin-top:4px}.arena{position:relative;height:clamp(400px,56svh,620px);overflow:hidden;background:#162039;isolation:isolate}#gameCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;image-rendering:pixelated}#video-background{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;display:none}#video-background iframe{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:177.78%;height:177.78%;border:0;filter:brightness(.4) saturate(.65)}#dim-overlay{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse,#ffffff02,#090e2199);pointer-events:none}.arena-label{position:absolute;left:20px;top:16px;z-index:2;color:#b5c8e9;font:9px var(--font-pixel);letter-spacing:.12em;pointer-events:none}.arena-label span{color:#798ba9;margin-left:8px}.arena-note{position:absolute;bottom:16px;left:20px;z-index:2;color:#90a4c7;font:10px var(--font-pixel);pointer-events:none}#bottom-controls{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;background:#1c273b;border-top:1px solid #ffffff12}#stat-tickets{font:11px var(--font-pixel);color:#a7dcd9}.charge-help{display:block;color:#8d9db7;font-size:11px;margin-top:5px}.action-controls{display:flex;align-items:center;gap:10px}#aoe-button{min-height:48px;padding:12px 26px;border:1px solid #83d6ce55;background:#21444b;color:#b4eee5;border-radius:12px;font-size:11px;font-weight:800;letter-spacing:.08em;transition:background .2s}#aoe-button.active{background:#f5d39b;color:#222436;border-color:#f5d39b;box-shadow:0 0 22px #f5d39b22}#aoe-button.disabled{color:#8198aa;background:#26364a;border-color:#ffffff10}#sound-toggle,#video-toggle{width:44px;height:44px;border:1px solid #ffffff1c;border-radius:11px;background:transparent;color:#afc4dd;display:grid;place-items:center}#sound-toggle svg,#video-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}[aria-pressed=true]{color:#a1e5d6!important;background:#8be7dc14!important}#toast-container{position:absolute;top:48px;left:50%;transform:translateX(-50%);z-index:4;pointer-events:none;width:max-content;max-width:90%}.toast{font:11px var(--font-pixel);padding:10px 16px;border:1px solid #99d9d466;border-radius:10px;background:#17263bef;color:#d3f4eb;margin-bottom:6px;text-align:center}.library-heading{display:flex;align-items:end;justify-content:space-between;margin:40px 0 18px;gap:20px}.library-heading h2{font-size:23px;letter-spacing:-.03em;margin:5px 0 0}.library-heading p{font-size:12px;color:var(--muted);margin:0}.game-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.module-group{display:contents}.module-btn{min-width:0;padding:17px 14px;min-height:110px;display:flex;flex-direction:column;gap:10px;text-decoration:none;border:1px solid #ffffff14;border-radius:14px;background:linear-gradient(140deg,#243048,#192236);transition:transform .18s,border-color .18s}.module-btn:hover:not(.locked){transform:translateY(-3px);border-color:#8be7dc77}.module-top{display:flex;justify-content:space-between;align-items:center}.module-icon{color:var(--card-color,#8be7dc);width:27px;height:27px}.module-number{font:9px var(--font-pixel);color:#7586a1}.module-name{font:700 11px var(--font-pixel);letter-spacing:.04em}.module-status{font-size:10px;color:#8da5ba}.module-btn.locked{background:#172031;color:#8e9bb2;border-style:dashed}.module-btn.locked .module-icon{opacity:.4}.module-btn.locked .module-name{color:#8391a8}.page-footer{display:flex;justify-content:space-between;gap:20px;color:#75849d;font-size:11px;padding:28px 0 34px}.page-footer a{text-decoration:none}.skip-link{position:fixed;top:-80px;left:16px;z-index:100;padding:12px;background:#f5d39b;color:#111}.skip-link:focus{top:10px}
+@media(max-width:850px){.game-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.intro{gap:20px}.intro p{max-width:250px}.shell{width:calc(100% - 32px)}#center-hud{gap:18px}.action-controls{gap:7px}#bottom-controls{padding:16px}}
+@media(max-width:560px){.shell{width:calc(100% - 24px)}#brand-header{padding:18px 0}.brand-main{font-size:13px}.brand-sub{font-size:8px}.brand-emblem{width:36px;height:36px}.intro{display:block;margin:12px 0 22px}.intro p{max-width:100%;font-size:12px;line-height:1.6;margin-top:12px}h1{font-size:36px}.eyebrow{font-size:9px}#center-hud{grid-template-columns:1fr 1fr;padding:14px;gap:12px}#score{font-size:18px}#info-bar{grid-column:2;grid-row:1;font-size:10px}#gauge-container{grid-column:1/-1;grid-row:2;grid-template-columns:1fr 1fr;gap:16px}#info-bar small{display:none}.arena{height:clamp(300px,40svh,380px)}.arena-label{left:14px;font-size:8px}.arena-note{left:14px;font-size:8px}.arcade-frame{border-radius:16px}#bottom-controls{flex-wrap:wrap;gap:12px;padding:14px}#stat-tickets{font-size:10px}.charge-help{font-size:10px}.action-controls{width:100%}#aoe-button{flex:1;padding:12px;font-size:10px}.library-heading{align-items:start;margin-top:30px}.library-heading h2{font-size:21px}.library-heading p{max-width:125px;font-size:10px;text-align:right}.game-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.module-btn{padding:12px 10px;min-height:105px;border-radius:12px}.module-name{font-size:9px}.module-status{font-size:9px}.module-number{font-size:8px}.page-footer{font-size:10px}.arena-label span{display:none}}
+@media(max-width:350px){.game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.brand-links{gap:4px}.brand-logo{gap:7px}.arena{height:300px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.intro{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;gap:12px;padding:0 2px}.intro h1{font-size:13px;line-height:1.4;letter-spacing:.04em;margin:0;font-weight:600;color:#c0ccdf}.intro .eyebrow{font-size:9px;white-space:nowrap}.intro .live-dot{width:5px;height:5px}@media(max-width:560px){.intro{margin:0 0 12px;gap:8px}.intro h1{font-size:11px}.intro .eyebrow{font-size:8px;letter-spacing:.06em}}
+main{min-width:0}.arcade-frame,#game-library{min-width:0}
+@media(orientation:landscape) and (min-width:600px){
+ .shell{width:min(1500px,calc(100% - 32px))}#brand-header{padding:16px 0}
+ main{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,34%);gap:20px;height:max(320px,calc(100svh - 154px));max-height:820px}
+ .arcade-frame{display:flex;flex-direction:column}.arena{flex:1;min-height:160px;height:auto}
+ #center-hud{gap:14px;padding:14px 16px}#bottom-controls{gap:12px;padding:14px 16px;flex-wrap:wrap}.action-controls{flex:1;justify-content:flex-end}#aoe-button{padding:12px 16px}
+ #game-library{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#53647e #172031;padding:0 8px 8px 0}
+ .library-heading{margin:0 0 14px;display:block}.library-heading h2{font-size:20px}.library-heading p{margin-top:6px;font-size:11px}
+ .game-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.module-btn{padding:12px 10px;min-height:100px}.module-name{font-size:10px}
+}
+@media(orientation:landscape) and (min-width:600px) and (max-width:1000px){
+ main{grid-template-columns:minmax(0,1fr) 128px;gap:12px}.game-grid{grid-template-columns:minmax(0,1fr)}
+ .library-heading h2{font-size:15px}.library-heading .eyebrow{font-size:8px}.library-heading p{display:none}
+ .module-btn{min-height:86px;gap:5px}#center-hud{gap:10px}#score{font-size:18px}.charge-help{display:none}
+ #bottom-controls{padding:10px;gap:8px}#aoe-button{font-size:9px;padding:10px}.action-controls{gap:6px}.arena-note{font-size:8px}
+}
+@media(orientation:portrait) and (max-width:560px){
+ .game-grid{display:flex;overflow-x:auto;gap:10px;padding:4px 2px 12px;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#53647e #172031}
+ .module-btn{flex:0 0 112px;scroll-snap-align:start}.library-heading{margin-top:22px}
+}
+</style>
 </head>
 <body>
-
-    <div id="video-background">
-        <div id="player"></div>
-    </div>
-    <div id="dim-overlay"></div>
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="ui-layer">
-        <div id="brand-header">
-            <div class="brand-logo">
-                <div class="brand-main">BUNTGAMES</div>
-                <div class="brand-sub">ETERNAL INVASION</div>
-            </div>
-            
-            <div id="center-hud">
-                <div id="score-area"><span id="score">000000000</span></div>
-                <div id="gauge-container">
-                    <div class="bar-wrapper">
-                        <span class="bar-label">HP</span>
-                        <div class="bar-bg"><div id="hp-bar" class="bar-fill hp" style="width: 100%;"></div></div>
-                    </div>
-                    <div class="bar-wrapper">
-                        <span class="bar-label">MP</span>
-                        <div class="bar-bg"><div id="exp-bar" class="bar-fill exp" style="width: 0%;"></div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="brand-links">
-                <a href="https://www.youtube.com/@textcube" target="_blank" class="link-btn">YT</a>
-                <a href="https://github.com/textcube/kitscript" target="_blank" class="link-btn">SRC</a>
-            </div>
-        </div>
-
-        <div id="info-bar">
-            <span id="stat-level">LV.1 HERO</span>
-        </div>
-
-        <nav id="left-modules" class="module-group"></nav>
-        <nav id="right-modules" class="module-group"></nav>
-
-        <footer id="bottom-controls">
-            <div id="stat-tickets">SALVO CHARGE: 0 / 3</div>
-            <button id="aoe-button" class="disabled">GENESIS BURST</button>
-            <button id="sound-toggle">SOUND: OFF</button>
-        </footer>
-        <div id="toast-container"></div>
-    </div>
-
-    <script src="https://www.youtube.com/iframe_api"></script>
+<a href="#game-library" class="skip-link">Skip to game collection</a>
+<div class="shell" id="ui-layer">
+<header id="brand-header"><a class="brand-logo" href="./home/index.html"><span class="brand-emblem" aria-hidden="true">✦</span><span><span class="brand-main">BUNTGAMES</span><span class="brand-sub">SMALL WORLDS. ENDLESS PLAY.</span></span></a><div class="brand-links"><a href="https://youtube.com/@textcube" target="_blank" rel="noopener noreferrer" class="link-btn" aria-label="YouTube channel" title="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3Z"/></svg></a><a href="https://github.com/textcube/kitscript" target="_blank" rel="noopener noreferrer" class="link-btn" aria-label="View source on GitHub" title="Source code"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18"/></svg></a></div></header>
+<section class="intro" aria-label="Game introduction"><h1>Eternal Invasion</h1><div class="eyebrow"><span class="live-dot"></span>AUTO DEFENSE · LIVE</div></section>
+<main>
+<section class="arcade-frame" aria-label="Eternal Invasion game">
+<div id="center-hud"><div id="score-area"><span class="eyebrow">HIGH MAGIC / SCORE</span><span id="score">000000000</span></div><div id="gauge-container"><div class="bar-wrapper"><span class="bar-label">HP</span><div class="bar-bg"><div id="hp-bar" class="bar-fill hp" style="width:100%" role="progressbar" aria-label="Guardian health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div></div></div><div class="bar-wrapper"><span class="bar-label">XP</span><div class="bar-bg"><div id="exp-bar" class="bar-fill exp" style="width:0%" role="progressbar" aria-label="Level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div></div></div><div id="info-bar"><span id="stat-level">LV.1 HERO</span><small>GUARDIAN ONLINE</small></div></div>
+<div class="arena" id="arena"><div id="video-background"><div id="player"></div></div><div id="dim-overlay"></div><canvas id="gameCanvas" role="img" aria-label="Pixel guardian and four spirit companions defending a moonlit sanctuary"></canvas><div class="arena-label">THE MOONLIT SANCTUARY <span>/ DEFENSE IN PROGRESS</span></div><div class="arena-note">AUTO AIM · AUTO FIRE · YOU CAST THE BURST</div><div id="toast-container" role="status" aria-live="polite"></div></div>
+<footer id="bottom-controls"><div><div id="stat-tickets">SALVO CHARGE: 0 / 3</div><small class="charge-help">Every 10 defeats earns one charge.</small></div><div class="action-controls"><button id="aoe-button" class="disabled" disabled>✦ GENESIS BURST</button><button id="video-toggle" type="button" aria-label="Enable background video" title="Optional background video" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4Z"/></svg></button><button id="sound-toggle" type="button" aria-label="Enable video sound" title="Video sound" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3Zm13 0 5 6m0-6-5 6"/></svg></button></div></footer>
+</section>
+<section id="game-library" aria-labelledby="library-title"><div class="library-heading"><div><div class="eyebrow">THE COLLECTION</div><h2 id="library-title">Find your next world.</h2></div><p>24 worlds to discover.<br>Pick a world and play.</p></div><div class="game-grid"><nav id="left-modules" class="module-group" aria-label="Game collection, odd levels">
+<a class="module-btn" data-level="1" href="./one/index.html" aria-label="Play ONE" style="order:1;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M7 7l5-4"/></svg><span class="module-number">01</span></span><span class="module-name">ONE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="3" href="https://kitscript.com/game/unity" aria-label="Play UNITY" style="order:3;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m12 3 9 5v8l-9 5-9-5V8Zm0 0v18M3 8l9 5 9-5"/></svg><span class="module-number">03</span></span><span class="module-name">UNITY</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="5" href="./cable/index.html" aria-label="Play CABLE" style="order:5;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M6 3v5a6 6 0 0 0 12 0V3M4 3h4m8 0h4M12 14v7"/></svg><span class="module-number">05</span></span><span class="module-name">CABLE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="7" href="./rogue/index.html" aria-label="Play ROGUE" style="order:7;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m12 3 9 4v6c0 5-9 8-9 8s-9-3-9-8V7Z"/></svg><span class="module-number">07</span></span><span class="module-name">ROGUE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="9" href="./pilot/index.html" aria-label="Play PILOT" style="order:9;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m12 2 3 8 7 3-7 2-3 7-3-7-7-2 7-3Z"/></svg><span class="module-number">09</span></span><span class="module-name">PILOT</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="11" href="./ocean/index.html" aria-label="Play OCEAN" style="order:11;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2 8q3-5 6 0t6 0t8 0M2 15q3-5 6 0t6 0t8 0"/></svg><span class="module-number">11</span></span><span class="module-name">OCEAN</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="13" href="./pizza/index.html" aria-label="Play PIZZA" style="order:13;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m12 3 9 18H3Zm0 7v1m-4 5v1m8-2v1"/></svg><span class="module-number">13</span></span><span class="module-name">PIZZA</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="15" href="./drone/index.html" aria-label="Play DRONE" style="order:15;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M8 8h8v8H8Zm-3-6a3 3 0 1 0 0 6 3 3 0 0 0 0-6m14 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6M5 16a3 3 0 1 0 0 6 3 3 0 0 0 0-6m14 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg><span class="module-number">15</span></span><span class="module-name">DRONE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="17" href="./cowboy/index.html" aria-label="Play COWBOY" style="order:17;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2 15q10 7 20 0l-6-2-1-9-3 3-3-3-1 9Z"/></svg><span class="module-number">17</span></span><span class="module-name">COWBOY</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="19" href="./pandemic/index.html" aria-label="Play PANDEMIC" style="order:19;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M3 12h18M5 5l14 14M5 19 19 5m-7 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10"/></svg><span class="module-number">19</span></span><span class="module-name">PANDEMIC</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="21" href="https://kitscript.com/game/wave" aria-label="Play WAVE" style="order:21;--card-color:#e5c798"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M2 13h4l3-8 6 15 3-8h4"/></svg><span class="module-number">21</span></span><span class="module-name">WAVE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="23" href="https://kitscript.com/game/house" aria-label="Play HOUSE" style="order:23;--card-color:#9ec9ea"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m2 11 10-8 10 8M5 9v12h5v-7h4v7h5V9"/></svg><span class="module-number">23</span></span><span class="module-name">HOUSE</span><span class="module-status">Enter world ↗</span></a>
+</nav><nav id="right-modules" class="module-group" aria-label="Game collection, even levels">
+<a class="module-btn" data-level="2" href="./clock/index.html" aria-label="Play CLOCK" style="order:2;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18m0 4v5l4 2"/></svg><span class="module-number">02</span></span><span class="module-name">CLOCK</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="4" href="./tank/index.html" aria-label="Play TANK" style="order:4;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 13h18v7H3Zm5 0V8h8v5m-2-5 7-3"/></svg><span class="module-number">04</span></span><span class="module-name">TANK</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="6" href="./quiz/index.html" aria-label="Play QUIZ" style="order:6;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M8 8a4 4 0 1 1 7 3l-3 2v2m0 4v1"/></svg><span class="module-number">06</span></span><span class="module-name">QUIZ</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="8" href="./world/index.html" aria-label="Play WORLD" style="order:8;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18m0 0c-5 5-5 13 0 18m0-18c5 5 5 13 0 18M3 12h18"/></svg><span class="module-number">08</span></span><span class="module-name">WORLD</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="10" href="./puzzle/index.html" aria-label="Play PUZZLE" style="order:10;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 3h7v5h4V3h7v7h-5v4h5v7h-7v-5h-4v5H3v-7h5v-4H3Z"/></svg><span class="module-number">10</span></span><span class="module-name">PUZZLE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="12" href="./bird/index.html" aria-label="Play BIRD" style="order:12;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 14q6-11 12-4l6-1-3 4q-2 9-10 6l-5 2 2-5"/></svg><span class="module-number">12</span></span><span class="module-name">BIRD</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="14" href="./bomb/index.html" aria-label="Play BOMB" style="order:14;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M14 6a8 8 0 1 0 4 4M13 5l3-3 3 3-3 3m4-5 2-2"/></svg><span class="module-number">14</span></span><span class="module-name">BOMB</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="16" href="./hack/index.html" aria-label="Play HACK" style="order:16;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m3 6 6 6-6 6m9 0h9"/></svg><span class="module-number">16</span></span><span class="module-name">HACK</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="18" href="./zone/index.html" aria-label="Play ZONE" style="order:18;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 3h6M3 3v6m18-6h-6m6 0v6M3 21h6m-6 0v-6m18 6h-6m6 0v-6M9 9h6v6H9Z"/></svg><span class="module-number">18</span></span><span class="module-name">ZONE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="20" href="./space/index.html" aria-label="Play SPACE" style="order:20;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="m14 3 7 0v7l-9 9-7-7ZM8 16l-5 5m2-9-3-1 4-4h4m3 12 0 3 4-4v-4"/></svg><span class="module-number">20</span></span><span class="module-name">SPACE</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="22" href="https://kitscript.com/game/playlist" aria-label="Play PLAYLIST" style="order:22;--card-color:#b9b4ed"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16M4 10h10M4 15h7m6-2 5 4-5 4Z"/></svg><span class="module-number">22</span></span><span class="module-name">PLAYLIST</span><span class="module-status">Enter world ↗</span></a>
+<a class="module-btn" data-level="24" href="https://kitscript.com/game/book" aria-label="Play BOOK" style="order:24;--card-color:#94d8d2"><span class="module-top"><svg class="module-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M12 5Q6 1 2 4v16q4-3 10 0 6-3 10 0V4q-4-3-10 1Zm0 0v15"/></svg><span class="module-number">24</span></span><span class="module-name">BOOK</span><span class="module-status">Enter world ↗</span></a>
+</nav></div></section>
+</main><footer class="page-footer"><span>BuntGames / An independent pixel playground.</span><a href="./home/index.html">Explore all projects ↗</a></footer>
+</div>
     <script>
         const CONFIG = {
             YT_VIDEO_ID: 'kFnxuOnbHU0', 
@@ -240,8 +152,10 @@
         let projectiles = [];
         let particles = [];
         let ytPlayer;
-        let videoBackgroundEnabled = true;
-        let usingIframeFallback = false;
+        let videoBackgroundEnabled = false;
+        let videoRequested=false;
+        const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+        let backdrop=null;
         let viewW = window.innerWidth, viewH = window.innerHeight; // 캔버스 백킹 스토어가 아닌 논리(CSS) 픽셀 기준 크기
         let lastTime = 0;
         let hiddenAt = 0; // 탭이 숨겨진 시각(복귀 시 스폰/난이도 타이머 보정용)
@@ -257,21 +171,6 @@
             const dim = document.getElementById('dim-overlay');
             if (bg) bg.style.display = 'none';
             if (dim) dim.style.background = 'radial-gradient(circle, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.6) 100%)';
-        }
-
-        function mountFallbackVideoIframe() {
-            const playerEl = document.getElementById('player');
-            if (!playerEl) return;
-            usingIframeFallback = true;
-            videoBackgroundEnabled = true;
-            playerEl.innerHTML = '';
-            const fallback = document.createElement('iframe');
-            fallback.src = `https://www.youtube-nocookie.com/embed/${CONFIG.YT_VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${CONFIG.YT_VIDEO_ID}&rel=0&playsinline=1`;
-            fallback.allow = 'autoplay; encrypted-media; picture-in-picture';
-            fallback.referrerPolicy = 'strict-origin-when-cross-origin';
-            fallback.frameBorder = '0';
-            playerEl.appendChild(fallback);
-            showToast('VIDEO FALLBACK MODE');
         }
 
         window.onYouTubeIframeAPIReady = function() {
@@ -290,12 +189,14 @@
                 height: '100%', width: '100%', videoId: CONFIG.YT_VIDEO_ID,
                 playerVars,
                 events: {
-                    'onReady': (event) => { event.target.playVideo(); event.target.mute(); },
+                    'onReady': (event) => { if(videoBackgroundEnabled)event.target.playVideo();else event.target.pauseVideo();event.target.mute(); },
                     'onStateChange': (event) => { if (event.data === YT.PlayerState.ENDED) { ytPlayer.playVideo(); } },
                     'onError': (event) => {
-                        // 153/101/150 등 임베드 제약 에러 시 no-cookie iframe fallback
+                        // Keep the local sanctuary visible when embedding is unavailable.
                         if ([153, 101, 150].includes(event.data)) {
-                            mountFallbackVideoIframe();
+                            hideVideoBackground();
+                            const button=document.getElementById('video-toggle');button.setAttribute('aria-pressed','false');button.setAttribute('aria-label','Enable background video');
+                            showToast('VIDEO UNAVAILABLE · SANCTUARY MODE');
                         }
                     }
                 }
@@ -308,8 +209,10 @@
             window.addEventListener('resize', resize);
             dom.aoeButton.addEventListener('click', triggerAOE);
             dom.soundToggle.addEventListener('click', toggleSound);
+            document.getElementById('video-toggle').addEventListener('click',toggleVideo);
             document.addEventListener('visibilitychange', handleVisibilityChange);
             renderModules();
+            if(typeof ResizeObserver==='function')new ResizeObserver(resize).observe(document.getElementById('arena'));
             updateHUD();
             requestAnimationFrame(gameLoop);
         }
@@ -329,23 +232,29 @@
 
         function resize() {
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            viewW = window.innerWidth;
-            viewH = window.innerHeight;
+            const arena=document.getElementById('arena');
+            const oldW=viewW,oldH=viewH;
+            viewW = arena.clientWidth;
+            viewH = arena.clientHeight;
+            CONFIG.PIXEL_SIZE=viewW<560?3.5:4.5;
+            enemies.forEach(e=>{e.x=e.x/oldW*viewW;e.y=e.y/oldH*viewH;});
+            projectiles=[];
             // 백킹 스토어만 dpr배로 확대하고, 게임 좌표 연산은 계속 논리(CSS) 픽셀(viewW/viewH) 기준으로 유지
             canvas.width = viewW * dpr;
             canvas.height = viewH * dpr;
-            canvas.style.width = viewW + 'px';
-            canvas.style.height = viewH + 'px';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             playerPos.x = viewW / 2;
             playerPos.y = viewH / 2;
-            const turretOffset = 135;
+            const turretOffset = Math.min(135,viewW*.25,viewH*.27);
             fairies = [
                 { x: playerPos.x - turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: 0 },
                 { x: playerPos.x + turretOffset, y: playerPos.y - turretOffset, cd: 0, offset: Math.PI/2 },
                 { x: playerPos.x - turretOffset, y: playerPos.y + turretOffset, cd: 0, offset: Math.PI },
                 { x: playerPos.x + turretOffset, y: playerPos.y + turretOffset, cd: 0, offset: Math.PI*1.5 }
             ];
+            backdrop=null;
         }
 
         function gameLoop(time) {
@@ -387,8 +296,8 @@
                 const dx = playerPos.x - e.x;
                 const dy = playerPos.y - e.y;
                 const distToPlayer = Math.hypot(dx, dy);
-                let vx = (dx / distToPlayer) * e.speed;
-                let vy = (dy / distToPlayer) * e.speed;
+                let vx = (dx / (distToPlayer||1)) * e.speed;
+                let vy = (dy / (distToPlayer||1)) * e.speed;
 
                 const cx = Math.floor(e.x / cellSize);
                 const cy = Math.floor(e.y / cellSize);
@@ -414,7 +323,7 @@
                 e.x += vx * dtf; e.y += vy * dtf; e.tick += dtf;
                 if (distToPlayer < 45) {
                     state.hp -= 0.5 * dtf;
-                    if (state.hp <= 0) gameOver();
+                    if (state.hp <= 0) {gameOver();return;}
                 }
             }
 
@@ -449,10 +358,12 @@
 
             for (let i = projectiles.length - 1; i >= 0; i--) {
                 const p = projectiles[i];
+                if(!enemies.includes(p.targetRef)){projectiles.splice(i,1);continue;}
+                p.tx=p.targetRef.x;p.ty=p.targetRef.y;
                 const dx = p.tx - p.x;
                 const dy = p.ty - p.y;
                 const dist = Math.hypot(dx, dy);
-                if (dist < 15) { killEnemy(p.targetRef); projectiles.splice(i, 1); continue; }
+                if (dist <= Math.max(15,p.speed*dtf)) { killEnemy(p.targetRef); projectiles.splice(i, 1); continue; }
                 p.x += (dx / dist) * p.speed * dtf; p.y += (dy / dist) * p.speed * dtf;
             }
             particles = particles.filter(p => { p.x += p.vx * dtf; p.y += p.vy * dtf; return (p.life -= 0.05 * dtf) > 0; });
@@ -462,6 +373,7 @@
         }
 
         function spawnEnemy() {
+            if(enemies.length>=90)return;
             const side = Math.floor(Math.random() * 4);
             let x, y;
             const buffer = CONFIG.ENEMY_SPAWN_BUFFER;
@@ -521,6 +433,7 @@
 
         function draw() {
             ctx.clearRect(0, 0, viewW, viewH);
+            drawSanctuary();
             ctx.strokeStyle = 'rgba(0, 255, 255, 0.08)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -531,11 +444,29 @@
             const enemyGlowEnabled = enemies.length <= 25;
 
             projectiles.forEach(p => { drawPixel(p.x - 3, p.y - 3, 6, 6, p.color); drawPixel(p.x - 1, p.y - 1, 2, 2, '#fff'); });
-            fairies.forEach(f => drawSubtleFairy(f.x, f.y, playerPos.anim, f.offset));
+            fairies.forEach(f => drawSubtleFairy(f.x, f.y, reducedMotion.matches?0:playerPos.anim, f.offset));
             enemies.forEach(e => drawEnhancedPixelEnemy(e, enemyGlowEnabled));
-            drawGrandPixelHero(playerPos.x, playerPos.y, playerPos.anim);
+            drawGrandPixelHero(playerPos.x, playerPos.y, reducedMotion.matches?0:playerPos.anim);
             particles.forEach(p => { ctx.globalAlpha = p.life; drawPixel(p.x, p.y, 4, 4, p.color); });
             ctx.globalAlpha = 1;
+        }
+
+        function drawSanctuary(){
+            if(!backdrop){
+                backdrop=document.createElement('canvas');backdrop.width=viewW;backdrop.height=viewH;
+                const b=backdrop.getContext('2d'),w=viewW,h=viewH;
+                const sky=b.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#17213a');sky.addColorStop(.45,'#343354');sky.addColorStop(1,'#1b2837');b.fillStyle=sky;b.fillRect(0,0,w,h);
+                for(let i=0;i<65;i++){b.fillStyle=i%3?'#92b4d64d':'#e9d9ac8a';b.fillRect((i*173+41)%w,35+(i*53)%(h*.42),i%5===0?2:1,2);}
+                b.fillStyle='#e8d5ae';b.beginPath();b.arc(w*.78,h*.17,21,0,Math.PI*2);b.fill();b.fillStyle='#30334f';b.beginPath();b.arc(w*.78-8,h*.17-6,19,0,Math.PI*2);b.fill();
+                for(let layer=0;layer<3;layer++){b.fillStyle=['#292d49','#202b41','#192b38'][layer];b.beginPath();b.moveTo(0,h);for(let x=0;x<=w+30;x+=30)b.lineTo(x,h*(.35+layer*.12)+Math.sin(x*.015+layer*2)*25+Math.cos(x*.037)*12);b.lineTo(w,h);b.fill();}
+                // Stepped ruins frame the sanctuary; the central combat space stays clear.
+                for(const x of [w*.1,w*.88]){b.fillStyle='#394253';b.fillRect(x-18,h*.22,36,h*.34);b.fillStyle='#4e5266';b.fillRect(x-22,h*.22,44,9);b.fillRect(x-22,h*.53,44,12);b.fillStyle='#8bdcd566';b.fillRect(x-3,h*.29,6,23);b.fillStyle='#687087';for(let y=h*.25;y<h*.5;y+=19)b.fillRect(x-14,y,12,2);}
+                const ground=b.createRadialGradient(w/2,h*.6,5,w/2,h*.6,w*.6);ground.addColorStop(0,'#3c41534d');ground.addColorStop(1,'#111e2c00');b.fillStyle=ground;b.fillRect(0,h*.4,w,h*.6);
+                b.strokeStyle='#86b5c00d';b.lineWidth=1;for(let y=h*.55;y<h;y+=24){b.beginPath();b.moveTo(0,y);b.lineTo(w,y);b.stroke();}for(let x=-w;x<w*2;x+=70){b.beginPath();b.moveTo(w/2+(x-w/2)*.2,h*.45);b.lineTo(x,h);b.stroke();}
+                b.save();b.translate(w/2,h/2+22);b.scale(1,.58);const r=Math.min(w*.34,145);b.strokeStyle='#a0d9d131';b.lineWidth=2;for(const radius of [r,r-9,r*.58]){b.beginPath();b.arc(0,0,radius,0,Math.PI*2);b.stroke();}for(let i=0;i<12;i++){b.save();b.rotate(i*Math.PI/6);b.fillStyle='#a0d9d14d';b.fillRect(r-5,-2,10,4);b.restore();}b.restore();
+                b.fillStyle='#101e2e';for(let i=0;i<15;i++){const x=i*(w/14);b.fillRect(x,h-9-(i%3)*4,18,20);b.fillRect(x+3,h-18-(i%3)*4,7,12);}
+            }
+            ctx.save();ctx.globalAlpha=videoBackgroundEnabled?0.55:1;ctx.drawImage(backdrop,0,0,viewW,viewH);ctx.restore();
         }
 
         function drawSubtleFairy(x, y, anim, offset) {
@@ -647,31 +578,29 @@
         }
 
         function spawnParticles(x, y, color, count) {
+            if(reducedMotion.matches)count=Math.min(count,4);
             for (let i = 0; i < count; i++) { particles.push({ x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, life: 1.0, color: color }); }
+            if(particles.length>450)particles.splice(0,particles.length-450);
         }
 
         function renderModules() {
-            const leftCont = dom.leftModules;
-            const rightCont = dom.rightModules;
-            if(!leftCont || !rightCont) return;
-            leftCont.innerHTML = ''; rightCont.innerHTML = '';
-            CONFIG.MODULES.forEach(m => {
-                const isLocked = m.reqLevel > 7 && state.level < m.reqLevel;
-                const btn = document.createElement('a'); btn.className = `module-btn ${isLocked ? 'locked' : ''}`;
-                btn.innerHTML = isLocked ? `LOCK LV.${m.reqLevel}` : m.label;
-                btn.href = isLocked ? '#' : `https://kitscript.com/game/${m.label.toLowerCase()}`;
-                if (m.side === 'left') leftCont.appendChild(btn); else rightCont.appendChild(btn);
+            document.querySelectorAll('.module-btn').forEach(link => {
+                const recommended = Number(link.dataset.level) <= Math.max(7, state.level);
+                link.querySelector('.module-status').textContent = recommended ? 'Enter world ↗' : 'Explore world ↗';
             });
         }
 
         function updateHUD() {
-            dom.hpBar.style.width = `${state.hp}%`;
+            dom.hpBar.style.width = `${Math.max(0,state.hp)}%`;
+            dom.hpBar.setAttribute('aria-valuenow',String(Math.max(0,Math.round(state.hp))));
+            dom.expBar.setAttribute('aria-valuenow',String(Math.round(state.exp/state.maxExp*100)));
             dom.expBar.style.width = `${(state.exp / state.maxExp) * 100}%`;
             dom.score.innerText = state.score.toString().padStart(9, '0');
             dom.statLevel.innerText = `LV.${state.level} HERO`;
             dom.statTickets.innerText = `SALVO CHARGE: ${state.tickets} / 3`;
 
             const aoeBtn = dom.aoeButton;
+            aoeBtn.disabled=state.tickets<CONFIG.TICKETS_FOR_AOE||!state.active;
             // 차지 게이지가 가득 찼는지에 따라 AOE 버튼의 활성/비활성 상태를 갱신
             if (state.tickets >= CONFIG.TICKETS_FOR_AOE) {
                 aoeBtn.classList.add('active');
@@ -688,14 +617,24 @@
             cont.appendChild(t); setTimeout(() => t.remove(), 2500);
         }
 
-        function gameOver() { state.active = false; showToast('GAME OVER - REBOOTING'); setTimeout(() => location.reload(), 3000); }
+        function gameOver() {if(!state.active)return;state.hp=0;state.active=false;updateHUD();showToast('GUARDIAN RESTING · RESTART IN 3s');setTimeout(()=>{state.hp=CONFIG.MAX_HP;state.level=1;state.exp=0;state.maxExp=1000;state.score=0;state.kills=0;state.tickets=0;state.startTime=performance.now();state.lastSpawnTime=performance.now();enemies=[];projectiles=[];particles=[];state.active=true;renderModules();updateHUD();},3000);}
+
+        function toggleVideo(){
+            videoBackgroundEnabled=!videoBackgroundEnabled;
+            document.getElementById('video-background').style.display=videoBackgroundEnabled?'block':'none';
+            const button=document.getElementById('video-toggle');button.setAttribute('aria-pressed',String(videoBackgroundEnabled));button.setAttribute('aria-label',videoBackgroundEnabled?'Disable background video':'Enable background video');
+            if(!videoBackgroundEnabled){if(ytPlayer?.pauseVideo)ytPlayer.pauseVideo();return;}
+            if(ytPlayer?.playVideo){ytPlayer.playVideo();return;}
+            if(!videoRequested){videoRequested=true;const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{videoRequested=false;hideVideoBackground();button.setAttribute('aria-pressed','false');showToast('VIDEO UNAVAILABLE · SANCTUARY MODE');};document.head.appendChild(script);}
+        }
 
         function toggleSound() {
-            if (!videoBackgroundEnabled || usingIframeFallback || !ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("VIDEO UNAVAILABLE"); return; }
+            if (!videoBackgroundEnabled || !ytPlayer || typeof ytPlayer.unMute !== 'function') { showToast("VIDEO UNAVAILABLE"); return; }
             state.isMuted = !state.isMuted;
             const btn = dom.soundToggle;
-            if (state.isMuted) { ytPlayer.mute(); btn.innerText = "SOUND: OFF"; }
-            else { ytPlayer.unMute(); ytPlayer.setVolume(100); ytPlayer.playVideo(); btn.innerText = "SOUND: ON"; showToast("SOUND ACTIVATED"); }
+            if (state.isMuted) { ytPlayer.mute(); }
+            else { ytPlayer.unMute(); ytPlayer.setVolume(60); ytPlayer.playVideo(); }
+            btn.setAttribute('aria-pressed',String(!state.isMuted));btn.setAttribute('aria-label',state.isMuted?'Enable video sound':'Mute video sound');
         }
 
         window.onload = init;
