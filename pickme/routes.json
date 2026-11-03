@@ -168,10 +168,10 @@
     "enabled": true
   },
   {
-    "url": "https://kitscript.com/game/wave/",
+    "url": "https://kitscript.com/oxpizza/",
     "theme": "tool",
-    "label": "WAVE",
-    "image": "./images/thumbnails/wave.webp",
+    "label": "OXPIZZA",
+    "image": "./images/thumbnails/pizza.webp",
     "weight": 1,
     "enabled": true
   },
@@ -264,10 +264,10 @@
     "enabled": true
   },
   {
-    "url": "https://kitscript.com/game/book/",
+    "url": "https://kitscript.com/game/oxpizza/",
     "theme": "tool",
-    "label": "ARCHITECT .AI",
-    "image": "./images/thumbnails/book.webp",
+    "label": "Pizzeria",
+    "image": "./images/thumbnails/oxpizza.webp",
     "weight": 3,
     "enabled": true
   },
