@@ -11,7 +11,7 @@ const cards = routes.filter(route => route.enabled).map(route => {
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid route URL');
   return `    <a class="pick-card" href="${escape(route.url)}" data-url="${escape(route.url)}" data-weight="${route.weight}" data-theme="${escape(route.theme)}">
       <img src="${escape(route.image)}" alt="" width="256" height="256" loading="lazy" decoding="async">
-      <span class="weight-indicator" aria-hidden="true">LV.${route.weight}</span><span>${escape(route.label)}</span>
+      <span>${escape(route.label)}</span>
     </a>`;
 }).join('\n');
 const path = new URL('index.html', root);

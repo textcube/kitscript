@@ -21,8 +21,8 @@ async function pageFor(options={}) {
 try {
  const {context,page} = await pageFor({javaScriptEnabled:false});
  await page.goto(url);
- assert.equal(await page.locator('#pick-grid a[href]').count(),43);
- assert.equal(await page.locator('#pick-grid img[width="256"]').count(),43);
+ assert.equal(await page.locator('#pick-grid a[href]').count(),47);
+ assert.equal(await page.locator('#pick-grid img[width="256"]').count(),47);
  assert.equal(await page.locator('#stop-btn').isVisible(),false);
  await context.close();
  const live=await pageFor();
@@ -30,7 +30,7 @@ try {
  await live.page.goto(url);
  await live.page.locator('#stop-btn').click();
  assert.equal(await live.page.locator('#status').innerText(),'MANUAL MODE');
- assert.equal(await live.page.locator('#pick-grid a').count(),43);
+ assert.equal(await live.page.locator('#pick-grid a').count(),47);
  await live.page.locator('#pick-grid a').last().scrollIntoViewIfNeeded();
  await live.page.waitForFunction(()=>Array.from(document.querySelectorAll('#pick-grid img')).every(img=>img.complete && img.naturalWidth===256));
  await live.page.locator('#pick-grid a').first().focus();
@@ -51,7 +51,7 @@ try {
  await storage.context.addInitScript(()=>{Object.defineProperty(window,'localStorage',{get(){throw Error('blocked')}})});
  await storage.page.goto(url+'?theme=unknown');
  await storage.page.locator('#stop-btn').click();
- assert.equal(await storage.page.locator('#pick-grid a').count(),43);
+ assert.equal(await storage.page.locator('#pick-grid a').count(),47);
  await storage.context.close();
- console.log('PASS: 43 links without JavaScript, keyboard selection, STOP, theme filter, invalid theme, blocked storage, mobile/desktop overflow.');
+ console.log('PASS: 47 links without JavaScript, keyboard selection, STOP, theme filter, invalid theme, blocked storage, mobile/desktop overflow.');
 } finally { await browser.close(); }

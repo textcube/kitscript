@@ -342,5 +342,37 @@
     "image": "./images/thumbnails/link.webp",
     "weight": 2,
     "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/library/",
+    "theme": "default",
+    "label": "Isekai Library",
+    "image": "./images/thumbnails/library.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/mart/",
+    "theme": "default",
+    "label": "Isekai Mart",
+    "image": "./images/thumbnails/mart.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/aqua/",
+    "theme": "default",
+    "label": "Isekai Aquarium",
+    "image": "./images/thumbnails/aqua.webp",
+    "weight": 1,
+    "enabled": true
+  },
+  {
+    "url": "https://kitscript.com/game/oxpizzas/",
+    "theme": "default",
+    "label": "Isekai Pizza Table",
+    "image": "./images/thumbnails/oxpizzas.webp",
+    "weight": 1,
+    "enabled": true
   }
 ]

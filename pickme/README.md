@@ -1,6 +1,6 @@
 # PICK ME — Retro Stage Select
 
-KITSCRIPT의 게임과 도구 43개를 탐색하고 가중치 룰렛으로 선택하는 페이지입니다.
+KITSCRIPT의 게임과 도구 47개를 탐색하고 가중치 룰렛으로 선택하는 페이지입니다.
 
 ## 링크와 검색
 

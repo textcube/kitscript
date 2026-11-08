@@ -643,5 +643,65 @@
       256,
       256
     ]
+  },
+  {
+    "id": "library",
+    "prompt": "Use case: stylized-concept. Create one square representative game menu cover for Isekai Library. Subject: an enchanted library with towering bookshelves and a floating open spellbook glowing purple and gold. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Intended final image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/library.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/library.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "mart",
+    "prompt": "Use case: stylized-concept. Create one square representative game menu cover for Isekai Mart. Subject: a cozy fantasy convenience store with a shopping basket, colorful magical potions and produce on shelves, glowing mint and amber. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Intended final image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/mart.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/mart.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "aqua",
+    "prompt": "Use case: stylized-concept. Create one square representative game menu cover for Isekai Aquarium. Subject: a magical aquarium with luminous tropical fish swimming around coral inside a large glass tank, glowing cyan and blue. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Intended final image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/aqua.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/aqua.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "oxpizzas",
+    "prompt": "Use case: stylized-concept. Create one square representative game menu cover for Isekai Pizza Table. Subject: a delicious round pizza on a rustic tavern table in a fantasy world, melted cheese, colorful toppings and warm orange magical oven light. Original polished retro arcade pixel-art illustration, neon accents on dark navy, cinematic light, clear centered silhouette and bold forms readable at 256px thumbnail size, full bleed square. No text, no logos, no watermark. Intended final image 1080x1080.",
+    "mode": "built-in imagegen",
+    "representative": "representatives/oxpizzas.webp",
+    "representativeSize": [
+      1080,
+      1080
+    ],
+    "thumbnail": "thumbnails/oxpizzas.webp",
+    "thumbnailSize": [
+      256,
+      256
+    ]
   }
 ]
